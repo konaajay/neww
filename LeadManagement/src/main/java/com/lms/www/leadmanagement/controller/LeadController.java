@@ -16,8 +16,8 @@ import com.lms.www.leadmanagement.service.LeadBulkUploadService;
 
 
 @RestController
-
 @RequestMapping("/api/leads")
+@CrossOrigin(origins = "*")
 public class LeadController {
 
     @Autowired

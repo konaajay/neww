@@ -13,6 +13,7 @@ import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/stats")
+@CrossOrigin(origins = "*")
 public class DashboardStatsController {
 
     @Autowired
