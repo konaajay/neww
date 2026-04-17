@@ -7,7 +7,6 @@ import com.lms.www.leadmanagement.entity.LeadTask;
 import com.lms.www.leadmanagement.repository.LeadRepository;
 import com.lms.www.leadmanagement.repository.LeadTaskRepository;
 import com.lms.www.leadmanagement.repository.PaymentRepository;
-import com.lms.www.leadmanagement.repository.RoleRepository;
 import com.lms.www.leadmanagement.repository.UserRepository;
 import com.lms.www.leadmanagement.dto.PaymentDTO;
 import lombok.extern.slf4j.Slf4j;
@@ -15,8 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.lms.www.leadmanagement.service.MailService;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -41,11 +38,11 @@ public class LeadPaymentService {
     @Autowired
     private MailService mailService;
 
-    @Value("${lms.base-url}")
-    private String baseUrl;
+    // @Value("${lms.base-url}")
+    // private String baseUrl;
 
-    @Value("${cashfree.environment:SANDBOX}")
-    private String environment;
+    // @Value("${cashfree.environment:SANDBOX}")
+    // private String environment;
 
     @Value("${app.frontend-url:http://localhost:3000}")
     private String frontendUrl;
