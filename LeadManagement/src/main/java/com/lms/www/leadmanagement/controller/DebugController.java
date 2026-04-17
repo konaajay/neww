@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/debug")
-@CrossOrigin(origins = "*")
 public class DebugController {
 
     @GetMapping("/auth")
