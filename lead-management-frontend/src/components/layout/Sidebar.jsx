@@ -51,7 +51,7 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
         return [
           { id: 'overview', label: 'My Dashboard', icon: LayoutDashboard },
           { id: 'leads', label: 'Leads', icon: Target },
-          { id: 'tasks', label: 'Follow up', icon: Layers },
+          { id: 'tasks', label: 'Tasks', icon: Layers },
           { id: 'call-logs', label: 'Call Up', icon: PhoneIcon },
           { id: 'payments', label: 'Revenues', icon: IndianRupee },
           { id: 'attendance', label: 'Attendance', icon: FileText },

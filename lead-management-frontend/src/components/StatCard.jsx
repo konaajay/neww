@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTheme } from '../context/ThemeContext';
 
-const StatCard = ({ title, value, sub, icon, color = 'primary', unit = 'Nodes' }) => {
+const StatCard = ({ title, value, sub, icon, color = 'primary', unit = 'Nodes', onClick }) => {
   const { isDarkMode } = useTheme();
   
   const colorMap = {
@@ -9,13 +9,19 @@ const StatCard = ({ title, value, sub, icon, color = 'primary', unit = 'Nodes' }
     success: { base: '#10b981', light: 'rgba(16, 185, 129, 0.1)', shadow: 'rgba(16, 185, 129, 0.3)' },
     warning: { base: '#f59e0b', light: 'rgba(245, 158, 11, 0.1)', shadow: 'rgba(245, 158, 11, 0.3)' },
     danger: { base: '#ef4444', light: 'rgba(239, 68, 68, 0.1)', shadow: 'rgba(239, 68, 68, 0.3)' },
-    info: { base: '#06b6d4', light: 'rgba(6, 182, 212, 0.1)', shadow: 'rgba(6, 182, 212, 0.3)' }
+    info: { base: '#06b6d4', light: 'rgba(6, 182, 212, 0.1)', shadow: 'rgba(6, 182, 212, 0.3)' },
+    secondary: { base: '#6366f1', light: 'rgba(99, 102, 241, 0.1)', shadow: 'rgba(99, 102, 241, 0.3)' },
+    pink: { base: '#ec4899', light: 'rgba(236, 72, 153, 0.1)', shadow: 'rgba(236, 72, 153, 0.3)' }
   };
 
   const themeColor = colorMap[color] || colorMap.primary;
 
   return (
-    <div className="premium-card h-100 overflow-hidden relative border-0 shadow-lg group transition-all hover-translate-y">
+    <div 
+      className={`premium-card h-100 overflow-hidden relative border-0 shadow-lg group transition-all ${onClick ? 'hover-translate-y cursor-pointer' : ''}`}
+      onClick={onClick}
+      style={{ cursor: onClick ? 'pointer' : 'default' }}
+    >
       {/* Dynamic Background Glow */}
       <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl opacity-10 group-hover:opacity-20 transition-opacity" 
            style={{ backgroundColor: themeColor.base, transform: 'translate(40%, -40%)' }}></div>
@@ -30,7 +36,9 @@ const StatCard = ({ title, value, sub, icon, color = 'primary', unit = 'Nodes' }
             <div className="text-muted fw-black text-uppercase tracking-widest mb-0 opacity-50" style={{ fontSize: '8px' }}>{title}</div>
             <div className="d-flex align-items-baseline gap-1">
                 <h4 className="fw-black text-main mb-0 tracking-tighter" style={{ fontSize: '1.25rem' }}>{value}</h4>
-                <span className="small text-muted fw-bold opacity-50 font-monospace" style={{ fontSize: '10px' }}>{unit}</span>
+                {unit && (
+                  <span className="small text-muted fw-bold opacity-50 font-monospace" style={{ fontSize: '10px' }}>{unit}</span>
+                )}
             </div>
           </div>
         </div>

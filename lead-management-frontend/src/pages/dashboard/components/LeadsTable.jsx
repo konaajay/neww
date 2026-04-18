@@ -1,9 +1,10 @@
-import { Search, Users, ShieldHalf, Phone, FileText, Edit, CreditCard, Trash2 } from 'lucide-react';
+import { Search, Users, ShieldHalf, Phone, FileText, Edit, CreditCard, Trash2, Wallet } from 'lucide-react';
 import { Table } from '../../../components/common/Components';
 import LeadEditModal from '../../../components/LeadEditModal';
 import CallOutcomeModal from '../../../components/CallOutcomeModal';
 import GeneratePaymentLinkModal from '../../../components/GeneratePaymentLinkModal';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../../context/ThemeContext';
 import { toast } from 'react-toastify';
 
@@ -34,6 +35,7 @@ const LeadsTable = ({
   const [selectedEditLead, setSelectedEditLead] = useState(null);
   const [selectedOutcomeLead, setSelectedOutcomeLead] = useState(null);
   const [selectedPaymentLead, setSelectedPaymentLead] = useState(null);
+  const navigate = useNavigate();
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -42,10 +44,10 @@ const LeadsTable = ({
   const getStatusBadge = (status) => {
     let variant = 'bg-surface text-muted';
     if (['NEW', 'PENDING'].includes(status)) variant = 'bg-primary bg-opacity-10 text-primary border border-primary border-opacity-10';
-    if (['PAID', 'CONVERTED', 'SUCCESSFUL', 'EMI'].includes(status)) variant = 'bg-success bg-opacity-10 text-success border border-success border-opacity-10';
+    if (['PAID', 'CONVERTED', 'SUCCESS', 'EMI'].includes(status)) variant = 'bg-success bg-opacity-10 text-success border border-success border-opacity-10';
     if (['WORKING', 'CONTACTED', 'INTERESTED'].includes(status)) variant = 'bg-info bg-opacity-10 text-info border border-info border-opacity-10';
     if (['RETRY', 'FOLLOW_UP'].includes(status)) variant = 'bg-warning bg-opacity-10 text-warning border border-warning border-opacity-10';
-    if (['LOST', 'NOT_INTERESTED', 'PAYMENT_FAILED'].includes(status)) variant = 'bg-danger bg-opacity-10 text-danger border border-danger border-opacity-10';
+    if (['LOST', 'NOT_INTERESTED', 'PAYMENT_FAILED', 'REJECTED'].includes(status)) variant = 'bg-danger bg-opacity-10 text-danger border border-danger border-opacity-10';
 
     return (
       <span className={`ui-badge ${variant}`} style={{ minWidth: '80px', textAlign: 'center', display: 'inline-block' }}>
@@ -235,6 +237,15 @@ const LeadsTable = ({
                   <button className="p-2 border-0 bg-transparent text-danger hover-scale transition-smooth rounded-circle hover:bg-danger hover:bg-opacity-10" title="Decommission Node" onClick={() => onDeleteLead && onDeleteLead(lead.id)}>
                     <Trash2 size={15} />
                   </button>
+                  {(['PAID', 'CONVERTED', 'EMI', 'SUCCESSFUL'].includes(lead.status)) && (
+                    <button 
+                      className="p-2 border-0 bg-transparent text-primary hover-scale transition-smooth rounded-circle hover:bg-primary hover:bg-opacity-10" 
+                      title="View Fee Ledger" 
+                      onClick={() => navigate(`/leads/${lead.id}/fee-structure`)}
+                    >
+                      <Wallet size={15} />
+                    </button>
+                  )}
                   <div className="ms-2 ps-2 border-start border-white border-opacity-10">
                     <select
                       className={`form-select bg-surface bg-opacity-20 border-0 text-main py-1 px-2 mb-0 ${['PAID', 'CONVERTED', 'SUCCESSFUL'].includes(lead.status) ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer hover:bg-opacity-40'}`}

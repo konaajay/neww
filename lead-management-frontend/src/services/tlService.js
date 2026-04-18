@@ -2,6 +2,8 @@ import api from '../api/api';
 
 const tlService = {
   fetchMyLeads: () => api.get('/tl/leads/my'),
+  fetchTeamLeads: (filters) => api.get('/tl/leads/team', { params: filters }),
+  fetchPersonalStats: (filters) => api.get('/leads/stats', { params: filters }),
   fetchDashboardStats: (filters) => api.get('/tl/dashboard/stats', { params: filters }),
   fetchMemberPerformance: (filters) => api.get('/tl/reports/member-performance', { params: filters }),
   fetchSubordinates: () => api.get('/tl/subordinates'),

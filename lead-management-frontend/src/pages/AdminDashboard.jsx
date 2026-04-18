@@ -24,6 +24,7 @@ import TicketManager from '../components/TicketManager';
 import LeadIngestionModal from './dashboard/components/LeadIngestionModal';
 
 import MetricCommandCenter from './dashboard/components/MetricCommandCenter';
+import LeadStatusPieChart from './dashboard/components/LeadStatusPieChart';
 import TaskBoard from '../components/TaskBoard';
 import RevenueStrategyHub from './dashboard/components/RevenueStrategyHub';
 import LeadEditPage from './dashboard/components/LeadEditPage';
@@ -33,6 +34,7 @@ import {
   Users,
   IndianRupee,
   Phone,
+  Layers,
   Edit,
   Trash2,
   CheckCircle,
@@ -493,7 +495,7 @@ const AdminDashboard = () => {
                   {user?.role !== 'ADMIN' && (
                     <>
                       <StatCard title="My Efficiency" value={stats?.totalGlobalLeads > 0 ? ((stats?.convertedToday / stats?.totalGlobalLeads) * 100).toFixed(1) : 0} unit="%" sub="Personal Conversion Ratio" icon={<TrendingUp />} color="primary" />
-                      <StatCard title="My Collection" value={stats?.totalPayments || 0} unit="T" sub="Monthly Transmissions" icon={<IndianRupee />} color="success" />
+                      <StatCard title="Revenue Flow" value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(stats?.totalRevenue || 0)} unit="" sub="Monthly Transmissions" icon={<IndianRupee />} color="success" />
                     </>
                   )}
                 </div>
@@ -539,7 +541,8 @@ const AdminDashboard = () => {
         )}
 
         {activeTab === 'team-dashboard' && (
-          <div className="animate-fade-in p-1">
+          <div className="animate-fade-in p-1 d-flex flex-column gap-4">
+
             <ManagerDashboardFilterHub
               teamTree={teamTree}
               stats={stats}
@@ -560,6 +563,95 @@ const AdminDashboard = () => {
               onSendPaymentLink={handleSendPaymentLink}
               onDeleteLead={handleDeleteLead}
             />
+
+             {/* Operational Overview (Synchronized with TL/Manager Dashboard) */}
+             <MetricCommandCenter 
+                 stats={{ 
+                     ...summary, 
+                     ...stats, 
+                     performance,
+                     presentCount: stats?.presentCount || summary?.attendance?.present || 0,
+                     absentCount: stats?.absentCount || summary?.attendance?.absent || 0,
+                     lateCount: stats?.lateCount || summary?.attendance?.late || 0,
+                     monthlyRevenue: stats?.monthlyRevenue || summary?.revenue?.monthly || 0,
+                     monthlyTarget: stats?.monthlyTarget || summary?.revenue?.target || 0,
+                     targetAchievement: stats?.targetAchievement || summary?.revenue?.achievement || 0,
+                     todayFollowups: stats?.todayFollowups || summary?.leads?.todayFollowups || 0,
+                     pendingFollowups: stats?.pendingFollowups || summary?.leads?.pendingFollowups || 0
+                 }} 
+                 role="ADMIN" 
+                 filters={filters} 
+                 onNavigate={setActiveTab} 
+             />
+
+            {/* Analytics Growth Row (Trend + Pie Chart) */}
+            <div className="row g-4 animate-fade-in">
+                <div className="col-12 col-xl-8">
+                    <Card title="Engagement Velocity" subtitle="Strategic Performance Trends" className="h-100">
+                        <div className="py-2" style={{ height: '360px' }}>
+                            <RevenueTrendChart data={trendData} theme={theme} />
+                        </div>
+                    </Card>
+                </div>
+                <div className="col-12 col-xl-4">
+                    <Card title="Squad Pipeline Distribution" subtitle="Status Segmentation Analytics" className="h-100">
+                        <div className="py-2" style={{ height: '360px' }}>
+                            <LeadStatusPieChart leads={leads} isDarkMode={theme === 'dark'} />
+                        </div>
+                    </Card>
+                </div>
+            </div>
+
+            {/* Team Efficiency Matrix (Synchronized with Manager/TL views) */}
+            <div className="row g-4 mb-4">
+                <div className="col-12">
+                    <Card title="Team Efficiency Matrix" subtitle="Global Staff Performance & Conversion Sync">
+                        <div className="card-body p-0">
+                            <Table 
+                                headers={[
+                                    'S.NO',
+                                    'Staff Member',
+                                    'Hierarchy Role',
+                                    <div className="text-center">Active Load</div>,
+                                    <div className="text-center">Success</div>,
+                                    <div className="text-center">Risk</div>,
+                                    <div className="text-end">Sync Rate</div>
+                                ]}
+                                data={performance || []}
+                                renderRow={(p, index) => (
+                                    <>
+                                        <td className="ps-4 text-muted fw-bold small" style={{ fontSize: '10px' }}>{index + 1}</td>
+                                        <td 
+                                            onClick={() => {
+                                                setFilters({...filters, userId: p.userId});
+                                                toast.info(`Aggregating metrics for: ${p.username}`);
+                                            }}
+                                            className="ps-4 cursor-pointer hover-scale transition-all"
+                                        >
+                                            <div className="d-flex align-items-center gap-3">
+                                                <div className="bg-primary bg-opacity-10 text-primary rounded-circle p-2 fw-black small border border-primary border-opacity-10 shadow-glow-sm" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    {p.username.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="d-flex flex-column">
+                                                    <span className="fw-bold text-main small">{p.username}</span>
+                                                    <span className="text-muted small opacity-50" style={{ fontSize: '9px' }}>VIEW FULL ANALYTICS</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td><span className="ui-badge bg-surface text-muted small border-white border-opacity-10">{p.role || 'USER'}</span></td>
+                                        <td className="text-center fw-bold">{p.totalLeads}</td>
+                                        <td className="text-center text-success fw-bold">{p.convertedLeads}</td>
+                                        <td className="text-center text-danger fw-bold">{p.lostLeads}</td>
+                                        <td className="pe-4 text-end text-primary fw-black">
+                                            {p.totalLeads > 0 ? ((p.convertedLeads / p.totalLeads) * 100).toFixed(1) : 0}%
+                                        </td>
+                                    </>
+                                )}
+                            />
+                        </div>
+                    </Card>
+                </div>
+            </div>
           </div>
         )}
 
@@ -624,39 +716,39 @@ const AdminDashboard = () => {
             />
             <div className="row g-3">
               <div className="col-12 col-md-3">
-                <StatCard
-                  title="Call Back"
-                  value={summary?.callbackCount || 0}
-                  sub="Registry Awaiting Response"
-                  icon={<Phone size={18} />}
-                  color="warning"
+                <StatCard 
+                  title="Total Nodes" 
+                  value={filteredLeadsList?.length || 0} 
+                  sub="Global Registry Pool" 
+                  icon={<Layers size={18} />} 
+                  color="primary" 
                 />
               </div>
               <div className="col-12 col-md-3">
-                <StatCard
-                  title="Converted"
-                  value={summary?.convertedCount || stats?.convertedToday || 0}
-                  sub="Successful Transmissions"
-                  icon={<CheckCircle size={18} />}
-                  color="success"
+                <StatCard 
+                  title="Interested" 
+                  value={stats?.interestedCount || summary?.leads?.interested || 0} 
+                  sub="High-Intent High-Conversion" 
+                  icon={<ShieldHalf size={18} />} 
+                  color="info" 
                 />
               </div>
               <div className="col-12 col-md-3">
-                <StatCard
-                  title="Follow-up"
-                  value={summary?.todayFollowups || 0}
-                  sub="Active Operational Nodes"
-                  icon={<Clock size={18} />}
-                  color="info"
+                <StatCard 
+                  title="Converted" 
+                  value={stats?.convertedCount || summary?.convertedCount || stats?.convertedToday || 0} 
+                  sub="Successful Transmissions" 
+                  icon={<CheckCircle size={18} />} 
+                  color="success" 
                 />
               </div>
               <div className="col-12 col-md-3">
-                <StatCard
-                  title="Lost"
-                  value={stats?.lostToday || summary?.lostCount || 0}
-                  sub="Off-Pitch Terminations"
-                  icon={<AlertCircle size={18} />}
-                  color="danger"
+                <StatCard 
+                  title="Lost" 
+                  value={stats?.totalLostCount || stats?.lostToday || summary?.lostCount || 0} 
+                  sub="Registry Access Terminated" 
+                  icon={<AlertCircle size={18} />} 
+                  color="danger" 
                 />
               </div>
             </div>

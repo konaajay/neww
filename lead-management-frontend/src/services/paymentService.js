@@ -36,11 +36,11 @@ const paymentService = {
     return api.post('/payments/manual-record', data);
   },
 
-  generateInvoice: (orderId) => {
-    return api.get('/public/payments/invoice', { params: { order_id: orderId } });
-  },
   fetchInvoiceByLead: (leadId) => {
     return api.get(`/payments/lead/${leadId}/invoice`);
+  },
+  fetchStudentFee: (leadId) => {
+    return api.get(`/payments/lead/${leadId}/fee-structure`);
   }
 };
 

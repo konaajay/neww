@@ -10,22 +10,8 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [show, setShow] = useState(false);
 
-  const { login, loginDemo } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
-
-  const handleDemoLogin = (role) => {
-    try {
-      loginDemo(role);
-      toast.success(`Logged in as ${role}`);
-      if (role === 'ADMIN') navigate('/admin');
-      else if (role === 'MANAGER') navigate('/manager');
-      else if (role === 'TEAM_LEADER') navigate('/tl');
-      else if (role === 'ASSOCIATE') navigate('/associate');
-      else navigate('/');
-    } catch {
-      toast.error('Demo login failed');
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -132,42 +118,7 @@ const LoginPage = () => {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="d-flex align-items-center my-4">
-            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
-            <span className="mx-3" style={{ color: '#6b7280', fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em' }}>DEMO ACCESS</span>
-            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
-          </div>
 
-          {/* Demo Role Buttons */}
-          <div className="row g-2">
-            {[
-              { role: 'ADMIN', label: 'Admin', Icon: ShieldCheck, color: '#6366f1' },
-              { role: 'MANAGER', label: 'Manager', Icon: UserCog, color: '#22d3ee' },
-              { role: 'TEAM_LEADER', label: 'Team Lead', Icon: Users, color: '#10b981' },
-              { role: 'ASSOCIATE', label: 'Associate', Icon: User, color: '#f59e0b' },
-            ].map(({ role, label, Icon, color }) => (
-              <div key={role} className="col-6">
-                <button
-                  onClick={() => handleDemoLogin(role)}
-                  className="w-100 d-flex flex-column align-items-center justify-content-center gap-1 py-2 rounded-3"
-                  style={{
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    color: '#9ca3af',
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                    transition: 'border-color 0.2s ease',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = color + '55'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
-                >
-                  <Icon size={16} color={color} />
-                  <span>{label}</span>
-                </button>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>

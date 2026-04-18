@@ -18,11 +18,12 @@ const managerService = {
             api.get('/manager/team-tree'),
             api.get('/reports/trend', { params: trendParams }),
             api.get('/call-records/admin/stats', { params: { date: filters.from?.split('T')[0] } }),
-            api.get('/stats/summary', { params: { from: filters.from?.split('T')[0], to: filters.to?.split('T')[0] } })
+            api.get('/stats/summary', { params: { from: filters.from?.split('T')[0], to: filters.to?.split('T')[0], userId: filters.userId } })
         ]);
     },
     fetchGlobalCallStats: (filters) => api.get('/call-records/admin/stats', { params: filters }),
-    fetchLeads: () => api.get('/manager/leads'),
+    fetchPersonalStats: (filters) => api.get('/leads/stats', { params: filters }),
+    fetchLeads: (filters) => api.get('/manager/leads', { params: { userId: filters?.userId } }),
     fetchTeamLeaders: () => api.get('/manager/team-leaders'),
     fetchRoles: () => api.get('/manager/roles'),
     fetchPermissions: () => api.get('/manager/permissions'),

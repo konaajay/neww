@@ -43,8 +43,9 @@ const AttendanceDashboard = ({ role, userId: externalUserId, date: externalDate 
     try {
       setLoading(true);
       let response;
-      if (role === 'ASSOCIATE' || role === 'TEAM_LEADER' || (role === 'MANAGER' && !externalUserId && !externalDate && !userId && !date)) {
-        // Fallback or self-view if no external filters and no local filters selected
+      const isPersonalMode = role === 'ASSOCIATE' || (externalUserId && externalUserId === 'self');
+      
+      if (isPersonalMode) {
         response = await attendanceService.getMyLogs();
         if (response.success) {
            setLogs(response.data.map(log => ({

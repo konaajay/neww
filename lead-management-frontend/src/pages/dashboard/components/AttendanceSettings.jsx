@@ -398,16 +398,8 @@ const AttendanceSettings = () => {
                                                 </select>
                                             </div>
                                             <div className="row g-3">
-                                                <div className="col-6">
-                                                    <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{fontSize: '0.65rem'}}>Sync Rate (s)</label>
-                                                    <input 
-                                                        type="number" className="ui-input py-2 rounded-3" 
-                                                        value={newPolicy.trackingIntervalSec} onChange={e => setNewPolicy({...newPolicy, trackingIntervalSec: parseInt(e.target.value)})}
-                                                        placeholder="300" required
-                                                    />
-                                                </div>
-                                                <div className="col-6">
-                                                    <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{fontSize: '0.65rem'}}>Grace (m)</label>
+                                                <div className="col-12">
+                                                    <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{fontSize: '0.65rem'}}>Out-of-Range Grace (m)</label>
                                                     <input 
                                                         type="number" className="ui-input py-2 rounded-3" 
                                                         value={newPolicy.gracePeriodMinutes || 0} onChange={e => setNewPolicy({...newPolicy, gracePeriodMinutes: parseInt(e.target.value) || 0})}
@@ -469,14 +461,6 @@ const AttendanceSettings = () => {
                                                         placeholder="240" required
                                                     />
                                                 </div>
-                                                <div>
-                                                    <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{fontSize: '0.65rem'}}>Idle Response (min)</label>
-                                                    <input 
-                                                        type="number" className="ui-input py-2 rounded-3" 
-                                                        value={newPolicy.maxIdleMinutes || 0} onChange={e => setNewPolicy({...newPolicy, maxIdleMinutes: parseInt(e.target.value) || 0})}
-                                                        placeholder="30" required
-                                                    />
-                                                </div>
                                             </div>
                                             <div className="mt-4 d-flex flex-column gap-2">
                                                 <button type="submit" className="ui-btn ui-btn-primary w-100 rounded-pill shadow-glow py-2 fw-black text-uppercase tracking-widest" style={{ fontSize: '10px' }}>
@@ -529,8 +513,8 @@ const AttendanceSettings = () => {
                                                     </td>
                                                     <td>
                                                         <div className="d-flex flex-column">
-                                                            <div className="small fw-black text-primary tabular-nums">{p.trackingIntervalSec}s PING</div>
-                                                            <div className="text-muted fw-bold" style={{ fontSize: '8px' }}>GRACE: {p.gracePeriodMinutes || 0}M</div>
+                                                            <div className="small fw-black text-primary tabular-nums">{p.gracePeriodMinutes || 0}M GRACE</div>
+                                                            <div className="text-muted fw-bold" style={{ fontSize: '8px' }}>TIMEOUT BUFFER</div>
                                                         </div>
                                                     </td>
                                                     <td className="text-center">

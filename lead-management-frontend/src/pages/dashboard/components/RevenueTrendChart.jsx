@@ -35,24 +35,24 @@ const RevenueTrendChart = ({ data }) => {
           <div className="d-flex flex-column gap-1">
             <div className="d-flex align-items-center justify-content-between gap-4">
               <span className="small d-flex align-items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                <div className="rounded-circle bg-primary" style={{ width: 8, height: 8 }}></div>
-                Leads Generated
+                <div className="rounded-circle" style={{ width: 8, height: 8, backgroundColor: '#6366f1' }}></div>
+                Leads Pipeline
               </span>
-              <span className="fw-black text-primary">{payload[0].value}</span>
+              <span className="fw-black" style={{ color: '#6366f1' }}>{payload[0].value}</span>
             </div>
             <div className="d-flex align-items-center justify-content-between gap-4 border-top border-white border-opacity-10 pt-1 mt-1">
               <span className="small d-flex align-items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                <div className="rounded-circle bg-danger" style={{ width: 8, height: 8 }}></div>
-                Lost Leads
+                <div className="rounded-circle" style={{ width: 8, height: 8, backgroundColor: '#f43f5e' }}></div>
+                Lost Assets
               </span>
-              <span className="fw-black text-danger">{payload[1]?.value || 0}</span>
+              <span className="fw-black" style={{ color: '#f43f5e' }}>{payload[1]?.value || 0}</span>
             </div>
             <div className="d-flex align-items-center justify-content-between gap-4 border-top border-white border-opacity-10 pt-1 mt-1">
               <span className="small d-flex align-items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                <div className="rounded-circle bg-success" style={{ width: 8, height: 8 }}></div>
+                <div className="rounded-circle" style={{ width: 8, height: 8, backgroundColor: '#10b981' }}></div>
                 Revenue Value
               </span>
-              <span className="fw-black text-success">₹ {payload[2]?.value ? payload[2].value.toLocaleString() : 0}</span>
+              <span className="fw-black" style={{ color: '#10b981' }}>₹ {payload[2]?.value ? payload[2].value.toLocaleString() : 0}</span>
             </div>
           </div>
         </div>

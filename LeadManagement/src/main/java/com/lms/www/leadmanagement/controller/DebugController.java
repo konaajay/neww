@@ -1,5 +1,6 @@
 package com.lms.www.leadmanagement.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -7,6 +8,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.CrossOrigin;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -14,6 +18,9 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/debug")
 public class DebugController {
+
+    @Autowired
+    private DataSource dataSource;
 
     @GetMapping("/auth")
     public Map<String, Object> debugAuth() {
@@ -31,5 +38,23 @@ public class DebugController {
         }
         return response;
     }
+
+    @GetMapping("/db")
+    public Map<String, Object> debugDb() {
+        Map<String, Object> response = new HashMap<>();
+        try (Connection connection = dataSource.getConnection()) {
+            DatabaseMetaData metaData = connection.getMetaData();
+            response.put("status", "SUCCESS");
+            response.put("database", metaData.getDatabaseProductName());
+            response.put("version", metaData.getDatabaseProductVersion());
+            response.put("url", metaData.getURL());
+        } catch (Exception e) {
+            response.put("status", "FAILED");
+            response.put("error", e.getMessage());
+            response.put("cause", e.getCause() != null ? e.getCause().getMessage() : "Unknown");
+        }
+        return response;
+    }
 }
+
 

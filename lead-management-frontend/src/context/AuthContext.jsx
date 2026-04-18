@@ -5,8 +5,27 @@ import authService from '../services/authService';
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
-  const [activeCall, setActiveCall] = useState(JSON.parse(localStorage.getItem('activeCall')));
+  const [user, setUser] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem('user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (e) {
+      console.error("AuthContext: Malformed user session detected, clearing storage.");
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      return null;
+    }
+  });
+
+  const [activeCall, setActiveCall] = useState(() => {
+    try {
+      const savedCall = localStorage.getItem('activeCall');
+      return savedCall ? JSON.parse(savedCall) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,9 +39,9 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const response = await authService.login(email, password);
-      // Backend should return id, role, email, username
-      const { token, id, role, email: userEmail, username, name } = response.data;
-      const userData = { id, email: userEmail, role, username, name: name || username || userEmail.split('@')[0] };
+      // Align with backend AuthResponse: token, id, email, role, name
+      const { token, id, role, email: userEmail, name } = response.data;
+      const userData = { id, email: userEmail, role, name: name || userEmail.split('@')[0] };
       
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(userData));

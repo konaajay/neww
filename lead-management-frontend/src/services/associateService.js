@@ -27,7 +27,9 @@ const associateService = {
   // Strict Call Tracking
   startCall: (data) => api.post('/calls/start', data),
   endCall: (callId, data) => api.post(`/calls/end/${callId}`, data),
-  fetchTodayReport: () => api.get('/calls/today')
+  fetchTodayReport: () => api.get('/calls/today'),
+  getFeeStructure: (leadId) => api.get(`/leads/${leadId}/fee-structure`),
+  fetchLeadById: (id) => api.get(`/leads/${id}`)
 };
 
 export default associateService;

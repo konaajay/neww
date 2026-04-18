@@ -11,6 +11,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentPortal from './pages/PaymentPortal';
 import AssociateDashboard from './pages/AssociateDashboard';
+import StudentFeePage from './pages/StudentFeePage';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -23,7 +24,19 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 };
 
 function App() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-vh-100 bg-dark d-flex flex-column align-items-center justify-content-center text-center p-4">
+        <div className="p-4 rounded-4 bg-surface bg-opacity-20 border border-white border-opacity-5 shadow-lg animate-pulse" style={{maxWidth: '320px'}}>
+             <div className="spinner-border text-primary mb-3" role="status"></div>
+             <h6 className="fw-black text-main text-uppercase tracking-widest mb-1" style={{fontSize: '11px'}}>GYANTRIX OS</h6>
+             <p className="text-muted small fw-bold mb-0 opacity-50 px-4" style={{fontSize: '9px'}}>SYNCHRONIZING SECURE SESSION PROTOCOLS...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ThemeProvider>
@@ -68,6 +81,14 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          <Route 
+            path="/leads/:id/fee-structure" 
+            element={
+              <ProtectedRoute>
+                <StudentFeePage />
+              </ProtectedRoute>
+            } 
+          />
 
           <Route 
             path="/" 
@@ -91,9 +112,6 @@ function App() {
         newestOnTop
         closeOnClick
         rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
         theme="dark"
       />
     </ThemeProvider>

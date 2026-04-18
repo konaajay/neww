@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import TargetModal from './TargetModal';
 
-const MetricCard = ({ title, stats, icon: Icon, color, onClick }) => (
+export const MetricCard = ({ title, stats, icon: Icon, color, onClick }) => (
   <div
     className="premium-card h-100 cursor-pointer border border-white border-opacity-10 shadow-lg group hover-active-card overflow-hidden"
     onClick={onClick}
@@ -71,13 +71,13 @@ const MetricCommandCenter = ({ stats, role, filters, onNavigate }) => {
     }
   };
 
-  const getCount = (k) => stats.userBreakdown?.[k] || stats.userBreakdown?.[k.toLowerCase()] || 0;
-  const totalUsers = getCount('TOTAL') || getCount('total') || (getCount('ADMIN') + getCount('MANAGER') + getCount('TEAM_LEADER') + getCount('ASSOCIATE'));
+  const getCount = (k) => stats.userBreakdown?.[k.toUpperCase()] || stats.userBreakdown?.[k.toLowerCase()] || 0;
+  const totalUsers = stats.totalUsers || (getCount('ADMIN') + getCount('MANAGER') + getCount('TEAM_LEADER') + getCount('ASSOCIATE'));
 
   return (
     <div className="row g-3 mb-4 animate-fade-in-up">
-      {/* 1. Attendance Card - Note (1) */}
-      <div className="col-12 col-md-4 col-xl-3" style={{ flex: '0 0 25%', maxWidth: '25%' }}>
+      {/* 1. Attendance Card */}
+      <div className="col-12 col-md-4 col-xl">
         <MetricCard
           title="Attendance"
           icon={Users}
@@ -86,83 +86,72 @@ const MetricCommandCenter = ({ stats, role, filters, onNavigate }) => {
           stats={{
             primary: { value: stats.presentCount || 0, label: 'Present' },
             secondary: [
-              { label: 'Absent', value: stats.absentCount || 0, color: 'danger' },
-              { label: 'Late', value: stats.lateCount || 0, color: 'warning' },
               { label: 'Ratio', value: `${stats.presentCount > 0 ? ((stats.presentCount / (stats.presentCount + stats.absentCount)) * 100).toFixed(0) : 0}%`, color: 'success' }
             ]
           }}
         />
       </div>
 
-      {/* 2. User Matrix Card - Note (2) */}
-      <div className="col-12 col-md-4 col-xl-3" style={{ flex: '0 0 25%', maxWidth: '25%' }}>
+      {/* 2. User Matrix Card */}
+      <div className="col-12 col-md-4 col-xl">
         <MetricCard
-          title="Users"
+          title="Team Count"
           icon={Users}
           color="info"
           onClick={() => handleNav('users', '/users')}
           stats={{
             primary: { value: totalUsers, label: 'Staff' },
-            secondary: [
-              { label: 'Manager', value: getCount('MANAGER') },
-              { label: 'TL', value: getCount('TEAM_LEADER'), color: 'info' },
-              { label: 'BDA', value: getCount('ASSOCIATE'), color: 'warning' }
-            ]
+          secondary: [
+            { label: 'TL Nodes', value: getCount('TEAM_LEADER'), color: 'info' },
+            { label: 'BDA Nodes', value: getCount('ASSOCIATE'), color: 'warning' }
+          ]
           }}
         />
       </div>
 
-      {/* 3. Follow-ups Card - Note (3) */}
-      <div className="col-12 col-md-4 col-xl-3" style={{ flex: '0 0 25%', maxWidth: '25%' }}>
+      {/* 3. Follow-ups Card */}
+      <div className="col-12 col-md-4 col-xl">
         <MetricCard
-          title="Follow ups"
+          title="Today's Schedule"
           icon={Clock}
-          color="warning"
+          color="secondary"
           onClick={() => handleNav('tasks', '/tasks')}
           stats={{
             primary: { value: stats.todayFollowups || 0, label: 'Scheduled Today' },
             secondary: [
-              { label: 'Leads', value: stats.todayFollowups || 0, color: 'primary' },
-              { label: 'Revenue', value: stats.pendingFollowups || 0, color: 'danger' },
-              // { label: 'Active', value: 'Ready', color: 'success' }
+              { label: 'Follow-ups', value: stats.todayFollowups || 0, color: 'primary' }
             ]
           }}
         />
       </div>
 
-      {/* 4. Supports Lifecycle - Note (4) - COMMENTED OUT BY USER REQUEST */}
-      {/* {!isPersonalAdminView && (
-        <div className="col-12 col-md-4 col-xl-2.4" style={{ flex: '0 0 20%', maxWidth: '20%' }}>
-          <MetricCard
-            title="Supports"
-            icon={LifeBuoy}
-            color="primary"
-            onClick={() => handleNav('support-queue', '/support-queue')}
-            stats={{
-              primary: { value: (stats.supportStats?.NEW || 0) + (stats.supportStats?.ACTIVE || 0), label: 'Active' },
-              secondary: [
-                { label: 'Pending', value: stats.supportStats?.NEW || 0, color: 'warning' },
-                { label: 'Resolved', value: stats.supportStats?.EXISTING || 0, color: 'success' },
-                { label: 'Review', value: stats.disposedStats?.PENDING_FINANCE || 0, color: 'danger' }
-              ]
-            }}
-          />
-        </div>
-      )} */}
-
-      {/* 5. Pending Followups Card - Note (5) */}
-      <div className="col-12 col-md-4 col-xl-3" style={{ flex: '0 0 25%', maxWidth: '25%' }}>
+      {/* 4. Follow-up Overdue Card */}
+      <div className="col-12 col-md-4 col-xl">
         <MetricCard
-          title="Pending Followups"
-          icon={Zap}
-          color="danger"
-          onClick={() => handleNav('revenue', '/revenue')}
+          title="Follow-up Overdue"
+          icon={AlertCircle}
+          color="warning"
+          onClick={() => handleNav('tasks', '/tasks')}
           stats={{
-            primary: { value: stats.pendingFollowups || 0, label: 'Pending Review' },
+            primary: { value: stats.pendingAppointments || (stats.pendingFollowups && !stats.pendingPayments ? stats.pendingFollowups : 0), label: 'Missed Appts' },
             secondary: [
-              { label: 'revenue', value: stats.pendingFollowups || 0, color: 'danger' },
-              { label: 'leads', value: stats.pendingFollowups || 0, color: 'warning' },
-              // { label: 'Priority', value: 'High', color: 'danger' }
+              { label: 'Urgent', value: stats.pendingAppointments || 0, color: 'danger' }
+            ]
+          }}
+        />
+      </div>
+
+      {/* 5. Payment Overdue Card */}
+      <div className="col-12 col-md-4 col-xl">
+        <MetricCard
+          title="Payment Overdue"
+          icon={IndianRupee}
+          color="danger"
+          onClick={() => handleNav('revenues', '/revenues')}
+          stats={{
+            primary: { value: stats.pendingPayments || 0, label: 'Missed EMIs' },
+            secondary: [
+              { label: 'Revenue', value: stats.pendingPayments || 0, color: 'danger' }
             ]
           }}
         />

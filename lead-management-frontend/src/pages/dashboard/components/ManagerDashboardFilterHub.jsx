@@ -21,6 +21,7 @@ import CallLogDashboard from './CallLogDashboard';
 import PaymentHistory from '../../../components/PaymentHistory';
 import TicketManager from '../../../components/TicketManager';
 import StatCard from '../../../components/StatCard';
+import { MetricCard } from './MetricCommandCenter';
 import { useAuth } from '../../../context/AuthContext';
 
 const ManagerDashboardFilterHub = ({
@@ -127,61 +128,76 @@ const ManagerDashboardFilterHub = ({
       );
     }
     switch (dataType) {
-      case 'Leads':
+      case 'Leads': {
+        const interestedCount = leads?.filter(l => ['INTERESTED', 'UNDER_REVIEW'].includes(l.status)).length || 0;
+        const convertedCount = leads?.filter(l => ['PAID', 'CONVERTED', 'SUCCESS', 'EMI'].includes(l.status)).length || 0;
+        const pendingCount = leads?.filter(l => ['FOLLOW_UP', 'NEW', 'IN_PROGRESS'].includes(l.status)).length || 0;
+        const lostCount = leads?.filter(l => ['LOST', 'NOT_INTERESTED', 'CLOSED', 'PAYMENT_FAILED'].includes(l.status)).length || 0;
+
         return (
-          <div className="row g-3 mb-4 animate-fade-in">
-            <div className="col-12 col-md-4">
-              <StatCard title="Total Leads" value={leads?.length || 0} sub="Global Dataset Overflow" icon={<Users />} color="primary" />
+          <div className="row g-3 mb-1 animate-fade-in">
+            <div className="col-12 col-md-4 col-xl">
+              <MetricCard title="Total Registry" icon={Users} color="primary" stats={{ primary: { value: leads?.length || 0, label: 'Global Nodes' } }} />
             </div>
-            <div className="col-12 col-md-4">
-              <StatCard title="Converted" value={stats?.convertedCount || 0} sub="Revenue Success Nodes" icon={<CheckCircle2 />} color="success" />
+            <div className="col-12 col-md-4 col-xl">
+              <MetricCard title="High Intent" icon={ShieldHalf} color="info" stats={{ primary: { value: Math.max(stats?.interestedCount || 0, interestedCount), label: 'Interested' } }} />
             </div>
-            <div className="col-12 col-md-4">
-              <StatCard title="Pending" value={stats?.pendingCount || 0} sub="In-Pipeline Objects" icon={<Clock />} color="warning" />
+            <div className="col-12 col-md-4 col-xl">
+              <MetricCard title="Success Nodes" icon={CheckCircle2} color="success" stats={{ primary: { value: Math.max(stats?.convertedCount || 0, convertedCount), label: 'Converted' } }} />
+            </div>
+            <div className="col-12 col-md-4 col-xl">
+              <MetricCard title="In-Pipeline" icon={Clock} color="warning" stats={{ primary: { value: Math.max(stats?.pendingCount || 0, pendingCount), label: 'Pending' } }} />
+            </div>
+            <div className="col-12 col-md-4 col-xl">
+              <MetricCard title="Terminated" icon={AlertCircle} color="danger" stats={{ primary: { value: Math.max(stats?.totalLostCount || 0, lostCount), label: 'Total Lost' } }} />
             </div>
           </div>
         );
+      }
       case 'Calls':
         return (
-          <div className="row g-3 mb-4 animate-fade-in">
+          <div className="row g-3 mb-1 animate-fade-in">
             <div className="col-12 col-md-6">
-              <StatCard title="Total Dials" value={callStats?.totalCalls || 0} sub="Nodal Connectivity" icon={<Phone />} color="primary" />
+              <MetricCard title="Nodal Connectivity" icon={Phone} color="primary" stats={{ primary: { value: callStats?.totalCalls || 0, label: 'Total Dials' } }} />
             </div>
             <div className="col-12 col-md-6">
-              <StatCard title="Connected Calls" value={callStats?.connectedCalls || 0} sub="Successful Connects" icon={<TrendingUp />} color="success" />
+              <MetricCard title="Successful Connects" icon={TrendingUp} color="success" stats={{ primary: { value: callStats?.connectedCalls || 0, label: 'Connected' } }} />
             </div>
           </div>
         );
       case 'Payments':
         return (
-          <div className="row g-3 mb-4 animate-fade-in">
-            <div className="col-12 col-md-6">
-              <StatCard title="Total Collection" value={`\u20B9${(stats?.monthlyRevenue || 0).toLocaleString()}`} sub="Revenue Channel" icon={<IndianRupee />} color="success" />
+          <div className="row g-3 mb-1 animate-fade-in">
+            <div className="col-12 col-md-4">
+              <MetricCard title="Revenue Channel" icon={IndianRupee} color="success" stats={{ primary: { value: `₹${(stats?.monthlyRevenue || 0).toLocaleString()}`, label: 'Collected' } }} />
             </div>
-            <div className="col-12 col-md-6">
-              <StatCard title="Achievement" value={`${stats?.targetAchievement?.toFixed(1) || 0}%`} sub="Target vs Achieved" icon={<BarChart3 />} color="warning" />
+            <div className="col-12 col-md-4">
+              <MetricCard title="Remaining Target" icon={TrendingUp} color="danger" stats={{ primary: { value: `₹${(stats?.expectedRevenue || 0).toLocaleString()}`, label: 'Revenue Gap' } }} />
+            </div>
+            <div className="col-12 col-md-4">
+              <MetricCard title="Target vs Achieved" icon={BarChart3} color="warning" stats={{ primary: { value: `${stats?.targetAchievement?.toFixed(1) || 0}%`, label: 'Achievement' } }} />
             </div>
           </div>
         );
       case 'Follow Ups':
         return (
-          <div className="row g-3 mb-4 animate-fade-in">
+          <div className="row g-3 mb-1 animate-fade-in">
             <div className="col-12 col-md-6">
-              <StatCard title="Pending Follow Ups" value={stats?.pendingFollowups || 0} sub="Awaiting Action" icon={<Clock />} color="danger" />
+              <MetricCard title="Awaiting Action" icon={Clock} color="danger" stats={{ primary: { value: stats?.pendingFollowups || 0, label: 'Pending' } }} />
             </div>
             <div className="col-12 col-md-6">
-              <StatCard title="Completed Today" value={stats?.todayFollowups || 0} sub="Daily Protocol Progress" icon={<CheckCircle2 />} color="success" />
+              <MetricCard title="Daily Progress" icon={CheckCircle2} color="success" stats={{ primary: { value: stats?.todayFollowups || 0, label: 'Completed Today' } }} />
             </div>
           </div>
         );
       case 'Raised Tickets':
         return (
-          <div className="row g-3 mb-4 animate-fade-in">
+          <div className="row g-3 mb-1 animate-fade-in">
             <div className="col-12 col-md-6">
-              <StatCard title="Open Tickets" value={stats?.openTickets || 0} sub="Pending Support" icon={<AlertCircle />} color="warning" />
+              <MetricCard title="Pending Support" icon={AlertCircle} color="warning" stats={{ primary: { value: stats?.openTickets || 0, label: 'Open Tickets' } }} />
             </div>
             <div className="col-12 col-md-6">
-              <StatCard title="Resolved" value={stats?.resolvedTickets || 0} sub="Closed Nodes" icon={<CheckCircle2 />} color="success" />
+              <MetricCard title="Closed Nodes" icon={CheckCircle2} color="success" stats={{ primary: { value: stats?.resolvedTickets || 0, label: 'Resolved' } }} />
             </div>
           </div>
         );
@@ -368,9 +384,11 @@ const ManagerDashboardFilterHub = ({
 
       {renderCards()}
 
-      <div className="animate-slide-up">
-        {renderTable()}
-      </div>
+      {renderTable() && (
+        <div className="animate-slide-up">
+          {renderTable()}
+        </div>
+      )}
     </div>
   );
 };

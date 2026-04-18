@@ -20,7 +20,9 @@ import {
   Upload,
   FileText,
   ShieldCheck,
-  UserPlus
+  UserPlus,
+  Clock,
+  AlertCircle
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import DashboardLayout from '../components/layout/DashboardLayout';
@@ -79,28 +81,46 @@ const AssociateDashboard = () => {
         authService.getProfile()
       ]);
       setStats(statsRes.data);
-      setLeads(Array.isArray(leadsRes.data) ? leadsRes.data : (leadsRes.data?.content || []));
+      const fetchedLeads = Array.isArray(leadsRes.data) ? leadsRes.data : (leadsRes.data?.content || []);
+      setLeads(fetchedLeads);
       setTrendData(trendRes.data);
       setCallStats(callStatsRes.data?.data || callStatsRes.data);
       setManager(profileRes.data?.supervisor || profileRes.data?.manager);
 
-      // Revenue Calculation Overdrive: If backend stats miss 'SUCCESS' or 'APPROVED' status,
-      // we recalculate from the payment ledger to ensure correctness.
+      // Revenue Calculation Overdrive: Ensuring correctness across backend gaps.
       try {
+        // 1. Calculate from Payment Ledger (most accurate for tracked payments)
         const historyRes = await paymentService.fetchHistory('ASSOCIATE', {
           startDate: filters.from,
           endDate: filters.to
         });
         const payments = historyRes.data || [];
-        const calculatedRevenue = payments
+        const paymentRevenue = payments
           .filter(p => ['PAID', 'SUCCESS', 'APPROVED'].includes(p.status))
           .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+
+        // 2. Calculate from Lead Pipeline (fallback for manual conversions or EMI placeholders)
+        // Note: For EMI leads, we count the full amount if no payments are logged, otherwise payments take priority.
+        const leadStatusRevenue = fetchedLeads
+          .filter(l => ['PAID', 'CONVERTED', 'SUCCESS', 'EMI'].includes(l.status))
+          .reduce((sum, l) => sum + (parseFloat(l.totalAmount || l.amount || 499) || 0), 0);
         
-        // Update stats with the more accurate calculated revenue if it's higher than the backend's reported value
-        // or if the backend value is potentially stale.
+        const calculatedRevenue = Math.max(paymentRevenue, leadStatusRevenue);
+        
+        const convertedCount = fetchedLeads.filter(l => ['PAID', 'CONVERTED', 'SUCCESS', 'EMI'].includes(l.status)).length;
+        const totalLeads = fetchedLeads.length;
+
         setStats(prev => ({
           ...prev,
-          totalRevenue: Math.max(prev?.totalRevenue || 0, calculatedRevenue)
+          total: totalLeads,
+          convertedCount,
+          totalRevenue: Math.max(prev?.totalRevenue || 0, calculatedRevenue),
+          pendingPaymentsAmount: statsRes.data.pendingPaymentsAmount,
+          forecastRevenue: statsRes.data.forecastRevenue,
+          pendingPayments: statsRes.data.pendingPayments,
+          pendingFollowUps: statsRes.data.pendingFollowUps,
+          followUpPool: statsRes.data.followUpPool,
+          todayFollowUps: statsRes.data.todayFollowUps
         }));
       } catch (err) {
         console.warn('Revenue recalculation failed, falling back to backend stats');
@@ -192,105 +212,55 @@ const AssociateDashboard = () => {
       <div className="animate-fade-in d-flex flex-column gap-4">
         {activeTab === 'overview' && (
           <div className="d-flex flex-column gap-4 animate-fade-in">
+             {/* GLOBAL RANGE FILTER */}
+             <FiltersBar 
+                filters={filters} 
+                onChange={setFilters} 
+                onSync={handleSync}
+                title="Identity Node Metrics"
+                role="ASSOCIATE"
+             />
+
              <ManagerProfile manager={manager} />
-             <div className="row g-4">
-                <div className="col-12 col-md-3">
-                  <StatCard title="Total Leads" value={stats?.total || 0} sub="Active Workspace" icon={<Users size={18} />} color="primary" />
+
+             {/* ROW 1: CRITICAL ACTIONS (4 CARDS) */}
+             <div className="row g-3 mb-3">
+                <div className="col-12 col-md-6 col-xl-3">
+                  <StatCard title="Today's Schedule" value={stats?.todayFollowUps || 0} icon={<Clock size={18} />} color="secondary" onClick={() => setActiveTab('tasks')} />
                 </div>
-                <div className="col-12 col-md-3">
-                  <StatCard title="Conversions" value={stats?.convertedCount || 0} sub="Successful Cycles" icon={<CheckCircle size={18} />} color="success" />
+                <div className="col-12 col-md-6 col-xl-3">
+                  <StatCard title="Payment Overdue" value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(stats?.pendingPaymentsAmount || 0)} icon={<IndianRupee size={18} />} color="danger" unit="" onClick={() => setActiveTab('payments')} />
                 </div>
-                <div className="col-12 col-md-3">
-                  <StatCard title="Lost Nodes" value={stats?.lostCount || 0} sub="Closed Files" icon={<Zap size={18} />} color="danger" />
+                <div className="col-12 col-md-6 col-xl-3">
+                  <StatCard title="Follow-up Overdue" value={stats?.pendingFollowUps || 0} icon={<AlertCircle size={18} />} color="warning" onClick={() => setActiveTab('leads')} />
                 </div>
-                <div className="col-12 col-md-3">
-                  <StatCard title="Your Revenue" value={`₹ ${stats?.totalRevenue?.toLocaleString() || 0}`} sub="Current Month" icon={<IndianRupee size={18} />} color="info" unit="INR" />
+                <div className="col-12 col-md-6 col-xl-3">
+                  <StatCard title="30-Day Revenue Forecast" value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(stats?.forecastRevenue || 0)} icon={<TrendingUp size={18} />} color="info" unit="" onClick={() => setActiveTab('payments')} />
                 </div>
              </div>
-                          <div className="row g-4 mb-4">
-                <div className="col-12 col-xl-8">
+
+             {/* ROW 2: PERFORMANCE TOTALS (3 CARDS) */}
+             <div className="row g-3 mb-4 justify-content-center">
+                <div className="col-12 col-md-4 col-xl-4">
+                  <StatCard title="Total Leads" value={stats?.total || 0} icon={<Users size={18} />} color="primary" onClick={() => setActiveTab('leads')} />
+                </div>
+                <div className="col-12 col-md-4 col-xl-4">
+                  <StatCard title="Total Converted" value={stats?.convertedCount || 0} icon={<CheckCircle size={18} />} color="success" onClick={() => setActiveTab('leads')} />
+                </div>
+                <div className="col-12 col-md-4 col-xl-4">
+                  <StatCard title="Total Revenue" value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(stats?.totalRevenue || 0)} icon={<Zap size={18} />} color="pink" unit="" onClick={() => setActiveTab('reports')} />
+                </div>
+             </div>
+
+             <div className="row g-4 mb-4">
+                <div className="col-12">
                    <div className="premium-card overflow-hidden shadow-lg border-0 h-100">
                       <div className="card-header bg-transparent p-4 border-0 border-bottom border-white border-opacity-5">
                          <h6 className="fw-black mb-0 text-main text-uppercase tracking-widest small">Conversion Velocity</h6>
                          <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>INDIVIDUAL TREND ANALYTICS</p>
                       </div>
-                      <div className="card-body p-4" style={{ height: '350px' }}>
+                      <div className="card-body p-4" style={{ height: '400px' }}>
                          <RevenueTrendChart data={trendData} theme={isDarkMode ? 'dark' : 'light'} />
-                      </div>
-                   </div>
-                </div>
-                
-                <div className="col-12 col-xl-4">
-                   <div className="d-flex flex-column gap-4 h-100">
-                      {/* Priority Hub */}
-                      <div className="premium-card p-4 border-0 shadow-lg bg-surface bg-opacity-20 d-flex flex-column gap-3">
-                         <div>
-                            <h6 className="fw-black mb-3 text-main small tracking-widest text-uppercase">Priority Hub</h6>
-                            <div className="d-flex flex-column gap-3">
-                               <div className="p-3 bg-dark bg-opacity-50 rounded-4 border border-white border-opacity-5 d-flex align-items-center gap-3">
-                                  <div className="p-2 bg-success bg-opacity-10 text-success rounded-3">
-                                     <TrendingUp size={18} />
-                                  </div>
-                                  <div>
-                                     <p className="mb-0 fw-black text-main small">Efficiency Matrix</p>
-                                     <p className="mb-0 text-muted" style={{fontSize: '9px'}}>TOP PERFORMANCE TRACKED</p>
-                                  </div>
-                               </div>
-                               <div className="p-3 bg-dark bg-opacity-50 rounded-4 border border-white border-opacity-5 d-flex align-items-center gap-3">
-                                  <div className="p-2 bg-warning bg-opacity-10 text-warning rounded-3">
-                                     <Phone size={18} />
-                                  </div>
-                                  <div className="flex-grow-1">
-                                     <p className="mb-0 fw-black text-main small">{leads?.length || 0} Active Leads</p>
-                                     <p className="mb-0 text-muted" style={{fontSize: '9px'}}>REQUIRES TRANSMISSION SCAN</p>
-                                  </div>
-                               </div>
-                            </div>
-                         </div>
-
-                         {/* Recent Followups Section */}
-                         <div className="mt-1 pt-3 border-top border-white border-opacity-5">
-                            <div className="d-flex justify-content-between align-items-center mb-3">
-                               <h6 className="fw-black text-primary text-uppercase tracking-widest mb-0" style={{ fontSize: '9px' }}>Recent Followups</h6>
-                               <div className="px-2 py-0.5 bg-primary bg-opacity-10 text-primary rounded-pill fw-black" style={{ fontSize: '8px' }}>REAL-TIME</div>
-                            </div>
-                            <div className="d-flex flex-column gap-2">
-                               {leads
-                                 ?.filter(l => l.nextFollowUpDate && new Date(l.nextFollowUpDate) >= new Date().setHours(0,0,0,0))
-                                 ?.sort((a, b) => new Date(a.nextFollowUpDate) - new Date(b.nextFollowUpDate))
-                                 ?.slice(0, 4)
-                                 ?.map((lead, i) => (
-                                   <div key={lead.id} className="p-2.5 bg-surface bg-opacity-30 rounded-3 d-flex justify-content-between align-items-center border border-white border-opacity-5 animate-slide-up" style={{ animationDelay: `${0.1 * (i+1)}s` }}>
-                                      <div className="overflow-hidden">
-                                         <p className="mb-0 fw-black text-main x-small text-truncate" style={{ fontSize: '11px' }}>{lead.name}</p>
-                                         <p className="mb-0 text-muted opacity-50 fw-bold" style={{ fontSize: '8px' }}>{lead.status}</p>
-                                      </div>
-                                      <div className="text-end flex-shrink-0 ms-2">
-                                         <div className="text-primary fw-black tabular-nums" style={{ fontSize: '10px' }}>{new Date(lead.nextFollowUpDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}</div>
-                                      </div>
-                                   </div>
-                                 ))
-                               }
-                               {(leads?.filter(l => l.nextFollowUpDate).length === 0) && (
-                                 <div className="text-center py-2 opacity-25">
-                                    <p className="mb-0 small fw-bold tracking-tighter" style={{ fontSize: '8px' }}>NO PENDING TRANSMISSIONS</p>
-                                 </div>
-                               )}
-                            </div>
-                         </div>
-                      </div>
-
-                      {/* Dynamic Resource Card */}
-                      <div className="premium-card p-4 border-0 shadow-lg flex-grow-1 position-relative overflow-hidden" 
-                           style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.1), transparent)' }}>
-                         <div className="position-absolute top-0 end-0 p-4 opacity-5">
-                            <ShieldCheck size={120} />
-                         </div>
-                         <h6 className="fw-black mb-2 text-main small tracking-widest text-uppercase">System Health</h6>
-                         <p className="text-muted small mb-4 opacity-75">Your operational node is fully synchronized.</p>
-                         <button className="ui-btn ui-btn-primary w-100 py-3 rounded-pill" onClick={() => setActiveTab('leads')}>
-                            Lead Terminal
-                         </button>
                       </div>
                    </div>
                 </div>
@@ -299,7 +269,15 @@ const AssociateDashboard = () => {
         )}
 
         {activeTab === 'leads' && (
-          <div className="premium-card overflow-hidden shadow-lg border-0">
+          <div className="d-flex flex-column gap-4 animate-fade-in">
+            <FiltersBar 
+              filters={filters} 
+              onChange={setFilters} 
+              onSync={handleSync}
+              title="Identity Node Metrics"
+              role="ASSOCIATE"
+            />
+            <div className="premium-card overflow-hidden shadow-lg border-0">
             <div className="card-header bg-transparent p-4 border-0 border-bottom border-white border-opacity-5 d-flex justify-content-between align-items-center">
               <div>
                 <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest small">Individual Lead Pool</h5>
@@ -329,6 +307,7 @@ const AssociateDashboard = () => {
                 showActions={true}
               />
             </div>
+          </div>
           </div>
         )}
 
@@ -384,7 +363,7 @@ const AssociateDashboard = () => {
               <h5 className="fw-black mb-1 text-main text-uppercase tracking-widest small">Financial Transmission Archive</h5>
               <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>VIEW PERSONAL CONVERSION AND REVENUE HISTORY</p>
             </div>
-            <PaymentHistory role="ASSOCIATE" />
+            <PaymentHistory role="ASSOCIATE" from={filters.from} to={filters.to} />
           </div>
         )}
 

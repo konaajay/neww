@@ -30,6 +30,18 @@ const UserEditModal = ({
   const safeTeamLeaders = Array.isArray(teamLeaders) ? teamLeaders : [];
   const safeOffices = Array.isArray(offices) ? offices : [];
 
+  const isAllSelected = safePermissions.length > 0 && (user.permissions || []).length === safePermissions.length;
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setUser(prev => ({ ...prev, permissions: [...safePermissions] }));
+      toast.info("All Shield Nodes synchronized", { autoClose: 800 });
+    } else {
+      setUser(prev => ({ ...prev, permissions: [] }));
+      toast.warning("All Shield Nodes deauthorized", { autoClose: 800 });
+    }
+  };
+
   const selectedShift = safeShifts.find(s => s?.id === user.shiftId);
 
   const handleGenerateOtp = async () => {
@@ -104,8 +116,7 @@ const UserEditModal = ({
           <form onSubmit={onSubmit}>
             <div className="modal-body p-3 p-md-4 custom-scroll" style={{ maxHeight: '65vh', overflowY: 'auto' }}>
               <div className="row g-3 g-md-4">
-                {/* Basic Identity */}
-                <div className="col-12 col-md-7">
+                <div className="col-12 col-md-4">
                   <label className="form-label small fw-black text-uppercase text-muted mb-1 tracking-widest" style={{ fontSize: '9px' }}>Full Name</label>
                   <input 
                     type="text" 
@@ -116,6 +127,16 @@ const UserEditModal = ({
                   />
                 </div>
                 <div className="col-12 col-md-5">
+                  <label className="form-label small fw-black text-uppercase text-muted mb-1 tracking-widest" style={{ fontSize: '9px' }}>Official Email (Identification)</label>
+                  <input 
+                    type="email" 
+                    className="form-control border border-white border-opacity-10 shadow-none bg-surface text-main fw-bold py-2 rounded-3" 
+                    value={user.email || ''}
+                    readOnly
+                    disabled
+                  />
+                </div>
+                <div className="col-12 col-md-3">
                   <label className="form-label small fw-black text-uppercase text-muted mb-1 tracking-widest" style={{ fontSize: '9px' }}>Role</label>
                   <select 
                     className="form-select border border-white border-opacity-10 shadow-none fw-bold bg-surface text-main py-2 rounded-3"
@@ -129,7 +150,7 @@ const UserEditModal = ({
                   </select>
                 </div>
 
-                <div className="col-12 col-md-4">
+                <div className="col-12 col-md-6">
                   <label className="form-label small fw-black text-uppercase text-muted mb-1 tracking-widest" style={{ fontSize: '9px' }}>Phone Number</label>
                   <input 
                     type="text" 
@@ -139,7 +160,7 @@ const UserEditModal = ({
                     required
                   />
                 </div>
-                <div className="col-12 col-md-4">
+                <div className="col-12 col-md-6">
                   <label className="form-label small fw-black text-uppercase text-muted mb-1 tracking-widest" style={{ fontSize: '9px' }}>Reports To</label>
                   <select 
                     className="form-select border border-white border-opacity-10 shadow-none fw-bold bg-surface text-main py-2 rounded-3"
@@ -159,137 +180,60 @@ const UserEditModal = ({
                     ))}
                   </select>
                 </div>
-                <div className="col-12 col-md-4">
-                   <label className="form-label small fw-black text-uppercase text-muted mb-1 tracking-widest" style={{ fontSize: '9px' }}>Office Terminal</label>
-                   <select 
-                     className="form-select border border-white border-opacity-10 shadow-none fw-bold bg-surface text-main py-2 rounded-3"
-                     value={user.officeId || ''}
-                     onChange={(e) => setUser(prev => ({...prev, officeId: e.target.value ? parseInt(e.target.value) : null}))}
-                   >
-                     <option value="">Select Location...</option>
-                     {safeOffices.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                   </select>
-                </div>
 
-                {/* Shift Info */}
-                <div className="col-12">
-                   <div className="p-3 rounded-4 border border-primary border-opacity-10 bg-primary bg-opacity-5">
-                      <div className="row g-2 g-md-3 align-items-end">
-                        <div className="col-12 col-md-6">
-                           <label className="form-label small fw-black text-uppercase text-primary mb-1 tracking-widest" style={{ fontSize: '9px' }}>Attendance Shift</label>
-                           <select 
-                             className="form-select border border-primary border-opacity-10 shadow-none fw-bold bg-surface text-main py-2 rounded-3"
-                             value={user.shiftId || ''}
-                             onChange={(e) => setUser(prev => ({...prev, shiftId: e.target.value ? parseInt(e.target.value) : null}))}
-                           >
-                             <option value="">Select Shift...</option>
-                             {safeShifts.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                           </select>
-                        </div>
-                        <div className="col-6 col-md-3">
-                           <label className="form-label small fw-black text-uppercase text-muted mb-1 tracking-widest" style={{ fontSize: '9px' }}>Start</label>
-                           <div className="form-control border-0 bg-surface text-main py-2 rounded-3 fw-black small text-center opacity-75">
-                              {selectedShift?.startTime?.substring(0, 5) || '--:--'}
-                           </div>
-                        </div>
-                        <div className="col-6 col-md-3">
-                           <label className="form-label small fw-black text-uppercase text-muted mb-1 tracking-widest" style={{ fontSize: '9px' }}>End</label>
-                           <div className="form-control border-0 bg-surface text-main py-2 rounded-3 fw-black small text-center opacity-75">
-                              {selectedShift?.endTime?.substring(0, 5) || '--:--'}
-                           </div>
-                        </div>
-                      </div>
-                   </div>
-                </div>
 
-                {/* Permissions & Security */}
-                <div className="col-12 col-md-6">
-                   <label className="form-label small fw-black text-uppercase text-muted d-block mb-2 tracking-widest" style={{ fontSize: '9px' }}>Permission Set Override</label>
-                   <div className="bg-surface p-3 rounded-4 shadow-inner overflow-auto text-main border border-white border-opacity-5 transition-all hover-border-primary custom-scroll" style={{ maxHeight: '160px' }}>
-                     <div className="d-flex flex-column gap-2">
+                {/* Permissions Node - Centered */}
+                 <div className="col-12 col-xl-10 mx-auto">
+                    <div className="d-flex align-items-center justify-content-between mb-2">
+                       <label className="form-label small fw-black text-uppercase text-muted mb-0 tracking-widest" style={{ fontSize: '9px' }}>Permission Set Override</label>
+                       <div className="form-check custom-check d-flex align-items-center">
+                         <input
+                           className="form-check-input shadow-none m-0"
+                           style={{ cursor: 'pointer', width: '1rem', height: '1rem' }}
+                           type="checkbox"
+                           id="edit-select-all-perms"
+                           checked={isAllSelected}
+                           onChange={handleSelectAll}
+                         />
+                         <label className="form-check-label small fw-black text-uppercase text-primary ms-2 cursor-pointer" htmlFor="edit-select-all-perms" style={{ fontSize: '8px', letterSpacing: '0.5px' }}>
+                           Select All
+                         </label>
+                       </div>
+                    </div>
+                    <div className="bg-surface p-4 rounded-4 shadow-inner overflow-auto text-main border border-white border-opacity-5 transition-all hover-border-primary custom-scroll" style={{ maxHeight: '200px', background: 'rgba(0,0,0,0.1)' }}>
+                     <div className="row g-3">
                        {safePermissions.map(perm => (
-                         <div key={perm} className="form-check custom-check d-flex align-items-center">
-                           <input 
-                              className="form-check-input shadow-none mt-0" 
-                              style={{ cursor: 'pointer' }}
-                              type="checkbox" 
-                              id={`edit-perm-${perm}`}
-                              checked={(user.permissions || []).includes(perm)}
-                              onChange={() => {
-                                setUser(prev => {
-                                  const currentPerms = prev.permissions || [];
-                                  const perms = currentPerms.includes(perm)
-                                    ? currentPerms.filter(p => p !== perm)
-                                    : [...currentPerms, perm];
-                                  return {...prev, permissions: perms};
-                                });
-                                toast.info(`Shield Node [${perm}] updated`, { autoClose: 800 });
-                              }}
-                           />
-                           <label className="form-check-label small fw-bold opacity-75 ms-2 cursor-pointer mb-0" htmlFor={`edit-perm-${perm}`}>
-                              {perm.replace(/_/g, ' ')}
-                           </label>
+                         <div key={perm} className="col-12 col-md-6 col-lg-4">
+                           <div className="form-check custom-check d-flex align-items-center py-2 px-3 rounded-3 transition-all hover-translate-x" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                             <input 
+                                 className="form-check-input shadow-none mt-0" 
+                                 style={{ cursor: 'pointer', width: '1.2rem', height: '1.2rem' }}
+                                 type="checkbox" 
+                                 id={`edit-perm-${perm}`}
+                                 checked={(user.permissions || []).includes(perm)}
+                                 onChange={() => {
+                                   setUser(prev => {
+                                     const currentPerms = prev.permissions || [];
+                                     const perms = currentPerms.includes(perm)
+                                       ? currentPerms.filter(p => p !== perm)
+                                       : [...currentPerms, perm];
+                                     return {...prev, permissions: perms};
+                                   });
+                                   toast.info(`Shield Node [${perm}] updated`, { autoClose: 800 });
+                                 }}
+                             />
+                             <label className="form-check-label small fw-black opacity-75 ms-3 cursor-pointer mb-0 text-uppercase tracking-widest" style={{ fontSize: '10px' }} htmlFor={`edit-perm-${perm}`}>
+                                 {perm.replace(/_/g, ' ')}
+                             </label>
+                           </div>
                          </div>
                        ))}
                      </div>
                    </div>
-                </div>
-
-                <div className="col-12 col-md-6">
-                   <label className="form-label small fw-black text-uppercase text-warning d-block mb-2 tracking-widest" style={{ fontSize: '9px' }}>Security Terminal</label>
-                   <div className="p-3 rounded-4 border border-warning border-opacity-10 bg-warning bg-opacity-5 h-100" style={{ minHeight: '160px' }}>
-                      <div className="d-flex align-items-center justify-content-between mb-2">
-                        <div className="d-flex align-items-center gap-2">
-                           <Key size={14} className="text-warning" />
-                           <span className="small fw-black text-uppercase text-warning" style={{ fontSize: '9px' }}>Access Control</span>
-                        </div>
-                        <button 
-                          type="button" 
-                          onClick={handleGenerateOtp}
-                          disabled={isGenerating}
-                          className="btn btn-link p-0 text-warning small fw-black text-uppercase text-decoration-none transition-all hover-white" 
-                          style={{ fontSize: '9px' }}
-                        >
-                          {isGenerating ? <RefreshCw className="animate-spin" size={12} /> : 'Sync Passkey'}
-                        </button>
-                      </div>
-
-                      {showOtpPanel ? (
-                        <div className="animate-fade-in bg-surface bg-opacity-50 p-3 rounded-3 border border-white border-opacity-5">
-                           <div className="p-2 mb-2 bg-warning bg-opacity-10 text-warning rounded-2 text-center border border-warning border-opacity-20">
-                              <span className="fw-black font-monospace tracking-widest small">{resetData.serverOtp}</span>
-                           </div>
-                           <div className="d-flex flex-column gap-2 mb-2">
-                              <input 
-                                type="text" 
-                                placeholder="OTP"
-                                className="form-control form-control-sm bg-surface border-0 fw-black text-warning text-center py-2"
-                                value={resetData.otp}
-                                onChange={(e) => setResetData(prev => ({...prev, otp: e.target.value}))}
-                              />
-                              <input 
-                                type="password" 
-                                placeholder="New Passkey"
-                                className="form-control form-control-sm bg-surface border-0 fw-black text-warning py-2"
-                                value={resetData.newPassword}
-                                onChange={(e) => setResetData(prev => ({...prev, newPassword: e.target.value}))}
-                              />
-                           </div>
-                           <button 
-                             type="button" 
-                             onClick={handleVerifyAndReset}
-                             className="btn btn-warning btn-sm w-100 fw-black text-uppercase shadow-sm py-2"
-                           >
-                             Authorize Reset
-                           </button>
-                        </div>
-                      ) : (
-                        <div className="d-flex flex-column align-items-center justify-content-center text-center opacity-50 py-4 h-100">
-                           <ShieldCheck size={24} className="mb-2 text-warning opacity-25" />
-                           <small className="fw-bold opacity-50" style={{ fontSize: '8px', letterSpacing: '1px' }}>SECURE HANDSHAKE PENDING</small>
-                        </div>
-                      )}
-                   </div>
+                   <style>{`
+                     .hover-translate-x { transition: transform 0.3s ease; }
+                     .hover-translate-x:hover { transform: translateX(5px); background: rgba(var(--bs-primary-rgb), 0.05) !important; }
+                   `}</style>
                 </div>
               </div>
             </div>

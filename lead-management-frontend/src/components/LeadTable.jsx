@@ -5,7 +5,6 @@ import { Button, Card, Input, Table } from './common/Components';
 import RejectionModal from './RejectionModal';
 import { toast } from 'react-toastify';
 import CallOutcomeModal from './CallOutcomeModal';
-import GeneratePaymentLinkModal from './GeneratePaymentLinkModal';
 import LeadEditModal from './LeadEditModal';
 import associateService from '../services/associateService';
 import { useAuth } from '../context/AuthContext';
@@ -27,42 +26,13 @@ const LeadTable = ({
   const { isDarkMode } = useTheme();
   const { activeCall, startCall: logActiveCall } = useAuth();
   const [selectedOutcomeLead, setSelectedOutcomeLead] = useState(null);
-  const [selectedLinkLead, setSelectedLinkLead] = useState(null);
   const [selectedEditLead, setSelectedEditLead] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isStartingCall, setIsStartingCall] = useState(false);
 
-  const handleStartCall = async (lead) => {
-    if (activeCall) {
-      toast.warning('Another interaction is currently active. Finish it first.');
-      return;
-    }
-
-    setIsStartingCall(true);
-    try {
-      const res = await associateService.startCall({
-        leadId: lead.id,
-        phoneNumber: lead.mobile
-      });
-      
-      const sessionData = {
-        callId: res.data.data.id,
-        leadId: lead.id,
-        leadName: lead.name,
-        phoneNumber: lead.mobile,
-        startTime: res.data.data.startTime
-      };
-      
-      logActiveCall(sessionData);
-      toast.success('Interaction sequence initiated');
-      
-      // Since the ribbon is removed, open the outcome modal immediately
-      setSelectedOutcomeLead(lead);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to initiate interaction');
-    } finally {
-      setIsStartingCall(false);
-    }
+  const handleStartCall = (lead) => {
+    // Immediate modal opening without background call registration
+    setSelectedOutcomeLead(lead);
   };
 
   const isLocked = (status) => ['PAID', 'CONVERTED', 'EMI', 'SUCCESSFUL'].includes(status);
@@ -163,15 +133,7 @@ const LeadTable = ({
                     >
                       <Phone size={15} />
                     </button>
-                    {(role === 'ADMIN' || (!isLocked(lead.status) && !lead.paymentOrderId)) && (
-                      <button 
-                        className="p-2 border-0 bg-transparent text-success hover-scale transition-smooth rounded-circle hover:bg-success hover:bg-opacity-10" 
-                        title="Generate Payment Link"
-                        onClick={() => setSelectedLinkLead(lead)}
-                      >
-                        <Zap size={15} />
-                      </button>
-                    )}
+
                     <button 
                       className="p-2 border-0 bg-transparent text-warning hover-scale transition-smooth rounded-circle hover:bg-warning hover:bg-opacity-10" 
                       title="Edit Lead Details"
@@ -214,18 +176,7 @@ const LeadTable = ({
         />
       )}
 
-      {selectedLinkLead && (
-        <GeneratePaymentLinkModal 
-          show={!!selectedLinkLead}
-          onClose={() => setSelectedLinkLead(null)}
-          lead={selectedLinkLead}
-          role={role}
-          onConfirm={(leadId, data) => {
-            onSendPaymentLink(leadId, data);
-            setSelectedLinkLead(null);
-          }}
-        />
-      )}
+
       {selectedEditLead && (
         <LeadEditModal 
           isOpen={!!selectedEditLead}

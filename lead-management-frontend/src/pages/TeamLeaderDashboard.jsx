@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Card, Input, Table } from '../components/common/Components';
-import { LayoutDashboard, Users, TrendingUp, Zap, AlertCircle, Clock, LogOut, Sun, Moon, Menu, BarChart3, BarChart2, IndianRupee, Phone, Upload, CheckCircle, FileText, UserPlus } from 'lucide-react';
+import { LayoutDashboard, Users, TrendingUp, Zap, AlertCircle, Clock, LogOut, Sun, Moon, Menu, BarChart3, BarChart2, IndianRupee, Phone, Upload, CheckCircle, FileText, UserPlus, ShieldHalf, ChevronDown, ListTodo, CalendarCheck } from 'lucide-react';
 import tlService from '../services/tlService';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -24,6 +24,8 @@ import CallLogDashboard from './dashboard/components/CallLogDashboard';
 import ManagerProfile from './dashboard/components/ManagerProfile';
 import authService from '../services/authService';
 import LeadIngestionModal from './dashboard/components/LeadIngestionModal';
+import LeadStatusPieChart from './dashboard/components/LeadStatusPieChart';
+import paymentService from '../services/paymentService';
 
 const TeamLeaderDashboard = () => {
   const { user, logout } = useAuth();
@@ -31,15 +33,18 @@ const TeamLeaderDashboard = () => {
   const theme = isDarkMode ? 'dark' : 'light';
 
   const [stats, setStats] = useState(null);
+  const [personalStats, setPersonalStats] = useState(null);
   const [manager, setManager] = useState(null);
   const [performance, setPerformance] = useState([]);
   const [associates, setAssociates] = useState([]);
   const [leads, setLeads] = useState([]);
   const [trendData, setTrendData] = useState([]);
+  const [personalTrendData, setPersonalTrendData] = useState([]);
   const [callStats, setCallStats] = useState(null);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(localStorage.getItem('tl_activeTab') || 'overview');
+  const [myDashboardSubTab, setMyDashboardSubTab] = useState('dashboard');
 
   const [selectedAssignees, setSelectedAssignees] = useState([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -64,22 +69,28 @@ const TeamLeaderDashboard = () => {
     try {
       const statsFilters = { start: filters.from, end: filters.to, userId: filters.userId };
       const trendFilters = { from: filters.from.split('T')[0], to: filters.to.split('T')[0], userId: filters.userId };
+      const personalTrendFilters = { from: filters.from.split('T')[0], to: filters.to.split('T')[0], userId: user.id };
 
-      const [leadsRes, statsRes, perfRes, subordinatesRes, trendRes, callStatsRes, summaryRes, profileRes] = await Promise.all([
-        tlService.fetchMyLeads(),
+      const [leadsRes, statsRes, personalStatsRes, perfRes, subordinatesRes, trendRes, personalTrendRes, callStatsRes, summaryRes, profileRes] = await Promise.all([
+        tlService.fetchTeamLeads({ startDate: filters.from, endDate: filters.to, userId: filters.userId }),
         tlService.fetchDashboardStats(statsFilters),
+        tlService.fetchPersonalStats({ ...statsFilters, userId: user.id }),
         tlService.fetchMemberPerformance(statsFilters),
         tlService.fetchSubordinates(),
         tlService.fetchTrendData(trendFilters),
-        tlService.fetchGlobalCallStats({ date: filters.from.split('T')[0] }),
-        tlService.fetchDashboardSummary({ from: filters.from.split('T')[0], to: filters.to.split('T')[0] }),
+        tlService.fetchTrendData(personalTrendFilters),
+        tlService.fetchGlobalCallStats({ date: filters.from.split('T')[0], userId: filters.userId }),
+        tlService.fetchDashboardSummary({ from: filters.from.split('T')[0], to: filters.to.split('T')[0], userId: filters.userId }),
         authService.getProfile()
       ]);
-      setLeads(Array.isArray(leadsRes.data) ? leadsRes.data : (leadsRes.data?.content || []));
+      const fetchedLeads = Array.isArray(leadsRes.data) ? leadsRes.data : (leadsRes.data?.content || []);
+      setLeads(fetchedLeads);
       setStats(statsRes.data);
+      setPersonalStats(personalStatsRes.data);
       setPerformance(perfRes.data);
       setAssociates(subordinatesRes.data);
       setTrendData(trendRes.data);
+      setPersonalTrendData(personalTrendRes.data);
       setCallStats(callStatsRes.data?.data || callStatsRes.data);
       setSummary(summaryRes.data);
       setManager(profileRes.data?.supervisor || profileRes.data?.manager);
@@ -95,11 +106,28 @@ const TeamLeaderDashboard = () => {
         const calculatedRevenue = payments
           .filter(p => ['PAID', 'SUCCESS', 'APPROVED'].includes(p.status))
           .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-        
+
+        // 2. Calculate local metrics for My Dashboard accuracy
+        const calculatedPersonalRevenue = Math.max(calculatedRevenue, personalStatsRes.data?.totalRevenue || 0);
+        const personalTotalLeads = fetchedLeads.length;
+        const personalConvertedCount = fetchedLeads.filter(l => ['PAID', 'CONVERTED', 'SUCCESS', 'EMI'].includes(l.status)).length;
+
+        setPersonalStats(prev => ({
+          ...prev,
+          total: personalTotalLeads,
+          convertedCount: personalConvertedCount,
+          totalRevenue: calculatedPersonalRevenue,
+          pendingPaymentsAmount: personalStatsRes.data.pendingPaymentsAmount,
+          forecastRevenue: personalStatsRes.data.forecastRevenue,
+          pendingPayments: personalStatsRes.data.pendingPayments,
+          pendingFollowUps: personalStatsRes.data.pendingFollowUps,
+          todayFollowUps: personalStatsRes.data.todayFollowUps
+        }));
+
         setStats(prev => ({
           ...prev,
-          totalPayments: Math.max(prev?.totalPayments || 0, calculatedRevenue),
-          totalRevenue: Math.max(prev?.totalRevenue || 0, calculatedRevenue)
+          totalRevenue: Math.max(prev?.totalRevenue || 0, calculatedRevenue),
+          totalPayments: Math.max(prev?.totalRevenue || 0, calculatedRevenue)
         }));
         setSummary(prev => ({
           ...prev,
@@ -219,13 +247,211 @@ const TeamLeaderDashboard = () => {
                 <h5 className="fw-black text-main mb-1 text-uppercase tracking-widest small">Personal Command Center</h5>
                 <p className="text-muted small fw-bold opacity-50 mb-0" style={{ fontSize: '9px' }}>VIEWING INDIVIDUAL OPERATIONAL PERFORMANCE</p>
               </div>
+
+              {/* Personal Command Selector (Dropdown) */}
+              <div className="d-flex align-items-center gap-3 mb-2 px-1">
+                <div className="position-relative">
+                   <select 
+                      className="form-select bg-surface border border-white border-opacity-10 text-main fw-black text-uppercase tracking-widest rounded-pill px-4 py-2 shadow-sm appearance-none"
+                      style={{ fontSize: '9px', minWidth: '220px', cursor: 'pointer', outline: 'none' }}
+                      value={myDashboardSubTab}
+                      onChange={(e) => setMyDashboardSubTab(e.target.value)}
+                   >
+                      <option value="dashboard">📊 PERSONAL OVERVIEW</option>
+                      <option value="leads">👥 MY INDIVIDUAL LEADS</option>
+                      <option value="tasks">📋 MY PENDING TASKS</option>
+                      <option value="attendance">📆 MY ATTENDANCE LOGS</option>
+                      <option value="revenue">💰 MY REVENUE TRANSACTION</option>
+                      <option value="calls">📞 MY TELEPHONY LOGS</option>
+                      <option value="reports">📈 MY PERFORMANCE TRENDS</option>
+                   </select>
+                   <div className="position-absolute end-0 top-50 translate-middle-y me-3 pointer-events-none opacity-50">
+                      <ChevronDown size={12} />
+                   </div>
+                </div>
+                
+                <div className="d-flex align-items-center bg-surface border border-white border-opacity-10 rounded-pill shadow-sm px-3 py-1.5 gap-2 ms-auto">
+                    <Clock size={12} className="text-primary opacity-50" />
+                    <input 
+                        type="date" 
+                        className="bg-transparent border-0 shadow-none text-main fw-black p-0" 
+                        value={filters.from.split('T')[0]} 
+                        onChange={e => setFilters({...filters, from: e.target.value + 'T00:00:00'})}
+                        style={{ fontSize: '10px', outline: 'none' }}
+                    />
+                    <span className="text-muted fw-bold small opacity-25">TO</span>
+                    <input 
+                        type="date" 
+                        className="bg-transparent border-0 shadow-none text-main fw-black p-0" 
+                        value={filters.to.split('T')[0]} 
+                        onChange={e => setFilters({...filters, to: e.target.value + 'T23:59:59'})}
+                        style={{ fontSize: '10px', outline: 'none' }}
+                    />
+                </div>
+              </div>
+
               <ManagerProfile manager={manager} />
-              <MetricCommandCenter
-                stats={{ ...summary, performance: performance.filter(p => p.userId === user.id) }}
-                role={user.role}
-                filters={{ ...filters, userId: user.id }}
-                onNavigate={(tab) => setActiveTab(tab === 'revenue' ? 'payments' : tab)}
-              />
+              
+              {myDashboardSubTab === 'dashboard' && (
+                <>
+                  {/* ROW 1: CRITICAL ACTIONS (4 CARDS) */}
+                  <div className="row g-3 mb-3">
+                    <div className="col-12 col-md-6 col-xl-3">
+                      <StatCard 
+                        title="Today's Schedule" 
+                        value={personalStats?.todayFollowUps || 0} 
+                        icon={<Clock size={18} />} 
+                        color="secondary" 
+                        onClick={() => setMyDashboardSubTab('tasks')} 
+                      />
+                    </div>
+                    <div className="col-12 col-md-6 col-xl-3">
+                      <StatCard 
+                        title="Payment Overdue" 
+                        value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(personalStats?.pendingPaymentsAmount || 0)} 
+                        icon={<IndianRupee size={18} />} 
+                        color="danger" 
+                        unit="" 
+                        onClick={() => setMyDashboardSubTab('revenue')} 
+                      />
+                    </div>
+                    <div className="col-12 col-md-6 col-xl-3">
+                      <StatCard 
+                        title="Follow-up Overdue" 
+                        value={personalStats?.pendingFollowUps || 0} 
+                        icon={<AlertCircle size={18} />} 
+                        color="warning" 
+                        onClick={() => setMyDashboardSubTab('leads')} 
+                      />
+                    </div>
+                    <div className="col-12 col-md-6 col-xl-3">
+                      <StatCard 
+                        title="30-Day Revenue Forecast" 
+                        value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(personalStats?.forecastRevenue || 0)} 
+                        icon={<TrendingUp size={18} />} 
+                        color="info" 
+                        unit="" 
+                        onClick={() => setMyDashboardSubTab('revenue')} 
+                      />
+                    </div>
+                  </div>
+
+                  {/* ROW 2: PERFORMANCE TOTALS (3 CARDS) */}
+                  <div className="row g-3 mb-4 justify-content-center">
+                    <div className="col-12 col-md-4 col-xl-4">
+                      <StatCard 
+                        title="Total Leads" 
+                        value={personalStats?.total || 0} 
+                        icon={<Users size={18} />} 
+                        color="primary" 
+                        onClick={() => setMyDashboardSubTab('leads')} 
+                      />
+                    </div>
+                    <div className="col-12 col-md-4 col-xl-4">
+                      <StatCard 
+                        title="Total Converted" 
+                        value={personalStats?.convertedCount || 0} 
+                        icon={<CheckCircle size={18} />} 
+                        color="success" 
+                        onClick={() => setMyDashboardSubTab('leads')} 
+                      />
+                    </div>
+                    <div className="col-12 col-md-4 col-xl-4">
+                      <StatCard 
+                        title="Total Revenue" 
+                        value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(personalStats?.totalRevenue || 0)} 
+                        icon={<Zap size={18} />} 
+                        color="pink" 
+                        unit="" 
+                        onClick={() => setMyDashboardSubTab('reports')} 
+                      />
+                    </div>
+                  </div>
+
+                  {/* CONVERSION VELOCITY TREND (PERSONAL) */}
+                  <div className="row g-4 mb-4">
+                    <div className="col-12">
+                      <div className="premium-card overflow-hidden shadow-lg border-0 h-100">
+                        <div className="card-header bg-transparent p-4 border-0 border-bottom border-white border-opacity-5">
+                          <h6 className="fw-black mb-0 text-main text-uppercase tracking-widest small">My Conversion Velocity</h6>
+                          <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>INDIVIDUAL TREND ANALYTICS</p>
+                        </div>
+                        <div className="card-body p-4" style={{ height: '400px' }}>
+                          <RevenueTrendChart data={personalTrendData} theme={isDarkMode ? 'dark' : 'light'} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {myDashboardSubTab === 'leads' && (
+                <div className="premium-card border-0 shadow-lg overflow-hidden animate-fade-in">
+                  <div className="card-header bg-transparent p-4 border-bottom border-white border-opacity-5">
+                      <h6 className="fw-black mb-0 text-main text-uppercase tracking-widest small">My Personal Leads</h6>
+                      <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>INDIVIDUAL PIPELINE MANAGEMENT</p>
+                  </div>
+                  <LeadList 
+                    leads={leads.filter(l => l.assignedToId === user.id)}
+                    role={user.role}
+                    onUpdateStatus={handleUpdateStatus}
+                    onRecordCallOutcome={handleRecordCallOutcome}
+                    onSendPaymentLink={handleSendPaymentLink}
+                    onViewInvoice={() => {}} 
+                    onUpdateLead={handleUpdateLead}
+                    onEdit={(lead) => {
+                      setEditingLead(lead);
+                      setActiveTab('edit-lead');
+                    }}
+                  />
+                </div>
+              )}
+
+              {myDashboardSubTab === 'tasks' && (
+                <div className="animate-fade-in">
+                  <TaskBoard 
+                    leads={leads.filter(l => l.assignedToId === user.id)}
+                    theme={theme}
+                    onUpdateStatus={handleUpdateStatus}
+                    onSendPaymentLink={handleSendPaymentLink}
+                    fetchLeads={fetchData}
+                    userId={user.id}
+                    hideFilters={true}
+                  />
+                </div>
+              )}
+
+              {myDashboardSubTab === 'attendance' && (
+                <div className="animate-fade-in">
+                  <AttendanceDashboard role="TEAM_LEADER" userId={user.id} />
+                </div>
+              )}
+
+              {myDashboardSubTab === 'revenue' && (
+                <div className="animate-fade-in">
+                   <PaymentHistory role="TEAM_LEADER" userId={user.id} from={filters.from} to={filters.to} hideHeader={true} />
+                </div>
+              )}
+
+              {myDashboardSubTab === 'calls' && (
+                <div className="animate-fade-in">
+                   <CallLogDashboard userId={user.id} hideHeader={true} />
+                </div>
+              )}
+
+              {myDashboardSubTab === 'reports' && (
+                <div className="animate-fade-in d-flex flex-column gap-4">
+                    <div className="premium-card overflow-hidden shadow-lg border-0 h-100">
+                      <div className="card-header bg-transparent p-4 border-0 border-bottom border-white border-opacity-5">
+                          <h6 className="fw-black mb-0 text-main text-uppercase tracking-widest small">My Performance Analytics</h6>
+                          <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>INDIVIDUAL CONVERSION TRENDS</p>
+                      </div>
+                      <div className="card-body p-4" style={{ height: '400px' }}>
+                          <RevenueTrendChart data={personalTrendData} theme={theme} />
+                      </div>
+                    </div>
+                </div>
+              )}
             </div>
           )}
           {/* Operational Scope Filters */}
@@ -291,29 +517,35 @@ const TeamLeaderDashboard = () => {
                 </div>
 
                 <div className="col-12 col-xl-4">
-                  <div className="row g-3 h-100">
-                    <div className="col-12 col-sm-6 col-xl-12">
-                      <StatCard title="Team Pipeline" value={stats?.leadStats?.TOTAL || 0} sub="Global Managed Records" icon={<Users />} color="primary" />
+                  <div className="premium-card p-0 overflow-hidden shadow-lg border-0 h-100">
+                    <div className="card-header bg-transparent p-4 border-0 d-flex justify-content-between align-items-center">
+                      <div>
+                        <h6 className="fw-black mb-0 text-main small tracking-widest text-uppercase">Squad Pipeline Distribution</h6>
+                        <small className="text-muted fw-bold opacity-50" style={{ fontSize: '8px' }}>STATUS SEGMENTATION</small>
+                      </div>
+                      <div className="p-2 bg-success bg-opacity-10 text-success rounded-circle">
+                         <TrendingUp size={16} />
+                      </div>
                     </div>
-                    <div className="col-12 col-sm-6 col-xl-12">
-                      <StatCard title="Total Success" value={stats?.convertedToday || 0} sub="Converted Nodes Today" icon={<CheckCircle />} color="success" />
+                    <div className="card-body p-0" style={{ height: '350px' }}>
+                      <LeadStatusPieChart leads={leads} isDarkMode={isDarkMode} />
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="row g-3">
+              <div className="row g-4 animate-fade-in">
                 <div className="col-12 col-md-3">
-                  <StatCard title="Interested" value={stats?.interestedToday || 0} sub="Hot Opportunities" icon={<Zap />} color="warning" />
+                  <StatCard title="Interested" value={stats?.interestedCount || 0} sub="Hot Opportunities" icon={<Zap />} color="warning" />
                 </div>
                 <div className="col-12 col-md-3">
-                  <StatCard title="Lost (Today)" value={stats?.lostToday || 0} sub="Off-Pitch Segments" icon={<Phone />} color="danger" />
+                  <StatCard title="Total Lead Lost" value={stats?.totalLostCount || 0} sub="Historical Attrition" icon={<Phone />} color="danger" />
                 </div>
                 <div className="col-12 col-md-3">
-                  <StatCard title="Revenue (P)" value={stats?.pendingRevenue || 0} sub="₹ Projected Margin" icon={<IndianRupee />} color="info" />
+                  <StatCard title="Team Nodes" value={stats?.totalUsers || 0} sub="Active Squad Size" icon={<Users />} color="info" />
                 </div>
                 <div className="col-12 col-md-3">
-                  <StatCard title="Revenue (C)" value={stats?.totalPayments || 0} sub="₹ Confirmed Capital" icon={<IndianRupee />} color="success" />
+                  <StatCard title="Revenue (C)" value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(stats?.totalRevenue || 0)} sub="₹ Confirmed Capital" icon={<IndianRupee />} color="success" unit="" />
                 </div>
               </div>
 
@@ -376,17 +608,8 @@ const TeamLeaderDashboard = () => {
               <div className="row g-3">
                 <div className="col-12 col-md-3">
                   <StatCard
-                    title="Call Back"
-                    value={summary?.callbackCount || 0}
-                    sub="Awaiting Registry Response"
-                    icon={<Phone size={18} />}
-                    color="warning"
-                  />
-                </div>
-                <div className="col-12 col-md-3">
-                  <StatCard
                     title="Converted"
-                    value={summary?.convertedCount || stats?.convertedToday || 0}
+                    value={leads.filter(l => ['PAID', 'CONVERTED', 'SUCCESS', 'EMI'].includes(l.status)).length}
                     sub="Successful Transmissions"
                     icon={<CheckCircle size={18} />}
                     color="success"
@@ -394,8 +617,17 @@ const TeamLeaderDashboard = () => {
                 </div>
                 <div className="col-12 col-md-3">
                   <StatCard
+                    title="Interested"
+                    value={leads.filter(l => l.status === 'INTERESTED' || l.status === 'UNDER_REVIEW').length}
+                    sub="Hot Opportunities"
+                    icon={<Zap size={18} />}
+                    color="warning"
+                  />
+                </div>
+                <div className="col-12 col-md-3">
+                  <StatCard
                     title="Follow-up"
-                    value={summary?.todayFollowups || 0}
+                    value={leads.filter(l => l.status === 'FOLLOW_UP').length}
                     sub="Active Operational Nodes"
                     icon={<Clock size={18} />}
                     color="info"
@@ -404,7 +636,7 @@ const TeamLeaderDashboard = () => {
                 <div className="col-12 col-md-3">
                   <StatCard
                     title="Lost"
-                    value={stats?.lostToday || summary?.lostCount || 0}
+                    value={leads.filter(l => ['LOST', 'NOT_INTERESTED', 'PAYMENT_FAILED'].includes(l.status)).length}
                     sub="Off-Pitch Terminations"
                     icon={<AlertCircle size={18} />}
                     color="danger"
@@ -553,7 +785,7 @@ const TeamLeaderDashboard = () => {
 
           {activeTab === 'payments' && (
             <div className="d-flex flex-column gap-4">
-              <PaymentHistory role="TEAM_LEADER" />
+              <PaymentHistory role="TEAM_LEADER" from={filters.from} to={filters.to} />
             </div>
           )}
 
@@ -563,7 +795,11 @@ const TeamLeaderDashboard = () => {
 
           {activeTab === 'call-logs' && (
             <div className="d-flex flex-column gap-4">
-              <CallLogDashboard />
+              <CallLogDashboard 
+                userId={filters.userId} 
+                from={filters.from} 
+                to={filters.to}
+              />
             </div>
           )}
 

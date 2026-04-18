@@ -4,7 +4,7 @@ import adminService from '../services/adminService';
 import managerService from '../services/managerService';
 import tlService from '../services/tlService';
 import { toast } from 'react-toastify';
-import { IndianRupee, CheckCircle, Scissors, PlusCircle, Clock, FileText } from 'lucide-react';
+import { IndianRupee, CheckCircle, Scissors, PlusCircle, Clock, FileText, AlertCircle } from 'lucide-react';
 import SplitInstallmentModal from './SplitInstallmentModal';
 import RecordPaymentModal from './RecordPaymentModal';
 import ManualPaymentModal from './ManualPaymentModal';
@@ -46,7 +46,7 @@ const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: 
   const handleViewInvoice = async (payment) => {
     try {
       toast.info('Retrieving official receipt...');
-      const res = await paymentService.generateInvoice(payment.paymentGatewayId);
+      const res = await paymentService.fetchInvoiceByLead(payment.leadId);
       setSelectedInvoiceData(res.data);
       setIsInvoiceModalOpen(true);
     } catch (err) {
@@ -89,7 +89,7 @@ const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: 
   const handleManualClear = async (paymentId, data) => {
     try {
       await paymentService.updatePaymentStatus(paymentId, data);
-      toast.success('Transaction neutralized successfully');
+      toast.success('Payment recorded successfully');
       setSelectedClearPayment(null);
       fetchHistory();
     } catch (err) {
@@ -298,6 +298,10 @@ const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: 
                 const isPending = payment.status === 'PENDING';
                 const isPaid = payment.status === 'PAID' || payment.status === 'SUCCESS' || payment.status === 'APPROVED';
                 
+                const now = new Date();
+                const targetDate = new Date(payment.dueDate || payment.createdAt);
+                const isOverdueByDate = isPending && targetDate < now;
+                
                 const dueDate = payment.dueDate
                   ? new Date(payment.dueDate).toLocaleDateString('en-CA')
                   : new Date(payment.createdAt).toLocaleDateString('en-CA');
@@ -314,19 +318,21 @@ const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: 
                       <span className="fw-black text-main">₹{payment.amount.toLocaleString()}</span>
                     </td>
                     <td className="py-4">
-                      <span className={`fw-black small ${isOverdue ? 'text-danger' : 'text-muted opacity-75'}`}>{dueDate}</span>
+                      <span className={`fw-black small ${isOverdue || isOverdueByDate ? 'text-danger' : 'text-muted opacity-75'}`}>{dueDate}</span>
                     </td>
                     <td className="py-4">
                        {isPaid && (
                          <div className="ui-badge bg-success bg-opacity-10 text-success border border-success border-opacity-20">
                            <CheckCircle size={10} />
-                           <span className="fw-black text-uppercase ms-1" style={{ fontSize: '9px' }}>Neutralized</span>
+                           <span className="fw-black text-uppercase ms-1" style={{ fontSize: '9px' }}>Paid</span>
                          </div>
                        )}
                        {isPending && (
-                         <div className="ui-badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-20">
-                           <Clock size={10} />
-                           <span className="fw-black text-uppercase ms-1" style={{ fontSize: '9px' }}>Live / Pending</span>
+                         <div className={`ui-badge bg-opacity-10 border border-opacity-20 ${isOverdueByDate ? 'bg-danger text-danger border-danger' : 'bg-warning text-warning border-warning'}`}>
+                           {isOverdueByDate ? <AlertCircle size={10} /> : <Clock size={10} />}
+                           <span className="fw-black text-uppercase ms-1" style={{ fontSize: '9px' }}>
+                             {isOverdueByDate ? 'Overdue / Pending' : 'Live / Pending'}
+                           </span>
                          </div>
                        )}
                        {isOverdue && (

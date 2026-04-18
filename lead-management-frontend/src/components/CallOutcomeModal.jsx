@@ -3,14 +3,14 @@ import ReactDOM from 'react-dom';
 import {
   ArrowLeft, Mail, Phone, BookOpen, MessageSquare,
   CheckCircle, Plus, Calendar, AlertCircle, ShieldCheck, User, Zap, IndianRupee, Copy, MessageCircle,
-  Clock
+  Clock, X
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import associateService from '../services/associateService';
 import adminService from '../services/adminService';
 import { useAuth } from '../context/AuthContext';
 
-const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onSendPaymentLink }) => {
+const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme }) => {
   const { clearCall } = useAuth();
   const [outcome, setOutcome] = useState('CONTACTED');
   const [note, setNote] = useState('');
@@ -60,7 +60,10 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onSendPaymen
 
   useEffect(() => {
     if (lead) {
-      setOutcome(lead.status === 'NEW' ? 'CONTACTED' : lead.status);
+      const currIdx = getStageIndex(lead.status);
+      const nextStage = pipelineStages.find(s => getStageIndex(s.id) > currIdx);
+      setOutcome(nextStage ? nextStage.id : lead.status);
+      
       setPaymentAmount('');
       setPaymentMethod('UPI');
       // If we are ending a specific call passed via lead object or extra prop
@@ -97,31 +100,21 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onSendPaymen
         });
         clearCall();
         toast.success('Interaction Logged Successfully');
-        console.log("Calling legacy onSubmit with data:", { outcome, note });
-        // Legacy/Direct Status Update Path
-        await onSubmit({
-          status: outcome,
-          note: note,
-          amount: parseFloat(paymentAmount) || 0,
-          paymentMethod: paymentMethod
-        });
       }
 
-      // Payment Link Integration Path: Trigger if PAID or EMI
-      if (onSendPaymentLink && (outcome === 'PAID' || outcome === 'EMI')) {
-        const payload = {
-          totalAmount: targetTotal,
-          initialAmount: parseFloat(initialAmount),
-          paymentType,
-          note: scheduleNote || note,
-          installments: installments.map((inst) => ({
-            amount: parseFloat(inst.amount),
-            dueDate: inst.dueDate ? `${inst.dueDate}T23:59:59` : null,
-          })),
-        };
-        console.log("Triggering onSendPaymentLink from outcome modal:", payload);
-        await onSendPaymentLink(lead.id, payload);
-      }
+      // Record outcome / update status via the provided onSubmit handler
+      await onSubmit({
+        status: outcome,
+        note: note,
+        // Payment Data
+        isPaymentAction: outcome === 'PAID' || outcome === 'EMI' || outcome === 'CONVERTED',
+        totalAmount: parseFloat(totalAmount) || 0,
+        paidAmount: parseFloat(outcome === 'PAID' ? totalAmount : initialAmount) || 0,
+        paymentMethod: paymentMethod,
+        paymentType: outcome === 'EMI' ? 'PART' : 'FULL',
+        installments: outcome === 'EMI' ? installments : []
+      });
+
 
       setShowAddNote(false);
       setNote('');
@@ -181,8 +174,14 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onSendPaymen
       case 'CONTACTED': return 1;
       case 'FOLLOW_UP': return 2;
       case 'INTERESTED': return 3;
-      case 'PAID': return 4;
-      case 'LOST': return 5;
+      case 'PAID':
+      case 'CONVERTED':
+      case 'EMI':
+      case 'SUCCESS':
+        return 4;
+      case 'LOST':
+      case 'NOT_INTERESTED':
+        return 5;
       default: return 0;
     }
   };
@@ -374,10 +373,13 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onSendPaymen
                     {/* Connecting background line */}
                     <div className="position-absolute bg-secondary bg-opacity-25" style={{ height: '2px', top: '50%', left: '5%', right: '5%', zIndex: 1 }}></div>
 
-                    {pipelineStages.map((stage, index) => {
-                      const isCompleted = currentStageIndex >= index;
-                      const isCurrent = currentStageIndex === index;
-                      const isSelected = selectedStageIndex === index;
+                    {pipelineStages
+                      .filter((_, index) => index >= currentStageIndex)
+                      .map((stage, _index) => {
+                        const index = getStageIndex(stage.id);
+                        const isCompleted = currentStageIndex >= index;
+                        const isCurrent = currentStageIndex === index;
+                        const isSelected = selectedStageIndex === index;
 
                       let btnClass = isDarkMode ? 'btn-outline-secondary text-white bg-dark' : 'btn-light border bg-white';
                       if (isCompleted || isSelected) {
@@ -435,118 +437,150 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onSendPaymen
                           <div className="col-12 col-md-6">
                             <label className="form-label small fw-bold text-uppercase text-muted mb-2 tracking-wider">Status Override</label>
                             <select
-                              className={`form-select fw-bold shadow-sm ${isDarkMode ? 'bg-secondary bg-opacity-25 text-white border-secondary border-opacity-50' : 'bg-light text-dark'}`}
-                              value={outcome}
-                              onChange={(e) => setOutcome(e.target.value)}
-                              style={{ cursor: 'pointer' }}
-                            >
-                              {pipelineStages
-                                .filter(s => {
-                                  const stageIdx = getStageIndex(s.id);
-                                  const currIdx = getStageIndex(lead.status);
-                                  // Rule: No regression
-                                  if (stageIdx < currIdx) return false;
-                                  // Rule: If Interested, only Converted or Lost
-                                  if (currIdx >= getStageIndex('INTERESTED')) {
-                                    return ['INTERESTED', 'PAID', 'LOST'].includes(s.id);
-                                  }
-                                  return true;
-                                })
-                                .map(s => <option key={s.id} value={s.id}>{s.label}</option>)
-                              }
-                              <option value="EMI">EMI PLAN SCHEDULED</option>
-                            </select>
+                               className={`form-select fw-bold shadow-sm ${isDarkMode ? 'bg-secondary bg-opacity-25 text-white border-secondary border-opacity-50' : 'bg-light text-dark'}`}
+                               value={outcome}
+                               onChange={(e) => setOutcome(e.target.value)}
+                               style={{ cursor: 'pointer' }}
+                             >
+                               {[...pipelineStages, { id: 'EMI', label: 'EMI PLAN SCHEDULED' }]
+                                 .filter(s => {
+                                   const stageIdx = getStageIndex(s.id);
+                                   const currIdx = getStageIndex(lead.status);
+                                   
+                                   // Rule 1: No regression (Hide past AND current stages to force forward move)
+                                   if (stageIdx <= currIdx) return false;
+                                   
+                                   // Rule 2: Interested Bottleneck
+                                   if (lead.status === 'INTERESTED') {
+                                     return ['PAID', 'CONVERTED', 'EMI', 'LOST'].includes(s.id);
+                                   }
+                                   
+                                   // If already terminal, don't allow change
+                                   if (currIdx >= 4 && stageIdx !== currIdx) return false;
+ 
+                                   return true;
+                                 })
+                                 .map(s => <option key={s.id} value={s.id}>{s.label}</option>)
+                               }
+                             </select>
                           </div>
-
-                          {(outcome === 'PAID' || outcome === 'EMI') && (
-                            <div className="col-12 mt-3 animate-fade-in">
-                              <div className={`p-4 rounded-4 border-2 shadow-sm ${isDarkMode ? 'bg-success bg-opacity-5 border-success border-opacity-20' : 'bg-success bg-opacity-10 border-success border-opacity-10'}`}>
-                                <div className="d-flex align-items-center justify-content-between mb-4">
-                                  <div className="d-flex align-items-center gap-2">
-                                    <div className={`p-2 rounded-circle ${isDarkMode ? 'bg-success bg-opacity-20 text-success' : 'bg-success text-white'}`}>
-                                      <IndianRupee size={16} />
-                                    </div>
-                                    <h6 className="fw-black text-success text-uppercase small tracking-widest mb-0">Financial Transmission Terminal</h6>
+ 
+                          {(outcome === 'PAID' || outcome === 'CONVERTED' || outcome === 'EMI') && (
+                            <div className="col-12 animate-slide-in">
+                              <div className={`p-4 rounded-4 border ${isDarkMode ? 'border-secondary border-opacity-20 bg-secondary bg-opacity-10' : 'border-light bg-white shadow-sm'} mb-3`}>
+                                <div className="d-flex align-items-center gap-2 mb-4">
+                                  <div className="p-2 bg-primary bg-opacity-10 text-primary rounded-circle">
+                                    <IndianRupee size={16} />
                                   </div>
-                                  <div className="d-flex gap-2 p-1 bg-dark bg-opacity-10 rounded-pill">
-                                    <button type="button" className={`btn btn-sm rounded-pill fw-black px-3 ${paymentType === 'FULL' ? 'btn-success text-white' : 'text-muted'}`} onClick={() => { setPaymentType('FULL'); setInstallments([]); setInitialAmount(totalAmount); }} style={{ fontSize: '9px' }}>FULL</button>
-                                    <button type="button" className={`btn btn-sm rounded-pill fw-black px-3 ${paymentType === 'PART' ? 'btn-success text-white' : 'text-muted'}`} onClick={() => setPaymentType('PART')} style={{ fontSize: '9px' }}>EMI</button>
-                                  </div>
+                                  <h6 className={`fw-black mb-0 text-uppercase tracking-widest small ${isDarkMode ? 'text-primary' : 'text-dark'}`}>
+                                    {outcome === 'EMI' ? 'EMI Schedule Management' : 'Full Payment Authentication'}
+                                  </h6>
                                 </div>
-                                
-                                <div className="row g-3 mb-3">
-                                  <div className="col-md-6">
-                                    <label className="form-label small fw-black text-muted text-uppercase mb-2" style={{ fontSize: '10px' }}>Total Package Amount (₹)</label>
-                                    <div className={`d-flex align-items-center rounded-3 px-3 py-1 border ${isDarkMode ? 'bg-dark border-secondary border-opacity-50' : 'bg-white'}`}>
-                                      <input 
-                                        type="number" 
-                                        className={`form-control border-0 bg-transparent shadow-none fw-black py-2 ${isDarkMode ? 'text-white' : 'text-dark'}`}
-                                        placeholder="Total"
+ 
+                                <div className="row g-3">
+                                  <div className="col-12 col-md-6">
+                                    <label className="form-label small fw-bold text-uppercase text-muted mb-2 tracking-wider">Course Package Total</label>
+                                    <div className="input-group">
+                                      <span className={`input-group-text border-end-0 ${isDarkMode ? 'bg-dark border-secondary border-opacity-50 text-muted' : 'bg-light border-light text-muted'}`}>₹</span>
+                                      <input
+                                        type="number"
+                                        className={`form-control fw-black ${isDarkMode ? 'bg-dark bg-opacity-50 text-white border-secondary border-opacity-50' : 'bg-light text-dark border-light'}`}
+                                        placeholder="0.00"
                                         value={totalAmount}
-                                        onChange={(e) => { setTotalAmount(e.target.value); if (paymentType === 'FULL') setInitialAmount(e.target.value); }}
+                                        onChange={(e) => setTotalAmount(e.target.value)}
                                       />
                                     </div>
                                   </div>
-                                  <div className="col-md-6">
-                                    <label className="form-label small fw-black text-muted text-uppercase mb-2" style={{ fontSize: '10px' }}>Initial Down Payment (₹)</label>
-                                    <div className={`d-flex align-items-center rounded-3 px-3 py-1 border ${isDarkMode ? 'bg-dark border-secondary border-opacity-50' : 'bg-white'}`}>
-                                      <input 
-                                        type="number" 
-                                        className={`form-control border-0 bg-transparent shadow-none fw-black py-2 ${isDarkMode ? 'text-white' : 'text-dark'}`}
-                                        placeholder="Down Payment"
-                                        value={initialAmount}
-                                        onChange={(e) => setInitialAmount(e.target.value)}
+ 
+                                  <div className="col-12 col-md-6">
+                                    <label className="form-label small fw-bold text-uppercase text-muted mb-2 tracking-wider">
+                                      {outcome === 'EMI' ? 'Initial Commitment amount' : 'Actual Paid Amount'}
+                                    </label>
+                                    <div className="input-group">
+                                      <span className={`input-group-text border-end-0 ${isDarkMode ? 'bg-dark border-secondary border-opacity-50 text-muted' : 'bg-light border-light text-muted'}`}>₹</span>
+                                      <input
+                                        type="number"
+                                        className={`form-control fw-black ${isDarkMode ? 'bg-dark bg-opacity-50 text-white border-secondary border-opacity-50' : 'bg-light text-dark border-light'}`}
+                                        placeholder="0.00"
+                                        value={outcome === 'EMI' ? initialAmount : totalAmount}
+                                        onChange={(e) => outcome === 'EMI' ? setInitialAmount(e.target.value) : setTotalAmount(e.target.value)}
                                       />
                                     </div>
                                   </div>
-                                </div>
-
-                                {paymentType === 'PART' && (
-                                  <div className="mb-3 animate-fade-in">
-                                    <label className="form-label small fw-black text-muted text-uppercase mb-2" style={{ fontSize: '10px' }}>Installment Schedule</label>
-                                    {installments.map((inst, i) => (
-                                      <div key={i} className="d-flex gap-2 mb-2 align-items-center">
-                                        <div className="flex-grow-1 input-group bg-dark bg-opacity-10 rounded-3 border overflow-hidden">
-                                           <span className="input-group-text bg-transparent border-0 text-muted pe-1 ps-2 small">₹</span>
-                                           <input type="number" placeholder="Amount" className="form-control border-0 bg-transparent py-2 small fw-bold text-main" value={inst.amount} onChange={(e) => handleInstallmentChange(i, 'amount', e.target.value)} />
-                                        </div>
-                                        <div className="flex-grow-1 input-group bg-dark bg-opacity-10 rounded-3 border overflow-hidden">
-                                           <input type="date" className="form-control border-0 bg-transparent py-2 small fw-bold text-main" value={inst.dueDate} onChange={(e) => handleInstallmentChange(i, 'dueDate', e.target.value)} />
-                                        </div>
-                                        <button type="button" className="btn btn-sm btn-link text-danger p-0" onClick={() => removeInstallment(i)}>
-                                          <Plus size={16} style={{ transform: 'rotate(45deg)' }} />
+ 
+                                  <div className="col-12">
+                                     <label className="form-label small fw-bold text-uppercase text-muted mb-2 tracking-wider">Settlement Protocol</label>
+                                     <select
+                                       className={`form-select fw-bold ${isDarkMode ? 'bg-dark bg-opacity-50 text-white border-secondary border-opacity-50' : 'bg-light text-dark border-light'}`}
+                                       value={paymentMethod}
+                                       onChange={(e) => setPaymentMethod(e.target.value)}
+                                     >
+                                       <option value="UPI">UPI TRANSFERS</option>
+                                       <option value="CASH">CASH SETTLEMENT</option>
+                                       <option value="BANK_TRANSFER">IMPS / NEFT / RTGS</option>
+                                       <option value="CARD">POS / ONLINE CARD</option>
+                                     </select>
+                                  </div>
+ 
+                                  {outcome === 'EMI' && (
+                                    <div className="col-12 mt-4 pt-3 border-top">
+                                      <div className="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 className="fw-black text-muted mb-0 text-uppercase tracking-widest small" style={{ fontSize: '10px' }}>Installment Map</h6>
+                                        <button
+                                          type="button"
+                                          className="btn btn-sm btn-outline-primary rounded-pill fw-bold d-flex align-items-center gap-1"
+                                          onClick={addInstallment}
+                                        >
+                                          <Plus size={14} /> Add Installment
                                         </button>
                                       </div>
-                                    ))}
-                                    <button type="button" className="btn btn-sm btn-link text-success fw-bold p-0 d-flex align-items-center gap-1" onClick={addInstallment} style={{ fontSize: '10px' }}>
-                                      <Plus size={14} /> ADD INSTALLMENT
-                                    </button>
-                                    
-                                    {!isMatch && (
-                                      <div className="mt-2 x-small fw-black text-warning text-uppercase tracking-widest">
-                                        Awaiting Balance: ₹{Math.abs(balanceRemaining).toFixed(0)}
+ 
+                                      <div className="d-flex flex-column gap-2 mb-3">
+                                        {installments.map((inst, idx) => (
+                                          <div key={idx} className="row g-2 align-items-center animate-fade-in">
+                                            <div className="col">
+                                              <input
+                                                type="number"
+                                                className={`form-control form-control-sm fw-bold ${isDarkMode ? 'bg-dark text-white border-secondary border-opacity-50' : 'bg-light text-dark border-light'}`}
+                                                placeholder="Amount"
+                                                value={inst.amount}
+                                                onChange={(e) => handleInstallmentChange(idx, 'amount', e.target.value)}
+                                              />
+                                            </div>
+                                            <div className="col">
+                                              <input
+                                                type="date"
+                                                className={`form-control form-control-sm fw-bold ${isDarkMode ? 'bg-dark text-white border-secondary border-opacity-50' : 'bg-light text-dark border-light'}`}
+                                                value={inst.dueDate}
+                                                onChange={(e) => handleInstallmentChange(idx, 'dueDate', e.target.value)}
+                                              />
+                                            </div>
+                                            <div className="col-auto">
+                                              <button
+                                                type="button"
+                                                className="btn btn-sm btn-outline-danger border-0 rounded-circle p-1"
+                                                onClick={() => removeInstallment(idx)}
+                                              >
+                                                <X size={14} />
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ))}
                                       </div>
-                                    )}
-                                  </div>
-                                )}
-
-                                <div className="mt-3">
-                                  <label className="form-label small fw-black text-muted text-uppercase mb-2" style={{ fontSize: '10px' }}>Schedule Note</label>
-                                  <input 
-                                    type="text" 
-                                    className={`form-control form-control-sm ${isDarkMode ? 'bg-dark border-secondary border-opacity-50 text-white' : 'bg-white'}`}
-                                    placeholder="e.g., Student requested end of month for 2nd part"
-                                    value={scheduleNote}
-                                    onChange={(e) => setScheduleNote(e.target.value)}
-                                  />
+                                      
+                                      <div className={`p-2 rounded-3 text-center small fw-bold ${isMatch ? 'text-success bg-success bg-opacity-10 border border-success border-opacity-10' : 'text-danger bg-danger bg-opacity-10 border border-danger border-opacity-10'}`}>
+                                         {isMatch ? 'Plan Balanced: Complete' : `Imbalance: ₹${balanceRemaining.toFixed(2)} remaining`}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                                <p className="text-muted mt-3 mb-0" style={{ fontSize: '8px' }}>* INITIALIZING TRANSMISSION LINK: Submission will generate a live payment link for the student.</p>
                               </div>
                             </div>
                           )}
 
 
-                          <div className="col-12 mt-3">
+
+                         <div className="col-12 mt-3">
                             <label className="form-label small fw-bold text-uppercase text-muted mb-2 tracking-wider">Historical Note</label>
                             <div className={`rounded-3 overflow-hidden d-flex shadow-sm ${isDarkMode ? 'bg-secondary bg-opacity-25 border border-secondary border-opacity-50' : 'bg-light border'}`}>
                               <span className={`p-3 border-end ${isDarkMode ? 'text-white border-secondary border-opacity-50 text-opacity-50' : 'text-muted border-light'}`}>
@@ -560,6 +594,25 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onSendPaymen
                                 onChange={(e) => setNote(e.target.value)}
                               ></textarea>
                             </div>
+                          </div>
+
+                          {/* Manual Follow-up Selection */}
+                          <div className="col-12 mt-3 animate-fade-in">
+                            <label className="form-label small fw-bold text-uppercase text-muted mb-2 tracking-wider">Schedule Next Action (Follow-up)</label>
+                            <div className={`rounded-3 overflow-hidden d-flex shadow-sm ${isDarkMode ? 'bg-secondary bg-opacity-25 border border-secondary border-opacity-50' : 'bg-light border'}`}>
+                              <span className={`p-3 border-end ${isDarkMode ? 'text-white border-secondary border-opacity-50 text-opacity-50' : 'text-muted border-light'}`}>
+                                <Calendar size={18} />
+                              </span>
+                              <input
+                                type="datetime-local"
+                                className={`form-control border-0 bg-transparent shadow-none py-3 ${isDarkMode ? 'text-white' : 'text-dark'}`}
+                                value={followUpDate}
+                                onChange={(e) => setFollowUpDate(e.target.value)}
+                              />
+                            </div>
+                            <small className="text-muted mt-2 d-block small" style={{ fontSize: '10px' }}>
+                              * Leave blank if no future follow-up node is required at this stage.
+                            </small>
                           </div>
                         </div>
 

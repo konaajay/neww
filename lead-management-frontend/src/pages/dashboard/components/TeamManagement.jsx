@@ -63,6 +63,16 @@ const TeamManagement = ({
     u.mobile?.includes(searchTerm)
   );
 
+  const isAllSelected = permissions.length > 0 && formData.permissions.length === permissions.length;
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setFormData({ ...formData, permissions: [...permissions] });
+    } else {
+      setFormData({ ...formData, permissions: [] });
+    }
+  };
+
   const UserRow = ({ user, level = 0, index, children }) => {
     const isExpanded = expandedIds.some(eid => isSameId(eid, user.id));
 
@@ -126,9 +136,8 @@ const TeamManagement = ({
             <span className="text-main fw-black font-monospace" style={{ fontSize: '10px' }}>{user.mobile || '---'}</span>
           </td>
 
-          {/* 5. DEPT */}
           <td>
-            <span className="text-muted fw-bold opacity-50 text-uppercase" style={{ fontSize: '8px', letterSpacing: '1px' }}>Core Operations</span>
+            <span className="text-muted fw-bold opacity-75 font-monospace" style={{ fontSize: '9px' }}>{user.email || '---'}</span>
           </td>
 
           {/* 6. ROLE */}
@@ -206,13 +215,6 @@ const TeamManagement = ({
           <button className="ui-btn ui-btn-outline px-3 py-2 rounded-3 text-muted d-flex align-items-center gap-2" style={{ fontSize: '10px' }}>
             <Zap size={12} /> FILTER
           </button>
-          <button
-            onClick={() => setActiveSubTab('onboarding')}
-            className="btn btn-primary px-4 py-2 rounded-3 fw-black text-uppercase tracking-widest shadow-glow d-flex align-items-center gap-2"
-            style={{ fontSize: '10px' }}
-          >
-            <UserPlus size={12} /> ADD
-          </button>
         </div>
       </div>
 
@@ -234,11 +236,11 @@ const TeamManagement = ({
                     <input type="email" className="ui-input py-3 w-100 fw-bold font-monospace" placeholder="rahul@example.com" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required />
                   </div>
                   <div className="col-md-4">
-                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Phone Terminal</label>
+                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Phone Number</label>
                     <input className="ui-input py-3 w-100 fw-bold" placeholder="+91 00000 00000" value={formData.mobile} onChange={e => setFormData({ ...formData, mobile: e.target.value })} required />
                   </div>
                   <div className="col-md-4">
-                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Security String</label>
+                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Password</label>
                     <input type="password" className="ui-input py-3 w-100 fw-bold" placeholder="••••••••" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} required />
                   </div>
                   <div className="col-md-4">
@@ -263,13 +265,7 @@ const TeamManagement = ({
                       {roles.map(r => <option key={r.id} value={r.name} className="text-dark">{r.name.replace(/_/g, ' ')}</option>)}
                     </select>
                   </div>
-                  <div className="col-md-4">
-                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Office Terminal</label>
-                    <select className="ui-input py-3 w-100 fw-black text-uppercase tracking-widest cursor-pointer" value={formData.officeId} onChange={e => setFormData({ ...formData, officeId: e.target.value })} required>
-                      <option value="" className="text-dark">Select Location...</option>
-                      {(offices || []).map(o => <option key={o.id} value={o.id} className="text-dark">{o.name}</option>)}
-                    </select>
-                  </div>
+
                   {(formData.role === 'ASSOCIATE' || formData.role === 'TEAM_LEADER' || formData.role === 'MANAGER') && (
                     <div className="col-md-4">
                       <label className="form-label small fw-black text-uppercase text-primary mb-2 tracking-widest" style={{ fontSize: '10px' }}>Hierarchy Mapping (Superior ID)</label>
@@ -287,7 +283,21 @@ const TeamManagement = ({
                   )}
 
                   <div className="col-12 mt-2">
-                    <label className="form-label small fw-black text-uppercase text-muted d-block mb-3 tracking-widest" style={{ fontSize: '10px' }}>System Access Privileges</label>
+                    <div className="d-flex align-items-center justify-content-between mb-3">
+                      <label className="form-label small fw-black text-uppercase text-muted mb-0 tracking-widest" style={{ fontSize: '10px' }}>System Access Privileges</label>
+                      <div className="form-check custom-check d-flex align-items-center">
+                        <input
+                          className="form-check-input shadow-none m-0"
+                          type="checkbox"
+                          id="select-all-perms"
+                          checked={isAllSelected}
+                          onChange={handleSelectAll}
+                        />
+                        <label className="form-check-label small fw-black text-uppercase text-primary ms-2 cursor-pointer" htmlFor="select-all-perms" style={{ fontSize: '9px', letterSpacing: '0.5px' }}>
+                          Select All
+                        </label>
+                      </div>
+                    </div>
                     <div className="bg-surface p-4 rounded-4 shadow-inner border border-white border-opacity-5" style={{ maxHeight: '180px', overflowY: 'auto' }}>
                       <div className="row g-3">
                         {permissions.map(perm => (
@@ -333,7 +343,7 @@ const TeamManagement = ({
                   <th style={{ fontSize: '10px', width: '100px' }}>SUP ID</th>
                   <th style={{ fontSize: '10px' }}>NAME</th>
                   <th style={{ fontSize: '10px' }}>PH</th>
-                  <th style={{ fontSize: '10px' }}>DEPT</th>
+                  <th style={{ fontSize: '10px' }}>EMAIL</th>
                   <th style={{ fontSize: '10px' }}>ROLE</th>
                   <th style={{ fontSize: '10px' }}>DOJ</th>
                   <th className="pe-4 text-end" style={{ fontSize: '10px' }}>ACTIONS</th>

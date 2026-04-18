@@ -460,3 +460,11 @@ h6 {
 .shadow-glow-sm {
   box-shadow: 0 0 10px var(--primary-glow);
 }
+
+/* Custom 5-column Grid System */
+@media (min-width: 1200px) {
+  .col-xl-5th {
+    flex: 0 0 auto;
+    width: 20%;
+  }
+}

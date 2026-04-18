@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Save, X, ChevronDown, Shield, Users, Target, Info, CreditCard } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
-import GeneratePaymentLinkModal from '../../../components/GeneratePaymentLinkModal';
 import { toast } from 'react-toastify';
+import paymentService from '../../../services/paymentService';
+import { IndianRupee, Wallet, Calendar, AlertCircle } from 'lucide-react';
 
 const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], role }) => {
     const { isDarkMode } = useTheme();
-    const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [formData, setFormData] = useState({
         name: lead?.name || '',
         mobile: lead?.mobile || '',
@@ -20,6 +20,27 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
         selectedLeads: [lead?.id] || [],
         notes: lead?.notes || ''
     });
+
+    const [studentFee, setStudentFee] = useState(null);
+    const [isFeeLoading, setIsFeeLoading] = useState(false);
+
+    useEffect(() => {
+        if (lead?.id && (lead.status === 'PAID' || lead.status === 'EMI' || lead.status === 'CONVERTED')) {
+            fetchFeeStructure();
+        }
+    }, [lead]);
+
+    const fetchFeeStructure = async () => {
+        setIsFeeLoading(true);
+        try {
+            const res = await paymentService.fetchStudentFee(lead.id);
+            setStudentFee(res.data);
+        } catch (err) {
+            console.error('Failed to fetch fee structure');
+        } finally {
+            setIsFeeLoading(false);
+        }
+    };
 
     const [errors, setErrors] = useState({});
 
@@ -68,22 +89,7 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
                                 <Shield size={16} />
                                 Transmission Secured
                             </div>
-                        ) : lead?.paymentOrderId && role !== 'ADMIN' ? (
-                            <div className="d-flex align-items-center gap-2 px-4 py-2 bg-info bg-opacity-10 text-info rounded-pill fw-bold small border border-info border-opacity-20">
-                                <CreditCard size={16} />
-                                Link Active
-                            </div>
                         ) : null}
-
-                        {(role === 'ADMIN' || (!['PAID', 'EMI', 'CONVERTED', 'SUCCESSFUL'].includes(lead?.status) && !lead?.paymentOrderId)) && (
-                            <button
-                                onClick={() => setShowPaymentModal(true)}
-                                className="btn btn-outline-success px-4 py-2 rounded-pill fw-bold border-2 d-flex align-items-center gap-2"
-                            >
-                                <CreditCard size={18} />
-                                Link Payment
-                            </button>
-                        )}
                     </div>
                 </div>
 
@@ -154,6 +160,66 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
                         </div>
 
 
+                        {/* Student Fee Structure Section */}
+                        {(studentFee || isFeeLoading) && (
+                            <div className="mt-5 pt-5 border-top border-light-subtle">
+                                <div className="d-flex align-items-center justify-content-between mb-4">
+                                    <div className="d-flex align-items-center gap-2">
+                                        <Wallet size={18} className="text-success" />
+                                        <h5 className="fw-bold text-dark mb-0" style={{ fontSize: '16px' }}>Student Fee Ledger</h5>
+                                    </div>
+                                    {studentFee?.paymentStatus === 'COMPLETED' ? (
+                                        <span className="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 border border-success border-opacity-10 fw-bold">SETTLED</span>
+                                    ) : (
+                                        <span className="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 py-2 border border-warning border-opacity-10 fw-bold">ACTIVE BALANCE</span>
+                                    )}
+                                </div>
+
+                                {isFeeLoading ? (
+                                    <div className="text-center py-4 opacity-50">
+                                        <div className="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                        <span className="small fw-bold">Syncing financial nodes...</span>
+                                    </div>
+                                ) : (
+                                    <div className="row g-4">
+                                        <div className="col-12 col-md-4">
+                                            <div className="p-4 rounded-4 border border-light-subtle bg-light bg-opacity-30">
+                                                <p className="text-secondary small fw-bold text-uppercase mb-2 tracking-wider" style={{ fontSize: '10px' }}>Total Package</p>
+                                                <h4 className="fw-black mb-0 text-dark">₹{studentFee?.totalAmount?.toLocaleString() || '0'}</h4>
+                                            </div>
+                                        </div>
+                                        <div className="col-12 col-md-4">
+                                            <div className="p-4 rounded-4 border border-light-subtle bg-success bg-opacity-5">
+                                                <p className="text-success small fw-bold text-uppercase mb-2 tracking-wider" style={{ fontSize: '10px' }}>Amount Paid</p>
+                                                <h4 className="fw-black mb-0 text-success">₹{studentFee?.paidAmount?.toLocaleString() || '0'}</h4>
+                                            </div>
+                                        </div>
+                                        <div className="col-12 col-md-4">
+                                            <div className="p-4 rounded-4 border border-light-subtle bg-danger bg-opacity-5">
+                                                <p className="text-danger small fw-bold text-uppercase mb-2 tracking-wider" style={{ fontSize: '10px' }}>Balance Due</p>
+                                                <h4 className="fw-black mb-0 text-danger">₹{studentFee?.balanceAmount?.toLocaleString() || '0'}</h4>
+                                            </div>
+                                        </div>
+                                        
+                                        {studentFee?.nextDueDate && studentFee?.balanceAmount > 0 && (
+                                            <div className="col-12">
+                                                <div className="d-flex align-items-center gap-3 p-3 rounded-4 bg-primary bg-opacity-5 border border-primary border-opacity-10 mt-2">
+                                                    <div className="p-2 bg-primary bg-opacity-10 text-primary rounded-3">
+                                                       <Calendar size={18} />
+                                                    </div>
+                                                    <div>
+                                                        <p className="mb-0 text-dark fw-bold small">Next Installment Collection</p>
+                                                        <p className="mb-0 text-primary small fw-black">{new Date(studentFee.nextDueDate).toLocaleDateString('en-IN', { dateStyle: 'long' })}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+
                     </div>
                 </div>
 
@@ -174,24 +240,6 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
                         Sync Configuration
                     </button>
                 </div>
-            </div>
-
-            <GeneratePaymentLinkModal
-                show={showPaymentModal}
-                onClose={() => setShowPaymentModal(false)}
-                lead={lead}
-                role={role}
-                onConfirm={async (id, data) => {
-                    if (onSendPaymentLink) {
-                        const success = await onSendPaymentLink(id, data);
-                        if (success) {
-                            setShowPaymentModal(false);
-                            toast.success('Payment protocol initialized and linked');
-                        }
-                    }
-                }}
-            />
-
             <style>{`
                 .form-label { letter-spacing: 0.5px; }
                 .form-select, .form-control { border-width: 1.5px; }
@@ -213,6 +261,7 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
                     .sticky-action-bar { border-radius: 0 !important; margin: 0 !important; max-width: 100% !important; }
                 }
             `}</style>
+        </div>
         </div>
     );
 };

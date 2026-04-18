@@ -44,7 +44,7 @@ const CallLogDashboard = ({ userId: externalUserId, hideHeader = false }) => {
                 from: filters.from.split('T')[0],
                 to: filters.to.split('T')[0]
             };
-            const statsFilters = { from: activeFilters.from, to: activeFilters.to };
+            const statsFilters = { from: activeFilters.from, to: activeFilters.to, userId: activeFilters.userId };
 
             let logsCall, usersCall, statsCall;
 

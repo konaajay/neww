@@ -172,40 +172,49 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
 
   return (
     <div className="d-flex flex-column gap-3 animate-fade-in pb-5">
-      {/* Summary Metrics - Clean Minimalist */}
+      {/* High-Fidelity Task Analytics Nodes */}
       <div className="row g-3 mb-2">
         <div className="col-12 col-md-4">
-          <div className="bg-white p-4 rounded-4 border border-light shadow-sm d-flex align-items-center gap-3">
-            <div className="p-3 bg-primary bg-opacity-10 rounded-circle text-primary">
-              <Clock size={20} />
+          <div className="premium-card p-4 shadow-lg border-0 d-flex align-items-center gap-4 group hover-active-card overflow-hidden" 
+               style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px)', borderRadius: '24px' }}>
+            <div className="p-3 bg-primary bg-opacity-10 rounded-4 text-primary border border-primary border-opacity-20 shadow-glow-sm group-hover:scale-110 transition-all">
+              <Clock size={22} />
             </div>
             <div>
-              <div className="text-muted small fw-bold text-uppercase tracking-wider" style={{ fontSize: '10px' }}>Today Followups</div>
-              <h3 className="fw-black text-main mb-0 tabular-nums">{filteredTasks.filter(t => t.dueDate && new Date(t.dueDate).toDateString() === new Date().toDateString() && t.status !== 'COMPLETED').length}</h3>
+              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Active Followups</div>
+              <h2 className="fw-black text-main mb-0 tabular-nums" style={{ letterSpacing: '-1px' }}>
+                {filteredTasks.filter(t => t.dueDate && new Date(t.dueDate).toDateString() === new Date().toDateString() && t.status !== 'COMPLETED').length}
+              </h2>
             </div>
           </div>
         </div>
         
         <div className="col-12 col-md-4">
-          <div className="bg-white p-4 rounded-4 border border-light shadow-sm d-flex align-items-center gap-3">
-            <div className="p-3 bg-warning bg-opacity-10 rounded-circle text-warning">
-              <AlertCircle size={20} />
+          <div className="premium-card p-4 shadow-lg border-0 d-flex align-items-center gap-4 group hover-active-card overflow-hidden" 
+               style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px)', borderRadius: '24px' }}>
+            <div className="p-3 bg-warning bg-opacity-10 rounded-4 text-warning border border-warning border-opacity-20 shadow-glow-sm group-hover:scale-110 transition-all">
+              <AlertCircle size={22} />
             </div>
             <div>
-              <div className="text-muted small fw-bold text-uppercase tracking-wider" style={{ fontSize: '10px' }}>Pending Tasks</div>
-              <h3 className="fw-black text-main mb-0 tabular-nums">{filteredTasks.filter(t => t.status === 'PENDING').length}</h3>
+              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Pending Squad Tasks</div>
+              <h2 className="fw-black text-main mb-0 tabular-nums" style={{ letterSpacing: '-1px' }}>
+                {filteredTasks.filter(t => t.status === 'PENDING').length}
+              </h2>
             </div>
           </div>
         </div>
 
         <div className="col-12 col-md-4">
-          <div className="bg-white p-4 rounded-4 border border-light shadow-sm d-flex align-items-center gap-3">
-            <div className="p-3 bg-success bg-opacity-10 rounded-circle text-success">
-              <CheckSquare size={20} />
+          <div className="premium-card p-4 shadow-lg border-0 d-flex align-items-center gap-4 group hover-active-card overflow-hidden" 
+               style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px)', borderRadius: '24px' }}>
+            <div className="p-3 bg-success bg-opacity-10 rounded-4 text-success border border-success border-opacity-20 shadow-glow-sm group-hover:scale-110 transition-all">
+              <CheckSquare size={22} />
             </div>
             <div>
-              <div className="text-muted small fw-bold text-uppercase tracking-wider" style={{ fontSize: '10px' }}>Sync Success</div>
-              <h3 className="fw-black text-main mb-0 tabular-nums">{filteredTasks.filter(t => t.status === 'COMPLETED').length}</h3>
+              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Synchronization Success</div>
+              <h2 className="fw-black text-main mb-0 tabular-nums" style={{ letterSpacing: '-1px' }}>
+                {filteredTasks.filter(t => t.status === 'COMPLETED').length}
+              </h2>
             </div>
           </div>
         </div>

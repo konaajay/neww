@@ -111,6 +111,33 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
                     </div>
                 </div>
 
+                {/* Account Summary - Fee Structure */}
+                {invoiceData.totalPackageAmount && (
+                    <div className="account-summary mb-4 mb-md-5 p-4 rounded bg-light border">
+                        <h6 className="fw-black text-uppercase small tracking-widest mb-3 opacity-50">Account Summary (Fee Ledger)</h6>
+                        <div className="row g-3">
+                            <div className="col-6 col-md-3">
+                                <div className="text-muted x-small fw-bold text-uppercase mb-1" style={{ fontSize: '9px' }}>Total Package</div>
+                                <div className="fw-bold fs-5">₹{invoiceData.totalPackageAmount.toLocaleString()}</div>
+                            </div>
+                            <div className="col-6 col-md-3">
+                                <div className="text-muted x-small fw-bold text-uppercase mb-1" style={{ fontSize: '9px' }}>Paid Amount</div>
+                                <div className="fw-bold fs-5 text-success">₹{invoiceData.paidAmountSoFar.toLocaleString()}</div>
+                            </div>
+                            <div className="col-6 col-md-3">
+                                <div className="text-muted x-small fw-bold text-uppercase mb-1" style={{ fontSize: '9px' }}>Balance Due</div>
+                                <div className="fw-bold fs-5 text-danger">₹{invoiceData.balanceDue.toLocaleString()}</div>
+                            </div>
+                            {invoiceData.nextInstallmentDate && invoiceData.balanceDue > 0 && (
+                                <div className="col-6 col-md-3">
+                                    <div className="text-muted x-small fw-bold text-uppercase mb-1" style={{ fontSize: '9px' }}>Next Due</div>
+                                    <div className="fw-bold fs-6 text-primary">{new Date(invoiceData.nextInstallmentDate).toLocaleDateString()}</div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* Verification Checkseal */}
                 <div className="d-flex align-items-center gap-3 text-success fw-black mb-5 mt-4 mt-md-5">
                     <div className="bg-success rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 24, height: 24 }}>
