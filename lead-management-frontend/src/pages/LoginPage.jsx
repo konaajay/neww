@@ -40,7 +40,12 @@ const LoginPage = () => {
       else if (user?.role === 'TEAM_LEADER') navigate('/tl');
       else navigate('/associate');
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Login failed');
+      console.error('Login error:', err);
+      if (err?.response?.status === 500) {
+        toast.error('Server Error (500): Database connection failed. Please check backend Aiven config/IP allowlist.');
+      } else {
+        toast.error(err?.response?.data?.message || 'Login failed - Check credentials');
+      }
     } finally {
       setLoading(false);
     }

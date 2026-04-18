@@ -56,8 +56,8 @@ const LeadTable = ({
       logActiveCall(sessionData);
       toast.success('Interaction sequence initiated');
       
-      // Trigger native dialer
-      window.location.href = `tel:${lead.mobile}`;
+      // Since the ribbon is removed, open the outcome modal immediately
+      setSelectedOutcomeLead(lead);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to initiate interaction');
     } finally {

@@ -4,6 +4,7 @@ import CallOutcomeModal from './CallOutcomeModal';
 import ManualTaskModal from './ManualTaskModal';
 import associateService from '../services/associateService';
 import { toast } from 'react-toastify';
+import { useAuth } from '../context/AuthContext';
 
 const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilters = false }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -14,8 +15,42 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
   const [cloudTasks, setCloudTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [reschedulingTask, setReschedulingTask] = useState(null);
+  const { activeCall, startCall: logActiveCall } = useAuth();
+  const [isStartingCall, setIsStartingCall] = useState(false);
 
   const isDarkMode = theme === 'dark';
+
+  const handleStartCall = async (lead) => {
+    if (activeCall) {
+      toast.warning('Another interaction is currently active. Finish it first.');
+      return;
+    }
+
+    setIsStartingCall(true);
+    try {
+      const res = await associateService.startCall({
+        leadId: lead.id,
+        phoneNumber: lead.mobile
+      });
+      
+      const sessionData = {
+        callId: res.data.data.id,
+        leadId: lead.id,
+        leadName: lead.name,
+        phoneNumber: lead.mobile,
+        startTime: res.data.data.startTime
+      };
+      
+      logActiveCall(sessionData);
+      toast.success('Interaction sequence initiated');
+      // Open outcome modal immediately
+      setSelectedLead({ lead });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to initiate interaction');
+    } finally {
+      setIsStartingCall(false);
+    }
+  };
 
   const loadTasks = async () => {
     setLoading(true);
@@ -311,7 +346,14 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
                       </div>
                     </td>
                     <td className="text-center">
-                      <a href={`tel:${task.lead?.mobile}`} className="text-success p-1 d-inline-block hover-scale" onClick={e => e.stopPropagation()}><Phone size={14} /></a>
+                      <button 
+                        className={`p-1 border-0 bg-transparent text-success hover-scale ${activeCall ? 'opacity-25' : ''}`}
+                        disabled={isStartingCall || !!activeCall}
+                        onClick={(e) => { e.stopPropagation(); handleStartCall(task.lead); }}
+                        title="Start Interaction"
+                      >
+                        <Phone size={14} />
+                      </button>
                     </td>
                     <td className="text-center">
                       <a href={`mailto:${task.lead?.email}`} className="text-primary p-1 d-inline-block hover-scale" onClick={e => e.stopPropagation()}><Mail size={14} /></a>

@@ -218,13 +218,16 @@ const ManagerDashboard = () => {
     };
 
     const handleRecordCallOutcome = async (leadId, data) => {
+        console.log('Manager recording outcome:', { leadId, data });
         try {
-            await managerService.recordCallOutcome(leadId, data);
+            const response = await managerService.recordCallOutcome(leadId, data);
+            console.log('Outcome record success:', response);
             toast.success('Outcome synchronized');
             loadLeads();
             reload();
         } catch (err) {
-            toast.error('Sync failed');
+            console.error('Outcome record failure:', err);
+            toast.error('Sync failed: ' + (err?.response?.data?.message || 'Unknown error'));
         }
     };
 

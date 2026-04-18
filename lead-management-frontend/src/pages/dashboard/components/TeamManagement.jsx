@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { UserPlus, Edit, Trash2, ChevronDown, ChevronRight, BarChart2, Users, Search, Phone, Zap, FileText, TrendingUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { UserPlus, Edit, Trash2, ChevronDown, ChevronRight, BarChart2, Users, Search, Phone, Zap, FileText, TrendingUp, AlertCircle } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 
 const TeamManagement = ({

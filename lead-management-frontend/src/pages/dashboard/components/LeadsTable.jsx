@@ -310,9 +310,18 @@ const LeadsTable = ({
         lead={selectedOutcomeLead}
         theme={isDarkMode ? 'dark' : 'light'}
         onSubmit={async (data) => {
+          console.log("LeadsTable: CallOutcomeModal reported outcome", data);
           if (onRecordCallOutcome) {
-            await onRecordCallOutcome(selectedOutcomeLead.id, data);
-            setSelectedOutcomeLead(null);
+            try {
+              await onRecordCallOutcome(selectedOutcomeLead.id, data);
+              console.log("LeadsTable: onRecordCallOutcome success");
+              setSelectedOutcomeLead(null);
+            } catch (err) {
+              console.error("LeadsTable: onRecordCallOutcome failed", err);
+              // Error is already toasted in ManagerDashboard/TeamLeaderDashboard
+            }
+          } else {
+            console.warn("LeadsTable: onRecordCallOutcome prop is missing");
           }
         }}
       />

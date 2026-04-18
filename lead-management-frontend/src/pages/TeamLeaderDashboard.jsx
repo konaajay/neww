@@ -83,6 +83,34 @@ const TeamLeaderDashboard = () => {
       setCallStats(callStatsRes.data?.data || callStatsRes.data);
       setSummary(summaryRes.data);
       setManager(profileRes.data?.supervisor || profileRes.data?.manager);
+
+      // Revenue Sync Overdrive
+      try {
+        const historyRes = await paymentService.fetchHistory('TEAM_LEADER', {
+          startDate: filters.from,
+          endDate: filters.to,
+          userId: filters.userId
+        });
+        const payments = historyRes.data || [];
+        const calculatedRevenue = payments
+          .filter(p => ['PAID', 'SUCCESS', 'APPROVED'].includes(p.status))
+          .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+        
+        setStats(prev => ({
+          ...prev,
+          totalPayments: Math.max(prev?.totalPayments || 0, calculatedRevenue),
+          totalRevenue: Math.max(prev?.totalRevenue || 0, calculatedRevenue)
+        }));
+        setSummary(prev => ({
+          ...prev,
+          revenue: {
+            ...prev?.revenue,
+            monthly: Math.max(prev?.revenue?.monthly || 0, calculatedRevenue)
+          }
+        }));
+      } catch (err) {
+        console.warn('TL revenue recalculation failed');
+      }
     } catch (err) {
       toast.error('Failed to load dashboard data');
     } finally {
@@ -133,12 +161,15 @@ const TeamLeaderDashboard = () => {
   };
 
   const handleRecordCallOutcome = async (leadId, data) => {
+    console.log('TL recording outcome:', { leadId, data });
     try {
-      await tlService.recordCallOutcome(leadId, data);
+      const response = await tlService.recordCallOutcome(leadId, data);
+      console.log('Outcome record success:', response);
       toast.success('Call outcome recorded');
       fetchData();
     } catch (err) {
-      toast.error('Failed to record outcome');
+      console.error('Outcome record failure:', err);
+      toast.error('Failed to record outcome: ' + (err?.response?.data?.message || 'Unknown error'));
     }
   };
 

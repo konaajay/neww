@@ -83,6 +83,28 @@ const AssociateDashboard = () => {
       setTrendData(trendRes.data);
       setCallStats(callStatsRes.data?.data || callStatsRes.data);
       setManager(profileRes.data?.supervisor || profileRes.data?.manager);
+
+      // Revenue Calculation Overdrive: If backend stats miss 'SUCCESS' or 'APPROVED' status,
+      // we recalculate from the payment ledger to ensure correctness.
+      try {
+        const historyRes = await paymentService.fetchHistory('ASSOCIATE', {
+          startDate: filters.from,
+          endDate: filters.to
+        });
+        const payments = historyRes.data || [];
+        const calculatedRevenue = payments
+          .filter(p => ['PAID', 'SUCCESS', 'APPROVED'].includes(p.status))
+          .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+        
+        // Update stats with the more accurate calculated revenue if it's higher than the backend's reported value
+        // or if the backend value is potentially stale.
+        setStats(prev => ({
+          ...prev,
+          totalRevenue: Math.max(prev?.totalRevenue || 0, calculatedRevenue)
+        }));
+      } catch (err) {
+        console.warn('Revenue recalculation failed, falling back to backend stats');
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load dashboard data');
     } finally {

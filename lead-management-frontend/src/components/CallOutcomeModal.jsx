@@ -26,6 +26,35 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onSendPaymen
   const [audioDuration, setAudioDuration] = useState(0);
   const [isDurationLoading, setIsDurationLoading] = useState(false);
 
+  // New Payment / Installment State integration
+  const [totalAmount, setTotalAmount] = useState('499');
+  const [initialAmount, setInitialAmount] = useState('499');
+  const [paymentType, setPaymentType] = useState('FULL');
+  const [installments, setInstallments] = useState([]);
+  const [scheduleNote, setScheduleNote] = useState('');
+
+  const addInstallment = () => {
+    setInstallments([...installments, { amount: '', dueDate: '' }]);
+    setPaymentType('PART');
+  };
+
+  const removeInstallment = (index) => {
+    const newInstallments = installments.filter((_, i) => i !== index);
+    setInstallments(newInstallments);
+    if (newInstallments.length === 0) setPaymentType('FULL');
+  };
+
+  const handleInstallmentChange = (index, field, value) => {
+    const newInstallments = [...installments];
+    newInstallments[index][field] = value;
+    setInstallments(newInstallments);
+  };
+
+  const sumOfParts = Number(initialAmount || 0) + installments.reduce((sum, inst) => sum + Number(inst.amount || 0), 0);
+  const targetTotal = Number(totalAmount || 0);
+  const isMatch = paymentType === 'FULL' ? true : Math.abs(sumOfParts - targetTotal) < 1;
+  const balanceRemaining = targetTotal - sumOfParts;
+
   const userRole = localStorage.getItem('role');
   const isAdminOrManager = ['ADMIN', 'MANAGER'].includes(userRole);
 
@@ -47,9 +76,14 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onSendPaymen
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    console.log("Submitting interaction logic...", { outcome, note, callId });
     // Strict Validations
-    if (!outcome) return toast.error('Status is mandatory');
-    if (!note || note.trim().length < 10) return toast.error('Notes must be at least 10 characters');
+    if (!outcome) {
+      console.warn("Validation failed: Missing outcome");
+      return toast.error('Status is mandatory');
+    }
+    // Note is now optional. Validation removed.
+
 
     setIsSubmitting(true);
     
@@ -63,14 +97,30 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onSendPaymen
         });
         clearCall();
         toast.success('Interaction Logged Successfully');
-      } else {
+        console.log("Calling legacy onSubmit with data:", { outcome, note });
         // Legacy/Direct Status Update Path
         await onSubmit({
           status: outcome,
           note: note,
-          amount: parseFloat(paymentAmount),
+          amount: parseFloat(paymentAmount) || 0,
           paymentMethod: paymentMethod
         });
+      }
+
+      // Payment Link Integration Path: Trigger if PAID or EMI
+      if (onSendPaymentLink && (outcome === 'PAID' || outcome === 'EMI')) {
+        const payload = {
+          totalAmount: targetTotal,
+          initialAmount: parseFloat(initialAmount),
+          paymentType,
+          note: scheduleNote || note,
+          installments: installments.map((inst) => ({
+            amount: parseFloat(inst.amount),
+            dueDate: inst.dueDate ? `${inst.dueDate}T23:59:59` : null,
+          })),
+        };
+        console.log("Triggering onSendPaymentLink from outcome modal:", payload);
+        await onSendPaymentLink(lead.id, payload);
       }
 
       setShowAddNote(false);
@@ -229,9 +279,9 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onSendPaymen
 
                   <div className="row g-3 mb-3">
                     <div className="col-6">
-                      <a href={`tel:${lead.mobile}`} className="btn btn-outline-success w-100 fw-bold rounded-3 d-flex align-items-center justify-content-center gap-2 py-2">
+                      <button type="button" className="btn btn-outline-success w-100 fw-bold rounded-3 d-flex align-items-center justify-content-center gap-2 py-2" onClick={() => setShowAddNote(true)}>
                         <Phone size={16} /> Call
-                      </a>
+                      </button>
                     </div>
                     <div className="col-6">
                       <a href={`mailto:${lead.email}`} className="btn btn-outline-primary w-100 fw-bold rounded-3 d-flex align-items-center justify-content-center gap-2 py-2" onClick={(e) => !lead.email && e.preventDefault()}>
@@ -408,44 +458,89 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onSendPaymen
                             </select>
                           </div>
 
-                          {outcome === 'PAID' && (
+                          {(outcome === 'PAID' || outcome === 'EMI') && (
                             <div className="col-12 mt-3 animate-fade-in">
                               <div className={`p-4 rounded-4 border-2 shadow-sm ${isDarkMode ? 'bg-success bg-opacity-5 border-success border-opacity-20' : 'bg-success bg-opacity-10 border-success border-opacity-10'}`}>
-                                <div className="d-flex align-items-center gap-2 mb-3">
-                                  <div className={`p-2 rounded-circle ${isDarkMode ? 'bg-success bg-opacity-20 text-success' : 'bg-success text-white'}`}>
-                                    <IndianRupee size={16} />
+                                <div className="d-flex align-items-center justify-content-between mb-4">
+                                  <div className="d-flex align-items-center gap-2">
+                                    <div className={`p-2 rounded-circle ${isDarkMode ? 'bg-success bg-opacity-20 text-success' : 'bg-success text-white'}`}>
+                                      <IndianRupee size={16} />
+                                    </div>
+                                    <h6 className="fw-black text-success text-uppercase small tracking-widest mb-0">Financial Transmission Terminal</h6>
                                   </div>
-                                  <h6 className="fw-black text-success text-uppercase small tracking-widest mb-0">Manual Ledger Settlement</h6>
+                                  <div className="d-flex gap-2 p-1 bg-dark bg-opacity-10 rounded-pill">
+                                    <button type="button" className={`btn btn-sm rounded-pill fw-black px-3 ${paymentType === 'FULL' ? 'btn-success text-white' : 'text-muted'}`} onClick={() => { setPaymentType('FULL'); setInstallments([]); setInitialAmount(totalAmount); }} style={{ fontSize: '9px' }}>FULL</button>
+                                    <button type="button" className={`btn btn-sm rounded-pill fw-black px-3 ${paymentType === 'PART' ? 'btn-success text-white' : 'text-muted'}`} onClick={() => setPaymentType('PART')} style={{ fontSize: '9px' }}>EMI</button>
+                                  </div>
                                 </div>
                                 
-                                <div className="row g-3">
+                                <div className="row g-3 mb-3">
                                   <div className="col-md-6">
-                                    <label className="form-label small fw-black text-muted text-uppercase mb-2" style={{ fontSize: '10px' }}>Collected Amount (₹)</label>
+                                    <label className="form-label small fw-black text-muted text-uppercase mb-2" style={{ fontSize: '10px' }}>Total Package Amount (₹)</label>
                                     <div className={`d-flex align-items-center rounded-3 px-3 py-1 border ${isDarkMode ? 'bg-dark border-secondary border-opacity-50' : 'bg-white'}`}>
                                       <input 
                                         type="number" 
                                         className={`form-control border-0 bg-transparent shadow-none fw-black py-2 ${isDarkMode ? 'text-white' : 'text-dark'}`}
-                                        placeholder="Enter amount"
-                                        value={paymentAmount}
-                                        onChange={(e) => setPaymentAmount(e.target.value)}
-                                        required
+                                        placeholder="Total"
+                                        value={totalAmount}
+                                        onChange={(e) => { setTotalAmount(e.target.value); if (paymentType === 'FULL') setInitialAmount(e.target.value); }}
                                       />
                                     </div>
                                   </div>
                                   <div className="col-md-6">
-                                    <label className="form-label small fw-black text-muted text-uppercase mb-2" style={{ fontSize: '10px' }}>Payment Mode</label>
-                                    <select 
-                                      className={`form-select fw-bold border rounded-3 py-2.5 ${isDarkMode ? 'bg-dark text-white border-secondary border-opacity-50 shadow-none' : 'bg-white shadow-sm'}`}
-                                      value={paymentMethod}
-                                      onChange={(e) => setPaymentMethod(e.target.value)}
-                                    >
-                                      <option value="UPI">Liquid (UPI/Mobile)</option>
-                                      <option value="CASH">Direct Cash</option>
-                                      <option value="BANK_TRANSFER">Bank/IMPS</option>
-                                    </select>
+                                    <label className="form-label small fw-black text-muted text-uppercase mb-2" style={{ fontSize: '10px' }}>Initial Down Payment (₹)</label>
+                                    <div className={`d-flex align-items-center rounded-3 px-3 py-1 border ${isDarkMode ? 'bg-dark border-secondary border-opacity-50' : 'bg-white'}`}>
+                                      <input 
+                                        type="number" 
+                                        className={`form-control border-0 bg-transparent shadow-none fw-black py-2 ${isDarkMode ? 'text-white' : 'text-dark'}`}
+                                        placeholder="Down Payment"
+                                        value={initialAmount}
+                                        onChange={(e) => setInitialAmount(e.target.value)}
+                                      />
+                                    </div>
                                   </div>
                                 </div>
-                                <p className="text-muted mt-3 mb-0" style={{ fontSize: '8px' }}>* Conversion requires mandatory financial verification. Ensure proof is documented in notes.</p>
+
+                                {paymentType === 'PART' && (
+                                  <div className="mb-3 animate-fade-in">
+                                    <label className="form-label small fw-black text-muted text-uppercase mb-2" style={{ fontSize: '10px' }}>Installment Schedule</label>
+                                    {installments.map((inst, i) => (
+                                      <div key={i} className="d-flex gap-2 mb-2 align-items-center">
+                                        <div className="flex-grow-1 input-group bg-dark bg-opacity-10 rounded-3 border overflow-hidden">
+                                           <span className="input-group-text bg-transparent border-0 text-muted pe-1 ps-2 small">₹</span>
+                                           <input type="number" placeholder="Amount" className="form-control border-0 bg-transparent py-2 small fw-bold text-main" value={inst.amount} onChange={(e) => handleInstallmentChange(i, 'amount', e.target.value)} />
+                                        </div>
+                                        <div className="flex-grow-1 input-group bg-dark bg-opacity-10 rounded-3 border overflow-hidden">
+                                           <input type="date" className="form-control border-0 bg-transparent py-2 small fw-bold text-main" value={inst.dueDate} onChange={(e) => handleInstallmentChange(i, 'dueDate', e.target.value)} />
+                                        </div>
+                                        <button type="button" className="btn btn-sm btn-link text-danger p-0" onClick={() => removeInstallment(i)}>
+                                          <Plus size={16} style={{ transform: 'rotate(45deg)' }} />
+                                        </button>
+                                      </div>
+                                    ))}
+                                    <button type="button" className="btn btn-sm btn-link text-success fw-bold p-0 d-flex align-items-center gap-1" onClick={addInstallment} style={{ fontSize: '10px' }}>
+                                      <Plus size={14} /> ADD INSTALLMENT
+                                    </button>
+                                    
+                                    {!isMatch && (
+                                      <div className="mt-2 x-small fw-black text-warning text-uppercase tracking-widest">
+                                        Awaiting Balance: ₹{Math.abs(balanceRemaining).toFixed(0)}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                <div className="mt-3">
+                                  <label className="form-label small fw-black text-muted text-uppercase mb-2" style={{ fontSize: '10px' }}>Schedule Note</label>
+                                  <input 
+                                    type="text" 
+                                    className={`form-control form-control-sm ${isDarkMode ? 'bg-dark border-secondary border-opacity-50 text-white' : 'bg-white'}`}
+                                    placeholder="e.g., Student requested end of month for 2nd part"
+                                    value={scheduleNote}
+                                    onChange={(e) => setScheduleNote(e.target.value)}
+                                  />
+                                </div>
+                                <p className="text-muted mt-3 mb-0" style={{ fontSize: '8px' }}>* INITIALIZING TRANSMISSION LINK: Submission will generate a live payment link for the student.</p>
                               </div>
                             </div>
                           )}

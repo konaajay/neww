@@ -157,6 +157,35 @@ const AdminDashboard = () => {
       setLeads(leadsPayload?.content || (Array.isArray(leadsPayload) ? leadsPayload : []));
       setTeamTree(treeRes.data || null);
       setCallStats(callStatsRes.data?.data || callStatsRes.data);
+
+      // Admin Revenue Sync Overdrive
+      try {
+        const historyRes = await paymentService.fetchHistory('ADMIN', {
+          startDate: filters.from,
+          endDate: filters.to,
+          userId: filters.userId // If filtering by a specific member
+        });
+        const payments = historyRes.data || [];
+        const calculatedRevenue = payments
+          .filter(p => ['PAID', 'SUCCESS', 'APPROVED'].includes(p.status))
+          .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+        
+        // Inject the accurate revenue into the stats and summary objects
+        setStats(prev => ({
+          ...prev,
+          totalRevenue: Math.max(prev?.totalRevenue || 0, calculatedRevenue),
+          monthlyRevenue: Math.max(prev?.monthlyRevenue || 0, calculatedRevenue)
+        }));
+        setSummary(prev => ({
+          ...prev,
+          revenue: {
+            ...prev?.revenue,
+            monthly: Math.max(prev?.revenue?.monthly || 0, calculatedRevenue)
+          }
+        }));
+      } catch (err) {
+        console.warn('Admin revenue recalculation failed');
+      }
     } catch (err) {
       toast.error('System synchronization failed');
     } finally {
@@ -677,12 +706,15 @@ const AdminDashboard = () => {
                           setActiveTab('edit-lead');
                         }}
                         onRecordCallOutcome={async (leadId, data) => {
+                          console.log('Admin recording outcome:', { leadId, data });
                           try {
-                            await adminService.recordCallOutcome(leadId, data);
+                            const response = await adminService.recordCallOutcome(leadId, data);
+                            console.log('Outcome record success:', response);
                             toast.success('Outcome recorded');
                             fetchData();
                           } catch (err) {
-                            toast.error('Failed to record outcome');
+                            console.error('Outcome record failure:', err);
+                            toast.error('Failed to record outcome: ' + (err?.response?.data?.message || 'Unknown error'));
                           }
                         }}
                         onSendPaymentLink={handleSendPaymentLink}

@@ -44,7 +44,7 @@ public class LeadPaymentService {
     // @Value("${cashfree.environment:SANDBOX}")
     // private String environment;
 
-    @Value("${app.frontend-url:http://localhost:3000}")
+    @Value("${app.frontend-url:https://salestoo.netlify.app}")
     private String frontendUrl;
 
     @Transactional
