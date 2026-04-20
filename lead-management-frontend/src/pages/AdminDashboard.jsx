@@ -831,7 +831,13 @@ const AdminDashboard = () => {
               role="ADMIN"
               currentUserId={user?.id}
             />
-            <AttendanceDashboard role="ADMIN" userId={filters.userId} date={filters.from.split('T')[0]} />
+            <AttendanceDashboard 
+              role="ADMIN" 
+              userId={filters.userId} 
+              startDate={filters.from.split('T')[0]} 
+              endDate={filters.to.split('T')[0]} 
+              refreshTrigger={refreshTrigger}
+            />
           </div>
         )}
 

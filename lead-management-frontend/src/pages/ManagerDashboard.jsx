@@ -101,6 +101,12 @@ const ManagerDashboard = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
     const [editingLead, setEditingLead] = useState(null);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    const handleSync = () => {
+        setRefreshTrigger(prev => prev + 1);
+        reload();
+    };
 
     const fetchLookupData = async () => {
         try {
@@ -820,12 +826,17 @@ const ManagerDashboard = () => {
                     <FiltersBar 
                         filters={filters}
                         onChange={setFilters}
-                        onSync={() => {}} 
+                        onSync={handleSync} 
                         title="ATTENDANCE HUB"
                         role={user?.role}
                         currentUserId={user?.id}
                     />
-                    <AttendanceDashboard role="MANAGER" userId={filters.userId} date={filters.from.split('T')[0]} />
+                    <AttendanceDashboard 
+                      role="MANAGER" 
+                      userId={filters.userId} 
+                      startDate={filters.from.split('T')[0]} 
+                      endDate={filters.to.split('T')[0]} 
+                    />
                   </div>
                 )}
 
@@ -859,7 +870,7 @@ const ManagerDashboard = () => {
                         <FiltersBar 
                             filters={filters}
                             onChange={setFilters}
-                            onSync={reload}
+                            onSync={() => setRefreshTrigger(prev => prev + 1)}
                             title="FINANCIAL HUB"
                             role={user?.role}
                             currentUserId={user?.id}

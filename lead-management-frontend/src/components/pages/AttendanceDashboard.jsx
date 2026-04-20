@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  Calendar, 
-  Filter, 
-  Search, 
-  Download, 
-  Clock, 
+import {
+  Users,
+  Calendar,
+  Filter,
+  Search,
+  Download,
+  Clock,
   Coffee,
   CheckCircle,
   XCircle,
@@ -15,25 +15,30 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import attendanceService from '../../services/attendanceService';
+import { useAuth } from '../../context/AuthContext';
 
-const AttendanceDashboard = ({ role, userId: externalUserId, date: externalDate }) => {
+const AttendanceDashboard = ({ role, userId: externalUserId, startDate: externalStartDate, endDate: externalEndDate, refreshTrigger }) => {
+  const { user } = useAuth();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Filters
-  const [date, setDate] = useState(externalDate || new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(externalStartDate || new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(externalEndDate || new Date().toISOString().split('T')[0]);
   const [userId, setUserId] = useState(externalUserId || '');
-
-  // User History Detail Modal
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [userHistory, setUserHistory] = useState([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [users, setUsers] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [userHistory, setUserHistory] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [stats, setStats] = useState({ present: 0, absent: 0, late: 0 });
 
+  // Sync with external props
   useEffect(() => {
-    if (externalDate) setDate(externalDate);
-  }, [externalDate]);
+    if (externalStartDate) setDate(externalStartDate);
+    if (externalEndDate) setEndDate(externalEndDate);
+  }, [externalStartDate, externalEndDate]);
 
   useEffect(() => {
     if (externalUserId !== undefined) setUserId(externalUserId || '');
@@ -44,23 +49,35 @@ const AttendanceDashboard = ({ role, userId: externalUserId, date: externalDate 
       setLoading(true);
       let response;
       const isPersonalMode = role === 'ASSOCIATE' || (externalUserId && externalUserId === 'self');
-      
+
       if (isPersonalMode) {
         response = await attendanceService.getMyLogs();
         if (response.success) {
-           setLogs(response.data.map(log => ({
-             ...log,
-             userName: 'Me',
-             date: log.checkInTime ? log.checkInTime.split('T')[0] : 'Today',
-             status: log.totalWorkMinutes >= 480 ? 'PRESENT' : (log.totalWorkMinutes >= 240 ? 'HALF_DAY' : 'ABSENT')
-           })));
-           setError(null);
+          setLogs(response.data.map(log => ({
+            ...log,
+            userName: 'Me',
+            date: log.checkInTime ? log.checkInTime.split('T')[0] : 'Today',
+            status: log.totalWorkMinutes >= 480 ? 'PRESENT' : (log.totalWorkMinutes >= 240 ? 'HALF_DAY' : 'ABSENT')
+          })));
+          setError(null);
         }
       } else {
-        const cleanDate = date?.includes('T') ? date.split('T')[0] : date;
-        response = await attendanceService.getAdminSummaries(cleanDate, userId);
+        const sanitizeDate = (d) => {
+          if (!d) return '';
+          const s = String(d);
+          return s.includes('T') ? s.split('T')[0] : s;
+        };
+
+        const cleanStartDate = sanitizeDate(date);
+        const cleanEndDate = sanitizeDate(endDate);
+
+        response = await attendanceService.getAdminSummaries(cleanStartDate, userId, cleanEndDate);
         if (response.success) {
-          setLogs(response.data);
+          // Normalize the data for consistent display
+          setLogs((response.data || []).map(log => ({
+            ...log,
+            displayDate: log.date || (log.checkInTime ? log.checkInTime.split('T')[0] : 'TODAY')
+          })));
           setError(null);
         }
       }
@@ -91,7 +108,7 @@ const AttendanceDashboard = ({ role, userId: externalUserId, date: externalDate 
 
   useEffect(() => {
     fetchLogs();
-  }, [date, userId]);
+  }, [date, endDate, userId, refreshTrigger]);
 
 
   const formatMinutes = (mins) => {
@@ -102,9 +119,9 @@ const AttendanceDashboard = ({ role, userId: externalUserId, date: externalDate 
   };
 
   return (
-    <div className={`container-fluid animate-fade-in ${externalUserId || externalDate ? 'p-0' : 'p-4'}`}>
+    <div className={`container-fluid animate-fade-in ${externalUserId || externalStartDate ? 'p-0' : 'p-4'}`}>
       {/* Header Area */}
-      {(!externalUserId && !externalDate) && (
+      {(!externalUserId && !externalStartDate) && (
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div>
             <h4 className="fw-black text-main mb-1 text-uppercase tracking-widest">Attendance Activity</h4>
@@ -117,32 +134,43 @@ const AttendanceDashboard = ({ role, userId: externalUserId, date: externalDate 
       )}
 
       {/* Filter Bar */}
-      {(!externalUserId && !externalDate) && (
+      {(!externalUserId && !externalStartDate) && (
         <div className="premium-card mb-4 border-0 shadow-lg">
           <div className="card-body p-4">
             <div className="row g-4 align-items-end">
               <div className="col-md-4">
-                <label className="small fw-black text-muted text-uppercase tracking-widest mb-2 d-block" style={{ fontSize: '10px' }}>Filter by Date</label>
+                <label className="small fw-black text-muted text-uppercase tracking-widest mb-2 d-block" style={{ fontSize: '10px' }}>Filter by Date Range</label>
                 <div className="input-group">
-                  <span className="input-group-text bg-surface border-0 text-primary rounded-start-4">
-                    <Calendar size={18} />
-                  </span>
-                  <input 
-                    type="date" 
-                    className="form-control bg-surface border-0 text-main shadow-none rounded-end-4 py-2.5"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                  />
+                  <div className="d-flex align-items-center gap-3">
+                    <div className="d-flex align-items-center bg-surface bg-opacity-50 p-1 px-3 rounded-pill border border-white border-opacity-10">
+                      <Calendar size={14} className="text-primary me-2" />
+                      <input
+                        type="date"
+                        className="bg-transparent border-0 text-main fw-black small text-uppercase outline-none py-1"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        style={{ fontSize: '10px' }}
+                      />
+                      <span className="mx-2 text-muted fw-bold small opacity-25">TO</span>
+                      <input
+                        type="date"
+                        className="bg-transparent border-0 text-main fw-black small text-uppercase outline-none py-1"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        style={{ fontSize: '10px' }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="col-md-4">
-                <label className="small fw-black text-muted text-uppercase tracking-widest mb-2 d-block" style={{ fontSize: '10px' }}>Identity Propagation (Staff ID)</label>
+                <label className="small fw-black text-muted text-uppercase tracking-widest mb-2 d-block" style={{ fontSize: '10px' }}>Staff ID Search</label>
                 <div className="input-group">
                   <span className="input-group-text bg-surface border-0 text-primary rounded-start-4">
                     <Search size={18} />
                   </span>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     className="form-control bg-surface border-0 text-main shadow-none rounded-end-4 py-2.5"
                     placeholder="Enter User ID..."
                     value={userId}
@@ -151,11 +179,11 @@ const AttendanceDashboard = ({ role, userId: externalUserId, date: externalDate 
                 </div>
               </div>
               <div className="col-md-4 text-end">
-                  <div className="d-flex align-items-center justify-content-end gap-3 text-muted small fw-bold opacity-50 mb-1">
-                     <div className="d-flex align-items-center gap-1"><div className="bg-success rounded-circle" style={{width: 8, height: 8}}></div> PRESENT</div>
-                     <div className="d-flex align-items-center gap-1"><div className="bg-warning rounded-circle" style={{width: 8, height: 8}}></div> HALF DAY</div>
-                     <div className="d-flex align-items-center gap-1"><div className="bg-danger rounded-circle" style={{width: 8, height: 8}}></div> ABSENT</div>
-                  </div>
+                <div className="d-flex align-items-center justify-content-end gap-3 text-muted small fw-bold opacity-50 mb-1">
+                  <div className="d-flex align-items-center gap-1"><div className="bg-success rounded-circle" style={{ width: 8, height: 8 }}></div> PRESENT</div>
+                  <div className="d-flex align-items-center gap-1"><div className="bg-warning rounded-circle" style={{ width: 8, height: 8 }}></div> HALF DAY</div>
+                  <div className="d-flex align-items-center gap-1"><div className="bg-danger rounded-circle" style={{ width: 8, height: 8 }}></div> ABSENT</div>
+                </div>
               </div>
             </div>
           </div>
@@ -168,8 +196,7 @@ const AttendanceDashboard = ({ role, userId: externalUserId, date: externalDate 
           <table className="table table-hover align-middle mb-0">
             <thead className="bg-surface bg-opacity-30 border-bottom border-white border-opacity-5">
               <tr>
-                <th className="px-4 py-3 small fw-black text-muted text-uppercase tracking-widest" style={{ fontSize: '10px' }}>SNo</th>
-                <th className="px-4 py-3 small fw-black text-muted text-uppercase tracking-widest text-center" style={{ fontSize: '10px' }}>Date</th>
+                <th className="px-4 py-3 small fw-black text-muted text-uppercase tracking-widest" style={{ fontSize: '10px' }}>Date</th>
                 <th className="px-4 py-3 small fw-black text-muted text-uppercase tracking-widest text-center" style={{ fontSize: '10px' }}>Emp ID</th>
                 <th className="px-4 py-3 small fw-black text-muted text-uppercase tracking-widest" style={{ fontSize: '10px' }}>Name</th>
                 <th className="px-4 py-3 small fw-black text-muted text-uppercase tracking-widest text-center" style={{ fontSize: '10px' }}>Status</th>
@@ -191,26 +218,23 @@ const AttendanceDashboard = ({ role, userId: externalUserId, date: externalDate 
                 <tr>
                   <td colSpan="7" className="text-center py-5">
                     <div className="d-flex flex-column align-items-center gap-3 opacity-25">
-                       <AlertCircle size={48} className="text-muted" />
-                       <span className="fw-black text-muted text-uppercase small tracking-widest">No nodes found for the selected temporal coordinates</span>
+                      <AlertCircle size={48} className="text-muted" />
+                      <span className="fw-black text-muted text-uppercase small tracking-widest">No nodes found for the selected temporal coordinates</span>
                     </div>
                   </td>
                 </tr>
               ) : (
                 logs.map((log, index) => (
-                  <tr key={`${log.userId}-${log.date}`} className="border-bottom border-white border-opacity-5 transition-smooth hover-bg-surface">
-                    <td className="px-4 py-3 text-muted small fw-bold">
-                        {index + 1}
-                    </td>
-                    <td className="px-4 py-3 text-center small text-main fw-black opacity-75">
-                      {log.date}
+                  <tr key={`${log.userId}-${log.displayDate || log.date || index}`} className="border-bottom border-white border-opacity-5 transition-smooth hover-bg-surface">
+                    <td className="px-4 py-3 fw-bold small text-muted">
+                      {log.displayDate}
                     </td>
                     <td className="px-4 py-3 text-center small text-primary fw-black">
                       #{log.userId || log.user?.id || '???'}
                     </td>
                     <td className="px-4 py-4">
-                      <div 
-                        className="d-flex align-items-center gap-3" 
+                      <div
+                        className="d-flex align-items-center gap-3"
                         style={{ cursor: 'pointer' }}
                         onClick={() => fetchUserHistory(log.user || { id: log.userId, name: log.userName })}
                       >
@@ -219,17 +243,16 @@ const AttendanceDashboard = ({ role, userId: externalUserId, date: externalDate 
                         </div>
                         <div>
                           <div className="fw-black text-main d-flex align-items-center gap-2" style={{ fontSize: '12px' }}>
-                             {log.userName || log.user?.name || `ID: ${log.userId || log.user?.id || '?'}`}
+                            {log.userName || log.user?.name || `Emp #${log.userId || '?'}`}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <div className={`ui-badge ${
-                        log.status === 'PRESENT' ? 'bg-success bg-opacity-10 text-success border border-success border-opacity-20' : 
-                        log.status === 'HALF_DAY' ? 'bg-warning bg-opacity-10 text-warning border border-warning border-opacity-20' : 
-                        'bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20'
-                      }`} style={{ fontSize: '9px' }}>
+                      <div className={`ui-badge ${log.status === 'PRESENT' ? 'bg-success bg-opacity-10 text-success border border-success border-opacity-20' :
+                        log.status === 'HALF_DAY' ? 'bg-warning bg-opacity-10 text-warning border border-warning border-opacity-20' :
+                          'bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20'
+                        }`} style={{ fontSize: '9px' }}>
                         {log.status === 'PRESENT' ? 'PRESENT' : log.status === 'HALF_DAY' ? 'HALF DAY' : 'ABSENT'}
                       </div>
                     </td>
@@ -241,20 +264,20 @@ const AttendanceDashboard = ({ role, userId: externalUserId, date: externalDate 
                     </td>
                     {(role === 'ADMIN' || role === 'MANAGER') && (
                       <td className="px-4 py-3 text-end">
-                        <button 
+                        <button
                           className="btn btn-link text-danger p-0 border-0 opacity-50 hover-opacity-100 transition-all"
                           title="Force Punch Out (Close Session)"
                           onClick={async (e) => {
-                             e.stopPropagation();
-                             if (window.confirm(`Force close current attendance session for ${log.userName || log.userId}?`)) {
-                                try {
-                                  await attendanceService.forceClockOut(log.userId);
-                                  toast.success('Session closed successfully');
-                                  fetchLogs();
-                                } catch (err) {
-                                  toast.error('Failed to close session - user may already be offline');
-                                }
-                             }
+                            e.stopPropagation();
+                            if (window.confirm(`Force close current attendance session for ${log.userName || log.userId}?`)) {
+                              try {
+                                await attendanceService.forceClockOut(log.userId);
+                                toast.success('Session closed successfully');
+                                fetchLogs();
+                              } catch (err) {
+                                toast.error('Failed to close session - user may already be offline');
+                              }
+                            }
                           }}
                         >
                           <XCircle size={18} />
@@ -282,12 +305,12 @@ const AttendanceDashboard = ({ role, userId: externalUserId, date: externalDate 
                 <X size={24} />
               </button>
             </div>
-            
+
             <div className="card-body p-4 overflow-auto">
               {loadingHistory ? (
                 <div className="text-center py-5">
-                   <div className="spinner-border text-primary mb-3"></div>
-                   <p className="opacity-50">Calculating monthly performance...</p>
+                  <div className="spinner-border text-primary mb-3"></div>
+                  <p className="opacity-50">Calculating monthly performance...</p>
                 </div>
               ) : (
                 <>
@@ -346,10 +369,9 @@ const AttendanceDashboard = ({ role, userId: externalUserId, date: externalDate 
                             <td className="p-2 text-center opacity-75">{formatMinutes(h.totalBreakMinutes)}</td>
                             <td className="p-2 text-center text-info">{h.outsideCount || 0}</td>
                             <td className="p-2 text-end">
-                              <span className={`badge rounded-pill ${
-                                h.status === 'PRESENT' ? 'bg-success text-success' : 
+                              <span className={`badge rounded-pill ${h.status === 'PRESENT' ? 'bg-success text-success' :
                                 h.status === 'HALF_DAY' ? 'bg-warning text-warning' : 'bg-danger text-danger'
-                              } bg-opacity-10 border border-current border-opacity-10`}>
+                                } bg-opacity-10 border border-current border-opacity-10`}>
                                 {h.status}
                               </span>
                             </td>
@@ -367,6 +389,5 @@ const AttendanceDashboard = ({ role, userId: externalUserId, date: externalDate 
     </div>
   );
 };
-
 
 export default AttendanceDashboard;

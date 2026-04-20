@@ -30,9 +30,13 @@ export const attendanceService = {
     return response.data;
   },
 
-  getAdminSummaries: async (date, userId) => {
+  getAdminSummaries: async (startDate, userId, endDate) => {
     const params = {};
-    if (date) params.date = date;
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    // Fallback for legacy backend if it uses 'date'
+    if (startDate && !params.startDate) params.date = startDate;
+    
     if (userId) params.userId = userId;
     const response = await api.get('/admin/attendance/summaries', { params });
     return response.data;

@@ -5,7 +5,6 @@ import { useTheme } from '../../../context/ThemeContext';
 const TeamManagement = ({
   teamLeaders,
   roles,
-  permissions,
   offices,
   shifts,
   handleCreateUser,
@@ -24,7 +23,6 @@ const TeamManagement = ({
     mobile: '',
     password: '',
     role: '',
-    permissions: [],
     supervisorId: '',
     officeId: '',
     joiningDate: new Date().toISOString().split('T')[0]
@@ -42,7 +40,7 @@ const TeamManagement = ({
     e.preventDefault();
     handleCreateUser(formData);
     setFormData({
-      name: '', email: '', mobile: '', password: '', role: '', permissions: [], supervisorId: '',
+      name: '', email: '', mobile: '', password: '', role: '', supervisorId: '',
       officeId: '',
       joiningDate: new Date().toISOString().split('T')[0]
     });
@@ -63,15 +61,9 @@ const TeamManagement = ({
     u.mobile?.includes(searchTerm)
   );
 
-  const isAllSelected = permissions.length > 0 && formData.permissions.length === permissions.length;
 
-  const handleSelectAll = (e) => {
-    if (e.target.checked) {
-      setFormData({ ...formData, permissions: [...permissions] });
-    } else {
-      setFormData({ ...formData, permissions: [] });
-    }
-  };
+
+
 
   const UserRow = ({ user, level = 0, index, children }) => {
     const isExpanded = expandedIds.some(eid => isSameId(eid, user.id));
@@ -282,49 +274,6 @@ const TeamManagement = ({
                     </div>
                   )}
 
-                  <div className="col-12 mt-2">
-                    <div className="d-flex align-items-center justify-content-between mb-3">
-                      <label className="form-label small fw-black text-uppercase text-muted mb-0 tracking-widest" style={{ fontSize: '10px' }}>System Access Privileges</label>
-                      <div className="form-check custom-check d-flex align-items-center">
-                        <input
-                          className="form-check-input shadow-none m-0"
-                          type="checkbox"
-                          id="select-all-perms"
-                          checked={isAllSelected}
-                          onChange={handleSelectAll}
-                        />
-                        <label className="form-check-label small fw-black text-uppercase text-primary ms-2 cursor-pointer" htmlFor="select-all-perms" style={{ fontSize: '9px', letterSpacing: '0.5px' }}>
-                          Select All
-                        </label>
-                      </div>
-                    </div>
-                    <div className="bg-surface p-4 rounded-4 shadow-inner border border-white border-opacity-5" style={{ maxHeight: '180px', overflowY: 'auto' }}>
-                      <div className="row g-3">
-                        {permissions.map(perm => (
-                          <div key={perm} className="col-md-4">
-                            <div className="form-check custom-check">
-                              <input
-                                className="form-check-input shadow-none"
-                                type="checkbox"
-                                id={`onboard-perm-${perm}`}
-                                checked={formData.permissions.includes(perm)}
-                                onChange={() => {
-                                  const currentPerms = formData.permissions;
-                                  const perms = currentPerms.includes(perm)
-                                    ? currentPerms.filter(p => p !== perm)
-                                    : [...currentPerms, perm];
-                                  setFormData({ ...formData, permissions: perms });
-                                }}
-                              />
-                              <label className="form-check-label small fw-bold opacity-75 ms-2 cursor-pointer" htmlFor={`onboard-perm-${perm}`}>
-                                {perm.replace(/_/g, ' ')}
-                              </label>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
                   <div className="col-12">
                     <button type="submit" className="btn btn-primary w-100 fw-black text-uppercase py-3 rounded-pill shadow-glow mt-2">Provision System Identity</button>
                   </div>

@@ -28,7 +28,6 @@ const paymentService = {
   },
 
   splitPayment: (id, splitRequest) => {
-    // splitRequest: { installments: [{ amount, dueDate }], paymentMethod, note }
     return api.post(`/payments/${id}/split`, splitRequest);
   },
 
