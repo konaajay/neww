@@ -42,7 +42,7 @@ const Navbar = ({ isCollapsed, userEmail, onLogout, onToggleSidebar, windowWidth
 
         {/* Desktop search bar */}
         {windowWidth > 1280 && (
-          <div className="search-container" style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-surface)', padding: '6px 16px', borderRadius: '999px', border: '1px solid var(--border-color)', transition: 'all 0.3s' }}>
+          <div className="search-container" style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-input)', padding: '6px 16px', borderRadius: '999px', border: '1px solid var(--border-color)', transition: 'all 0.3s' }}>
             <Search size={14} className="search-icon" style={{ color: 'var(--text-muted)', transition: 'color 0.3s' }} />
             <input
               type="text"

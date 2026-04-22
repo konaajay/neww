@@ -5,6 +5,7 @@ const adminService = {
   fetchMemberPerformance: (filters) => api.get('/admin/reports/member-performance', { params: filters }),
   fetchTrendData: (filters) => api.get('/reports/trend', { params: filters }),
   fetchDashboardSummary: (filters) => api.get('/stats/summary', { params: filters }),
+  fetchUnifiedDashboard: (filters) => api.get('/dashboard/summary', { params: filters }),
   fetchUsers: () => api.get('/admin/users'),
   fetchPermissions: () => api.get('/admin/permissions'),
   fetchShifts: () => api.get('/admin/shifts'),

@@ -39,4 +39,10 @@ public interface AttendanceSessionRepository extends JpaRepository<AttendanceSes
     List<AttendanceSession> findFilteredByUserIds(@Param("userIds") java.util.Collection<Long> userIds, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     boolean existsByOfficeId(Long officeId);
+    
+    @Query("SELECT COUNT(DISTINCT s.user.id) FROM AttendanceSession s WHERE s.checkInTime >= :start AND s.checkInTime <= :end")
+    long countPresentUsers(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT COUNT(DISTINCT s.user.id) FROM AttendanceSession s WHERE s.isLate = true AND s.checkInTime >= :start AND s.checkInTime <= :end")
+    long countLateUsers(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 }

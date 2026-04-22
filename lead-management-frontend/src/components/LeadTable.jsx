@@ -76,7 +76,7 @@ const LeadTable = ({
             placeholder="Search leads..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="form-control bg-dark bg-opacity-40 border border-white border-opacity-10 text-main py-2 ps-5 shadow-none rounded-pill transition-all"
+            className="form-control bg-surface bg-opacity-50 border border-white border-opacity-10 text-main py-2 ps-5 shadow-none rounded-pill transition-all"
             style={{ fontSize: '12px' }}
           />
         </div>

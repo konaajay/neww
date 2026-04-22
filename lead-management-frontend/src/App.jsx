@@ -3,6 +3,17 @@ import { useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000,
+    },
+  },
+});
 
 import LoginPage from './pages/LoginPage';
 import ManagerDashboard from './pages/ManagerDashboard';
@@ -39,82 +50,84 @@ function App() {
   }
 
   return (
-    <ThemeProvider>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/payment-success" element={<PaymentSuccess />} />
-          <Route path="/pay/:sessionId" element={<PaymentPortal />} />
-          
-          <Route 
-            path="/manager/*" 
-            element={
-              <ProtectedRoute allowedRoles={['MANAGER']}>
-                <ManagerDashboard />
-              </ProtectedRoute>
-            } 
-          />
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/pay/:sessionId" element={<PaymentPortal />} />
+            
+            <Route 
+              path="/manager/*" 
+              element={
+                <ProtectedRoute allowedRoles={['MANAGER']}>
+                  <ManagerDashboard />
+                </ProtectedRoute>
+              } 
+            />
 
-          <Route 
-            path="/admin/*" 
-            element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            } 
-          />
+            <Route 
+              path="/admin/*" 
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN']}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              } 
+            />
 
-          <Route 
-            path="/tl/*" 
-            element={
-              <ProtectedRoute allowedRoles={['TEAM_LEADER']}>
-                <TeamLeaderDashboard />
-              </ProtectedRoute>
-            } 
-          />
+            <Route 
+              path="/tl/*" 
+              element={
+                <ProtectedRoute allowedRoles={['TEAM_LEADER']}>
+                  <TeamLeaderDashboard />
+                </ProtectedRoute>
+              } 
+            />
 
-          <Route 
-            path="/associate/*" 
-            element={
-              <ProtectedRoute allowedRoles={['ASSOCIATE', 'ASSOCIATE_TEAM_LEAD']}>
-                <AssociateDashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/leads/:id/fee-structure" 
-            element={
-              <ProtectedRoute>
-                <StudentFeePage />
-              </ProtectedRoute>
-            } 
-          />
+            <Route 
+              path="/associate/*" 
+              element={
+                <ProtectedRoute allowedRoles={['ASSOCIATE', 'ASSOCIATE_TEAM_LEAD']}>
+                  <AssociateDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/leads/:id/fee-structure" 
+              element={
+                <ProtectedRoute>
+                  <StudentFeePage />
+                </ProtectedRoute>
+              } 
+            />
 
-          <Route 
-            path="/" 
-            element={
-              user ? (
-                user.role === 'ADMIN' ? 
-                  <Navigate to="/admin" /> : 
-                  user.role === 'MANAGER' ? 
-                    <Navigate to="/manager" /> : 
-                    user.role === 'TEAM_LEADER' ? 
-                      <Navigate to="/tl" /> : <Navigate to="/associate" />
-              ) : <Navigate to="/login" />
-            } 
-          />
-        </Routes>
-      </Router>
-      <ToastContainer 
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        theme="dark"
-      />
-    </ThemeProvider>
+            <Route 
+              path="/" 
+              element={
+                user ? (
+                  user.role === 'ADMIN' ? 
+                    <Navigate to="/admin" /> : 
+                    user.role === 'MANAGER' ? 
+                      <Navigate to="/manager" /> : 
+                      user.role === 'TEAM_LEADER' ? 
+                        <Navigate to="/tl" /> : <Navigate to="/associate" />
+                ) : <Navigate to="/login" />
+              } 
+            />
+          </Routes>
+        </Router>
+        <ToastContainer 
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          theme="dark"
+        />
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 

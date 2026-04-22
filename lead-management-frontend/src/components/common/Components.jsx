@@ -56,28 +56,28 @@ export const Input = ({ label, icon, className = '', ...props }) => {
   );
 };
 
-export const Table = ({ headers, data, renderRow, className = '' }) => {
+export const Table = ({ headers = [], data = [], renderRow, className = '' }) => {
   return (
     <div className={`table-responsive ${className}`}>
       <table className="table table-hover align-middle mb-0">
         <thead>
           <tr className="text-muted small fw-black border-bottom" style={{ borderColor: 'var(--border-color)' }}>
-            {headers.map((header, idx) => (
-              <th key={idx} className={`${idx === 0 ? 'ps-4' : ''} ${idx === headers.length - 1 ? 'pe-4 text-end' : ''}`} style={{ fontSize: '10px', textTransform: 'uppercase', tracking: '0.05em' }}>
+            {headers?.map((header, idx) => (
+              <th key={idx} className={`${idx === 0 ? 'ps-4' : ''} ${idx === (headers?.length - 1) ? 'pe-4 text-end' : ''}`} style={{ fontSize: '10px', textTransform: 'uppercase', tracking: '0.05em' }}>
                 {header}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {data.map((item, idx) => (
+          {data?.map((item, idx) => (
             <tr key={idx} className="table-row border-bottom transition-all" style={{ borderColor: 'var(--border-color)' }}>
               {renderRow(item, idx)}
             </tr>
           ))}
-          {data.length === 0 && (
+          {(!data || data.length === 0) && (
             <tr>
-              <td colSpan={headers.length} className="text-center p-5 text-muted fw-bold opacity-20">
+              <td colSpan={headers?.length || 1} className="text-center p-5 text-muted fw-bold opacity-20">
                 NO OPERATIONAL RECORDS FOUND
               </td>
             </tr>

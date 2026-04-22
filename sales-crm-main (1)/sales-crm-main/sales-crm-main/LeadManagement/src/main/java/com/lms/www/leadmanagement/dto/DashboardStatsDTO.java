@@ -22,6 +22,8 @@ public class DashboardStatsDTO {
     private BigDecimal dailyRevenue;
     private BigDecimal monthlyRevenue;
     private BigDecimal expectedRevenue;
+    private BigDecimal pendingPaymentsAmount;
+    private BigDecimal forecastRevenue;
     
     // Follow-ups
     private long todayFollowups;

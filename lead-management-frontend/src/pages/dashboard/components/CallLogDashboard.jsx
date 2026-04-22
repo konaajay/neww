@@ -12,7 +12,7 @@ import { toast } from 'react-toastify';
 import FiltersBar from './FiltersBar';
 import CallAnalyticsGrid from './CallAnalyticsGrid';
 
-const CallLogDashboard = ({ userId: externalUserId, hideHeader = false }) => {
+const CallLogDashboard = ({ userId: externalUserId, hideHeader = false, filters: propsFilters, onChange: onPropsFiltersChange }) => {
     const { user } = useAuth();
     const { isDarkMode, theme } = useTheme();
     const role = user?.role;
@@ -24,17 +24,21 @@ const CallLogDashboard = ({ userId: externalUserId, hideHeader = false }) => {
     const [playingId, setPlayingId] = useState(null);
     const [audioObj, setAudioObj] = useState(null);
     
-    const [filters, setFilters] = useState({
-        from: new Date().toISOString().split('T')[0] + 'T00:00:00',
-        to: new Date().toISOString().split('T')[0] + 'T23:59:59',
+    const [internalFilters, setInternalFilters] = useState({
+        from: new Date().toISOString().split('T')[0],
+        to: new Date().toISOString().split('T')[0],
         userId: externalUserId || ''
     });
 
+    // Use external filters if provided, otherwise fall back to internal
+    const filters = propsFilters || internalFilters;
+    const setFilters = onPropsFiltersChange || setInternalFilters;
+
     useEffect(() => {
-        if (externalUserId !== undefined) {
+        if (externalUserId !== undefined && !propsFilters) {
             setFilters(prev => ({ ...prev, userId: externalUserId || '' }));
         }
-    }, [externalUserId]);
+    }, [externalUserId, propsFilters]);
 
     const fetchData = async () => {
         setLoading(true);

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, RefreshCcw, User, Users, ShieldHalf, Filter } from 'lucide-react';
-import { Button } from '../../../components/common/Components';
+import { Calendar, RefreshCcw, Filter } from 'lucide-react';
 import adminService from '../../../services/adminService';
+import { useTheme } from '../../../context/ThemeContext';
 
 const FiltersBar = ({ filters, onChange, onSync, title = "COMMAND CENTER", role = "", currentUserId }) => {
+  const { isDarkMode } = useTheme();
   const [selectedMgrId, setSelectedMgrId] = useState("");
   const [selectedTlId, setSelectedTlId] = useState("");
   const [selectedAssocId, setSelectedAssocId] = useState("");
@@ -46,40 +47,48 @@ const FiltersBar = ({ filters, onChange, onSync, title = "COMMAND CENTER", role 
 
   useEffect(() => {
     let targetUserId = null;
-    if (selectedAssocId) targetUserId = selectedAssocId;
-    else if (selectedTlId) targetUserId = selectedTlId;
-    else if (selectedMgrId) targetUserId = selectedMgrId;
-    else if (isManager) targetUserId = currentUserId;
+    let targetTeamId = null;
 
-    if (filters?.userId !== targetUserId) {
-      onChange({ ...filters, userId: targetUserId });
+    if (selectedAssocId) {
+      targetUserId = selectedAssocId;
+    } else if (selectedTlId) {
+      targetTeamId = selectedTlId;
+    } else if (selectedMgrId) {
+      targetTeamId = selectedMgrId;
+    } else if (isManager) {
+      targetTeamId = currentUserId;
     }
-  }, [selectedMgrId, selectedTlId, selectedAssocId, filters?.userId]);
+
+    if (filters?.userId !== targetUserId || filters?.teamId !== targetTeamId) {
+      onChange({ 
+        ...filters, 
+        userId: targetUserId, 
+        teamId: targetTeamId 
+      });
+    }
+  }, [selectedMgrId, selectedTlId, selectedAssocId, filters?.userId, filters?.teamId]);
 
   return (
-    <div className="bg-white p-2 mb-3 animate-fade-in border border-light shadow-sm rounded-pill px-4">
-      <div className="d-flex align-items-center justify-content-between gap-2 overflow-x-auto no-scrollbar">
+    <div className={`premium-card p-2 px-3 mb-3 animate-fade-in ${isDarkMode ? 'bg-surface bg-opacity-40 backdrop-blur' : 'bg-white shadow-sm'} rounded-pill`}>
+      <div className="d-flex align-items-center justify-content-between gap-2 overflow-x-auto no-scrollbar py-1">
         {/* Left Section: Title + Dropdowns */}
-        <div className="d-flex align-items-center gap-3">
-          <div className="d-flex align-items-center gap-2 pe-3 border-end border-light">
-            <div className="p-2 bg-primary bg-opacity-10 text-primary rounded-circle">
-              <Filter size={16} />
+        <div className="d-flex align-items-center gap-2">
+          <div className="d-flex align-items-center gap-2 pe-3 border-end border-white border-opacity-10">
+            <div className={`p-2 ${isDarkMode ? 'bg-white bg-opacity-5' : 'bg-primary bg-opacity-10'} text-primary rounded-circle`}>
+              <Filter size={14} />
             </div>
-            <div className="d-none d-xxl-block">
-              <h5 className="fw-black mb-0 text-dark tracking-wide text-uppercase" style={{ fontSize: '11px' }}>{title}</h5>
-              <p className="text-muted small mb-0 fw-bold opacity-50 text-uppercase" style={{ fontSize: '7px', letterSpacing: '0.4px' }}>
-                ANALYSIS
-              </p>
+            <div className="d-none d-lg-block">
+              <h5 className={`fw-black mb-0 ${isDarkMode ? 'text-main' : 'text-dark'} tracking-wide text-uppercase`} style={{ fontSize: '10px' }}>{title}</h5>
             </div>
           </div>
 
           {!isAssociate && (
             <div className="d-flex align-items-center gap-2">
               {role === 'ADMIN' && (
-                <div className="bg-light p-1 px-3 rounded-pill border border-light">
+                <div className={`${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-5' : 'bg-light border-light'} p-1 px-3 rounded-pill border`}>
                   <select
                     className="bg-transparent border-0 text-main fw-bold small text-uppercase outline-none py-1"
-                    style={{ fontSize: '9px', minWidth: '130px' }}
+                    style={{ fontSize: '9px', minWidth: '120px' }}
                     value={selectedMgrId}
                     onChange={(e) => {
                       setSelectedMgrId(e.target.value);
@@ -87,20 +96,19 @@ const FiltersBar = ({ filters, onChange, onSync, title = "COMMAND CENTER", role 
                       setSelectedAssocId("");
                     }}
                   >
-                    <option value="">CHOOSE MANAGER</option>
+                    <option value="" className="text-dark">MANAGER</option>
                     {managers.map(m => (
-                      <option key={m.id} value={m.id}>{m.name.toUpperCase()}</option>
+                      <option key={m.id} value={m.id} className="text-dark">{m.name.toUpperCase()}</option>
                     ))}
                   </select>
                 </div>
               )}
 
-              {/* Team selection for Admin, Manager and TL (if applicable) */}
               {(role === 'ADMIN' || isManager) && (
-                <div className="bg-light p-1 px-3 rounded-pill border border-light">
+                <div className={`${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-5' : 'bg-light border-light'} p-1 px-3 rounded-pill border`}>
                   <select
                     className="bg-transparent border-0 text-main fw-bold small text-uppercase outline-none py-1"
-                    style={{ fontSize: '9px', minWidth: '130px' }}
+                    style={{ fontSize: '9px', minWidth: '120px' }}
                     value={selectedTlId}
                     onChange={(e) => {
                       setSelectedTlId(e.target.value);
@@ -108,27 +116,26 @@ const FiltersBar = ({ filters, onChange, onSync, title = "COMMAND CENTER", role 
                     }}
                     disabled={!effectiveUserId}
                   >
-                    <option value="">{effectiveUserId ? 'ALL TEAMS' : '---'}</option>
+                    <option value="" className="text-dark">{effectiveUserId ? 'ALL TEAMS' : '---'}</option>
                     {tls.map(t => (
-                      <option key={t.id} value={t.id}>{t.name.toUpperCase()}</option>
+                      <option key={t.id} value={t.id} className="text-dark">{t.name.toUpperCase()}</option>
                     ))}
                   </select>
                 </div>
               )}
 
-              {/* Associate selection for Admin, Manager and TL */}
               {(role === 'ADMIN' || isManager || isTL) && (
-                <div className="bg-light p-1 px-3 rounded-pill border border-light">
+                <div className={`${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-5' : 'bg-light border-light'} p-1 px-3 rounded-pill border`}>
                   <select
                     className="bg-transparent border-0 text-main fw-bold small text-uppercase outline-none py-1"
-                    style={{ fontSize: '9px', minWidth: '130px' }}
+                    style={{ fontSize: '9px', minWidth: '120px' }}
                     value={selectedAssocId}
                     onChange={(e) => setSelectedAssocId(e.target.value)}
                     disabled={!effectiveUserId && role !== 'TEAM_LEADER'}
                   >
-                    <option value="">{(effectiveUserId || isTL) ? 'ALL ASSOCIATES' : '---'}</option>
+                    <option value="" className="text-dark">{(effectiveUserId || isTL) ? 'ASSOCIATES' : '---'}</option>
                     {associates.map(a => (
-                      <option key={a.id} value={a.id}>{a.name.toUpperCase()}</option>
+                      <option key={a.id} value={a.id} className="text-dark">{a.name.toUpperCase()}</option>
                     ))}
                   </select>
                 </div>
@@ -139,37 +146,38 @@ const FiltersBar = ({ filters, onChange, onSync, title = "COMMAND CENTER", role 
 
         {/* Right Section: Calendar + Reset + Sync */}
         <div className="d-flex align-items-center gap-2">
-          <div className="d-flex align-items-center gap-2 bg-light p-1 px-3 rounded-pill border border-light">
-            <Calendar size={12} className="text-muted" />
+          <div className={`d-flex align-items-center gap-2 ${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-5' : 'bg-light border-light'} p-1 px-3 rounded-pill border`}>
+            <Calendar size={11} className="text-muted" />
             <div className="d-flex align-items-center gap-1">
               <input
                 type="date"
                 className="bg-transparent border-0 text-main fw-bold px-1"
-                value={filters.from?.split('T')[0] || ""}
-                onChange={(e) => onChange({ ...filters, from: e.target.value + 'T00:00:00' })}
-                style={{ width: '105px', fontSize: '10px', outline: 'none' }}
+                value={filters.from || ""}
+                onChange={(e) => onChange({ ...filters, from: e.target.value })}
+                style={{ width: '95px', fontSize: '9px', outline: 'none' }}
               />
               <span className="text-muted small opacity-25">|</span>
               <input
                 type="date"
                 className="bg-transparent border-0 text-main fw-bold px-1"
-                value={filters.to?.split('T')[0] || ""}
-                onChange={(e) => onChange({ ...filters, to: e.target.value + 'T23:59:59' })}
-                style={{ width: '105px', fontSize: '10px', outline: 'none' }}
+                value={filters.to || ""}
+                onChange={(e) => onChange({ ...filters, to: e.target.value })}
+                style={{ width: '95px', fontSize: '9px', outline: 'none' }}
               />
             </div>
           </div>
 
           <button
-            className="btn btn-outline-secondary rounded-pill border-light py-1.5 px-3 fw-bold text-uppercase"
+            className={`btn ${isDarkMode ? 'btn-outline-light border-white border-opacity-10' : 'btn-outline-secondary border-light'} rounded-pill py-1 px-3 fw-bold text-uppercase`}
             onClick={() => {
               setSelectedMgrId("");
               setSelectedTlId("");
               setSelectedAssocId("");
               onChange({
-                from: new Date().toISOString().split('T')[0] + 'T00:00:00',
-                to: new Date().toISOString().split('T')[0] + 'T23:59:59',
-                userId: isManager ? currentUserId : null
+                from: new Date().toISOString().split('T')[0],
+                to: new Date().toISOString().split('T')[0],
+                userId: null,
+                teamId: isManager ? currentUserId : null
               });
             }}
             style={{ fontSize: '9px' }}
@@ -178,12 +186,12 @@ const FiltersBar = ({ filters, onChange, onSync, title = "COMMAND CENTER", role 
           </button>
           
           <button
-            className="btn btn-primary rounded-pill py-1.5 px-3 border-0 fw-bold text-uppercase d-flex align-items-center gap-2 shadow-sm"
+            className="btn btn-primary rounded-pill py-1 px-3 border-0 fw-bold text-uppercase d-flex align-items-center gap-2 shadow-glow-sm"
             onClick={() => onSync ? onSync() : onChange(filters)}
             style={{ fontSize: '9px' }}
           >
-            <RefreshCcw size={12} />
-            SYNC CORE
+            <RefreshCcw size={11} />
+            SYNC
           </button>
         </div>
       </div>

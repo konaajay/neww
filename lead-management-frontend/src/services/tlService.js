@@ -9,6 +9,7 @@ const tlService = {
   fetchSubordinates: () => api.get('/tl/subordinates'),
   fetchTrendData: (filters) => api.get('/reports/trend', { params: filters }),
   fetchDashboardSummary: (filters) => api.get('/stats/summary', { params: filters }),
+  fetchUnifiedDashboard: (filters) => api.get('/dashboard/summary', { params: filters }),
   addLead: (leadData) => api.post('/tl/leads', leadData),
   updateLeadStatus: (leadId, status, note) => api.put(`/tl/leads/${leadId}/status`, null, { params: { status, note } }),
   recordCallOutcome: (leadId, outcomeData) => api.post(`/leads/${leadId}/record-outcome`, outcomeData),

@@ -268,7 +268,7 @@ const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: 
              <div className="d-flex gap-2">
                 <input
                   type="text"
-                  className="bg-dark bg-opacity-40 border-0 text-main py-1 px-4 rounded-pill"
+                  className="bg-surface bg-opacity-50 border-0 text-main py-1 px-4 rounded-pill"
                   placeholder="Seach Student..."
                   value={studentSearch}
                   onChange={e => setStudentSearch(e.target.value)}

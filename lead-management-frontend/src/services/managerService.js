@@ -1,7 +1,9 @@
 import api from '../api/api';
 
 const managerService = {
+    fetchUnifiedDashboard: (filters) => api.get('/dashboard/summary', { params: filters }),
     fetchDashboardData: (filters) => {
+        // Redundant - should be replaced with fetchUnifiedDashboard
         const statsParams = {
             start: filters.from,
             end: filters.to,

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import useDebounce from '../hooks/useDebounce';
 import { Button, Card, Input, Table } from '../components/common/Components';
 import { 
   Users, 
@@ -34,7 +35,6 @@ import TeamTree from './dashboard/components/TeamTree';
 import TeamManagement from './dashboard/components/TeamManagement';
 import UserEditModal from './dashboard/components/UserEditModal';
 import PaymentHistory from '../components/PaymentHistory';
-import RevenueTrendChart from './dashboard/components/RevenueTrendChart';
 import StatCard from '../components/StatCard';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import AttendanceDashboard from '../components/pages/AttendanceDashboard';
@@ -49,12 +49,14 @@ import LeadIngestionModal from './dashboard/components/LeadIngestionModal';
 import FiltersBar from './dashboard/components/FiltersBar';
 
 import MetricCommandCenter from './dashboard/components/MetricCommandCenter';
-import LeadStatusPieChart from './dashboard/components/LeadStatusPieChart';
 import TicketManager from '../components/TicketManager';
 import ManagerProfile from './dashboard/components/ManagerProfile';
 import LeadEditPage from './dashboard/components/LeadEditPage';
 import authService from '../services/authService';
+import { StatSkeleton, ChartSkeleton } from './dashboard/components/DashboardSkeletons';
 
+const RevenueTrendChart = React.lazy(() => import('./dashboard/components/RevenueTrendChart'));
+const LeadStatusPieChart = React.lazy(() => import('./dashboard/components/LeadStatusPieChart'));
 
 const ManagerDashboard = () => {
     const { user, logout } = useAuth();
@@ -65,8 +67,9 @@ const ManagerDashboard = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterUnassigned, setFilterUnassigned] = useState(false);
     const [bulkAssignTlId, setBulkAssignTlId] = useState('');
-    const [manager, setManager] = useState(null);
     const [personalStats, setPersonalStats] = useState(null);
+    const [callStats, setCallStats] = useState(null);
+    const [manager, setManager] = useState(null);
 
 
     // Invoice state
@@ -74,13 +77,24 @@ const ManagerDashboard = () => {
     const [selectedInvoiceData, setSelectedInvoiceData] = useState(null);
 
     const [filters, setFilters] = useState({
-        from: new Date().toISOString().split('T')[0] + 'T00:00:00',
-        to: new Date().toISOString().split('T')[0] + 'T23:59:59',
-        userId: null
+        from: new Date().toISOString().split('T')[0],
+        to: new Date().toISOString().split('T')[0],
+        userId: null,
+        teamId: user?.id,
+        currentUserId: user?.id
     });
 
-    // Custom Hooks
-    const { stats, performance, teamTree, trend, callStats, summary, loading, reload } = useDashboardData(filters);
+    const debouncedFilters = useDebounce(filters, 400);
+
+    // High-performance data synchronization via React Query
+    const { 
+        stats, 
+        performance, 
+        teamTree, 
+        trend, 
+        loading: dashboardLoading, 
+        reload: syncDashboard 
+    } = useDashboardData(debouncedFilters, 'MANAGER');
     const { 
         leads, 
         loadLeads, 
@@ -129,6 +143,14 @@ const ManagerDashboard = () => {
             setShifts(Array.isArray(shiftRes.data) ? shiftRes.data : (shiftRes.data?.data || []));
             setAvailableOffices(Array.isArray(officesRes.data) ? officesRes.data : (officesRes.data?.data || []));
             setManager(profileRes.data?.supervisor || profileRes.data?.manager);
+
+            // Fetch Call Stats
+            const callRes = await managerService.fetchGlobalCallStats({
+                from: debouncedFilters.from,
+                to: debouncedFilters.to,
+                userId: debouncedFilters.userId
+            });
+            setCallStats(callRes.data);
         } catch (err) {
             toast.error('Lookup data sync failed');
         }
@@ -184,19 +206,6 @@ const ManagerDashboard = () => {
     useEffect(() => {
         fetchLookupData();
     }, []);
-
-    useEffect(() => {
-        // Fetch personal stats for manager's own dashboard
-        const fetchPersonalMetrics = async () => {
-            try {
-                const res = await managerService.fetchPersonalStats(filters);
-                setPersonalStats(res.data);
-            } catch (err) {
-                console.warn('Failed to fetch personal metrics');
-            }
-        };
-        fetchPersonalMetrics();
-    }, [filters]);
 
     useEffect(() => {
         // Auto-scroll to top when drilling into a specific user's data
@@ -382,16 +391,16 @@ const ManagerDashboard = () => {
                           <input 
                               type="date" 
                               className="bg-transparent border-0 shadow-none text-main fw-black p-0" 
-                              value={filters.from.split('T')[0]} 
-                              onChange={e => setFilters({...filters, from: e.target.value + 'T00:00:00'})}
+                              value={filters.from} 
+                              onChange={e => setFilters({...filters, from: e.target.value})}
                               style={{ fontSize: '10px', outline: 'none' }}
                           />
                           <span className="text-muted fw-bold small opacity-25">TO</span>
                           <input 
                               type="date" 
                               className="bg-transparent border-0 shadow-none text-main fw-black p-0" 
-                              value={filters.to.split('T')[0]} 
-                              onChange={e => setFilters({...filters, to: e.target.value + 'T23:59:59'})}
+                              value={filters.to} 
+                              onChange={e => setFilters({...filters, to: e.target.value})}
                               style={{ fontSize: '10px', outline: 'none' }}
                           />
                       </div>
@@ -404,74 +413,74 @@ const ManagerDashboard = () => {
                         {/* ROW 1: CRITICAL ACTIONS (4 CARDS) */}
                         <div className="row g-3 mb-3">
                           <div className="col-12 col-md-6 col-xl-3">
-                            <StatCard 
+                            {dashboardLoading ? <StatSkeleton /> : <StatCard 
                               title="Today's Schedule" 
-                              value={personalStats?.todayFollowUps || 0} 
+                              value={stats?.todayFollowups || 0} 
                               icon={<Clock size={18} />} 
                               color="secondary" 
                               onClick={() => setMyDashboardSubTab('leads')} 
-                            />
+                            />}
                           </div>
                           <div className="col-12 col-md-6 col-xl-3">
-                            <StatCard 
+                            {dashboardLoading ? <StatSkeleton /> : <StatCard 
                               title="Payment Overdue" 
-                              value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(personalStats?.pendingPaymentsAmount || 0)} 
+                              value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(stats?.pendingPaymentsAmount || 0)} 
                               icon={<IndianRupee size={18} />} 
                               color="danger" 
                               unit="" 
                               onClick={() => setMyDashboardSubTab('revenue')} 
-                            />
+                            />}
                           </div>
                           <div className="col-12 col-md-6 col-xl-3">
-                            <StatCard 
+                            {dashboardLoading ? <StatSkeleton /> : <StatCard 
                               title="Follow-up Overdue" 
-                              value={personalStats?.pendingFollowUps || 0} 
+                              value={stats?.pendingFollowups || 0} 
                               icon={<AlertCircle size={18} />} 
                               color="warning" 
                               onClick={() => setMyDashboardSubTab('leads')} 
-                            />
+                            />}
                           </div>
                           <div className="col-12 col-md-6 col-xl-3">
-                            <StatCard 
+                            {dashboardLoading ? <StatSkeleton /> : <StatCard 
                               title="30-Day Revenue Forecast" 
-                              value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(personalStats?.forecastRevenue || 0)} 
+                              value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(stats?.forecastRevenue || 0)} 
                               icon={<TrendingUp size={18} />} 
                               color="info" 
                               unit="" 
                               onClick={() => setMyDashboardSubTab('revenue')} 
-                            />
+                            />}
                           </div>
                         </div>
 
                         {/* ROW 2: PERFORMANCE TOTALS (3 CARDS) */}
                         <div className="row g-3 mb-4 justify-content-center">
                           <div className="col-12 col-md-4 col-xl-4">
-                            <StatCard 
+                            {dashboardLoading ? <StatSkeleton /> : <StatCard 
                               title="Total Leads" 
-                              value={personalStats?.total || 0} 
+                              value={stats?.total || 0} 
                               icon={<Users size={18} />} 
                               color="primary" 
                               onClick={() => setMyDashboardSubTab('leads')} 
-                            />
+                            />}
                           </div>
                           <div className="col-12 col-md-4 col-xl-4">
-                            <StatCard 
+                            {dashboardLoading ? <StatSkeleton /> : <StatCard 
                               title="Total Converted" 
-                              value={personalStats?.convertedCount || 0} 
+                              value={stats?.convertedCount || 0} 
                               icon={<CheckCircle size={18} />} 
                               color="success" 
                               onClick={() => setMyDashboardSubTab('leads')} 
-                            />
+                            />}
                           </div>
                           <div className="col-12 col-md-4 col-xl-4">
-                            <StatCard 
+                            {dashboardLoading ? <StatSkeleton /> : <StatCard 
                               title="Total Revenue" 
-                              value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(personalStats?.totalRevenue || 0)} 
+                              value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(stats?.monthlyRevenue || 0)} 
                               icon={<Zap size={18} />} 
                               color="pink" 
                               unit="" 
                               onClick={() => setMyDashboardSubTab('reports')} 
-                            />
+                            />}
                           </div>
                         </div>
                         
@@ -484,7 +493,11 @@ const ManagerDashboard = () => {
                                 <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>INDIVIDUAL TREND ANALYTICS</p>
                               </div>
                               <div className="card-body p-4" style={{ height: '400px' }}>
-                                <RevenueTrendChart data={trend} theme={isDarkMode ? 'dark' : 'light'} />
+                                {dashboardLoading ? <ChartSkeleton /> : (
+                                  <React.Suspense fallback={<ChartSkeleton />}>
+                                    <RevenueTrendChart data={trend} theme={isDarkMode ? 'dark' : 'light'} />
+                                  </React.Suspense>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -561,17 +574,16 @@ const ManagerDashboard = () => {
                     <div className="mb-2">
                         <MetricCommandCenter 
                             stats={{ 
-                                ...summary, 
                                 ...stats,
                                 performance,
-                                presentCount: stats?.presentCount || summary?.attendance?.present || 0,
-                                absentCount: stats?.absentCount || summary?.attendance?.absent || 0,
-                                lateCount: stats?.lateCount || summary?.attendance?.late || 0,
-                                monthlyRevenue: stats?.monthlyRevenue || summary?.revenue?.monthly || 0,
-                                monthlyTarget: stats?.monthlyTarget || summary?.revenue?.target || 0,
-                                targetAchievement: stats?.targetAchievement || summary?.revenue?.achievement || 0,
-                                todayFollowups: stats?.todayFollowups || summary?.leads?.todayFollowups || 0,
-                                pendingFollowups: stats?.pendingFollowups || summary?.leads?.pendingFollowups || 0
+                                presentCount: stats?.presentCount || 0,
+                                absentCount: stats?.absentCount || 0,
+                                lateCount: stats?.lateCount || 0,
+                                monthlyRevenue: stats?.monthlyRevenue || 0,
+                                monthlyTarget: stats?.monthlyTarget || 0,
+                                targetAchievement: stats?.targetAchievement || 0,
+                                todayFollowups: stats?.todayFollowups || 0,
+                                pendingFollowups: stats?.pendingFollowups || 0
                             }} 
                             role="MANAGER" 
                             filters={filters} 
@@ -611,7 +623,7 @@ const ManagerDashboard = () => {
                         <div className="col-12 col-xl-4">
                             <Card title="Squad Pipeline Distribution" subtitle="Status Segmentation Analytics" className="h-100">
                                 <div className="py-2" style={{ height: '360px' }}>
-                                    <LeadStatusPieChart leads={leads} isDarkMode={isDarkMode} />
+                                    <LeadStatusPieChart distribution={stats?.statusDistribution} leads={leads} isDarkMode={isDarkMode} />
                                 </div>
                             </Card>
                         </div>

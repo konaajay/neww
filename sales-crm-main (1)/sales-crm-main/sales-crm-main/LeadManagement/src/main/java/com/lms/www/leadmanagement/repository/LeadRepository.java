@@ -27,6 +27,8 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
     long countByAssignedTo(User assignedTo);
     long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
     long countByStatus(Lead.Status status);
+    long countByStatusIn(Collection<Lead.Status> statuses);
+    long countByCreatedAtBetweenAndStatusIn(LocalDateTime start, LocalDateTime end, Collection<Lead.Status> statuses);
     long countByFollowUpDateBetween(LocalDateTime start, LocalDateTime end);
     long countByFollowUpDateBefore(LocalDateTime now);
     List<Lead> findByAssignedToIsNull();

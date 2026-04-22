@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import useDebounce from '../hooks/useDebounce';
 import ManagerProfile from './dashboard/components/ManagerProfile';
 import ManagerDashboardFilterHub from './dashboard/components/ManagerDashboardFilterHub';
 import { useAuth } from '../context/AuthContext';
@@ -9,7 +10,6 @@ import StatCard from '../components/StatCard';
 import LeadsTable from './dashboard/components/LeadsTable';
 import TeamTree from './dashboard/components/TeamTree';
 import TeamManagement from './dashboard/components/TeamManagement';
-import RevenueTrendChart from './dashboard/components/RevenueTrendChart';
 import FiltersBar from './dashboard/components/FiltersBar';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import UserEditModal from './dashboard/components/UserEditModal';
@@ -22,12 +22,13 @@ import paymentService from '../services/paymentService';
 import LeadForm from '../components/LeadForm';
 import TicketManager from '../components/TicketManager';
 import LeadIngestionModal from './dashboard/components/LeadIngestionModal';
-
 import MetricCommandCenter from './dashboard/components/MetricCommandCenter';
-import LeadStatusPieChart from './dashboard/components/LeadStatusPieChart';
-import TaskBoard from '../components/TaskBoard';
-import RevenueStrategyHub from './dashboard/components/RevenueStrategyHub';
 import LeadEditPage from './dashboard/components/LeadEditPage';
+import { useDashboardData } from './dashboard/hooks/useDashboardData';
+import { StatSkeleton, ChartSkeleton } from './dashboard/components/DashboardSkeletons';
+
+const RevenueTrendChart = React.lazy(() => import('./dashboard/components/RevenueTrendChart'));
+const LeadStatusPieChart = React.lazy(() => import('./dashboard/components/LeadStatusPieChart'));
 import { Button, Card, Input, Table } from '../components/common/Components';
 import {
   UserPlus,
@@ -55,9 +56,8 @@ import { toast } from 'react-toastify';
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
   const { theme } = useTheme();
-  const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingLookup, setLoadingLookup] = useState(true);
   const [availablePermissions, setAvailablePermissions] = useState([]);
   const [availableShifts, setAvailableShifts] = useState([]);
   const [availableOffices, setAvailableOffices] = useState([]);
@@ -82,11 +82,8 @@ const AdminDashboard = () => {
       }
     }
   }, [activeTab]);
-  const [performance, setPerformance] = useState([]);
-  const [trendData, setTrendData] = useState([]);
   const [callStats, setCallStats] = useState(null);
   const [teamTree, setTeamTree] = useState(null);
-  const [summary, setSummary] = useState(null);
 
   // Pipeline state
   const [selectedLeadIds, setSelectedLeadIds] = useState([]);
@@ -100,12 +97,24 @@ const AdminDashboard = () => {
   const [isIngestionModalOpen, setIsIngestionModalOpen] = useState(false);
 
   const [filters, setFilters] = useState({
-    from: new Date().toISOString().split('T')[0] + 'T00:00:00',
-    to: new Date().toISOString().split('T')[0] + 'T23:59:59',
+    from: new Date().toISOString().split('T')[0],
+    to: new Date().toISOString().split('T')[0],
     userId: null,
+    teamId: null,
     currentUserId: user?.id
   });
 
+  const debouncedFilters = useDebounce(filters, 400);
+
+  // High-performance data synchronization via React Query
+  const { 
+    stats, 
+    trend: trendData, 
+    performance, 
+    loading: dashboardLoading, 
+    reload: syncDashboard 
+  } = useDashboardData(debouncedFilters, 'ADMIN');
+  const [loading, setLoading] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [targetPeriod, setTargetPeriod] = useState({ 
     month: new Date().getMonth() + 1, 
@@ -114,82 +123,39 @@ const AdminDashboard = () => {
   const [revenueTargets, setRevenueTargets] = useState([]);
   const handleSync = () => setRefreshTrigger(prev => prev + 1);
 
-  const fetchData = async () => {
-    setLoading(true);
-    setPerformance([]); // Avoid stale hierarchical filtering
+  const fetchLookupData = async () => {
+    setLoadingLookup(true);
     try {
-      const statsFilters = { start: filters.from, end: filters.to, userId: filters.userId };
-      const now = new Date();
-      const currentMonth = now.getMonth() + 1;
-      const currentYear = now.getFullYear();
-
-      const [statsRes, perfRes, trendRes, usersRes, permsRes, shiftsRes, officesRes, leadsRes, treeRes, callStatsRes, summaryRes, targetsRes] = await Promise.all([
-        adminService.fetchDashboardStats({ start: filters.from, end: filters.to, userId: filters.userId }),
-        adminService.fetchMemberPerformance({ start: filters.from, end: filters.to, userId: filters.userId }),
-        adminService.fetchTrendData({ from: filters.from.split('T')[0], to: filters.to.split('T')[0], userId: filters.userId }),
+      const [usersRes, permsRes, shiftsRes, officesRes, treeRes] = await Promise.all([
         adminService.fetchUsers(),
         adminService.fetchPermissions(),
         adminService.fetchShifts(),
         adminService.fetchOffices(),
-        adminService.fetchLeads(statsFilters),
-        adminService.fetchTeamTree(),
-        adminService.fetchGlobalCallStats({ date: filters.from.split('T')[0] }),
-        adminService.fetchDashboardSummary({
-          from: filters.from.split('T')[0],
-          to: filters.to.split('T')[0],
-          userId: filters.userId
-        }),
-        adminService.fetchRevenueTargets(targetPeriod.month, targetPeriod.year)
+        adminService.fetchTeamTree()
       ]);
-
-      setStats(statsRes.data || {});
-      setSummary(summaryRes.data);
-      setRevenueTargets(targetsRes.data?.data || targetsRes.data || []);
-      const perfData = perfRes.data;
-      setPerformance(Array.isArray(perfData) ? perfData : (perfData?.data || []));
-      const trendPayload = trendRes.data;
-      setTrendData(Array.isArray(trendPayload) ? trendPayload : (trendPayload?.data || []));
-      const usersPayload = usersRes.data;
-      setUsers(usersPayload?.content || (Array.isArray(usersPayload) ? usersPayload : []));
-      const permsPayload = permsRes.data;
-      setAvailablePermissions(Array.isArray(permsPayload) ? permsPayload : (permsPayload?.data || []));
-      setAvailableShifts(Array.isArray(shiftsRes.data) ? shiftsRes.data : (shiftsRes.data?.data || []));
-      setAvailableOffices(Array.isArray(officesRes.data) ? officesRes.data : (officesRes.data?.data || []));
-      const leadsPayload = leadsRes.data;
-      setLeads(leadsPayload?.content || (Array.isArray(leadsPayload) ? leadsPayload : []));
+      
+      setUsers(usersRes.data?.content || usersRes.data || []);
+      setAvailablePermissions(permsRes.data || []);
+      setAvailableShifts(shiftsRes.data || []);
+      setAvailableOffices(officesRes.data || []);
       setTeamTree(treeRes.data || null);
-      setCallStats(callStatsRes.data?.data || callStatsRes.data);
-
-      // Admin Revenue Sync Overdrive
-      try {
-        const historyRes = await paymentService.fetchHistory('ADMIN', {
-          startDate: filters.from,
-          endDate: filters.to,
-          userId: filters.userId // If filtering by a specific member
-        });
-        const payments = historyRes.data || [];
-        const calculatedRevenue = payments
-          .filter(p => ['PAID', 'SUCCESS', 'APPROVED'].includes(p.status))
-          .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-        
-        // Inject the accurate revenue into the stats and summary objects
-        setStats(prev => ({
-          ...prev,
-          totalRevenue: Math.max(prev?.totalRevenue || 0, calculatedRevenue),
-          monthlyRevenue: Math.max(prev?.monthlyRevenue || 0, calculatedRevenue)
-        }));
-        setSummary(prev => ({
-          ...prev,
-          revenue: {
-            ...prev?.revenue,
-            monthly: Math.max(prev?.revenue?.monthly || 0, calculatedRevenue)
-          }
-        }));
-      } catch (err) {
-        console.warn('Admin revenue recalculation failed');
-      }
     } catch (err) {
-      toast.error('System synchronization failed');
+      console.error("Lookup Sync Error:", err);
+    } finally {
+      setLoadingLookup(false);
+    }
+  };
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const leadsRes = await adminService.fetchLeads(debouncedFilters);
+      setLeads(Array.isArray(leadsRes.data) ? leadsRes.data : (leadsRes.data?.content || []));
+      await syncDashboard();
+      await fetchLookupData();
+    } catch (err) {
+      console.error("Global Data Sync Error:", err);
+      toast.error("Failed to synchronize dashboard environment");
     } finally {
       setLoading(false);
     }
@@ -197,9 +163,15 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchData();
-    // Auto-scroll to top on filter change to ensure user sees updated charts/stats immediately
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [filters, refreshTrigger, targetPeriod]);
+  }, [debouncedFilters, refreshTrigger]);
+
+  useEffect(() => {
+    const fetchTargets = async () => {
+      const targetsRes = await adminService.fetchRevenueTargets(targetPeriod.month, targetPeriod.year);
+      setRevenueTargets(targetsRes.data?.data || targetsRes.data || []);
+    };
+    fetchTargets();
+  }, [refreshTrigger, targetPeriod]);
 
   const handleDeleteUser = async (id) => {
     if (window.confirm('Terminate this user access permanently?')) {
@@ -423,16 +395,16 @@ const AdminDashboard = () => {
                 <input
                   type="date"
                   className="bg-transparent border-0 shadow-none text-main fw-black p-0"
-                  value={filters.from.split('T')[0]}
-                  onChange={e => setFilters({ ...filters, from: e.target.value + 'T00:00:00' })}
+                  value={filters.from}
+                  onChange={e => setFilters({ ...filters, from: e.target.value })}
                   style={{ fontSize: '10px', outline: 'none' }}
                 />
                 <span className="text-muted fw-bold small opacity-25">TO</span>
                 <input
                   type="date"
                   className="bg-transparent border-0 shadow-none text-main fw-black p-0"
-                  value={filters.to.split('T')[0]}
-                  onChange={e => setFilters({ ...filters, to: e.target.value + 'T23:59:59' })}
+                  value={filters.to}
+                  onChange={e => setFilters({ ...filters, to: e.target.value })}
                   style={{ fontSize: '10px', outline: 'none' }}
                 />
               </div>
@@ -460,12 +432,14 @@ const AdminDashboard = () => {
             {myDashboardSubTab === 'dashboard' && (
               <>
                 <ManagerProfile manager={null} />
-                <MetricCommandCenter
-                  stats={{ ...summary, ...stats, performance: performance.filter(p => p.userId === user.id) }}
-                  role="ADMIN"
-                  filters={{ ...filters, userId: user.id }}
-                  onNavigate={setActiveTab}
-                />
+                {dashboardLoading ? <StatSkeleton /> : (
+                  <MetricCommandCenter
+                    stats={{ ...stats, performance: performance?.filter(p => p.userId === user?.id) || [] }}
+                    role="ADMIN"
+                    filters={{ ...filters, userId: user?.id }}
+                    onNavigate={setActiveTab}
+                  />
+                )}
               </>
             )}
 
@@ -518,24 +492,32 @@ const AdminDashboard = () => {
             </div>
 
             <div className="mb-4">
-              <MetricCommandCenter 
-                stats={{ 
-                  ...summary, 
-                  ...stats, 
-                  performance,
-                  presentCount: stats?.presentCount || summary?.attendance?.present || 0,
-                  absentCount: stats?.absentCount || summary?.attendance?.absent || 0,
-                  lateCount: stats?.lateCount || summary?.attendance?.late || 0,
-                  monthlyRevenue: stats?.monthlyRevenue || summary?.revenue?.monthly || 0,
-                  monthlyTarget: stats?.monthlyTarget || summary?.revenue?.target || 0,
-                  targetAchievement: stats?.targetAchievement || summary?.revenue?.achievement || 0,
-                  todayFollowups: stats?.todayFollowups || summary?.leads?.todayFollowups || 0,
-                  pendingFollowups: stats?.pendingFollowups || summary?.leads?.pendingFollowups || 0
-                }} 
-                role="ADMIN" 
-                filters={filters} 
-                onNavigate={setActiveTab} 
-              />
+              {dashboardLoading ? (
+                <div className="row g-3">
+                  <div className="col-12 col-md-3"><StatSkeleton /></div>
+                  <div className="col-12 col-md-3"><StatSkeleton /></div>
+                  <div className="col-12 col-md-3"><StatSkeleton /></div>
+                  <div className="col-12 col-md-3"><StatSkeleton /></div>
+                </div>
+              ) : (
+                <MetricCommandCenter 
+                  stats={{ 
+                    ...stats, 
+                    performance,
+                    presentCount: stats?.presentCount || 0,
+                    absentCount: stats?.absentCount || 0,
+                    lateCount: stats?.lateCount || 0,
+                    monthlyRevenue: stats?.monthlyRevenue || 0,
+                    monthlyTarget: stats?.monthlyTarget || 0,
+                    targetAchievement: stats?.targetAchievement || 0,
+                    todayFollowups: stats?.todayFollowups || 0,
+                    pendingFollowups: stats?.pendingFollowups || 0
+                  }} 
+                  role="ADMIN" 
+                  filters={filters} 
+                  onNavigate={setActiveTab} 
+                />
+              )}
             </div>
           </div>
         )}
@@ -567,17 +549,16 @@ const AdminDashboard = () => {
              {/* Operational Overview (Synchronized with TL/Manager Dashboard) */}
              <MetricCommandCenter 
                  stats={{ 
-                     ...summary, 
                      ...stats, 
                      performance,
-                     presentCount: stats?.presentCount || summary?.attendance?.present || 0,
-                     absentCount: stats?.absentCount || summary?.attendance?.absent || 0,
-                     lateCount: stats?.lateCount || summary?.attendance?.late || 0,
-                     monthlyRevenue: stats?.monthlyRevenue || summary?.revenue?.monthly || 0,
-                     monthlyTarget: stats?.monthlyTarget || summary?.revenue?.target || 0,
-                     targetAchievement: stats?.targetAchievement || summary?.revenue?.achievement || 0,
-                     todayFollowups: stats?.todayFollowups || summary?.leads?.todayFollowups || 0,
-                     pendingFollowups: stats?.pendingFollowups || summary?.leads?.pendingFollowups || 0
+                     presentCount: stats?.presentCount || 0,
+                     absentCount: stats?.absentCount || 0,
+                     lateCount: stats?.lateCount || 0,
+                     monthlyRevenue: stats?.monthlyRevenue || 0,
+                     monthlyTarget: stats?.monthlyTarget || 0,
+                     targetAchievement: stats?.targetAchievement || 0,
+                     todayFollowups: stats?.todayFollowups || 0,
+                     pendingFollowups: stats?.pendingFollowups || 0
                  }} 
                  role="ADMIN" 
                  filters={filters} 
@@ -587,18 +568,36 @@ const AdminDashboard = () => {
             {/* Analytics Growth Row (Trend + Pie Chart) */}
             <div className="row g-4 animate-fade-in">
                 <div className="col-12 col-xl-8">
-                    <Card title="Engagement Velocity" subtitle="Strategic Performance Trends" className="h-100">
-                        <div className="py-2" style={{ height: '360px' }}>
+                    <div className="premium-card border-0 shadow-lg h-100" style={{ minHeight: '400px' }}>
+                      <div className="card-header bg-transparent p-4 border-0 border-bottom border-white border-opacity-5">
+                          <h6 className="fw-black mb-0 text-main text-uppercase tracking-widest small">Strategic Performance Trends</h6>
+                      </div>
+                      <div className="card-body p-4">
+                        {dashboardLoading ? <ChartSkeleton /> : (
+                          <React.Suspense fallback={<ChartSkeleton />}>
                             <RevenueTrendChart data={trendData} theme={theme} />
-                        </div>
-                    </Card>
+                          </React.Suspense>
+                        )}
+                      </div>
+                    </div>
                 </div>
                 <div className="col-12 col-xl-4">
-                    <Card title="Squad Pipeline Distribution" subtitle="Status Segmentation Analytics" className="h-100">
-                        <div className="py-2" style={{ height: '360px' }}>
-                            <LeadStatusPieChart leads={leads} isDarkMode={theme === 'dark'} />
-                        </div>
-                    </Card>
+                    <div className="premium-card border-0 shadow-lg h-100">
+                      <div className="card-header bg-transparent p-4 border-0 border-bottom border-white border-opacity-5">
+                          <h6 className="fw-black mb-0 text-main text-uppercase tracking-widest small">Squad Pipeline Distribution</h6>
+                      </div>
+                      <div className="card-body p-4">
+                        {dashboardLoading ? <ChartSkeleton /> : (
+                          <React.Suspense fallback={<ChartSkeleton />}>
+                            <LeadStatusPieChart 
+                                distribution={stats?.statusDistribution} 
+                                leads={leads} 
+                                isDarkMode={theme === 'dark'} 
+                            />
+                          </React.Suspense>
+                        )}
+                      </div>
+                    </div>
                 </div>
             </div>
 
@@ -727,26 +726,24 @@ const AdminDashboard = () => {
               <div className="col-12 col-md-3">
                 <StatCard 
                   title="Interested" 
-                  value={stats?.interestedCount || summary?.leads?.interested || 0} 
+                  value={stats?.interestedCount || stats?.leads?.interested || 0} 
                   sub="High-Intent High-Conversion" 
                   icon={<ShieldHalf size={18} />} 
                   color="info" 
                 />
               </div>
-              <div className="col-12 col-md-3">
+              <div className="col-12 col-md-6 col-lg-3">
                 <StatCard 
-                  title="Converted" 
-                  value={stats?.convertedCount || summary?.convertedCount || stats?.convertedToday || 0} 
-                  sub="Successful Transmissions" 
-                  icon={<CheckCircle size={18} />} 
+                  title="Pipeline Efficiency" 
+                  value={stats?.convertedCount || stats?.convertedToday || 0} 
+                  icon={<Zap size={18} />} 
                   color="success" 
                 />
               </div>
-              <div className="col-12 col-md-3">
+              <div className="col-12 col-md-6 col-lg-3">
                 <StatCard 
-                  title="Lost" 
-                  value={stats?.totalLostCount || stats?.lostToday || summary?.lostCount || 0} 
-                  sub="Registry Access Terminated" 
+                  title="Lead Leakage" 
+                  value={stats?.totalLostCount || stats?.lostToday || 0} 
                   icon={<AlertCircle size={18} />} 
                   color="danger" 
                 />
@@ -869,14 +866,11 @@ const AdminDashboard = () => {
 
         {activeTab === 'call-logs' && (
           <div className="animate-fade-in d-flex flex-column gap-4">
-             <FiltersBar
-              filters={filters}
-              onChange={setFilters}
-              onSync={fetchData}
-              role="ADMIN"
-              currentUserId={user?.id}
+            <CallLogDashboard 
+              filters={filters} 
+              onChange={setFilters} 
+              userId={filters.userId} 
             />
-            <CallLogDashboard userId={filters.userId} />
           </div>
         )}
 

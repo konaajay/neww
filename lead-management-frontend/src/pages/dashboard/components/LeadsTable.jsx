@@ -107,7 +107,7 @@ const LeadsTable = ({
                   setSearchTerm(e.target.value);
                   setCurrentPage(1); // Reset to page 1 on search
                 }}
-                className="form-control bg-dark bg-opacity-40 border border-white border-opacity-10 text-main py-2.5 ps-5 shadow-none rounded-pill focus:border-primary transition-all"
+                className="form-control bg-surface bg-opacity-50 border border-white border-opacity-10 text-main py-2.5 ps-5 shadow-none rounded-pill focus:border-primary transition-all"
                 style={{ fontSize: '12px' }}
               />
             </div>

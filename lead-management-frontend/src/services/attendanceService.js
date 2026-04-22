@@ -9,6 +9,10 @@ export const attendanceService = {
   },
 
   trackLocation: async (lat, lng, accuracy, deviceId) => {
+    if (lat === null || lat === undefined || lng === null || lng === undefined) {
+      console.warn('[Attendance] Skipping location track: Invalid coordinates');
+      return { success: false, message: 'Invalid coordinates' };
+    }
     const response = await api.post('/attendance/track', {
       lat, lng, accuracy, deviceId
     });

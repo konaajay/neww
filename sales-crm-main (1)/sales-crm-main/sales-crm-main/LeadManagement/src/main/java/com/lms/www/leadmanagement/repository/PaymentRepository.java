@@ -73,4 +73,45 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             @Param("userIds") java.util.Collection<Long> userIds,
             @Param("start") java.time.LocalDateTime start,
             @Param("end") java.time.LocalDateTime end);
+
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p " +
+            "WHERE (p.status = com.lms.www.leadmanagement.entity.Payment$Status.PAID " +
+            "OR p.status = com.lms.www.leadmanagement.entity.Payment$Status.APPROVED " +
+            "OR p.status = com.lms.www.leadmanagement.entity.Payment$Status.SUCCESS) " +
+            "AND (:start IS NULL OR p.createdAt >= :start) " +
+            "AND (:end IS NULL OR p.createdAt <= :end)")
+    java.math.BigDecimal getGlobalTotalRevenue(
+            @Param("start") java.time.LocalDateTime start,
+            @Param("end") java.time.LocalDateTime end);
+
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p " +
+            "JOIN Lead l ON p.leadId = l.id " +
+            "WHERE (p.status = com.lms.www.leadmanagement.entity.Payment$Status.PENDING " +
+            "OR p.status = com.lms.www.leadmanagement.entity.Payment$Status.OVERDUE) " +
+            "AND l.assignedTo.id IN :userIds " +
+            "AND p.dueDate < :now")
+    java.math.BigDecimal getPendingRevenueAmount(
+            @Param("userIds") java.util.Collection<Long> userIds,
+            @Param("now") java.time.LocalDateTime now);
+
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p " +
+            "JOIN Lead l ON p.leadId = l.id " +
+            "WHERE (p.status = com.lms.www.leadmanagement.entity.Payment$Status.PENDING " +
+            "OR p.status = com.lms.www.leadmanagement.entity.Payment$Status.OVERDUE) " +
+            "AND l.assignedTo.id IN :userIds " +
+            "AND p.dueDate >= :now AND p.dueDate <= :future")
+    java.math.BigDecimal getForecastRevenue(
+            @Param("userIds") java.util.Collection<Long> userIds,
+            @Param("now") java.time.LocalDateTime now,
+            @Param("future") java.time.LocalDateTime future);
+
+    @Query("SELECT COUNT(p) FROM Payment p " +
+            "JOIN Lead l ON p.leadId = l.id " +
+            "WHERE (p.status = com.lms.www.leadmanagement.entity.Payment$Status.PENDING " +
+            "OR p.status = com.lms.www.leadmanagement.entity.Payment$Status.OVERDUE) " +
+            "AND l.assignedTo.id IN :userIds " +
+            "AND p.dueDate < :now")
+    long countPendingPayments(
+            @Param("userIds") java.util.Collection<Long> userIds,
+            @Param("now") java.time.LocalDateTime now);
 }

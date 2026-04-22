@@ -9,8 +9,10 @@ import {
 } from 'recharts';
 import { PieChart as PieIcon } from 'lucide-react';
 
-const LeadStatusPieChart = ({ leads, isDarkMode }) => {
-  if (!leads || leads.length === 0) {
+const LeadStatusPieChart = ({ leads, distribution, isDarkMode }) => {
+  const hasData = (leads && leads.length > 0) || (distribution && Object.keys(distribution).length > 0);
+
+  if (!hasData) {
     return (
       <div className="d-flex flex-column align-items-center justify-content-center h-100 opacity-20">
         <PieIcon size={48} className="mb-2" />
@@ -19,16 +21,18 @@ const LeadStatusPieChart = ({ leads, isDarkMode }) => {
     );
   }
 
-  // Aggregate leads by status
-  const distribution = leads.reduce((acc, lead) => {
+  // Use provided distribution or aggregate from leads
+  const finalDistribution = distribution || leads.reduce((acc, lead) => {
     const status = lead.status || 'NEW';
     acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, {});
 
-  const data = Object.keys(distribution).map(status => ({
+  const totalCount = Object.values(finalDistribution).reduce((sum, v) => sum + v, 0);
+
+  const data = Object.keys(finalDistribution).map(status => ({
     name: status.replace(/_/g, ' '),
-    value: distribution[status]
+    value: finalDistribution[status]
   })).sort((a, b) => b.value - a.value);
 
   const COLORS = {
@@ -50,7 +54,7 @@ const LeadStatusPieChart = ({ leads, isDarkMode }) => {
         <div className="p-3 rounded shadow-lg border-0" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
           <p className="fw-black mb-1 small text-uppercase" style={{ color: payload[0].payload.fill }}>{payload[0].name}</p>
           <p className="fw-bold mb-0 text-main">{payload[0].value} Leads</p>
-          <p className="text-muted mb-0 fw-bold" style={{ fontSize: '10px' }}>{((payload[0].value / leads.length) * 100).toFixed(1)}% of Pipeline</p>
+          <p className="text-muted mb-0 fw-bold" style={{ fontSize: '10px' }}>{((payload[0].value / totalCount) * 100).toFixed(1)}% of Pipeline</p>
         </div>
       );
     }

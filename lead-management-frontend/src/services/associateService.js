@@ -13,6 +13,7 @@ const associateService = {
   fetchCallStats: (filters) => api.get('/call-records/stats', { params: filters }),
   fetchMyLogs: (filters) => api.get('/call-records/my', { params: filters }),
   fetchTrendData: (filters) => api.get('/reports/trend', { params: filters }),
+  fetchUnifiedDashboard: (filters) => api.get('/dashboard/summary', { params: filters }),
   
   fetchLeadTasks: (leadId) => api.get(`/tasks/lead/${leadId}`),
 
