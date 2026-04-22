@@ -45,6 +45,7 @@ export const AuthProvider = ({ children }) => {
       
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(userData));
+      console.log("AuthContext: Login successful, userData stored:", userData);
       setUser(userData);
       return userData;
     } catch (error) {

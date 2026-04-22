@@ -1,20 +1,20 @@
 import api from '../api/api';
 
 export const attendanceService = {
-  clockIn: async (lat, lng, accuracy, deviceId) => {
+  clockIn: async (lat, lng, accuracy, deviceId, isMockLocation = false) => {
     const response = await api.post('/attendance/clock-in', {
-      lat, lng, accuracy, deviceId
+      lat, lng, accuracy, deviceId, isMockLocation
     });
     return response.data;
   },
 
-  trackLocation: async (lat, lng, accuracy, deviceId) => {
+  trackLocation: async (lat, lng, accuracy, deviceId, isMockLocation = false) => {
     if (lat === null || lat === undefined || lng === null || lng === undefined) {
       console.warn('[Attendance] Skipping location track: Invalid coordinates');
       return { success: false, message: 'Invalid coordinates' };
     }
     const response = await api.post('/attendance/track', {
-      lat, lng, accuracy, deviceId
+      lat, lng, accuracy, deviceId, isMockLocation
     });
     return response.data;
   },

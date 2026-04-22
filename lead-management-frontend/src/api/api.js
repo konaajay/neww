@@ -16,6 +16,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 && !window.location.pathname.includes('/login')) {
+      console.error("API 401 Unauthorized encountered on:", error.config?.url);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';

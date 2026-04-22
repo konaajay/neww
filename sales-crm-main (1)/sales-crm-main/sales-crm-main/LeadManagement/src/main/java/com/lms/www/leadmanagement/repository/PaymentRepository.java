@@ -114,4 +114,17 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     long countPendingPayments(
             @Param("userIds") java.util.Collection<Long> userIds,
             @Param("now") java.time.LocalDateTime now);
+
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p " +
+            "JOIN Lead l ON p.leadId = l.id " +
+            "WHERE (p.status = com.lms.www.leadmanagement.entity.Payment$Status.PAID " +
+            "OR p.status = com.lms.www.leadmanagement.entity.Payment$Status.APPROVED " +
+            "OR p.status = com.lms.www.leadmanagement.entity.Payment$Status.SUCCESS) " +
+            "AND l.assignedTo.id IN :userIds " +
+            "AND (:start IS NULL OR p.createdAt >= :start) " +
+            "AND (:end IS NULL OR p.createdAt <= :end)")
+    java.math.BigDecimal getTotalRevenueIn(
+            @Param("userIds") java.util.Collection<Long> userIds,
+            @Param("start") java.time.LocalDateTime start,
+            @Param("end") java.time.LocalDateTime end);
 }

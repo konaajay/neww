@@ -68,9 +68,18 @@ const TeamLeaderDashboard = () => {
   const [editingLead, setEditingLead] = useState(null);
   const [isIngestionModalOpen, setIsIngestionModalOpen] = useState(false);
 
-  useEffect(() => {
-    localStorage.setItem('tl_activeTab', activeTab);
-  }, [activeTab]);
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    localStorage.setItem('tl_activeTab', tab);
+    
+    // Tab-based data scoping: 
+    // 'My Stats' forces personal scoping. Team tabs reset to team view.
+    if (tab === 'my-stats') {
+      setFilters(prev => ({ ...prev, userId: user?.id }));
+    } else {
+      setFilters(prev => ({ ...prev, userId: null }));
+    }
+  };
 
   const fetchLookupData = async () => {
     try {
@@ -84,8 +93,8 @@ const TeamLeaderDashboard = () => {
       }
 
       const leadsRes = await tlService.fetchTeamLeads({ 
-        startDate: debouncedFilters.from, 
-        endDate: debouncedFilters.to, 
+        from: debouncedFilters.from, 
+        to: debouncedFilters.to, 
         userId: debouncedFilters.userId || debouncedFilters.teamId
       });
       setLeads(Array.isArray(leadsRes.data) ? leadsRes.data : (leadsRes.data?.content || []));
@@ -185,11 +194,22 @@ const TeamLeaderDashboard = () => {
       title="Team leader console"
       subtitle="Performance tracking"
       activeTab={activeTab}
-      onTabChange={setActiveTab}
+      onTabChange={handleTabChange}
       role="TEAM_LEADER"
     >
       <>
         <div className="animate-fade-in d-flex flex-column gap-3">
+          {/* GLOBAL RANGE FILTER */}
+          {activeTab !== 'edit-lead' && activeTab !== 'ingestion' && (
+            <FiltersBar
+              filters={filters}
+              onChange={setFilters}
+              onSync={handleSync}
+              users={associates}
+              role="TEAM_LEADER"
+              hideUserFilter={activeTab === 'my-stats'}
+            />
+          )}
           {activeTab === 'my-stats' && (
             <div className="d-flex flex-column gap-3 animate-fade-in">
               <div className="px-1">
@@ -217,25 +237,6 @@ const TeamLeaderDashboard = () => {
                    <div className="position-absolute end-0 top-50 translate-middle-y me-3 pointer-events-none opacity-50">
                       <ChevronDown size={12} />
                    </div>
-                </div>
-                
-                <div className="d-flex align-items-center bg-surface border border-white border-opacity-10 rounded-pill shadow-sm px-3 py-1.5 gap-2 ms-auto">
-                    <Clock size={12} className="text-primary opacity-50" />
-                    <input 
-                        type="date" 
-                        className="bg-transparent border-0 shadow-none text-main fw-black p-0" 
-                        value={filters.from} 
-                        onChange={e => setFilters({...filters, from: e.target.value})}
-                        style={{ fontSize: '10px', outline: 'none' }}
-                    />
-                    <span className="text-muted fw-bold small opacity-25">TO</span>
-                    <input 
-                        type="date" 
-                        className="bg-transparent border-0 shadow-none text-main fw-black p-0" 
-                        value={filters.to} 
-                        onChange={e => setFilters({...filters, to: e.target.value})}
-                        style={{ fontSize: '10px', outline: 'none' }}
-                    />
                 </div>
               </div>
 
@@ -376,7 +377,13 @@ const TeamLeaderDashboard = () => {
 
               {myDashboardSubTab === 'attendance' && (
                 <div className="animate-fade-in">
-                  <AttendanceDashboard role="TEAM_LEADER" userId={user.id} />
+                  <AttendanceDashboard 
+                    role="TEAM_LEADER" 
+                    userId={user.id} 
+                    startDate={filters.from}
+                    endDate={filters.to}
+                    hideFilters={true} 
+                  />
                 </div>
               )}
 
@@ -388,7 +395,7 @@ const TeamLeaderDashboard = () => {
 
               {myDashboardSubTab === 'calls' && (
                 <div className="animate-fade-in">
-                   <CallLogDashboard userId={user.id} hideHeader={true} />
+                   <CallLogDashboard userId={user.id} hideHeader={true} filters={filters} onChange={setFilters} />
                 </div>
               )}
 
@@ -400,23 +407,16 @@ const TeamLeaderDashboard = () => {
                           <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>INDIVIDUAL CONVERSION TRENDS</p>
                       </div>
                       <div className="card-body p-4" style={{ height: '400px' }}>
-                          <RevenueTrendChart data={personalTrendData} theme={theme} />
+                          <React.Suspense fallback={<ChartSkeleton />}>
+                            <RevenueTrendChart data={trendData} theme={theme} />
+                          </React.Suspense>
                       </div>
                     </div>
                 </div>
               )}
             </div>
           )}
-          {/* Operational Scope Filters */}
-          {activeTab === 'overview' && (
-            <FiltersBar
-              filters={filters}
-              onChange={setFilters}
-              onSync={handleSync}
-              users={associates}
-              role="TEAM_LEADER"
-            />
-          )}
+          {/* Operational Scope Filters handled globally */}
 
           {filters.userId && (
             <div className="d-flex align-items-center justify-content-between p-3 bg-primary bg-opacity-10 border border-primary border-opacity-20 rounded-4 animate-slide-in mb-1 shadow-glow">
@@ -464,7 +464,9 @@ const TeamLeaderDashboard = () => {
                       </div>
                     </div>
                     <div className="card-body p-0">
-                      <RevenueTrendChart data={trendData} theme={theme} />
+                      <React.Suspense fallback={<ChartSkeleton />}>
+                        <RevenueTrendChart data={trendData} theme={theme} />
+                      </React.Suspense>
                     </div>
                   </div>
                 </div>
@@ -481,7 +483,9 @@ const TeamLeaderDashboard = () => {
                       </div>
                     </div>
                     <div className="card-body p-0" style={{ height: '350px' }}>
-                      <LeadStatusPieChart distribution={stats?.statusDistribution || []} leads={leads} isDarkMode={isDarkMode} />
+                      <React.Suspense fallback={<ChartSkeleton />}>
+                        <LeadStatusPieChart distribution={stats?.statusDistribution || []} leads={leads} isDarkMode={isDarkMode} />
+                      </React.Suspense>
                     </div>
                   </div>
                 </div>
@@ -558,11 +562,18 @@ const TeamLeaderDashboard = () => {
 
           {activeTab === 'pipeline' && (
             <div className="animate-fade-in d-flex flex-column gap-3">
-              <div className="row g-3">
+              {(() => {
+                const dateScopedLeads = (leads || []).filter(l => 
+                  new Date(l.createdAt) >= new Date(filters.from) && 
+                  new Date(l.createdAt) <= new Date(filters.to + 'T23:59:59')
+                );
+                return (
+                  <>
+                  <div className="row g-3">
                 <div className="col-12 col-md-3">
                   <StatCard
                     title="Converted"
-                    value={leads.filter(l => ['PAID', 'CONVERTED', 'SUCCESS', 'EMI'].includes(l.status)).length}
+                    value={dateScopedLeads.filter(l => ['PAID', 'CONVERTED', 'SUCCESS', 'EMI'].includes(l.status)).length}
                     sub="Successful Transmissions"
                     icon={<CheckCircle size={18} />}
                     color="success"
@@ -571,7 +582,7 @@ const TeamLeaderDashboard = () => {
                 <div className="col-12 col-md-3">
                   <StatCard
                     title="Interested"
-                    value={leads.filter(l => l.status === 'INTERESTED' || l.status === 'UNDER_REVIEW').length}
+                    value={dateScopedLeads.filter(l => l.status === 'INTERESTED' || l.status === 'UNDER_REVIEW').length}
                     sub="Hot Opportunities"
                     icon={<Zap size={18} />}
                     color="warning"
@@ -580,7 +591,7 @@ const TeamLeaderDashboard = () => {
                 <div className="col-12 col-md-3">
                   <StatCard
                     title="Follow-up"
-                    value={leads.filter(l => l.status === 'FOLLOW_UP').length}
+                    value={dateScopedLeads.filter(l => l.status === 'FOLLOW_UP').length}
                     sub="Active Operational Nodes"
                     icon={<Clock size={18} />}
                     color="info"
@@ -589,7 +600,7 @@ const TeamLeaderDashboard = () => {
                 <div className="col-12 col-md-3">
                   <StatCard
                     title="Lost"
-                    value={leads.filter(l => ['LOST', 'NOT_INTERESTED', 'PAYMENT_FAILED'].includes(l.status)).length}
+                    value={dateScopedLeads.filter(l => ['LOST', 'NOT_INTERESTED', 'PAYMENT_FAILED'].includes(l.status)).length}
                     sub="Off-Pitch Terminations"
                     icon={<AlertCircle size={18} />}
                     color="danger"
@@ -613,12 +624,12 @@ const TeamLeaderDashboard = () => {
                 </div>
                 <div className="card-body p-0">
                   <LeadList
-                    leads={leads}
+                    leads={dateScopedLeads}
                     onUpdateStatus={handleUpdateStatus}
                     onUpdateLead={handleUpdateLead}
                     onEdit={(lead) => {
-                      setEditingLead(lead);
-                      setActiveTab('edit-lead');
+                       setEditingLead(lead);
+                       setActiveTab('edit-lead');
                     }}
                     onSendPaymentLink={handleSendPaymentLink}
                     onAssignLead={handleAssignLead}
@@ -630,16 +641,25 @@ const TeamLeaderDashboard = () => {
                   />
                 </div>
               </div>
+              </>
+              )
+
+              })()}
             </div>
           )}
 
           {activeTab === 'tasks' && (
             <TaskBoard
-              leads={leads}
+              leads={(leads || []).filter(l => 
+                new Date(l.createdAt) >= new Date(filters.from) && 
+                new Date(l.createdAt) <= new Date(filters.to + 'T23:59:59')
+              )}
               theme={theme}
               onUpdateStatus={handleUpdateStatus}
               onSendPaymentLink={handleSendPaymentLink}
               fetchLeads={fetchData}
+              userId={filters.userId}
+              hideFilters={true}
             />
           )}
 
@@ -647,7 +667,7 @@ const TeamLeaderDashboard = () => {
             <div className="d-flex flex-column gap-4">
               {/* Squad Efficiency Snapshot */}
               {(() => {
-                const squadStats = performance.reduce((acc, p) => ({
+                const squadStats = (performance || []).reduce((acc, p) => ({
                   leads: acc.leads + (p.totalLeads || 0),
                   converted: acc.converted + (p.convertedLeads || 0),
                   lost: acc.lost + (p.lostLeads || 0),
@@ -708,7 +728,7 @@ const TeamLeaderDashboard = () => {
                     <div className="text-center">Lost</div>,
                     'Sync Rate'
                   ]}
-                  data={performance}
+                  data={performance || []}
                   renderRow={(p, index) => (
                     <>
                       <td className="ps-4 text-muted fw-bold small" style={{ fontSize: '10px' }}>
@@ -738,20 +758,32 @@ const TeamLeaderDashboard = () => {
 
           {activeTab === 'payments' && (
             <div className="d-flex flex-column gap-4">
-              <PaymentHistory role="TEAM_LEADER" from={filters.from} to={filters.to} />
+              <PaymentHistory 
+                role="TEAM_LEADER" 
+                from={filters.from} 
+                to={filters.to} 
+                userId={filters.userId}
+                hideFilters={true}
+              />
             </div>
           )}
 
           {activeTab === 'attendance' && (
-            <AttendanceDashboard role="TEAM_LEADER" />
+            <AttendanceDashboard 
+              role="TEAM_LEADER" 
+              userId={filters.userId}
+              startDate={filters.from}
+              endDate={filters.to}
+              hideFilters={true}
+            />
           )}
 
           {activeTab === 'call-logs' && (
             <div className="d-flex flex-column gap-4">
               <CallLogDashboard 
-                userId={filters.userId} 
-                from={filters.from} 
-                to={filters.to}
+                filters={filters}
+                onChange={setFilters}
+                hideHeader={true}
               />
             </div>
           )}

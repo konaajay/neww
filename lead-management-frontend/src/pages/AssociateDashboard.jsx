@@ -166,17 +166,19 @@ const AssociateDashboard = () => {
       role="ASSOCIATE"
     >
       <div className="animate-fade-in d-flex flex-column gap-4">
+        {/* GLOBAL RANGE FILTER */}
+        {activeTab !== 'edit-lead' && (
+          <FiltersBar
+            filters={filters}
+            onChange={setFilters}
+            onSync={handleSync}
+            title="Identity Node Metrics"
+            role="ASSOCIATE"
+            hideUserFilter={true}
+          />
+        )}
         {activeTab === 'overview' && (
           <div className="d-flex flex-column gap-4 animate-fade-in">
-            {/* GLOBAL RANGE FILTER */}
-            <FiltersBar
-              filters={filters}
-              onChange={setFilters}
-              onSync={handleSync}
-              title="Identity Node Metrics"
-              role="ASSOCIATE"
-            />
-
             <ManagerProfile manager={manager} />
 
             {/* ROW 1: CRITICAL ACTIONS (4 CARDS) */}
@@ -230,13 +232,6 @@ const AssociateDashboard = () => {
 
         {activeTab === 'leads' && (
           <div className="d-flex flex-column gap-4 animate-fade-in">
-            <FiltersBar
-              filters={filters}
-              onChange={setFilters}
-              onSync={handleSync}
-              title="Identity Node Metrics"
-              role="ASSOCIATE"
-            />
             <div className="premium-card overflow-hidden shadow-lg border-0">
               <div className="card-header bg-transparent p-4 border-0 border-bottom border-white border-opacity-5 d-flex justify-content-between align-items-center">
                 <div>
@@ -279,18 +274,11 @@ const AssociateDashboard = () => {
             onUpdateStatus={handleUpdateStatus}
             onSendPaymentLink={handleSendPaymentLink}
             fetchLeads={fetchData}
+            hideFilters={true}
           />
         )}
-
         {activeTab === 'reports' && (
           <div className="d-flex flex-column gap-4 animate-fade-in">
-            <FiltersBar
-              filters={filters}
-              onChange={setFilters}
-              onSync={handleSync}
-              title="Identity Node Metrics"
-              role="ASSOCIATE"
-            />
 
             <div className="row g-4 mb-4">
               {/* Stats moved to Overview */}
@@ -309,7 +297,9 @@ const AssociateDashboard = () => {
                     </div>
                   </div>
                   <div className="card-body p-4">
-                    <LazyRevenueTrendChart data={trend} theme={isDarkMode ? 'dark' : 'light'} />
+                    <React.Suspense fallback={<ChartSkeleton />}>
+                      <LazyRevenueTrendChart data={trend} theme={isDarkMode ? 'dark' : 'light'} />
+                    </React.Suspense>
                   </div>
                 </div>
               </div>
@@ -323,17 +313,31 @@ const AssociateDashboard = () => {
               <h5 className="fw-black mb-1 text-main text-uppercase tracking-widest small">Financial Transmission Archive</h5>
               <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>VIEW PERSONAL CONVERSION AND REVENUE HISTORY</p>
             </div>
-            <PaymentHistory role="ASSOCIATE" from={filters.from} to={filters.to} />
+            <PaymentHistory 
+              role="ASSOCIATE" 
+              from={filters.from} 
+              to={filters.to} 
+              hideFilters={true}
+            />
           </div>
         )}
 
         {activeTab === 'attendance' && (
-          <AttendanceDashboard role="ASSOCIATE" />
+          <AttendanceDashboard 
+            role="ASSOCIATE" 
+            startDate={filters.from} 
+            endDate={filters.to} 
+            hideFilters={true}
+          />
         )}
 
         {activeTab === 'call-logs' && (
           <div className="animate-fade-in">
-            <CallLogDashboard />
+            <CallLogDashboard 
+              hideHeader={true} 
+              filters={filters} 
+              onChange={setFilters} 
+            />
           </div>
         )}
 

@@ -48,11 +48,13 @@
   transition: background-color 0.4s ease, border-color 0.4s ease, transform 0.2s ease;
 }
 
-html, body {
-  height: 100%;
+html, body, #root {
+  min-height: 100%;
+  height: auto !important;
   margin: 0;
   padding: 0;
   background-color: var(--bg-body) !important;
+  overflow-y: auto !important;
 }
 
 body {

@@ -10,7 +10,7 @@ import RecordPaymentModal from './RecordPaymentModal';
 import ManualPaymentModal from './ManualPaymentModal';
 import InvoiceModal from '../pages/dashboard/components/InvoiceModal';
 
-const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: externalTo, hideHeader = false }) => {
+const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: externalTo, hideHeader = false, hideFilters = false }) => {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [teamLeaders, setTeamLeaders] = useState([]);
@@ -194,7 +194,7 @@ const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: 
         )}
 
         {/* Filters Wrapper - Conditionally hide if external filters provided */}
-        {(!externalUserId && !externalFrom) && (
+        {!hideFilters && !externalUserId && !externalFrom && (
           <div className="p-4 bg-surface bg-opacity-50 border-bottom border-white border-opacity-5 d-flex flex-wrap gap-4 align-items-end">
             <div className="flex-grow-1" style={{ maxWidth: '180px' }}>
               <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '9px', opacity: 0.6 }}>Operational Status</label>
@@ -259,7 +259,7 @@ const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: 
         )}
 
         {/* Local Search for External Filter Mode */}
-        {(externalUserId || externalFrom) && (
+        {!hideFilters && (externalUserId || externalFrom) && (
           <div className="p-3 bg-surface bg-opacity-20 d-flex justify-content-between align-items-center border-bottom border-white border-opacity-5">
              <div className="d-flex align-items-center gap-2">
                 <FileText size={16} className="text-primary opacity-50" />

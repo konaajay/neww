@@ -9,6 +9,14 @@ import java.util.HashMap;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(SecurityViolationException.class)
+    public ResponseEntity<Map<String, String>> handleSecurityViolationException(SecurityViolationException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("message", ex.getMessage());
+        error.put("error", "SECURITY_VIOLATION");
+        return ResponseEntity.status(403).body(error);
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException ex) {
         Map<String, String> error = new HashMap<>();

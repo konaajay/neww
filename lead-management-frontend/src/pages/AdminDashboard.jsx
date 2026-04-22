@@ -24,6 +24,7 @@ import TicketManager from '../components/TicketManager';
 import LeadIngestionModal from './dashboard/components/LeadIngestionModal';
 import MetricCommandCenter from './dashboard/components/MetricCommandCenter';
 import LeadEditPage from './dashboard/components/LeadEditPage';
+import TaskBoard from '../components/TaskBoard';
 import { useDashboardData } from './dashboard/hooks/useDashboardData';
 import { StatSkeleton, ChartSkeleton } from './dashboard/components/DashboardSkeletons';
 
@@ -69,19 +70,17 @@ const AdminDashboard = () => {
   const [myDashboardSubTab, setMyDashboardSubTab] = useState('dashboard');
   const [leads, setLeads] = useState([]);
 
-  useEffect(() => {
-    // Mode-switching logic: 
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    
+    // Tab-based data scoping: 
     // 'My Dashboard' forces personal scoping. Team tabs reset to global view.
-    if (activeTab === 'my-stats') {
-      if (filters.userId !== user?.id) {
-        setFilters(prev => ({ ...prev, userId: user?.id }));
-      }
+    if (tab === 'my-stats') {
+      setFilters(prev => ({ ...prev, userId: user?.id }));
     } else {
-      if (filters.userId === user?.id) {
-        setFilters(prev => ({ ...prev, userId: null }));
-      }
+      setFilters(prev => ({ ...prev, userId: null }));
     }
-  }, [activeTab]);
+  };
   const [callStats, setCallStats] = useState(null);
   const [teamTree, setTeamTree] = useState(null);
 
@@ -327,7 +326,12 @@ const AdminDashboard = () => {
       ? (l.assignedToId == filters.userId || hierarchyIds.some(id => id == l.assignedToId))
       : true;
 
-    return matchesSearch && matchesUnassigned && matchesUser;
+    // Universal Date Scoping
+    const matchesDate = 
+      new Date(l.createdAt) >= new Date(filters.from) && 
+      new Date(l.createdAt) <= new Date(filters.to + 'T23:59:59');
+
+    return matchesSearch && matchesUnassigned && matchesUser && matchesDate;
   });
 
   const handleRecordCallOutcome = async (leadId, data) => {
@@ -369,10 +373,21 @@ const AdminDashboard = () => {
   return (
     <DashboardLayout
       activeTab={activeTab}
-      onTabChange={setActiveTab}
+      onTabChange={handleTabChange}
       role="ADMIN"
     >
       <div className="animate-fade-in">
+        {/* GLOBAL RANGE FILTER */}
+        {activeTab !== 'edit-lead' && activeTab !== 'ingestion' && (
+          <FiltersBar
+            filters={filters}
+            onChange={setFilters}
+            onSync={handleSync}
+            role="ADMIN"
+            currentUserId={user?.id}
+            hideUserFilter={activeTab === 'my-stats'}
+          />
+        )}
         {activeTab === 'my-stats' && (
           <div className="d-flex flex-column gap-3 animate-fade-in">
             <div className="px-1 d-flex flex-wrap align-items-center justify-content-between gap-3">
@@ -388,25 +403,6 @@ const AdminDashboard = () => {
                     INDIVIDUAL PERFORMANCE ANALYTICS
                   </p>
                 </div>
-              </div>
-
-              <div className="d-flex align-items-center bg-surface border border-white border-opacity-10 rounded-pill shadow-sm px-3 py-1.5 gap-2">
-                <Clock size={12} className="text-primary opacity-50" />
-                <input
-                  type="date"
-                  className="bg-transparent border-0 shadow-none text-main fw-black p-0"
-                  value={filters.from}
-                  onChange={e => setFilters({ ...filters, from: e.target.value })}
-                  style={{ fontSize: '10px', outline: 'none' }}
-                />
-                <span className="text-muted fw-bold small opacity-25">TO</span>
-                <input
-                  type="date"
-                  className="bg-transparent border-0 shadow-none text-main fw-black p-0"
-                  value={filters.to}
-                  onChange={e => setFilters({ ...filters, to: e.target.value })}
-                  style={{ fontSize: '10px', outline: 'none' }}
-                />
               </div>
             </div>
 
@@ -443,14 +439,23 @@ const AdminDashboard = () => {
               </>
             )}
 
-            {myDashboardSubTab === 'calls' && <CallLogDashboard userId={user?.id} hideHeader={true} />}
+            {myDashboardSubTab === 'calls' && (
+              <CallLogDashboard 
+                userId={user?.id} 
+                hideHeader={true} 
+                filters={filters} 
+                onChange={setFilters} 
+              />
+            )}
             {myDashboardSubTab === 'reports' && (
               <div className="row g-4 animate-fade-in">
                 <div className="col-12 col-xl-8">
                   {user?.role !== 'ADMIN' && (
                     <Card title="My Conversion Velocity" subtitle="Individual Performance Analytics" className="h-100">
                       <div className="py-2" style={{ height: '360px' }}>
-                        <RevenueTrendChart data={trendData} theme={theme} />
+                        <React.Suspense fallback={<ChartSkeleton />}>
+                          <RevenueTrendChart data={trendData} theme={theme} />
+                        </React.Suspense>
                       </div>
                     </Card>
                   )}
@@ -479,17 +484,6 @@ const AdminDashboard = () => {
         )}
         {activeTab === 'overview' && (
           <div className="d-flex flex-column gap-3 p-1">
-            <div className="row g-3">
-              <div className="col-12">
-                <FiltersBar
-                  filters={filters}
-                  onChange={setFilters}
-                  onSync={handleSync}
-                  role="ADMIN"
-                  currentUserId={user?.id}
-                />
-              </div>
-            </div>
 
             <div className="mb-4">
               {dashboardLoading ? (
@@ -544,6 +538,7 @@ const AdminDashboard = () => {
               onRecordCallOutcome={handleRecordCallOutcome}
               onSendPaymentLink={handleSendPaymentLink}
               onDeleteLead={handleDeleteLead}
+              hideFilters={true}
             />
 
              {/* Operational Overview (Synchronized with TL/Manager Dashboard) */}
@@ -706,13 +701,6 @@ const AdminDashboard = () => {
 
         {activeTab === 'pipeline' && (
           <div className="animate-fade-in d-flex flex-column gap-3">
-            <FiltersBar
-              filters={filters}
-              onChange={setFilters}
-              onSync={fetchData}
-              role="ADMIN"
-              currentUserId={user?.id}
-            />
             <div className="row g-3">
               <div className="col-12 col-md-3">
                 <StatCard 
@@ -818,22 +806,15 @@ const AdminDashboard = () => {
           </div>
         )}
 
-
         {activeTab === 'attendance-logs' && (
           <div className="animate-fade-in d-flex flex-column gap-4">
-            <FiltersBar
-              filters={filters}
-              onChange={setFilters}
-              onSync={fetchData}
-              role="ADMIN"
-              currentUserId={user?.id}
-            />
             <AttendanceDashboard 
               role="ADMIN" 
               userId={filters.userId} 
               startDate={filters.from.split('T')[0]} 
               endDate={filters.to.split('T')[0]} 
               refreshTrigger={refreshTrigger}
+              hideFilters={true}
             />
           </div>
         )}
@@ -843,18 +824,13 @@ const AdminDashboard = () => {
             <AttendanceSettings />
           </div>
         )}
-
         {activeTab === 'tasks' && (
           <div className="animate-fade-in d-flex flex-column gap-4">
-            <FiltersBar
-              filters={filters}
-              onChange={setFilters}
-              onSync={fetchData}
-              role="ADMIN"
-              currentUserId={user?.id}
-            />
             <TaskBoard
-              leads={leads}
+              leads={(leads || []).filter(l => 
+                new Date(l.createdAt) >= new Date(filters.from) && 
+                new Date(l.createdAt) <= new Date(filters.to + 'T23:59:59')
+              )}
               theme={theme}
               onUpdateStatus={handleUpdateUser} 
               fetchLeads={fetchData}
@@ -863,17 +839,16 @@ const AdminDashboard = () => {
             />
           </div>
         )}
-
         {activeTab === 'call-logs' && (
           <div className="animate-fade-in d-flex flex-column gap-4">
             <CallLogDashboard 
               filters={filters} 
               onChange={setFilters} 
               userId={filters.userId} 
+              hideHeader={true}
             />
           </div>
         )}
-
         {activeTab === 'revenue' && (
           <div className="d-flex flex-column gap-4 animate-fade-in">
             <div className="d-flex align-items-center gap-3 mb-1">
@@ -885,14 +860,14 @@ const AdminDashboard = () => {
                 <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>AGGREGATED TRANSACTIONAL ARCHIVE</p>
               </div>
             </div>
-            <FiltersBar
-              filters={filters}
-              onChange={setFilters}
-              onSync={fetchData}
-              role="ADMIN"
-              currentUserId={user?.id}
+            <PaymentHistory 
+              role="ADMIN" 
+              userId={filters.userId} 
+              from={filters.from} 
+              to={filters.to} 
+              hideHeader={true} 
+              hideFilters={true}
             />
-            <PaymentHistory role="ADMIN" userId={filters.userId} from={filters.from} to={filters.to} hideHeader={true} />
           </div>
         )}
         {activeTab === 'ingestion' && (
@@ -906,16 +881,8 @@ const AdminDashboard = () => {
               onClose={() => setActiveTab('pipeline')}
             />
           </div>
-        )}
-        {activeTab === 'tickets' && (
+        )}        {activeTab === 'tickets' && (
           <div className="animate-fade-in d-flex flex-column gap-4">
-            <FiltersBar
-              filters={filters}
-              onChange={setFilters}
-              onSync={fetchData}
-              role="ADMIN"
-              currentUserId={user?.id}
-            />
             {loading ? (
               <div className="p-5 text-center">
                 <div className="spinner-border text-primary opacity-25"></div>

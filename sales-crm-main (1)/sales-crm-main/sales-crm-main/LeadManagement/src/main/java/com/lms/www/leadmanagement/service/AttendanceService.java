@@ -7,6 +7,7 @@ import com.lms.www.leadmanagement.dto.OfficeLocationDTO;
 import com.lms.www.leadmanagement.entity.*;
 import com.lms.www.leadmanagement.entity.GlobalTarget;
 import com.lms.www.leadmanagement.exception.ResourceNotFoundException;
+import com.lms.www.leadmanagement.exception.SecurityViolationException;
 import com.lms.www.leadmanagement.mapper.AttendanceMapper;
 import com.lms.www.leadmanagement.repository.*;
 import lombok.extern.slf4j.Slf4j;
@@ -92,6 +93,11 @@ public class AttendanceService {
     public AttendanceDTO clockIn(LocationRequestDTO request, String ua, String ip) {
         Long userId = request.getUserId();
 
+        if (request.isMockLocation()) {
+            log.warn("Security violation for user {}: Mock location detected during Punch-In", userId);
+            throw new SecurityViolationException("Security violation: Mock location detected. Deployment protocol terminated.");
+        }
+
         attendanceSessionRepository.findByUserIdAndStatusIn(userId,
                 List.of(AttendanceStatus.WORKING, AttendanceStatus.ON_SHORT_BREAK, AttendanceStatus.ON_LONG_BREAK,
                         AttendanceStatus.AUTO_BREAK))
@@ -132,6 +138,11 @@ public class AttendanceService {
     @Transactional
     public AttendanceDTO trackLocation(LocationRequestDTO request, String ua, String ip) {
         Long userId = request.getUserId();
+        
+        if (request.isMockLocation()) {
+            log.warn("Security violation for user {}: Mock location detected during Heartbeat", userId);
+            throw new SecurityViolationException("Security violation: Mock location detected. Tracking session suspended.");
+        }
         try {
             AttendanceSession session = attendanceSessionRepository.findActiveForUpdate(userId,
                     List.of(AttendanceStatus.WORKING, AttendanceStatus.ON_SHORT_BREAK, AttendanceStatus.ON_LONG_BREAK,

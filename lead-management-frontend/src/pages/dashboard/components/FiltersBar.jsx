@@ -3,7 +3,7 @@ import { Calendar, RefreshCcw, Filter } from 'lucide-react';
 import adminService from '../../../services/adminService';
 import { useTheme } from '../../../context/ThemeContext';
 
-const FiltersBar = ({ filters, onChange, onSync, title = "COMMAND CENTER", role = "", currentUserId }) => {
+const FiltersBar = ({ filters, onChange, onSync, title = "COMMAND CENTER", role = "", currentUserId, modes = [], activeMode = "", onModeChange = () => {}, hideUserFilter = false }) => {
   const { isDarkMode } = useTheme();
   const [selectedMgrId, setSelectedMgrId] = useState("");
   const [selectedTlId, setSelectedTlId] = useState("");
@@ -45,28 +45,7 @@ const FiltersBar = ({ filters, onChange, onSync, title = "COMMAND CENTER", role 
     }
   }, [selectedTlId, effectiveUserId]);
 
-  useEffect(() => {
-    let targetUserId = null;
-    let targetTeamId = null;
-
-    if (selectedAssocId) {
-      targetUserId = selectedAssocId;
-    } else if (selectedTlId) {
-      targetTeamId = selectedTlId;
-    } else if (selectedMgrId) {
-      targetTeamId = selectedMgrId;
-    } else if (isManager) {
-      targetTeamId = currentUserId;
-    }
-
-    if (filters?.userId !== targetUserId || filters?.teamId !== targetTeamId) {
-      onChange({ 
-        ...filters, 
-        userId: targetUserId, 
-        teamId: targetTeamId 
-      });
-    }
-  }, [selectedMgrId, selectedTlId, selectedAssocId, filters?.userId, filters?.teamId]);
+  // Hierarchy logic moved to event handlers to prevent infinite loops.
 
   return (
     <div className={`premium-card p-2 px-3 mb-3 animate-fade-in ${isDarkMode ? 'bg-surface bg-opacity-40 backdrop-blur' : 'bg-white shadow-sm'} rounded-pill`}>
@@ -82,7 +61,8 @@ const FiltersBar = ({ filters, onChange, onSync, title = "COMMAND CENTER", role 
             </div>
           </div>
 
-          {!isAssociate && (
+          <React.Fragment>
+            {!isAssociate && !hideUserFilter && (
             <div className="d-flex align-items-center gap-2">
               {role === 'ADMIN' && (
                 <div className={`${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-5' : 'bg-light border-light'} p-1 px-3 rounded-pill border`}>
@@ -91,9 +71,11 @@ const FiltersBar = ({ filters, onChange, onSync, title = "COMMAND CENTER", role 
                     style={{ fontSize: '9px', minWidth: '120px' }}
                     value={selectedMgrId}
                     onChange={(e) => {
-                      setSelectedMgrId(e.target.value);
+                      const val = e.target.value;
+                      setSelectedMgrId(val);
                       setSelectedTlId("");
                       setSelectedAssocId("");
+                      onChange({ ...filters, teamId: val || null, userId: null });
                     }}
                   >
                     <option value="" className="text-dark">MANAGER</option>
@@ -111,8 +93,11 @@ const FiltersBar = ({ filters, onChange, onSync, title = "COMMAND CENTER", role 
                     style={{ fontSize: '9px', minWidth: '120px' }}
                     value={selectedTlId}
                     onChange={(e) => {
-                      setSelectedTlId(e.target.value);
+                      const val = e.target.value;
+                      setSelectedTlId(val);
                       setSelectedAssocId("");
+                      const targetTeamId = val || selectedMgrId || (isManager ? currentUserId : null);
+                      onChange({ ...filters, teamId: targetTeamId, userId: null });
                     }}
                     disabled={!effectiveUserId}
                   >
@@ -130,7 +115,17 @@ const FiltersBar = ({ filters, onChange, onSync, title = "COMMAND CENTER", role 
                     className="bg-transparent border-0 text-main fw-bold small text-uppercase outline-none py-1"
                     style={{ fontSize: '9px', minWidth: '120px' }}
                     value={selectedAssocId}
-                    onChange={(e) => setSelectedAssocId(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSelectedAssocId(val);
+                      if (val) {
+                        onChange({ ...filters, userId: val, teamId: null });
+                      } else {
+                        // Reset to team level
+                        const targetTeamId = selectedTlId || selectedMgrId || (isManager ? currentUserId : null);
+                        onChange({ ...filters, userId: null, teamId: targetTeamId });
+                      }
+                    }}
                     disabled={!effectiveUserId && role !== 'TEAM_LEADER'}
                   >
                     <option value="" className="text-dark">{(effectiveUserId || isTL) ? 'ASSOCIATES' : '---'}</option>
@@ -142,6 +137,21 @@ const FiltersBar = ({ filters, onChange, onSync, title = "COMMAND CENTER", role 
               )}
             </div>
           )}
+          {modes.length > 0 && (
+            <div className={`d-flex align-items-center gap-2 ${isDarkMode ? 'bg-primary bg-opacity-10 border-primary border-opacity-10' : 'bg-primary bg-opacity-10 border-primary border-opacity-10'} p-1 px-3 rounded-pill border ms-2`}>
+              <select
+                className={`bg-transparent border-0 ${isDarkMode ? 'text-primary' : 'text-primary'} fw-black small text-uppercase tracking-wider outline-none py-1`}
+                style={{ fontSize: '9px' }}
+                value={activeMode}
+                onChange={(e) => onModeChange(e.target.value)}
+              >
+                {modes.map(mode => (
+                  <option key={mode.value} value={mode.value} className="text-dark">{mode.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          </React.Fragment>
         </div>
 
         {/* Right Section: Calendar + Reset + Sync */}

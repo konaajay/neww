@@ -284,7 +284,8 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
         </div>
       )}
 
-      {/* Local search if filters are hidden */}
+      {/* Local search if filters are hidden - HIDDEN to follow 'one filter' rule */}
+      {/* 
       {hideFilters && (
         <div className="px-1 d-flex justify-content-between align-items-center mb-1">
            <div className="d-flex align-items-center gap-2">
@@ -310,6 +311,7 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
            </div>
         </div>
       )}
+      */}
 
       {/* Task Matrix - Table Layout as per sketch */}
       <div className="premium-card overflow-hidden shadow-lg border-0 animate-fade-in">

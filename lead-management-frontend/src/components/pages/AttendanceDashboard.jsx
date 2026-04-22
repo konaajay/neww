@@ -17,7 +17,7 @@ import { toast } from 'react-toastify';
 import attendanceService from '../../services/attendanceService';
 import { useAuth } from '../../context/AuthContext';
 
-const AttendanceDashboard = ({ role, userId: externalUserId, startDate: externalStartDate, endDate: externalEndDate, refreshTrigger }) => {
+const AttendanceDashboard = ({ role, userId: externalUserId, startDate: externalStartDate, endDate: externalEndDate, refreshTrigger, hideFilters = false }) => {
   const { user } = useAuth();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -121,7 +121,7 @@ const AttendanceDashboard = ({ role, userId: externalUserId, startDate: external
   return (
     <div className={`container-fluid animate-fade-in ${externalUserId || externalStartDate ? 'p-0' : 'p-4'}`}>
       {/* Header Area */}
-      {(!externalUserId && !externalStartDate) && (
+      {!hideFilters && !externalUserId && !externalStartDate && (
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div>
             <h4 className="fw-black text-main mb-1 text-uppercase tracking-widest">Attendance Activity</h4>
@@ -134,7 +134,7 @@ const AttendanceDashboard = ({ role, userId: externalUserId, startDate: external
       )}
 
       {/* Filter Bar */}
-      {(!externalUserId && !externalStartDate) && (
+      {!hideFilters && !externalUserId && !externalStartDate && (
         <div className="premium-card mb-4 border-0 shadow-lg">
           <div className="card-body p-4">
             <div className="row g-4 align-items-end">
@@ -171,10 +171,11 @@ const AttendanceDashboard = ({ role, userId: externalUserId, startDate: external
                   </span>
                   <input
                     type="text"
-                    className="form-control bg-surface border-0 text-main shadow-none rounded-end-4 py-2.5"
-                    placeholder="Enter User ID..."
+                    className="form-control bg-surface bg-opacity-50 border border-white border-opacity-10 text-main shadow-none rounded-pill py-2.5 ps-3 transition-all"
+                    placeholder="Search by Employee ID..."
                     value={userId}
                     onChange={(e) => setUserId(e.target.value)}
+                    style={{ fontSize: '12px' }}
                   />
                 </div>
               </div>

@@ -98,7 +98,9 @@ const AttendanceWidget = ({ isCollapsed }) => {
       async (position) => {
         try {
           const { latitude, longitude, accuracy } = position.coords;
-          const data = await attendanceService.trackLocation(latitude, longitude, accuracy, 'WEB_BROWSER');
+          // Heuristic: Some mock providers yield exactly 0 as altitude or accuracy
+          const isMockLocation = position.mocked || false; 
+          const data = await attendanceService.trackLocation(latitude, longitude, accuracy, 'WEB_BROWSER', isMockLocation);
           if (data.success) {
             console.log('[Attendance Debug] Tracking heartbeat:', {
                 status: data.data.status,
@@ -137,7 +139,8 @@ const AttendanceWidget = ({ isCollapsed }) => {
       async (position) => {
         try {
           const { latitude, longitude, accuracy } = position.coords;
-          const data = await attendanceService.clockIn(latitude, longitude, accuracy, 'WEB_BROWSER');
+          const isMockLocation = position.mocked || false;
+          const data = await attendanceService.clockIn(latitude, longitude, accuracy, 'WEB_BROWSER', isMockLocation);
           if (data.success) {
             console.log('[Attendance Debug] Punch-In Success:', {
                 lat: latitude,

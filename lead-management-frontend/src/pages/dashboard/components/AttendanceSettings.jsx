@@ -24,15 +24,15 @@ const AttendanceSettings = () => {
 
     const [newOffice, setNewOffice] = useState({ name: '', latitude: 0, longitude: 0, radius: 100 });
     const [newShift, setNewShift] = useState({ name: '', startTime: '09:00', endTime: '18:00', graceMinutes: 15, minHalfDayMinutes: 240, minFullDayMinutes: 480, officeId: '' });
-    const [newPolicy, setNewPolicy] = useState({ 
-        officeId: '', 
-        trackingIntervalSec: 300, 
-        shortBreakStartTime: '17:00', 
-        shortBreakEndTime: '17:10', 
-        longBreakStartTime: '13:00', 
-        longBreakEndTime: '14:00', 
+    const [newPolicy, setNewPolicy] = useState({
+        officeId: '',
+        trackingIntervalSec: 300,
+        shortBreakStartTime: '17:00',
+        shortBreakEndTime: '17:10',
+        longBreakStartTime: '13:00',
+        longBreakEndTime: '14:00',
         gracePeriodMinutes: 2,
-        maxAccuracyMeters: 100, 
+        maxAccuracyMeters: 100,
         minimumWorkMinutes: 240,
         maxIdleMinutes: 30
     });
@@ -48,18 +48,18 @@ const AttendanceSettings = () => {
                 adminService.fetchGlobalTargets(),
                 adminService.fetchUsers()
             ]);
-            
+
             setGlobalTargets(targetsRes.data.data);
-            
+
             const userData = usersRes.data.data;
             setUsers(Array.isArray(userData) ? userData : (userData?.content || []));
 
             const offData = officesRes.data.data;
             setOffices(Array.isArray(offData) ? offData : (offData?.content || []));
-            
+
             const polData = policiesRes.data.data;
             setPolicies(Array.isArray(polData) ? polData : (polData?.content || []));
-            
+
             const shiftData = shiftsRes.data.data;
             setShifts(Array.isArray(shiftData) ? shiftData : (shiftData?.content || []));
         } catch (err) {
@@ -141,15 +141,15 @@ const AttendanceSettings = () => {
                 toast.success('Policy active');
             }
             setEditingPolicyId(null);
-            setNewPolicy({ 
-                officeId: '', 
-                trackingIntervalSec: 300, 
-                shortBreakStartTime: '17:00', 
-                shortBreakEndTime: '17:10', 
-                longBreakStartTime: '13:00', 
-                longBreakEndTime: '14:00', 
+            setNewPolicy({
+                officeId: '',
+                trackingIntervalSec: 300,
+                shortBreakStartTime: '17:00',
+                shortBreakEndTime: '17:10',
+                longBreakStartTime: '13:00',
+                longBreakEndTime: '14:00',
                 gracePeriodMinutes: 2,
-                maxAccuracyMeters: 100, 
+                maxAccuracyMeters: 100,
                 minimumWorkMinutes: 240,
                 maxIdleMinutes: 30
             });
@@ -158,7 +158,7 @@ const AttendanceSettings = () => {
             toast.error(editingPolicyId ? 'Failed to update policy' : 'Failed to create policy');
         }
     };
-    
+
     const handleEditPolicy = (policy) => {
         setEditingPolicyId(policy.id);
         setNewPolicy({
@@ -226,8 +226,8 @@ const AttendanceSettings = () => {
                 <div className="col-12 col-lg-3">
                     <div className={`premium-card p-3 border-0 ${isDarkMode ? 'bg-surface bg-opacity-40 backdrop-blur' : 'bg-white shadow-sm'} d-flex flex-column gap-3`} style={{ borderRadius: '24px' }}>
                         <div className="px-2 pt-2">
-                           <h6 className={`fw-black ${isDarkMode ? 'text-main' : 'text-dark'} small tracking-widest text-uppercase opacity-40 mb-1`} style={{ fontSize: '9px' }}>System Control</h6>
-                           <p className="text-muted small fw-bold mb-0 opacity-30" style={{ fontSize: '8px' }}>IDENTITY NODES & PROTOCOLS</p>
+                            <h6 className={`fw-black ${isDarkMode ? 'text-main' : 'text-dark'} small tracking-widest text-uppercase opacity-40 mb-1`} style={{ fontSize: '9px' }}>System Control</h6>
+                            <p className="text-muted small fw-bold mb-0 opacity-30" style={{ fontSize: '8px' }}>IDENTITY NODES & PROTOCOLS</p>
                         </div>
 
                         <div className="d-flex flex-column gap-2">
@@ -239,7 +239,7 @@ const AttendanceSettings = () => {
                                 const Icon = btn.icon;
                                 const isActive = activeSection === btn.id;
                                 return (
-                                    <button 
+                                    <button
                                         key={btn.id}
                                         onClick={() => setActiveSection(btn.id)}
                                         className={`p-3 d-flex align-items-center gap-3 rounded-4 border transition-all ${isActive ? 'bg-primary border-primary shadow-glow' : `${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-5' : 'bg-light border-0'} text-muted hover-bg-surface`}`}
@@ -277,36 +277,36 @@ const AttendanceSettings = () => {
                                     <div className="row g-4">
                                         <div className="col-md-6 border-end-md border-opacity-5 pe-md-4" style={{ borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}>
                                             <div className="mb-4">
-                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{fontSize: '0.65rem'}}>Node Identifier</label>
-                                                <input 
-                                                    type="text" className={`ui-input py-2.5 rounded-4 ${isDarkMode ? '' : 'bg-white border text-dark'}`} 
-                                                    value={newOffice.name} onChange={e => setNewOffice({...newOffice, name: e.target.value})}
+                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Node Identifier</label>
+                                                <input
+                                                    type="text" className={`ui-input py-2.5 rounded-4 ${isDarkMode ? '' : 'bg-white border text-dark'}`}
+                                                    value={newOffice.name} onChange={e => setNewOffice({ ...newOffice, name: e.target.value })}
                                                     placeholder="e.g. Hyderabad Global Hub" required
                                                 />
                                             </div>
                                             <div className="mb-0">
-                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{fontSize: '0.65rem'}}>Geofence Radius (meters)</label>
-                                                <input 
-                                                    type="number" className={`ui-input py-2.5 rounded-4 ${isDarkMode ? '' : 'bg-white border text-dark'}`} 
-                                                    value={newOffice.radius || 100} onChange={e => setNewOffice({...newOffice, radius: parseInt(e.target.value) || 0})}
+                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Geofence Radius (meters)</label>
+                                                <input
+                                                    type="number" className={`ui-input py-2.5 rounded-4 ${isDarkMode ? '' : 'bg-white border text-dark'}`}
+                                                    value={newOffice.radius || 100} onChange={e => setNewOffice({ ...newOffice, radius: parseInt(e.target.value) || 0 })}
                                                     required
                                                 />
                                             </div>
                                         </div>
                                         <div className="col-md-6 ps-md-4">
                                             <div className="mb-4">
-                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{fontSize: '0.65rem'}}>Latitude Coordination</label>
-                                                <input 
-                                                    type="number" step="any" className={`ui-input py-2.5 rounded-4 ${isDarkMode ? '' : 'bg-white border text-dark'}`} 
-                                                    value={newOffice.latitude || 0} onChange={e => setNewOffice({...newOffice, latitude: parseFloat(e.target.value) || 0})}
+                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Latitude Coordination</label>
+                                                <input
+                                                    type="number" step="any" className={`ui-input py-2.5 rounded-4 ${isDarkMode ? '' : 'bg-white border text-dark'}`}
+                                                    value={newOffice.latitude || 0} onChange={e => setNewOffice({ ...newOffice, latitude: parseFloat(e.target.value) || 0 })}
                                                     required
                                                 />
                                             </div>
                                             <div className="mb-0">
-                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{fontSize: '0.65rem'}}>Longitude Coordination</label>
-                                                <input 
-                                                    type="number" step="any" className={`ui-input py-2.5 rounded-4 ${isDarkMode ? '' : 'bg-white border text-dark'}`} 
-                                                    value={newOffice.longitude || 0} onChange={e => setNewOffice({...newOffice, longitude: parseFloat(e.target.value) || 0})}
+                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Longitude Coordination</label>
+                                                <input
+                                                    type="number" step="any" className={`ui-input py-2.5 rounded-4 ${isDarkMode ? '' : 'bg-white border text-dark'}`}
+                                                    value={newOffice.longitude || 0} onChange={e => setNewOffice({ ...newOffice, longitude: parseFloat(e.target.value) || 0 })}
                                                     required
                                                 />
                                             </div>
@@ -350,11 +350,11 @@ const AttendanceSettings = () => {
                                     </div>
                                 ))}
                                 {offices.length === 0 && !loading && (
-                                   <div className="col-12 py-5 text-center bg-surface bg-opacity-20 rounded-4 border border-dashed border-white border-opacity-10">
-                                      <MapPin size={48} className="text-muted opacity-20 mb-3" />
-                                      <h6 className="fw-black text-muted text-uppercase tracking-widest small">Binary Hub Not Detected</h6>
-                                      <p className="text-muted small opacity-50 fw-bold mb-0">No office locations configured in local registry</p>
-                                   </div>
+                                    <div className="col-12 py-5 text-center bg-surface bg-opacity-20 rounded-4 border border-dashed border-white border-opacity-10">
+                                        <MapPin size={48} className="text-muted opacity-20 mb-3" />
+                                        <h6 className="fw-black text-muted text-uppercase tracking-widest small">Binary Hub Not Detected</h6>
+                                        <p className="text-muted small opacity-50 fw-bold mb-0">No office locations configured in local registry</p>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -376,10 +376,10 @@ const AttendanceSettings = () => {
                                     <div className="row g-4">
                                         <div className="col-lg-4 border-end border-white border-opacity-5 pe-lg-4">
                                             <div className="mb-4">
-                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{fontSize: '0.65rem'}}>Branch Target</label>
-                                                <select 
-                                                    className="ui-input py-2 rounded-3" 
-                                                    value={newPolicy.officeId} onChange={e => setNewPolicy({...newPolicy, officeId: e.target.value})}
+                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Branch Target</label>
+                                                <select
+                                                    className="ui-input py-2 rounded-3"
+                                                    value={newPolicy.officeId} onChange={e => setNewPolicy({ ...newPolicy, officeId: e.target.value })}
                                                     required
                                                 >
                                                     <option value="" className="text-dark">Select hub...</option>
@@ -390,65 +390,65 @@ const AttendanceSettings = () => {
                                             </div>
                                             <div className="row g-3">
                                                 <div className="col-12">
-                                                    <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{fontSize: '0.65rem'}}>Out-of-Range Grace (m)</label>
-                                                    <input 
-                                                        type="number" className="ui-input py-2 rounded-3" 
-                                                        value={newPolicy.gracePeriodMinutes || 0} onChange={e => setNewPolicy({...newPolicy, gracePeriodMinutes: parseInt(e.target.value) || 0})}
+                                                    <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Out-of-Range Grace (m)</label>
+                                                    <input
+                                                        type="number" className="ui-input py-2 rounded-3"
+                                                        value={newPolicy.gracePeriodMinutes || 0} onChange={e => setNewPolicy({ ...newPolicy, gracePeriodMinutes: parseInt(e.target.value) || 0 })}
                                                         placeholder="2" required
                                                     />
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         <div className="col-lg-5 border-end border-white border-opacity-5 px-lg-4">
-                                            <label className="text-primary small fw-black text-uppercase mb-3 d-block" style={{fontSize: '0.65rem'}}>Intermission Parameters</label>
+                                            <label className="text-primary small fw-black text-uppercase mb-3 d-block" style={{ fontSize: '0.65rem' }}>Intermission Parameters</label>
                                             <div className="row g-3">
                                                 <div className="col-12">
                                                     <div className={`p-3 rounded-4 border ${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-5' : 'bg-white border-dark border-opacity-5'} shadow-sm`}>
-                                                        <span className="small text-muted fw-bold d-block mb-3 opacity-75" style={{fontSize: '0.65rem'}}>RECREATION WINDOW</span>
+                                                        <span className="small text-muted fw-bold d-block mb-3 opacity-75" style={{ fontSize: '0.65rem' }}>RECREATION WINDOW</span>
                                                         <div className="d-flex align-items-center gap-2">
                                                             <div className="flex-grow-1">
-                                                                <label className="text-muted fs-xs fw-black d-block mb-1" style={{fontSize: '7px'}}>START</label>
-                                                                <input type="time" className="ui-input px-2 py-1.5 border-0 bg-transparent text-center fs-6" 
-                                                                   value={newPolicy.shortBreakStartTime} onChange={e => setNewPolicy({...newPolicy, shortBreakStartTime: e.target.value})} />
+                                                                <label className="text-muted fs-xs fw-black d-block mb-1" style={{ fontSize: '7px' }}>START</label>
+                                                                <input type="time" className="ui-input px-2 py-1.5 border-0 bg-transparent text-center fs-6"
+                                                                    value={newPolicy.shortBreakStartTime} onChange={e => setNewPolicy({ ...newPolicy, shortBreakStartTime: e.target.value })} />
                                                             </div>
                                                             <ArrowRight size={12} className="text-muted opacity-20 mt-4" />
                                                             <div className="flex-grow-1">
-                                                                <label className="text-muted fs-xs fw-black d-block mb-1" style={{fontSize: '7px'}}>END</label>
-                                                                <input type="time" className="ui-input px-2 py-1.5 border-0 bg-transparent text-center fs-6" 
-                                                                   value={newPolicy.shortBreakEndTime} onChange={e => setNewPolicy({...newPolicy, shortBreakEndTime: e.target.value})} />
+                                                                <label className="text-muted fs-xs fw-black d-block mb-1" style={{ fontSize: '7px' }}>END</label>
+                                                                <input type="time" className="ui-input px-2 py-1.5 border-0 bg-transparent text-center fs-6"
+                                                                    value={newPolicy.shortBreakEndTime} onChange={e => setNewPolicy({ ...newPolicy, shortBreakEndTime: e.target.value })} />
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div className="col-12">
                                                     <div className={`p-3 rounded-4 border ${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-5' : 'bg-white border-dark border-opacity-5'} shadow-sm`}>
-                                                        <span className="small text-muted fw-bold d-block mb-3 opacity-75" style={{fontSize: '0.65rem'}}>LUNCHEON WINDOW</span>
+                                                        <span className="small text-muted fw-bold d-block mb-3 opacity-75" style={{ fontSize: '0.65rem' }}>LUNCHEON WINDOW</span>
                                                         <div className="d-flex align-items-center gap-2">
                                                             <div className="flex-grow-1">
-                                                                <label className="text-muted fs-xs fw-black d-block mb-1" style={{fontSize: '7px'}}>START</label>
-                                                                <input type="time" className="ui-input px-2 py-1.5 border-0 bg-transparent text-center fs-6" 
-                                                                   value={newPolicy.longBreakStartTime} onChange={e => setNewPolicy({...newPolicy, longBreakStartTime: e.target.value})} />
+                                                                <label className="text-muted fs-xs fw-black d-block mb-1" style={{ fontSize: '7px' }}>START</label>
+                                                                <input type="time" className="ui-input px-2 py-1.5 border-0 bg-transparent text-center fs-6"
+                                                                    value={newPolicy.longBreakStartTime} onChange={e => setNewPolicy({ ...newPolicy, longBreakStartTime: e.target.value })} />
                                                             </div>
                                                             <ArrowRight size={12} className="text-muted opacity-20 mt-4" />
                                                             <div className="flex-grow-1">
-                                                                <label className="text-muted fs-xs fw-black d-block mb-1" style={{fontSize: '7px'}}>END</label>
-                                                                <input type="time" className="ui-input px-2 py-1.5 border-0 bg-transparent text-center fs-6" 
-                                                                   value={newPolicy.longBreakEndTime} onChange={e => setNewPolicy({...newPolicy, longBreakEndTime: e.target.value})} />
+                                                                <label className="text-muted fs-xs fw-black d-block mb-1" style={{ fontSize: '7px' }}>END</label>
+                                                                <input type="time" className="ui-input px-2 py-1.5 border-0 bg-transparent text-center fs-6"
+                                                                    value={newPolicy.longBreakEndTime} onChange={e => setNewPolicy({ ...newPolicy, longBreakEndTime: e.target.value })} />
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         <div className="col-lg-3 d-flex flex-column justify-content-between ps-lg-4">
                                             <div className="d-flex flex-column gap-3">
                                                 <div>
-                                                    <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{fontSize: '0.65rem'}}>Active Threshold (min)</label>
-                                                    <input 
-                                                        type="number" className="ui-input py-2 rounded-3" 
-                                                        value={newPolicy.minimumWorkMinutes || 0} onChange={e => setNewPolicy({...newPolicy, minimumWorkMinutes: parseInt(e.target.value) || 0})}
+                                                    <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Active Threshold (min)</label>
+                                                    <input
+                                                        type="number" className="ui-input py-2 rounded-3"
+                                                        value={newPolicy.minimumWorkMinutes || 0} onChange={e => setNewPolicy({ ...newPolicy, minimumWorkMinutes: parseInt(e.target.value) || 0 })}
                                                         placeholder="240" required
                                                     />
                                                 </div>
@@ -459,13 +459,13 @@ const AttendanceSettings = () => {
                                                     {editingPolicyId ? 'SYNC ENGINE' : 'ACTIVATE ENGINE'}
                                                 </button>
                                                 {editingPolicyId && (
-                                                    <button 
-                                                        type="button" 
-                                                        className="ui-btn ui-btn-outline w-100 rounded-pill py-2 fw-black text-uppercase tracking-widest" 
+                                                    <button
+                                                        type="button"
+                                                        className="ui-btn ui-btn-outline w-100 rounded-pill py-2 fw-black text-uppercase tracking-widest"
                                                         style={{ fontSize: '10px' }}
                                                         onClick={() => {
                                                             setEditingPolicyId(null);
-                                                            setNewPolicy({ officeId: '', trackingIntervalSec: 300, shortBreakStartTime: '17:00', shortBreakEndTime: '17:10', longBreakStartTime: '13:00', longBreakEndTime: '14:00', gracePeriodMinutes: 2, maxAccuracyMeters: 100, minimumWorkMinutes: 240, maxIdleMinutes: 30});
+                                                            setNewPolicy({ officeId: '', trackingIntervalSec: 300, shortBreakStartTime: '17:00', shortBreakEndTime: '17:10', longBreakStartTime: '13:00', longBreakEndTime: '14:00', gracePeriodMinutes: 2, maxAccuracyMeters: 100, minimumWorkMinutes: 240, maxIdleMinutes: 30 });
                                                         }}
                                                     >ABORT</button>
                                                 )}
@@ -475,14 +475,14 @@ const AttendanceSettings = () => {
                                 </form>
                             </div>
 
-                         <div className={`premium-card p-0 overflow-hidden shadow-lg border-0 ${isDarkMode ? '' : 'bg-white mt-4'}`} style={{ borderRadius: '24px' }}>
+                            <div className={`premium-card p-0 overflow-hidden shadow-lg border-0 ${isDarkMode ? '' : 'bg-white mt-4'}`} style={{ borderRadius: '24px' }}>
                                 <div className={`card-header bg-transparent p-4 border-0 d-flex justify-content-between align-items-center border-bottom ${isDarkMode ? 'border-white border-opacity-5' : 'border-dark border-opacity-5'}`}>
-                                   <div className="d-flex align-items-center gap-2">
-                                      <div className="p-2 bg-primary bg-opacity-10 text-primary rounded-3">
-                                         <Shield size={18} />
-                                      </div>
-                                      <h6 className={`fw-black mb-0 ${isDarkMode ? 'text-main' : 'text-dark'} text-uppercase small tracking-widest`}>Active Governance Registry</h6>
-                                   </div>
+                                    <div className="d-flex align-items-center gap-2">
+                                        <div className="p-2 bg-primary bg-opacity-10 text-primary rounded-3">
+                                            <Shield size={18} />
+                                        </div>
+                                        <h6 className={`fw-black mb-0 ${isDarkMode ? 'text-main' : 'text-dark'} text-uppercase small tracking-widest`}>Active Governance Registry</h6>
+                                    </div>
                                 </div>
                                 <div className="table-responsive">
                                     <table className="table table-hover align-middle mb-0 border-0 bg-transparent">
@@ -499,7 +499,7 @@ const AttendanceSettings = () => {
                                             {policies.map(p => (
                                                 <tr key={p.id} className={`${isDarkMode ? 'border-white border-opacity-5' : 'border-dark border-opacity-5'} border-bottom transition-all`}>
                                                     <td className="ps-4 py-3">
-                                                       <div className="text-muted fw-bold" style={{ fontSize: '8px' }}>IDENTITY: {p.id ? p.id.toString().slice(-8) : 'NEW'}</div>
+                                                        <div className="text-muted fw-bold" style={{ fontSize: '8px' }}>IDENTITY: {p.id ? p.id.toString().slice(-8) : 'NEW'}</div>
                                                     </td>
                                                     <td>
                                                         <div className="d-flex flex-column">
@@ -509,8 +509,8 @@ const AttendanceSettings = () => {
                                                     </td>
                                                     <td className="text-center">
                                                         <div className="d-flex align-items-center justify-content-center gap-2">
-                                                           <span className="ui-badge bg-info bg-opacity-10 text-info fw-black" style={{ fontSize: '8px' }}>SHORT: {p.shortBreakStartTime}</span>
-                                                           <span className="ui-badge bg-primary bg-opacity-10 text-primary fw-black" style={{ fontSize: '8px' }}>LONG: {p.longBreakStartTime}</span>
+                                                            <span className="ui-badge bg-info bg-opacity-10 text-info fw-black" style={{ fontSize: '8px' }}>SHORT: {p.shortBreakStartTime}</span>
+                                                            <span className="ui-badge bg-primary bg-opacity-10 text-primary fw-black" style={{ fontSize: '8px' }}>LONG: {p.longBreakStartTime}</span>
                                                         </div>
                                                     </td>
                                                     <td className="text-end">
@@ -519,14 +519,14 @@ const AttendanceSettings = () => {
                                                     </td>
                                                     <td className="pe-4 text-end">
                                                         <div className="d-flex justify-content-end gap-1">
-                                                            <button 
+                                                            <button
                                                                 onClick={() => handleEditPolicy(p)}
                                                                 className="ui-btn btn-sm p-2 rounded-circle border-0 text-primary hover-bg-primary bg-opacity-10 transition-all shadow-none"
                                                                 title="Configure"
                                                             >
                                                                 <Edit size={14} />
                                                             </button>
-                                                            <button 
+                                                            <button
                                                                 onClick={() => handleDeletePolicy(p.id)}
                                                                 className="ui-btn btn-sm p-2 rounded-circle border-0 text-danger hover-bg-danger bg-opacity-10 transition-all shadow-none"
                                                                 title="Purge"
@@ -556,7 +556,7 @@ const AttendanceSettings = () => {
 
                     {activeSection === 'shifts' && (
                         <div className="d-flex flex-column gap-4 animate-fade-in">
-                             <div className={`premium-card p-4 border-0 shadow-lg ${isDarkMode ? '' : 'bg-white'}`}>
+                            <div className={`premium-card p-4 border-0 shadow-lg ${isDarkMode ? '' : 'bg-white'}`}>
                                 <div className="d-flex align-items-center gap-3 mb-4">
                                     <div className="p-3 bg-primary bg-opacity-10 text-primary rounded-4">
                                         <Clock size={24} />
@@ -570,18 +570,18 @@ const AttendanceSettings = () => {
                                     <div className="row g-4">
                                         <div className="col-md-6 border-end border-white border-opacity-5 pe-md-4">
                                             <div className="mb-4">
-                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{fontSize: '0.65rem'}}>Shift nomenclature</label>
-                                                <input 
-                                                    type="text" className="ui-input py-2 rounded-3" 
-                                                    value={newShift.name} onChange={e => setNewShift({...newShift, name: e.target.value})}
+                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Shift nomenclature</label>
+                                                <input
+                                                    type="text" className="ui-input py-2 rounded-3"
+                                                    value={newShift.name} onChange={e => setNewShift({ ...newShift, name: e.target.value })}
                                                     placeholder="e.g. ALPHA DAY ROTATION" required
                                                 />
                                             </div>
                                             <div className="mb-4">
-                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{fontSize: '0.65rem'}}>Operational Branch (Office)</label>
-                                                <select 
-                                                    className="ui-input py-2 rounded-3" 
-                                                    value={newShift.officeId} onChange={e => setNewShift({...newShift, officeId: e.target.value})}
+                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Operational Branch (Office)</label>
+                                                <select
+                                                    className="ui-input py-2 rounded-3"
+                                                    value={newShift.officeId} onChange={e => setNewShift({ ...newShift, officeId: e.target.value })}
                                                 >
                                                     <option value="">Link to global hub (optional)...</option>
                                                     {offices.map(o => (
@@ -591,18 +591,18 @@ const AttendanceSettings = () => {
                                             </div>
                                             <div className="row g-3">
                                                 <div className="col-6">
-                                                    <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{fontSize: '0.65rem'}}>Inauguration</label>
-                                                    <input 
-                                                        type="time" className="ui-input py-2 rounded-3" 
-                                                        value={newShift.startTime} onChange={e => setNewShift({...newShift, startTime: e.target.value})}
+                                                    <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Inauguration</label>
+                                                    <input
+                                                        type="time" className="ui-input py-2 rounded-3"
+                                                        value={newShift.startTime} onChange={e => setNewShift({ ...newShift, startTime: e.target.value })}
                                                         required
                                                     />
                                                 </div>
                                                 <div className="col-6">
-                                                    <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{fontSize: '0.65rem'}}>Termination</label>
-                                                    <input 
-                                                        type="time" className="ui-input py-2 rounded-3" 
-                                                        value={newShift.endTime} onChange={e => setNewShift({...newShift, endTime: e.target.value})}
+                                                    <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Termination</label>
+                                                    <input
+                                                        type="time" className="ui-input py-2 rounded-3"
+                                                        value={newShift.endTime} onChange={e => setNewShift({ ...newShift, endTime: e.target.value })}
                                                         required
                                                     />
                                                 </div>
@@ -610,10 +610,10 @@ const AttendanceSettings = () => {
                                         </div>
                                         <div className="col-md-6 ps-md-4 d-flex flex-column justify-content-between">
                                             <div className="mb-4">
-                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{fontSize: '0.65rem'}}>Arrival Grace Limit (mins)</label>
-                                                <input 
-                                                    type="number" className="ui-input py-2 rounded-3" 
-                                                    value={newShift.graceMinutes} onChange={e => setNewShift({...newShift, graceMinutes: parseInt(e.target.value)})}
+                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Arrival Grace Limit (mins)</label>
+                                                <input
+                                                    type="number" className="ui-input py-2 rounded-3"
+                                                    value={newShift.graceMinutes} onChange={e => setNewShift({ ...newShift, graceMinutes: parseInt(e.target.value) })}
                                                     required
                                                 />
                                             </div>
@@ -623,8 +623,8 @@ const AttendanceSettings = () => {
                                                     {editingShiftId ? 'SYNC CYCLE' : 'INITIALIZE CYCLE'}
                                                 </button>
                                                 {editingShiftId && (
-                                                    <button 
-                                                        type="button" 
+                                                    <button
+                                                        type="button"
                                                         className="ui-btn ui-btn-outline w-100 rounded-pill py-2 fw-black text-uppercase tracking-widest"
                                                         style={{ fontSize: '11px' }}
                                                         onClick={() => {
@@ -640,8 +640,8 @@ const AttendanceSettings = () => {
                             </div>
 
                             <div className="row g-3">
-                                 {shifts.map(shift => (
-                                     <div key={shift.id} className="col-md-6 col-xl-4">
+                                {shifts.map(shift => (
+                                    <div key={shift.id} className="col-md-6 col-xl-4">
                                         <div className={`premium-card h-100 p-4 hover-lift border-0 ${isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-white shadow-sm'}`} style={{ borderRadius: '24px' }}>
                                             <div className="d-flex align-items-center gap-3 mb-4">
                                                 <div className="p-3 bg-primary bg-opacity-10 rounded-pill text-primary shadow-glow">
@@ -649,35 +649,35 @@ const AttendanceSettings = () => {
                                                 </div>
                                                 <div className="flex-grow-1 overflow-hidden">
                                                     <h6 className={`mb-0 fw-black ${isDarkMode ? 'text-main' : 'text-dark'} text-uppercase small tracking-wider text-truncate`}>{shift.name}</h6>
-                                                    <span className="text-muted fw-bold opacity-50" style={{fontSize: '8px'}}>NODE ID: {shift.id ? shift.id.toString().slice(-6) : 'SYS'}</span>
+                                                    <span className="text-muted fw-bold opacity-50" style={{ fontSize: '8px' }}>NODE ID: {shift.id ? shift.id.toString().slice(-6) : 'SYS'}</span>
                                                 </div>
                                             </div>
                                             <div className={`d-flex justify-content-between ${isDarkMode ? 'bg-surface bg-opacity-30 border-white border-opacity-5' : 'bg-light border-0'} p-3 rounded-4 border mb-4 mt-2`}>
                                                 <div className="text-center px-2 flex-grow-1 border-end border-white border-opacity-5">
-                                                    <p className="text-muted fw-black mb-1" style={{fontSize: '7px'}}>START</p>
+                                                    <p className="text-muted fw-black mb-1" style={{ fontSize: '7px' }}>START</p>
                                                     <span className="fw-black text-main font-monospace">{shift.startTime.slice(0, 5)}</span>
                                                 </div>
                                                 <div className="text-center px-2 flex-grow-1">
-                                                    <p className="text-muted fw-black mb-1" style={{fontSize: '7px'}}>END</p>
+                                                    <p className="text-muted fw-black mb-1" style={{ fontSize: '7px' }}>END</p>
                                                     <span className="fw-black text-main font-monospace">{shift.endTime.slice(0, 5)}</span>
                                                 </div>
                                             </div>
                                             <div className="d-flex justify-content-between align-items-center pt-2">
-                                                <span className="ui-badge bg-primary bg-opacity-10 text-primary fw-black" style={{fontSize: '8px'}}>{shift.graceMinutes}M GRACE</span>
+                                                <span className="ui-badge bg-primary bg-opacity-10 text-primary fw-black" style={{ fontSize: '8px' }}>{shift.graceMinutes}M GRACE</span>
                                                 <div className="d-flex gap-1">
-                                                     <button onClick={() => handleEditShift(shift)} className="ui-btn btn-sm p-1.5 rounded-circle border-0 text-primary hover-bg-primary bg-opacity-10 shadow-none"><Edit size={12} /></button>
-                                                     <button onClick={() => handleDeleteShift(shift.id)} className="ui-btn btn-sm p-1.5 rounded-circle border-0 text-danger hover-bg-danger bg-opacity-10 shadow-none"><Trash2 size={12} /></button>
+                                                    <button onClick={() => handleEditShift(shift)} className="ui-btn btn-sm p-1.5 rounded-circle border-0 text-primary hover-bg-primary bg-opacity-10 shadow-none"><Edit size={12} /></button>
+                                                    <button onClick={() => handleDeleteShift(shift.id)} className="ui-btn btn-sm p-1.5 rounded-circle border-0 text-danger hover-bg-danger bg-opacity-10 shadow-none"><Trash2 size={12} /></button>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 ))}
                                 {shifts.length === 0 && !loading && (
-                                   <div className="col-12 py-5 text-center bg-surface bg-opacity-20 rounded-4 border border-dashed border-white border-opacity-10">
-                                      <Clock size={48} className="text-muted opacity-20 mb-3" />
-                                      <h6 className="fw-black text-muted text-uppercase tracking-widest small">Synchronized Cycles Unavailable</h6>
-                                      <p className="text-muted small opacity-50 fw-bold mb-0">No active work rotations found in system registry</p>
-                                   </div>
+                                    <div className="col-12 py-5 text-center bg-surface bg-opacity-20 rounded-4 border border-dashed border-white border-opacity-10">
+                                        <Clock size={48} className="text-muted opacity-20 mb-3" />
+                                        <h6 className="fw-black text-muted text-uppercase tracking-widest small">Synchronized Cycles Unavailable</h6>
+                                        <p className="text-muted small opacity-50 fw-bold mb-0">No active work rotations found in system registry</p>
+                                    </div>
                                 )}
                             </div>
                         </div>

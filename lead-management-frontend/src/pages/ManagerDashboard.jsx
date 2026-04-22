@@ -116,6 +116,15 @@ const ManagerDashboard = () => {
     const [editingUser, setEditingUser] = useState(null);
     const [editingLead, setEditingLead] = useState(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [hubMode, setHubMode] = useState('Leads');
+
+    const HUB_MODES = [
+      { label: 'Leads Mode', value: 'Leads' },
+      { label: 'Call Analysis', value: 'Calls' },
+      { label: 'Revenue Mode', value: 'Payments' },
+      { label: 'Follow-ups', value: 'Follow Ups' },
+      { label: 'Tickets', value: 'Raised Tickets' }
+    ];
 
     const handleSync = () => {
         setRefreshTrigger(prev => prev + 1);
@@ -213,20 +222,19 @@ const ManagerDashboard = () => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }, [filters.userId]);
-    useEffect(() => {
-        localStorage.setItem('mgr_activeTab', activeTab);
+    const handleTabChange = (tab) => {
+        setActiveTab(tab);
+        localStorage.setItem('mgr_activeTab', tab);
         
         // Tab-based data scoping:
         // 'My Dashboard' forces the filter to show the manager's personal data.
-        // Switching to any 'Team' tab resets this filter to show aggregated team data.
-        if (activeTab === 'my-stats' && user?.id) {
-            if (filters.userId !== user.id) {
-                setFilters(prev => ({ ...prev, userId: user.id }));
-            }
-        } else if (activeTab === 'overview' && filters.userId !== null) {
+        // Switching to any 'Team' tab (overview) resets this filter to show aggregated team data.
+        if (tab === 'my-stats') {
+            setFilters(prev => ({ ...prev, userId: user?.id }));
+        } else if (tab === 'overview') {
             setFilters(prev => ({ ...prev, userId: null }));
         }
-    }, [activeTab, user?.id, filters.userId]);
+    };
 
     const handleCreateUser = async (formData) => {
         try {
@@ -353,8 +361,23 @@ const ManagerDashboard = () => {
     });
 
     return (
-        <DashboardLayout activeTab={activeTab} onTabChange={setActiveTab} role="MANAGER">
+        <DashboardLayout activeTab={activeTab} onTabChange={handleTabChange} role="MANAGER">
             <div className="animate-fade-in d-flex flex-column gap-4">
+            {/* GLOBAL RANGE FILTER */}
+            {activeTab !== 'edit-lead' && activeTab !== 'ingestion' && (
+                <FiltersBar
+                    filters={filters}
+                    onChange={setFilters}
+                    onSync={handleSync}
+                    users={teamLeaders}
+                    role="MANAGER"
+                    currentUserId={user?.id}
+                    modes={activeTab === 'overview' ? HUB_MODES : []}
+                    activeMode={hubMode}
+                    onModeChange={setHubMode}
+                    hideUserFilter={activeTab === 'my-stats'}
+                />
+            )}
                 {activeTab === 'my-stats' && (
                   <div className="d-flex flex-column gap-3 animate-fade-in">
                     <div className="px-1 d-flex flex-wrap align-items-center justify-content-between gap-3">
@@ -384,25 +407,6 @@ const ManagerDashboard = () => {
                          <div className="position-absolute end-0 top-50 translate-middle-y me-3 pointer-events-none opacity-50">
                             <ChevronDown size={12} />
                          </div>
-                      </div>
-                      
-                      <div className="d-flex align-items-center bg-surface border border-white border-opacity-10 rounded-pill shadow-sm px-3 py-1.5 gap-2 ms-auto">
-                          <Clock size={12} className="text-primary opacity-50" />
-                          <input 
-                              type="date" 
-                              className="bg-transparent border-0 shadow-none text-main fw-black p-0" 
-                              value={filters.from} 
-                              onChange={e => setFilters({...filters, from: e.target.value})}
-                              style={{ fontSize: '10px', outline: 'none' }}
-                          />
-                          <span className="text-muted fw-bold small opacity-25">TO</span>
-                          <input 
-                              type="date" 
-                              className="bg-transparent border-0 shadow-none text-main fw-black p-0" 
-                              value={filters.to} 
-                              onChange={e => setFilters({...filters, to: e.target.value})}
-                              style={{ fontSize: '10px', outline: 'none' }}
-                          />
                       </div>
                     </div>
 
@@ -508,7 +512,11 @@ const ManagerDashboard = () => {
                     {myDashboardSubTab === 'leads' && (
                        <div className="premium-card overflow-hidden shadow-lg animate-fade-in">
                           <LeadsTable 
-                            leads={(leads || []).filter(l => l && l.assignedToId === user?.id)} 
+                            leads={(leads || []).filter(l => 
+                              l && l.assignedToId === user?.id &&
+                              new Date(l.createdAt) >= new Date(filters.from) &&
+                              new Date(l.createdAt) <= new Date(filters.to + 'T23:59:59')
+                            )} 
                             searchTerm={searchTerm} 
                             setSearchTerm={setSearchTerm}
                             filterUnassigned={false}
@@ -533,14 +541,24 @@ const ManagerDashboard = () => {
 
                     {myDashboardSubTab === 'attendance' && (
                       <div className="animate-fade-in">
-                        <AttendanceDashboard role="MANAGER" userId={user.id} />
+                        <AttendanceDashboard 
+                          role="MANAGER" 
+                          userId={user.id} 
+                          startDate={filters.from}
+                          endDate={filters.to}
+                          hideFilters={true} 
+                        />
                       </div>
                     )}
 
                     {myDashboardSubTab === 'tasks' && (
                       <div className="animate-fade-in">
                         <TaskBoard 
-                          leads={(leads || []).filter(l => l && l.assignedToId === user?.id)}
+                          leads={(leads || []).filter(l => 
+                            l && l.assignedToId === user?.id &&
+                            new Date(l.createdAt) >= new Date(filters.from) &&
+                            new Date(l.createdAt) <= new Date(filters.to + 'T23:59:59')
+                          )}
                           theme={theme}
                           onUpdateStatus={() => loadLeads()} 
                           fetchLeads={loadLeads}
@@ -551,7 +569,7 @@ const ManagerDashboard = () => {
                     )}
 
                     {myDashboardSubTab === 'revenue' && <PaymentHistory role="MANAGER" userId={user?.id} from={filters.from} to={filters.to} hideHeader={true} />}
-                    {myDashboardSubTab === 'calls' && <CallLogDashboard userId={user?.id} hideHeader={true} />}
+                    {myDashboardSubTab === 'calls' && <CallLogDashboard userId={user?.id} hideHeader={true} filters={filters} onChange={setFilters} />}
                     {myDashboardSubTab === 'reports' && (
                       <div className="d-flex flex-column gap-4 animate-fade-in pb-5">
                         {/* Personal Analytics Node */}
@@ -561,7 +579,9 @@ const ManagerDashboard = () => {
                               <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>INDIVIDUAL CONVERSION TRENDS</p>
                           </div>
                           <div className="card-body p-4" style={{ height: '400px' }}>
-                              <RevenueTrendChart data={trend} theme={theme} />
+                              <React.Suspense fallback={<ChartSkeleton />}>
+                                <RevenueTrendChart data={trend} theme={theme} />
+                              </React.Suspense>
                           </div>
                         </div>
                       </div>
@@ -609,6 +629,9 @@ const ManagerDashboard = () => {
                         onRecordCallOutcome={handleRecordCallOutcome}
                         onSendPaymentLink={handleSendPaymentLink}
                         onDeleteLead={handleDeleteLead}
+                        hideFilters={true}
+                        dataType={hubMode}
+                        onDataTypeChange={setHubMode}
                     />
                     
                     {/* Analytics Growth Row (Trend + Pie Chart) */}
@@ -616,14 +639,18 @@ const ManagerDashboard = () => {
                         <div className="col-12 col-xl-8">
                             <Card title="Team Conversion History" subtitle="Sales Performance Velocity" className="h-100">
                                 <div className="py-2" style={{ height: '360px' }}>
-                                    <RevenueTrendChart data={trend} theme={theme} />
+                                    <React.Suspense fallback={<ChartSkeleton />}>
+                                        <RevenueTrendChart data={trend} theme={theme} />
+                                    </React.Suspense>
                                 </div>
                             </Card>
                         </div>
                         <div className="col-12 col-xl-4">
                             <Card title="Squad Pipeline Distribution" subtitle="Status Segmentation Analytics" className="h-100">
                                 <div className="py-2" style={{ height: '360px' }}>
-                                    <LeadStatusPieChart distribution={stats?.statusDistribution} leads={leads} isDarkMode={isDarkMode} />
+                                    <React.Suspense fallback={<ChartSkeleton />}>
+                                        <LeadStatusPieChart distribution={stats?.statusDistribution} leads={leads} isDarkMode={isDarkMode} />
+                                    </React.Suspense>
                                 </div>
                             </Card>
                         </div>
@@ -713,14 +740,6 @@ const ManagerDashboard = () => {
 
                 {activeTab === 'pipeline' && (
                   <div className="animate-fade-in d-flex flex-column gap-3">
-                    <FiltersBar 
-                        filters={filters}
-                        onChange={setFilters}
-                        onSync={loadLeads}
-                        title="PIPELINE HUB"
-                        role={user?.role}
-                        currentUserId={user?.id}
-                    />
 
                     <div className="row g-3 px-1 mt-1">
                       {/* ... status cards ... */}
@@ -835,37 +854,26 @@ const ManagerDashboard = () => {
 
                  {activeTab === 'attendance-logs' && (
                   <div className="animate-fade-in d-flex flex-column gap-3">
-                    <FiltersBar 
-                        filters={filters}
-                        onChange={setFilters}
-                        onSync={handleSync} 
-                        title="ATTENDANCE HUB"
-                        role={user?.role}
-                        currentUserId={user?.id}
-                    />
                     <AttendanceDashboard 
                       role="MANAGER" 
                       userId={filters.userId} 
                       startDate={filters.from.split('T')[0]} 
                       endDate={filters.to.split('T')[0]} 
+                      hideFilters={true}
                     />
                   </div>
                 )}
 
                 {activeTab === 'call-logs' && (
-                    <CallLogDashboard />
+                    <CallLogDashboard 
+                        filters={filters}
+                        onChange={setFilters}
+                        hideHeader={true}
+                    />
                 )}
 
                 {activeTab === 'tasks' && (
                   <div className="animate-fade-in d-flex flex-column gap-3">
-                    <FiltersBar 
-                        filters={filters}
-                        onChange={setFilters}
-                        onSync={() => loadLeads()}
-                        title="TASK COMMAND HUB"
-                        role={user?.role}
-                        currentUserId={user?.id}
-                    />
                     <TaskBoard
                       leads={leads}
                       theme={theme}
@@ -879,15 +887,14 @@ const ManagerDashboard = () => {
 
                 {activeTab === 'payments' && (
                     <div className="d-flex flex-column gap-3 animate-fade-in">
-                        <FiltersBar 
-                            filters={filters}
-                            onChange={setFilters}
-                            onSync={() => setRefreshTrigger(prev => prev + 1)}
-                            title="FINANCIAL HUB"
-                            role={user?.role}
-                            currentUserId={user?.id}
+                        <PaymentHistory 
+                            role="MANAGER" 
+                            userId={filters.userId} 
+                            from={filters.from} 
+                            to={filters.to} 
+                            hideHeader={true} 
+                            hideFilters={true}
                         />
-                        <PaymentHistory role="MANAGER" userId={filters.userId} from={filters.from} to={filters.to} hideHeader={true} />
                     </div>
                 )}
 
@@ -904,7 +911,9 @@ const ManagerDashboard = () => {
                       <div className="col-12">
                         <Card title="Market Engagement History" subtitle="Transactional Velocity Analysis">
                           <div className="py-2" style={{ height: '400px' }}>
-                            <RevenueTrendChart data={trend} theme={theme} />
+                            <React.Suspense fallback={<ChartSkeleton />}>
+                              <RevenueTrendChart data={trend} theme={theme} />
+                            </React.Suspense>
                           </div>
                         </Card>
                       </div>

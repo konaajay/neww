@@ -25,5 +25,11 @@ public interface LeadTaskRepository extends JpaRepository<LeadTask, Long> {
     @Query("SELECT t FROM LeadTask t WHERE (t.lead.assignedTo.id IN :userIds OR t.lead.createdBy.id IN :userIds) AND (cast(:start as timestamp) IS NULL OR t.dueDate >= :start) AND (cast(:end as timestamp) IS NULL OR t.dueDate <= :end)")
     List<LeadTask> findFilteredByUserIds(@Param("userIds") java.util.Collection<Long> userIds, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
+    @Query("SELECT COUNT(t) FROM LeadTask t WHERE (t.lead.assignedTo.id IN :userIds OR t.lead.createdBy.id IN :userIds) AND t.dueDate >= :start AND t.dueDate <= :end")
+    long countFollowups(@Param("userIds") java.util.Collection<Long> userIds, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    @Query("SELECT COUNT(t) FROM LeadTask t WHERE (t.lead.assignedTo.id IN :userIds OR t.lead.createdBy.id IN :userIds) AND t.status = com.lms.www.leadmanagement.entity.LeadTask$TaskStatus.PENDING AND t.dueDate < :now")
+    long countPendingTasks(@Param("userIds") java.util.Collection<Long> userIds, @Param("now") LocalDateTime now);
+
     boolean existsByLeadIdAndStatusAndDueDate(Long leadId, LeadTask.TaskStatus status, LocalDateTime dueDate);
 }

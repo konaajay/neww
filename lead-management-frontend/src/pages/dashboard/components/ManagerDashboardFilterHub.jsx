@@ -23,6 +23,7 @@ import TicketManager from '../../../components/TicketManager';
 import StatCard from '../../../components/StatCard';
 import { MetricCard } from './MetricCommandCenter';
 import { useAuth } from '../../../context/AuthContext';
+import adminService from '../../../services/adminService';
 
 const ManagerDashboardFilterHub = ({
   teamTree,
@@ -39,13 +40,18 @@ const ManagerDashboardFilterHub = ({
   onSendPaymentLink,
   onDeleteLead,
   teamLeaders: initialTeamLeaders,
-  loading
+  loading,
+  hideFilters = false,
+  dataType: externalDataType,
+  onDataTypeChange
 }) => {
   const { user } = useAuth();
   const [selectedMgrId, setSelectedMgrId] = useState('');
   const [selectedTlId, setSelectedTlId] = useState('');
   const [selectedAssocId, setSelectedAssocId] = useState('');
-  const [dataType, setDataType] = useState('Leads');
+  const [internalDataType, setInternalDataType] = useState('Leads');
+  const dataType = externalDataType || internalDataType;
+  const setDataType = onDataTypeChange || setInternalDataType;
 
   // Role-based scoping logic
   const isManager = user?.role === 'MANAGER';
@@ -58,9 +64,7 @@ const ManagerDashboardFilterHub = ({
   // Fetch Managers on Load
   useEffect(() => {
     if (!isManager) {
-      import('../../../services/adminService').then(({ default: adminService }) => {
-        adminService.fetchManagers().then(res => setManagers(res.data)).catch(() => { });
-      });
+      adminService.fetchManagers().then(res => setManagers(res.data)).catch(() => { });
     }
   }, [isManager]);
 
@@ -68,9 +72,7 @@ const ManagerDashboardFilterHub = ({
   useEffect(() => {
     const targetMgrId = isManager ? user.id : selectedMgrId;
     if (targetMgrId) {
-      import('../../../services/adminService').then(({ default: adminService }) => {
-        adminService.fetchTeamsByManager(targetMgrId).then(res => setTls(res.data)).catch(() => { });
-      });
+      adminService.fetchTeamsByManager(targetMgrId).then(res => setTls(res.data)).catch(() => { });
     } else {
       setTls([]);
     }
@@ -80,14 +82,9 @@ const ManagerDashboardFilterHub = ({
   useEffect(() => {
     const targetMgrId = isManager ? user.id : selectedMgrId;
     if (selectedTlId) {
-      import('../../../services/adminService').then(({ default: adminService }) => {
-        adminService.fetchAssociates(selectedTlId, null).then(res => setAssociates(res.data)).catch(() => { });
-      });
+      adminService.fetchAssociates(selectedTlId, null).then(res => setAssociates(res.data)).catch(() => { });
     } else if (targetMgrId) {
-      // If "All Teams" is selected, fetch all under Manager
-      import('../../../services/adminService').then(({ default: adminService }) => {
-        adminService.fetchAssociates(null, targetMgrId).then(res => setAssociates(res.data)).catch(() => { });
-      });
+      adminService.fetchAssociates(null, targetMgrId).then(res => setAssociates(res.data)).catch(() => { });
     } else {
       setAssociates([]);
     }
@@ -95,22 +92,7 @@ const ManagerDashboardFilterHub = ({
 
   const effectiveMgr = isManager ? user : managers.find(m => m.id.toString() === selectedMgrId);
 
-  useEffect(() => {
-    let targetUserId = null;
-    if (selectedAssocId) {
-      targetUserId = selectedAssocId;
-    } else if (selectedTlId) {
-      targetUserId = selectedTlId;
-    } else if (selectedMgrId) {
-      targetUserId = selectedMgrId;
-    } else if (isManager) {
-      targetUserId = user.id;
-    }
-
-    if (filters?.userId !== targetUserId) {
-      setFilters(prev => ({ ...prev, userId: targetUserId }));
-    }
-  }, [selectedMgrId, selectedTlId, selectedAssocId, isManager, user?.id, filters?.userId]);
+  // Selection logic moved to event handlers to prevent infinite render loops.
 
   const renderCards = () => {
     if (loading) {
@@ -290,97 +272,108 @@ const ManagerDashboardFilterHub = ({
 
   return (
     <div className="d-flex flex-column gap-4">
-      <div className="premium-card p-2 border-0 shadow-lg bg-surface bg-opacity-10 backdrop-blur rounded-pill px-4" style={{ backdropFilter: 'blur(20px)' }}>
-        <div className="d-flex align-items-center justify-content-between gap-2 overflow-x-auto no-scrollbar">
-          {/* Left: Title & Analysis Type */}
-          <div className="d-flex align-items-center gap-3">
-            <div className="d-flex align-items-center gap-2 pe-3 border-end border-white border-opacity-10">
-              <div className="p-2 bg-primary bg-opacity-10 text-primary rounded-circle">
-                <Filter size={14} />
+      {!hideFilters && (
+        <div className="premium-card p-2 border-0 shadow-lg bg-surface bg-opacity-10 backdrop-blur rounded-pill px-4" style={{ backdropFilter: 'blur(20px)' }}>
+          <div className="d-flex align-items-center justify-content-between gap-2 overflow-x-auto no-scrollbar">
+            {/* Left: Title & Analysis Type */}
+            <div className="d-flex align-items-center gap-3">
+              <div className="d-flex align-items-center gap-2 pe-3 border-end border-white border-opacity-10 animate-fade-in">
+                <div className="p-2 bg-primary bg-opacity-10 text-primary rounded-circle">
+                  <Filter size={14} />
+                </div>
+                <div className="d-none d-xl-block">
+                  <h6 className="fw-black mb-0 text-main tracking-widest text-uppercase" style={{ fontSize: '10px' }}>Command Center</h6>
+                  <small className="text-muted fw-bold opacity-50" style={{ fontSize: '7px' }}>HIERARCHICAL ANALYSIS</small>
+                </div>
               </div>
-              <div className="d-none d-xl-block">
-                <h6 className="fw-black mb-0 text-main tracking-widest text-uppercase" style={{ fontSize: '10px' }}>Command Center</h6>
-                <small className="text-muted fw-bold opacity-50" style={{ fontSize: '7px' }}>HIERARCHICAL ANALYSIS</small>
-              </div>
-            </div>
 
-            <div className="d-flex align-items-center gap-2">
-              {!isManager && (
-                <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-30 p-1 px-3 rounded-pill border border-white border-opacity-5">
-                  <Users size={12} className="text-primary opacity-50" />
+              <div className="d-flex align-items-center gap-2">
+                {!isManager && (
+                  <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-30 p-1 px-3 rounded-pill border border-white border-opacity-5 animate-fade-in">
+                    <Users size={12} className="text-primary opacity-50" />
+                    <select
+                      className="bg-transparent border-0 text-main fw-black small text-uppercase tracking-wider outline-none py-1"
+                      style={{ fontSize: '9px', minWidth: '130px' }}
+                      value={selectedMgrId}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSelectedMgrId(val);
+                        setSelectedTlId('');
+                        setSelectedAssocId('');
+                        setFilters(prev => ({
+                          ...prev,
+                          userId: val || (isManager ? user.id : null)
+                        }));
+                      }}
+                    >
+                      <option value="">CHOOSE MANAGER</option>
+                      {managers.map(m => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-30 p-1 px-3 rounded-pill border border-white border-opacity-5 animate-fade-in">
+                  <ShieldHalf size={12} className="text-warning opacity-50" />
                   <select
                     className="bg-transparent border-0 text-main fw-black small text-uppercase tracking-wider outline-none py-1"
                     style={{ fontSize: '9px', minWidth: '130px' }}
-                    value={selectedMgrId}
-                    onChange={(e) => setSelectedMgrId(e.target.value)}
+                    value={selectedTlId}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSelectedTlId(val);
+                      setSelectedAssocId('');
+                      setFilters(prev => ({
+                        ...prev,
+                        userId: val || selectedMgrId || (isManager ? user.id : null)
+                      }));
+                    }}
+                    disabled={!isManager && !selectedMgrId}
                   >
-                    <option value="">CHOOSE MANAGER</option>
-                    {managers.map(m => (
-                      <option key={m.id} value={m.id}>{m.name}</option>
+                    <option value="">{(isManager || selectedMgrId) ? 'ALL TEAMS' : '---'}</option>
+                    {tls.map(tl => (
+                      <option key={tl.id} value={tl.id}>{tl.name}</option>
                     ))}
                   </select>
                 </div>
-              )}
 
-              <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-30 p-1 px-3 rounded-pill border border-white border-opacity-5">
-                <ShieldHalf size={12} className="text-warning opacity-50" />
-                <select
-                  className="bg-transparent border-0 text-main fw-black small text-uppercase tracking-wider outline-none py-1"
-                  style={{ fontSize: '9px', minWidth: '130px' }}
-                  value={selectedTlId}
-                  onChange={(e) => setSelectedTlId(e.target.value)}
-                  disabled={!isManager && !selectedMgrId}
-                >
-                  <option value="">{(isManager || selectedMgrId) ? 'ALL TEAMS' : '---'}</option>
-                  {tls.map(tl => (
-                    <option key={tl.id} value={tl.id}>{tl.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-30 p-1 px-3 rounded-pill border border-white border-opacity-5">
-                <User size={12} className="text-info opacity-50" />
-                <select
-                  className="bg-transparent border-0 text-main fw-black small text-uppercase tracking-wider outline-none py-1"
-                  style={{ fontSize: '9px', minWidth: '130px' }}
-                  value={selectedAssocId}
-                  onChange={(e) => setSelectedAssocId(e.target.value)}
-                  disabled={!effectiveMgr}
-                >
-                  <option value="">{effectiveMgr ? 'ALL ASSOCIATES' : '---'}</option>
-                  {associates.map(member => (
-                    <option key={member.id} value={member.id}>{member.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="d-flex align-items-center gap-2 bg-primary bg-opacity-10 p-1 px-3 rounded-pill border border-primary border-opacity-20">
-                <Layers size={12} className="text-primary opacity-50" />
-                <select
-                  className="bg-transparent border-0 text-primary fw-black small text-uppercase tracking-wider outline-none py-1"
-                  style={{ fontSize: '9px' }}
-                  value={dataType}
-                  onChange={(e) => setDataType(e.target.value)}
-                >
-                  <option value="Leads">Leads Mode</option>
-                  <option value="Calls">Call Analysis</option>
-                  <option value="Payments">Revenue Mode</option>
-                  <option value="Follow Ups">Follow-ups</option>
-                  <option value="Raised Tickets">Tickets</option>
-                </select>
+                <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-30 p-1 px-3 rounded-pill border border-white border-opacity-5 animate-fade-in">
+                  <User size={12} className="text-info opacity-50" />
+                  <select
+                    className="bg-transparent border-0 text-main fw-black small text-uppercase tracking-wider outline-none py-1"
+                    style={{ fontSize: '9px', minWidth: '130px' }}
+                    value={selectedAssocId}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSelectedAssocId(val);
+                      setFilters(prev => ({
+                        ...prev,
+                        userId: val || selectedTlId || selectedMgrId || (isManager ? user.id : null)
+                      }));
+                    }}
+                    disabled={!effectiveMgr}
+                  >
+                    <option value="">{effectiveMgr ? 'ALL ASSOCIATES' : '---'}</option>
+                    {associates.map(member => (
+                      <option key={member.id} value={member.id}>{member.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
-          </div>
 
-          <button
-            className="ui-btn ui-btn-outline btn-sm px-4 rounded-pill border-white border-opacity-10 fw-black transition-all hover-scale"
-            style={{ fontSize: '9px', whiteSpace: 'nowrap' }}
-            onClick={hubReset}
-          >
-            RESET ALL
-          </button>
+            <button
+              className="ui-btn ui-btn-outline btn-sm px-4 rounded-pill border-white border-opacity-10 fw-black transition-all hover-scale"
+              style={{ fontSize: '9px', whiteSpace: 'nowrap' }}
+              onClick={hubReset}
+            >
+              RESET ALL
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+
 
       {renderCards()}
 
@@ -394,3 +387,4 @@ const ManagerDashboardFilterHub = ({
 };
 
 export default ManagerDashboardFilterHub;
+
