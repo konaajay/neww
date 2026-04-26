@@ -6,10 +6,10 @@ import associateService from '../services/associateService';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 
-const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilters = false }) => {
+const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilters = false, startDate, endDate, initialFilter = 'ALL', refreshTrigger }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState(initialFilter);
   const [selectedLead, setSelectedLead] = useState(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [cloudTasks, setCloudTasks] = useState([]);
@@ -68,7 +68,7 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
 
   React.useEffect(() => {
     loadTasks();
-  }, [leads, userId]);
+  }, [userId, refreshTrigger]);
 
   // Extract valid tasks from cloud data
   const tasks = useMemo(() => {
@@ -130,8 +130,15 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
       let matchesDate = true;
       if (dateFilter) {
         if (!task.dueDate) return false;
-        const taskDateStr = new Date(task.dueDate).toISOString().split('T')[0];
+        const d = new Date(task.dueDate);
+        const taskDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         matchesDate = taskDateStr === dateFilter;
+      } else if (hideFilters && startDate && endDate) {
+        if (!task.dueDate) return false;
+        const taskDate = new Date(task.dueDate);
+        const start = new Date(startDate);
+        const end = new Date(endDate + 'T23:59:59');
+        matchesDate = taskDate >= start && taskDate <= end;
       }
 
       let matchesStatus = true;
@@ -141,15 +148,16 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
 
       let matchesUser = true;
       if (userId) {
-         const validUserIdStr = userId.toString();
-         matchesUser = (task.lead && task.lead.assignedToId?.toString() === validUserIdStr) || 
-                       (task.assigneeId?.toString() === validUserIdStr) ||
-                       (task.user?.id?.toString() === validUserIdStr);
+          const validUserIdStr = userId.toString();
+          matchesUser = (task.lead && task.lead.assignedToId?.toString() === validUserIdStr) || 
+                        (task.lead && task.lead.createdById?.toString() === validUserIdStr) ||
+                        (task.assigneeId?.toString() === validUserIdStr) ||
+                        (task.user?.id?.toString() === validUserIdStr);
       }
 
       return matchesSearch && matchesDate && matchesStatus && matchesUser;
     });
-  }, [tasks, searchTerm, dateFilter, statusFilter, userId]);
+  }, [tasks, searchTerm, dateFilter, statusFilter, userId, startDate, endDate]);
 
   const handleUpdateTaskStatus = async (taskId, newStatus) => {
     try {
@@ -170,6 +178,28 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
     }
   };
 
+  const isToday = (dateInput) => {
+    if (!dateInput) return false;
+    try {
+      let d;
+      if (Array.isArray(dateInput)) {
+        d = new Date(dateInput[0], dateInput[1] - 1, dateInput[2], dateInput[3] || 0, dateInput[4] || 0);
+      } else {
+        d = new Date(dateInput);
+      }
+      
+      const today = new Date();
+      return (
+        d.getDate() === today.getDate() &&
+        d.getMonth() === today.getMonth() &&
+        d.getFullYear() === today.getFullYear()
+      );
+    } catch (e) { 
+      console.error("isToday parse error:", e);
+      return false; 
+    }
+  };
+
   return (
     <div className="d-flex flex-column gap-3 animate-fade-in pb-5">
       {/* High-Fidelity Task Analytics Nodes */}
@@ -178,12 +208,12 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
           <div className="premium-card p-4 shadow-lg border-0 d-flex align-items-center gap-4 group hover-active-card overflow-hidden" 
                style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px)', borderRadius: '24px' }}>
             <div className="p-3 bg-primary bg-opacity-10 rounded-4 text-primary border border-primary border-opacity-20 shadow-glow-sm group-hover:scale-110 transition-all">
-              <Clock size={22} />
+              <Calendar size={22} />
             </div>
             <div>
-              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Active Followups</div>
+              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Today's Tasks</div>
               <h2 className="fw-black text-main mb-0 tabular-nums" style={{ letterSpacing: '-1px' }}>
-                {filteredTasks.filter(t => t.dueDate && new Date(t.dueDate).toDateString() === new Date().toDateString() && t.status !== 'COMPLETED').length}
+                {filteredTasks.filter(t => t.status !== 'COMPLETED' && isToday(t.dueDate)).length}
               </h2>
             </div>
           </div>
@@ -192,13 +222,13 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
         <div className="col-12 col-md-4">
           <div className="premium-card p-4 shadow-lg border-0 d-flex align-items-center gap-4 group hover-active-card overflow-hidden" 
                style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px)', borderRadius: '24px' }}>
-            <div className="p-3 bg-warning bg-opacity-10 rounded-4 text-warning border border-warning border-opacity-20 shadow-glow-sm group-hover:scale-110 transition-all">
+            <div className="p-3 bg-danger bg-opacity-10 rounded-4 text-danger border border-danger border-opacity-20 shadow-glow-sm group-hover:scale-110 transition-all">
               <AlertCircle size={22} />
             </div>
             <div>
-              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Pending Squad Tasks</div>
+              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Overdue Tasks</div>
               <h2 className="fw-black text-main mb-0 tabular-nums" style={{ letterSpacing: '-1px' }}>
-                {filteredTasks.filter(t => t.status === 'PENDING').length}
+                {filteredTasks.filter(t => t.isOverdue && t.status !== 'COMPLETED').length}
               </h2>
             </div>
           </div>
@@ -211,9 +241,9 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
               <CheckSquare size={22} />
             </div>
             <div>
-              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Synchronization Success</div>
+              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Completed Today</div>
               <h2 className="fw-black text-main mb-0 tabular-nums" style={{ letterSpacing: '-1px' }}>
-                {filteredTasks.filter(t => t.status === 'COMPLETED').length}
+                {filteredTasks.filter(t => t.status?.toUpperCase() === 'COMPLETED' && isToday(t.updatedAt)).length}
               </h2>
             </div>
           </div>
@@ -284,8 +314,7 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
         </div>
       )}
 
-      {/* Local search if filters are hidden - HIDDEN to follow 'one filter' rule */}
-      {/* 
+      {/* Local search and Add Task when filters are hidden */}
       {hideFilters && (
         <div className="px-1 d-flex justify-content-between align-items-center mb-1">
            <div className="d-flex align-items-center gap-2">
@@ -293,25 +322,23 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
               <h6 className="fw-black text-main mb-0 small text-uppercase tracking-widest">Master Task Ledger</h6>
            </div>
            <div className="d-flex gap-2">
-             <input
-                type="text"
-                className="bg-white border text-main py-1 px-4 rounded-pill"
-                placeholder="Search metrics..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                style={{ fontSize: '11px', outline: 'none', width: '200px' }}
-              />
               <button 
-                className="btn btn-primary btn-sm rounded-pill px-4 fw-black text-uppercase shadow-glow"
+                className="btn btn-primary btn-sm rounded-pill px-4 fw-black text-uppercase shadow-glow d-flex align-items-center gap-2"
                 onClick={() => setShowTaskModal(true)}
-                style={{ fontSize: '10px' }}
+                style={{ fontSize: '10px', padding: '10px 20px' }}
               >
-                + NEW TASK
+                <Plus size={14} /> NEW TASK
+              </button>
+              <button 
+                  className="btn btn-light btn-sm rounded-pill px-3 border border-light shadow-sm"
+                  onClick={loadTasks}
+                  disabled={loading}
+              >
+                  <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
               </button>
            </div>
         </div>
       )}
-      */}
 
       {/* Task Matrix - Table Layout as per sketch */}
       <div className="premium-card overflow-hidden shadow-lg border-0 animate-fade-in">
@@ -375,8 +402,11 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
                       </div>
                     </td>
                     <td className="text-center">
-                      <span className={`badge rounded-pill fw-bold ${task.status === 'COMPLETED' ? 'bg-success bg-opacity-10 text-success' : 'bg-warning bg-opacity-10 text-warning'}`} style={{ fontSize: '9px' }}>
-                        {task.status}
+                      <span className={`badge rounded-pill fw-bold ${
+                        task.status === 'COMPLETED' ? 'bg-success bg-opacity-10 text-success' : 
+                        task.isOverdue ? 'bg-danger bg-opacity-10 text-danger' : 'bg-warning bg-opacity-10 text-warning'
+                      }`} style={{ fontSize: '9px' }}>
+                        {task.status === 'COMPLETED' ? 'COMPLETED' : (task.isOverdue ? 'OVERDUE' : task.status)}
                       </span>
                     </td>
                     <td>
