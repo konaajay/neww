@@ -12,7 +12,7 @@ import { toast } from 'react-toastify';
 import FiltersBar from './FiltersBar';
 import CallAnalyticsGrid from './CallAnalyticsGrid';
 
-const CallLogDashboard = ({ userId: externalUserId, hideHeader = false, filters: propsFilters, onChange: onPropsFiltersChange }) => {
+const CallLogDashboard = ({ userId: externalUserId, hideHeader = false, filters: propsFilters, onChange: onPropsFiltersChange, refreshTrigger }) => {
     const { user } = useAuth();
     const { isDarkMode, theme } = useTheme();
     const role = user?.role;
@@ -93,7 +93,7 @@ const CallLogDashboard = ({ userId: externalUserId, hideHeader = false, filters:
 
     useEffect(() => {
         fetchData();
-    }, [filters.from, filters.to, filters.userId]);
+    }, [filters.from, filters.to, filters.userId, refreshTrigger]);
 
     const formatDuration = (seconds) => {
         if (!seconds) return '0s';

@@ -77,7 +77,13 @@ const adminService = {
   generateResetOtp: (userId) => api.post(`/admin/users/${userId}/reset-password-otp`),
   verifyResetOtp: (userId, otp, newPassword) => api.post(`/admin/users/${userId}/verify-reset-otp`, { otp, newPassword }),
   sendPaymentLink: (leadId, data) => api.post(`/leads/${leadId}/send-payment-link`, data),
-  deleteLead: (id) => api.delete(`/leads/${id}`)
+  deleteLead: (id) => api.delete(`/leads/${id}`),
+
+  // Pipeline Stage Management
+  fetchPipelineStages: () => api.get('/admin/pipeline-stages'),
+  createPipelineStage: (data) => api.post('/admin/pipeline-stages', data),
+  updatePipelineStage: (id, data) => api.put(`/admin/pipeline-stages/${id}`, data),
+  deletePipelineStage: (id) => api.delete(`/admin/pipeline-stages/${id}`)
 };
 
 export default adminService;

@@ -17,7 +17,7 @@ import { toast } from 'react-toastify';
 import attendanceService from '../../services/attendanceService';
 import { useAuth } from '../../context/AuthContext';
 
-const AttendanceDashboard = ({ role, userId: externalUserId, startDate: externalStartDate, endDate: externalEndDate, refreshTrigger, hideFilters = false }) => {
+const AttendanceDashboard = ({ role, userId: externalUserId, teamId: externalTeamId, teamTree, startDate: externalStartDate, endDate: externalEndDate, refreshTrigger, hideFilters = false }) => {
   const { user } = useAuth();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,35 +49,99 @@ const AttendanceDashboard = ({ role, userId: externalUserId, startDate: external
       setLoading(true);
       let response;
       const isPersonalMode = role === 'ASSOCIATE' || (externalUserId && externalUserId === 'self');
+      
+      const sanitizeDate = (d) => {
+        if (!d) return '';
+        const s = String(d);
+        return s.includes('T') ? s.split('T')[0] : s;
+      };
+
+      const cleanStartDate = sanitizeDate(date);
+      const cleanEndDate = sanitizeDate(endDate);
 
       if (isPersonalMode) {
         response = await attendanceService.getMyLogs();
         if (response.success) {
-          setLogs(response.data.map(log => ({
+          const allLogs = (response.data || []).map(log => ({
             ...log,
             userName: 'Me',
-            date: log.checkInTime ? log.checkInTime.split('T')[0] : 'Today',
-            status: log.totalWorkMinutes >= 480 ? 'PRESENT' : (log.totalWorkMinutes >= 240 ? 'HALF_DAY' : 'ABSENT')
-          })));
+            displayDate: formatDate(log.date || log.checkInTime),
+            status: log.status || 'ABSENT'
+          }));
+
+          // Filter by date range and joining date locally for personal view
+          const filtered = allLogs.filter(log => {
+            const logDate = log.date || (log.checkInTime ? (Array.isArray(log.checkInTime) ? `${log.checkInTime[0]}-${String(log.checkInTime[1]).padStart(2, '0')}-${String(log.checkInTime[2]).padStart(2, '0')}` : log.checkInTime.split('T')[0]) : null);
+            if (!logDate) return false;
+            
+            // Check joining date if available
+            if (user?.joiningDate) {
+              const join = user.joiningDate.includes('T') ? user.joiningDate.split('T')[0] : user.joiningDate;
+              if (logDate < join) return false;
+            }
+
+            return logDate >= cleanStartDate && logDate <= cleanEndDate;
+          });
+
+          setLogs(filtered);
           setError(null);
         }
       } else {
-        const sanitizeDate = (d) => {
-          if (!d) return '';
-          const s = String(d);
-          return s.includes('T') ? s.split('T')[0] : s;
-        };
-
-        const cleanStartDate = sanitizeDate(date);
-        const cleanEndDate = sanitizeDate(endDate);
-
         response = await attendanceService.getAdminSummaries(cleanStartDate, userId, cleanEndDate);
         if (response.success) {
           // Normalize the data for consistent display
-          setLogs((response.data || []).map(log => ({
+          let processedLogs = (response.data || []).map(log => ({
             ...log,
-            displayDate: log.date || (log.checkInTime ? log.checkInTime.split('T')[0] : 'TODAY')
-          })));
+            displayDate: formatDate(log.date || log.checkInTime)
+          }));
+
+          // Local extraction for team filtering if applicable
+          if (externalTeamId && !externalUserId && teamTree) {
+              const findNode = (nodes, targetId) => {
+                  for(let n of nodes) {
+                      if (String(n.id) === String(targetId)) return n;
+                      if (n.subordinates) {
+                          const found = findNode(n.subordinates, targetId);
+                          if (found) return found;
+                      }
+                  }
+                  return null;
+              };
+              
+              const flatten = (data, userList = new Set()) => {
+                  if (!data) return Array.from(userList);
+                  if (Array.isArray(data)) {
+                      data.forEach(item => flatten(item, userList));
+                      return Array.from(userList);
+                  }
+                  if (data.id) userList.add(String(data.id));
+                  if (Array.isArray(data.subordinates)) {
+                      data.subordinates.forEach(child => flatten(child, userList));
+                  }
+                  return Array.from(userList);
+              };
+
+              const rootNode = findNode(Array.isArray(teamTree) ? teamTree : [teamTree], externalTeamId);
+              if (rootNode) {
+                  const allowedIds = flatten(rootNode);
+                  processedLogs = processedLogs.filter(log => allowedIds.includes(String(log.userId || log.user?.id)));
+              }
+          }
+
+          // Global Filter: Remove logs before user's joining date if available in log object
+          processedLogs = processedLogs.filter(log => {
+            const logDate = log.date || (log.checkInTime ? (Array.isArray(log.checkInTime) ? `${log.checkInTime[0]}-${String(log.checkInTime[1]).padStart(2, '0')}-${String(log.checkInTime[2]).padStart(2, '0')}` : (typeof log.checkInTime === 'string' ? log.checkInTime.split('T')[0] : null)) : null);
+            if (!logDate) return true;
+            
+            const userJoiningDate = log.user?.joiningDate || log.joiningDate;
+            if (userJoiningDate) {
+              const join = userJoiningDate.includes('T') ? userJoiningDate.split('T')[0] : userJoiningDate;
+              if (logDate < join) return false;
+            }
+            return true;
+          });
+
+          setLogs(processedLogs);
           setError(null);
         }
       }
@@ -111,12 +175,30 @@ const AttendanceDashboard = ({ role, userId: externalUserId, startDate: external
   }, [date, endDate, userId, refreshTrigger]);
 
 
+  const formatDate = (val) => {
+    if (!val) return 'TODAY';
+    // Handle array format [2024, 4, 23]
+    if (Array.isArray(val)) {
+      const [y, m, d] = val;
+      return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
+    // Handle ISO string
+    if (typeof val === 'string') {
+      return val.includes('T') ? val.split('T')[0] : val;
+    }
+    return String(val);
+  };
+
   const formatMinutes = (mins) => {
     if (mins === null || mins === undefined || isNaN(mins)) return "0h 0m";
     const h = Math.floor(mins / 60);
     const m = mins % 60;
     return `${h}h ${m}m`;
   };
+
+  const presentCount = logs.filter(l => (l.totalWorkMinutes || 0) >= 480).length;
+  const halfDayCount = logs.filter(l => (l.totalWorkMinutes || 0) >= 240 && (l.totalWorkMinutes || 0) < 480).length;
+  const absentCount = logs.length - presentCount - halfDayCount;
 
   return (
     <div className={`container-fluid animate-fade-in ${externalUserId || externalStartDate ? 'p-0' : 'p-4'}`}>
@@ -130,6 +212,56 @@ const AttendanceDashboard = ({ role, userId: externalUserId, startDate: external
           <button className="btn btn-primary d-flex align-items-center gap-2 rounded-pill shadow-glow px-4 fw-black text-uppercase small">
             <Download size={18} /> Export Logs
           </button>
+        </div>
+      )}
+
+      {/* Dynamic Summary Cards */}
+      {!loading && (
+        <div className="row g-3 mb-4 animate-fade-in">
+          <div className="col-12 col-sm-6 col-lg-3">
+            <div className="premium-card p-4 border-0 shadow-lg h-100 d-flex align-items-center gap-4 group hover-active-card overflow-hidden">
+               <div className="p-3 bg-primary bg-opacity-10 rounded-4 text-primary border border-primary border-opacity-20 shadow-glow-sm">
+                  <Users size={22} />
+               </div>
+               <div>
+                  <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Total Staff</div>
+                  <h3 className="fw-black text-main mb-0">{logs.length}</h3>
+               </div>
+            </div>
+          </div>
+          <div className="col-12 col-sm-6 col-lg-3">
+            <div className="premium-card p-4 border-0 shadow-lg h-100 d-flex align-items-center gap-4 group hover-active-card overflow-hidden">
+               <div className="p-3 bg-success bg-opacity-10 rounded-4 text-success border border-success border-opacity-20 shadow-glow-sm">
+                  <CheckCircle size={22} />
+               </div>
+               <div>
+                  <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Total Present</div>
+                  <h3 className="fw-black text-main mb-0">{presentCount}</h3>
+               </div>
+            </div>
+          </div>
+          <div className="col-12 col-sm-6 col-lg-3">
+            <div className="premium-card p-4 border-0 shadow-lg h-100 d-flex align-items-center gap-4 group hover-active-card overflow-hidden">
+               <div className="p-3 bg-warning bg-opacity-10 rounded-4 text-warning border border-warning border-opacity-20 shadow-glow-sm">
+                  <Coffee size={22} />
+               </div>
+               <div>
+                  <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Total Half Day</div>
+                  <h3 className="fw-black text-main mb-0">{halfDayCount}</h3>
+               </div>
+            </div>
+          </div>
+          <div className="col-12 col-sm-6 col-lg-3">
+            <div className="premium-card p-4 border-0 shadow-lg h-100 d-flex align-items-center gap-4 group hover-active-card overflow-hidden">
+               <div className="p-3 bg-danger bg-opacity-10 rounded-4 text-danger border border-danger border-opacity-20 shadow-glow-sm">
+                  <XCircle size={22} />
+               </div>
+               <div>
+                  <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Total Absent</div>
+                  <h3 className="fw-black text-main mb-0">{absentCount}</h3>
+               </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -201,7 +333,7 @@ const AttendanceDashboard = ({ role, userId: externalUserId, startDate: external
                 <th className="px-4 py-3 small fw-black text-muted text-uppercase tracking-widest text-center" style={{ fontSize: '10px' }}>Emp ID</th>
                 <th className="px-4 py-3 small fw-black text-muted text-uppercase tracking-widest" style={{ fontSize: '10px' }}>Name</th>
                 <th className="px-4 py-3 small fw-black text-muted text-uppercase tracking-widest text-center" style={{ fontSize: '10px' }}>Status</th>
-                <th className="px-4 py-3 small fw-black text-muted text-uppercase tracking-widest text-center" style={{ fontSize: '10px' }}>Working Hours</th>
+                <th className="px-4 py-3 small fw-black text-muted text-uppercase tracking-widest" style={{ fontSize: '10px' }}>Time Breakdown</th>
                 {(role === 'ADMIN' || role === 'MANAGER') && (
                   <th className="px-4 py-3 small fw-black text-muted text-uppercase tracking-widest text-end" style={{ fontSize: '10px' }}>Actions</th>
                 )}
@@ -257,11 +389,22 @@ const AttendanceDashboard = ({ role, userId: externalUserId, startDate: external
                         {log.status === 'PRESENT' ? 'PRESENT' : log.status === 'HALF_DAY' ? 'HALF DAY' : 'ABSENT'}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="d-inline-flex align-items-center gap-2 px-3 py-1.5 bg-surface text-main rounded-pill small border border-white border-opacity-5 fw-black" style={{ fontSize: '11px' }}>
-                        <Clock size={12} className="text-primary" />
-                        {formatMinutes(log.totalWorkMinutes)}
-                      </div>
+                    <td className="px-4 py-3">
+                      {(log.totalWorkMinutes == null && log.totalBreakMinutes == null && log.totalIdleMinutes == null) ? (
+                        <div className="text-muted small opacity-50 fw-bold fst-italic">No Record</div>
+                      ) : (
+                        <div className="d-flex flex-column gap-1 text-start" style={{ fontSize: '11px' }}>
+                          <div className="text-success fw-bold">
+                            ● Work: {formatMinutes(log.totalWorkMinutes || 0)}
+                          </div>
+                          <div className="text-warning fw-bold">
+                            ● Break: {formatMinutes(log.totalBreakMinutes || 0)}
+                          </div>
+                          <div className="text-danger fw-bold">
+                            ● Outside: {formatMinutes(log.totalIdleMinutes || 0)}
+                          </div>
+                        </div>
+                      )}
                     </td>
                     {(role === 'ADMIN' || role === 'MANAGER') && (
                       <td className="px-4 py-3 text-end">

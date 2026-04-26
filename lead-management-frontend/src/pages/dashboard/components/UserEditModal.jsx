@@ -182,59 +182,7 @@ const UserEditModal = ({
                 </div>
 
 
-                {/* Permissions Node - Centered */}
-                 <div className="col-12 col-xl-10 mx-auto">
-                    <div className="d-flex align-items-center justify-content-between mb-2">
-                       <label className="form-label small fw-black text-uppercase text-muted mb-0 tracking-widest" style={{ fontSize: '9px' }}>Permission Set Override</label>
-                       <div className="form-check custom-check d-flex align-items-center">
-                         <input
-                           className="form-check-input shadow-none m-0"
-                           style={{ cursor: 'pointer', width: '1rem', height: '1rem' }}
-                           type="checkbox"
-                           id="edit-select-all-perms"
-                           checked={isAllSelected}
-                           onChange={handleSelectAll}
-                         />
-                         <label className="form-check-label small fw-black text-uppercase text-primary ms-2 cursor-pointer" htmlFor="edit-select-all-perms" style={{ fontSize: '8px', letterSpacing: '0.5px' }}>
-                           Select All
-                         </label>
-                       </div>
-                    </div>
-                    <div className="bg-surface p-4 rounded-4 shadow-inner overflow-auto text-main border border-white border-opacity-5 transition-all hover-border-primary custom-scroll" style={{ maxHeight: '200px', background: 'rgba(0,0,0,0.1)' }}>
-                     <div className="row g-3">
-                       {safePermissions.map(perm => (
-                         <div key={perm} className="col-12 col-md-6 col-lg-4">
-                           <div className="form-check custom-check d-flex align-items-center py-2 px-3 rounded-3 transition-all hover-translate-x" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                             <input 
-                                 className="form-check-input shadow-none mt-0" 
-                                 style={{ cursor: 'pointer', width: '1.2rem', height: '1.2rem' }}
-                                 type="checkbox" 
-                                 id={`edit-perm-${perm}`}
-                                 checked={(user.permissions || []).includes(perm)}
-                                 onChange={() => {
-                                   setUser(prev => {
-                                     const currentPerms = prev.permissions || [];
-                                     const perms = currentPerms.includes(perm)
-                                       ? currentPerms.filter(p => p !== perm)
-                                       : [...currentPerms, perm];
-                                     return {...prev, permissions: perms};
-                                   });
-                                   toast.info(`Shield Node [${perm}] updated`, { autoClose: 800 });
-                                 }}
-                             />
-                             <label className="form-check-label small fw-black opacity-75 ms-3 cursor-pointer mb-0 text-uppercase tracking-widest" style={{ fontSize: '10px' }} htmlFor={`edit-perm-${perm}`}>
-                                 {perm.replace(/_/g, ' ')}
-                             </label>
-                           </div>
-                         </div>
-                       ))}
-                     </div>
-                   </div>
-                   <style>{`
-                     .hover-translate-x { transition: transform 0.3s ease; }
-                     .hover-translate-x:hover { transform: translateX(5px); background: rgba(var(--bs-primary-rgb), 0.05) !important; }
-                   `}</style>
-                </div>
+
               </div>
             </div>
             <div className="modal-footer border-0 p-3 p-md-4 d-flex flex-column flex-sm-row justify-content-end gap-2 gap-md-3 bg-card border-top border-white border-opacity-5">

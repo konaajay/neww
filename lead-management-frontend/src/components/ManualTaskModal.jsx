@@ -2,9 +2,13 @@ import React, { useState } from 'react';
 import { X, Calendar, AlignLeft, User, Target, Clock, CheckCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'react-toastify';
 import tlService from '../services/tlService';
+import { useTheme } from '../context/ThemeContext';
 
 const ManualTaskModal = ({ show, onClose, onTaskCreated, leads, initialData }) => {
+  const { isDarkMode } = useTheme();
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
   const [formData, setFormData] = useState(initialData ? {
     ...initialData,
     dueDate: initialData.dueDate || ''
@@ -15,6 +19,14 @@ const ManualTaskModal = ({ show, onClose, onTaskCreated, leads, initialData }) =
     dueDate: '',
     taskType: 'FOLLOW_UP'
   });
+
+  const filteredLeads = leads.filter(l => 
+    l.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    l.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    l.mobile?.includes(searchTerm)
+  );
+
+  const selectedLead = leads.find(l => l.id === formData.leadId);
 
   React.useEffect(() => {
     if (initialData) {
@@ -61,122 +73,172 @@ const ManualTaskModal = ({ show, onClose, onTaskCreated, leads, initialData }) =
 
   return (
     <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 11000 }}>
-      <div className="modal-dialog modal-dialog-centered">
+      <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: '650px' }}>
         <div className="modal-content border-0 shadow-2xl rounded-4 overflow-hidden bg-card" style={{ color: 'var(--text-main)' }}>
 
           {/* Header */}
-          <div className="modal-header border-bottom border-secondary border-opacity-10 bg-surface bg-opacity-30 p-4">
-            <div className="d-flex align-items-center gap-3">
-              <div className="bg-primary bg-opacity-20 p-3 rounded-4 text-primary shadow-sm">
-                <Calendar size={24} />
-              </div>
+          <div className="modal-header border-bottom border-secondary border-opacity-10 bg-surface bg-opacity-30 p-4 d-flex align-items-center justify-content-between">
+            <div className="d-flex align-items-center gap-2">
+              <Calendar size={20} className="text-primary opacity-75" />
               <div>
-                <h4 className="fw-black text-main mb-0 tracking-tight">Schedule Activity</h4>
-                <p className="text-muted small fw-bold mb-0 text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Manual Ledger Entry</p>
+                <h4 className="fw-black text-main mb-0 tracking-tight" style={{ fontSize: '1.25rem' }}>Schedule Activity</h4>
+                <p className="text-muted small fw-bold mb-0 text-uppercase tracking-widest" style={{ fontSize: '8px' }}>Manual Ledger Entry</p>
               </div>
             </div>
-            <button type="button" className="btn btn-link text-main rounded-circle p-2 shadow-sm border border-secondary border-opacity-25" onClick={onClose}>
+            <button 
+              type="button" 
+              className="btn btn-link text-muted p-2 rounded-circle hover-bg-surface transition-all border-0 outline-none shadow-none" 
+              onClick={onClose}
+              style={{ marginTop: '-10px', marginRight: '-10px' }}
+            >
               <X size={20} />
             </button>
           </div>
 
-          <div className="modal-body p-4">
-            <form onSubmit={handleSubmit}>
+          <div className="modal-body p-4 p-md-5">
+            <form onSubmit={handleSubmit} className="d-flex flex-column gap-4">
 
-              {/* Lead Selection */}
-              <div className="mb-4">
-                <label className="form-label small fw-black text-muted text-uppercase mb-2 tracking-wider">Linked Student / Lead</label>
-                <div className="input-group bg-surface bg-opacity-50 rounded-4 overflow-hidden border border-secondary border-opacity-25 focus-within-primary transition-all">
-                  <span className="input-group-text bg-transparent border-0 text-muted ps-3"><User size={18} /></span>
-                  <select
-                    className="form-select bg-transparent border-0 text-main py-2 shadow-none fw-bold"
-                    value={formData.leadId}
-                    onChange={(e) => setFormData({ ...formData, leadId: e.target.value })}
-                    required
-                  >
-                    <option value="" className="bg-card">Select Opportunity...</option>
-                    {leads.map(l => (
-                      <option key={l.id} value={l.id} className="bg-card">{l.name} ({l.email || 'No email'})</option>
-                    ))}
-                  </select>
+              {/* Searchable Lead Selection */}
+              <div className="position-relative">
+                <div className="form-floating h-100">
+                  <input
+                    type="text"
+                    className={`form-control ${isDarkMode ? 'bg-dark bg-opacity-40 border-white border-opacity-10 text-main' : 'bg-light border-dark border-opacity-10 text-dark'} py-4 px-4 shadow-none rounded-4 focus:border-primary transition-all custom-input h-100 fw-bold`}
+                    placeholder="Search Leads..."
+                    value={showDropdown ? searchTerm : (selectedLead ? `${selectedLead.name} (${selectedLead.email || 'No email'})` : '')}
+                    onFocus={() => {
+                        setShowDropdown(true);
+                        setSearchTerm('');
+                    }}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    required={!formData.leadId}
+                    style={{ minHeight: '70px' }}
+                    autoComplete="off"
+                  />
+                  <label className={`${isDarkMode ? 'text-muted' : 'text-slate-500'} fw-bold small text-uppercase tracking-widest opacity-50 ps-4 pt-4`} style={{ fontSize: '10px' }}>
+                    {formData.leadId ? 'Linked Student / Lead' : 'Search & Select Lead'}
+                  </label>
                 </div>
+
+                {showDropdown && (
+                  <div 
+                    className="position-absolute w-100 mt-2 shadow-2xl rounded-4 overflow-hidden animate-slide-down"
+                    style={{ 
+                        zIndex: 1000, 
+                        maxHeight: '250px', 
+                        overflowY: 'auto',
+                        background: isDarkMode ? 'rgba(17, 24, 39, 0.98)' : '#ffffff',
+                        backdropFilter: 'blur(10px)',
+                        border: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+                    }}
+                  >
+                    {filteredLeads.length > 0 ? (
+                      filteredLeads.map(l => (
+                        <div 
+                          key={l.id}
+                          className={`p-3 cursor-pointer transition-all ${formData.leadId === l.id ? 'bg-primary bg-opacity-20 text-primary' : 'hover:bg-surface text-main'}`}
+                          onClick={() => {
+                            setFormData({ ...formData, leadId: l.id });
+                            setShowDropdown(false);
+                            setSearchTerm('');
+                          }}
+                          style={{ borderBottom: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}
+                        >
+                          <div className="fw-black small">{l.name}</div>
+                          <div className="text-muted small opacity-50" style={{ fontSize: '10px' }}>{l.email || 'No email'} • {l.mobile || 'No contact'}</div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-muted small fw-bold opacity-50">NO ENTITIES MATCH SEARCH PROTOCOL</div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Click outside to close dropdown mask */}
+                {showDropdown && (
+                    <div 
+                        className="position-fixed top-0 start-0 w-100 h-100" 
+                        style={{ zIndex: -1 }} 
+                        onClick={() => setShowDropdown(false)}
+                    />
+                )}
               </div>
 
-              {/* Title & Type */}
-              <div className="row g-3 mb-4">
-                <div className="col-12 col-md-8">
-                  <label className="form-label small fw-black text-muted text-uppercase mb-2 tracking-wider">Objective / Title</label>
-                  <div className="input-group bg-surface bg-opacity-50 rounded-4 overflow-hidden border border-secondary border-opacity-25 focus-within-primary transition-all">
-                    <span className="input-group-text bg-transparent border-0 text-muted ps-3"><Target size={18} /></span>
+              {/* Objective & Classification */}
+              <div className="row g-4">
+                <div className="col-12 col-md-7">
+                  <div className="form-floating">
                     <input
                       type="text"
-                      className="form-control bg-transparent border-0 text-main py-3 shadow-none fw-black"
-                      placeholder="e.g. Closing Call @ 5PM"
+                      className={`form-control ${isDarkMode ? 'bg-dark bg-opacity-40 border-white border-opacity-10 text-main' : 'bg-light border-dark border-opacity-10 text-dark'} py-4 px-4 shadow-none rounded-4 focus:border-primary transition-all custom-input fw-black`}
+                      placeholder="Objective"
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       required
+                      style={{ minHeight: '75px' }}
                     />
+                    <label className={`${isDarkMode ? 'text-muted' : 'text-slate-500'} fw-bold small text-uppercase tracking-widest opacity-50 ps-4 pt-4`} style={{ fontSize: '10px' }}>Objective / Title</label>
                   </div>
                 </div>
-                <div className="col-12 col-md-4">
-                  <label className="form-label small fw-black text-muted text-uppercase mb-2 tracking-wider">Classification</label>
-                  <select
-                    className="form-select bg-surface bg-opacity-80 rounded-4 border-secondary border-opacity-30 text-main py-3 shadow-none fw-bold"
-                    value={formData.taskType}
-                    onChange={(e) => setFormData({ ...formData, taskType: e.target.value })}
-                  >
-                    <option value="FOLLOW_UP" className="bg-card">Follow-up</option>
-                    <option value="EMI_COLLECTION" className="bg-card">EMI Collection</option>
-                    <option value="INVITATION" className="bg-card">Invitation</option>
-                    <option value="CLOSING" className="bg-card">Closing</option>
-                  </select>
+                <div className="col-12 col-md-5">
+                  <div className="form-floating">
+                    <select
+                      className={`form-select ${isDarkMode ? 'bg-dark bg-opacity-40 border-white border-opacity-10 text-main' : 'bg-light border-dark border-opacity-10 text-dark'} py-4 px-4 shadow-none rounded-4 focus:border-primary transition-all custom-input fw-bold`}
+                      value={formData.taskType}
+                      onChange={(e) => setFormData({ ...formData, taskType: e.target.value })}
+                      style={{ minHeight: '75px' }}
+                    >
+                      <option value="FOLLOW_UP" className="bg-card">Follow-up</option>
+                      <option value="EMI_COLLECTION" className="bg-card">EMI Collection</option>
+                      <option value="INVITATION" className="bg-card">Invitation</option>
+                      <option value="CLOSING" className="bg-card">Closing</option>
+                    </select>
+                    <label className={`${isDarkMode ? 'text-muted' : 'text-slate-500'} fw-bold small text-uppercase tracking-widest opacity-50 ps-4 pt-4`} style={{ fontSize: '10px' }}>Classification</label>
+                  </div>
                 </div>
               </div>
 
-              {/* Date Selection - Think like a calendar! */}
-              <div className="mb-4">
-                <label className="form-label small fw-black text-muted text-uppercase mb-2 tracking-wider">Scheduled Target Date</label>
-                <div className="input-group bg-surface bg-opacity-80 rounded-4 overflow-hidden border border-secondary border-opacity-30 focus-within-primary transition-all mb-3">
-                  <span className="input-group-text bg-transparent border-0 text-muted ps-3"><Clock size={18} /></span>
+              {/* Date Selection */}
+              <div>
+                 <div className="form-floating mb-3">
                   <input
                     type="date"
-                    className="form-control bg-transparent border-0 text-main py-3 shadow-none fw-black h-auto"
+                    className={`form-control ${isDarkMode ? 'bg-dark bg-opacity-40 border-white border-opacity-10 text-main' : 'bg-light border-dark border-opacity-10 text-dark'} py-4 px-4 shadow-none rounded-4 focus:border-primary transition-all custom-input h-auto fw-black`}
                     value={formData.dueDate}
                     min={new Date().toISOString().split('T')[0]}
                     onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                    style={{ colorScheme: 'dark' }}
+                    style={{ colorScheme: isDarkMode ? 'dark' : 'light', minHeight: '70px' }}
                     required
                   />
+                  <label className={`${isDarkMode ? 'text-muted' : 'text-slate-500'} fw-bold small text-uppercase tracking-widest opacity-50 ps-4 pt-4`} style={{ fontSize: '10px' }}>Scheduled Target Date</label>
                 </div>
-                <div className="d-flex gap-2 flex-wrap">
-                  <button type="button" onClick={() => setQuickDate(0)} className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-black x-small">Today</button>
-                  <button type="button" onClick={() => setQuickDate(1)} className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-black x-small">Tomorrow</button>
-                  <button type="button" onClick={() => setQuickDate(7)} className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-black x-small">Next Week</button>
+                <div className="d-flex gap-2 flex-wrap ps-2">
+                  <button type="button" onClick={() => setQuickDate(0)} className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-black small border-opacity-25" style={{fontSize: '10px'}}>Today</button>
+                  <button type="button" onClick={() => setQuickDate(1)} className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-black small border-opacity-25" style={{fontSize: '10px'}}>Tomorrow</button>
+                  <button type="button" onClick={() => setQuickDate(7)} className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-black small border-opacity-25" style={{fontSize: '10px'}}>Next Week</button>
                 </div>
               </div>
 
               {/* Description */}
-              <div className="mb-4">
-                <label className="form-label small fw-black text-muted text-uppercase mb-2 tracking-wider">Strategy / Notes</label>
-                <div className="input-group bg-surface bg-opacity-80 rounded-4 overflow-hidden border border-secondary border-opacity-30 focus-within-primary transition-all">
-                  <span className="input-group-text bg-transparent border-0 text-muted ps-3 pt-3 align-self-start"><AlignLeft size={18} /></span>
-                  <textarea
-                    className="form-control bg-transparent border-0 text-main py-3 shadow-none fw-bold"
-                    placeholder="Document specific points for this interaction..."
-                    rows="3"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  />
-                </div>
+              <div className="form-floating">
+                <textarea
+                  className={`form-control ${isDarkMode ? 'bg-dark bg-opacity-40 border-white border-opacity-10 text-main' : 'bg-light border-dark border-opacity-10 text-dark'} py-4 px-4 shadow-none rounded-4 focus:border-primary transition-all custom-input fw-bold`}
+                  placeholder="Notes"
+                  style={{ height: '120px' }}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
+                <label className={`${isDarkMode ? 'text-muted' : 'text-slate-500'} fw-bold small text-uppercase tracking-widest opacity-50 ps-4 pt-3`} style={{ fontSize: '10px' }}>Strategy / Evolution Notes</label>
               </div>
 
               <button
                 type="submit"
-                className="btn btn-primary w-100 py-3 rounded-pill fw-black text-uppercase tracking-widest shadow-lg d-flex align-items-center justify-content-center gap-2 hover-up"
+                className={`ui-btn ui-btn-primary w-100 py-4 rounded-pill fw-black text-uppercase d-flex align-items-center justify-content-center gap-3 shadow-glow transition-all ${loading ? 'opacity-50' : 'hover-scale'}`}
+                style={{ letterSpacing: '4px', fontSize: '13px', minHeight: '70px' }}
                 disabled={loading}
               >
                 {loading ? <RefreshCw className="animate-spin" size={20} /> : <CheckCircle size={20} />}
-                {loading ? 'Committing...' : 'Commit to Schedule'}
+                {loading ? 'COMMITTING TO LEDGER...' : 'COMMIT TO SCHEDULE'}
               </button>
             </form>
           </div>

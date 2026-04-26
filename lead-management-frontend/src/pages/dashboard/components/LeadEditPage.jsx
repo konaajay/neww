@@ -81,13 +81,27 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
                 <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-5 gap-3">
                     <div>
                         <h2 className="fw-bold text-dark mb-1" style={{ fontSize: '24px', letterSpacing: '-0.5px' }}>Edit Lead </h2>
-                        <p className="text-muted mb-0" style={{ fontSize: '14px' }}>Update node details and structural assignments</p>
+                        <p className="text-muted mb-0" style={{ fontSize: '14px' }}>Update lead details and assignments</p>
                     </div>
-                    <div className="d-flex gap-3">
+                    <div className="d-flex gap-2">
+                        <button
+                            className="btn btn-outline-secondary px-4 py-2 fw-bold text-uppercase tracking-wider rounded-pill"
+                            style={{ fontSize: '11px' }}
+                            onClick={onCancel}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            className="btn btn-primary px-4 py-2 fw-bold text-uppercase tracking-wider rounded-pill shadow-sm"
+                            style={{ fontSize: '11px', background: '#4f46e5' }}
+                            onClick={handleSave}
+                        >
+                            Update
+                        </button>
                         {lead?.status === 'PAID' || lead?.status === 'EMI' ? (
-                            <div className="d-flex align-items-center gap-2 px-4 py-2 bg-success bg-opacity-10 text-success rounded-pill fw-bold small border border-success border-opacity-20">
-                                <Shield size={16} />
-                                Transmission Secured
+                            <div className="d-flex align-items-center gap-2 px-4 py-2 bg-success bg-opacity-10 text-success rounded-pill fw-bold small border border-success border-opacity-20 ms-2">
+                                <Shield size={14} />
+                                Verified
                             </div>
                         ) : null}
                     </div>
@@ -112,7 +126,7 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
                                         type="text"
                                         name="name"
                                         className={`form-control py-2 px-3 rounded-3 border-light-subtle ${errors.name ? 'is-invalid' : ''}`}
-                                        placeholder="Enter node name"
+                                        placeholder="Lead Name"
                                         value={formData.name}
                                         onChange={handleChange}
                                         style={{ backgroundColor: '#fdfdfd', height: '48px' }}
@@ -125,7 +139,7 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
                                         type="tel"
                                         name="mobile"
                                         className={`form-control py-2 px-3 rounded-3 border-light-subtle ${errors.mobile ? 'is-invalid' : ''}`}
-                                        placeholder="Enter contact number"
+                                        placeholder="Phone Number"
                                         value={formData.mobile}
                                         onChange={handleChange}
                                         style={{ backgroundColor: '#fdfdfd', height: '48px' }}
@@ -133,24 +147,24 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
                                     {errors.mobile && <div className="invalid-feedback">{errors.mobile}</div>}
                                 </div>
                                 <div className="col-12 col-md-6">
-                                    <label className="form-label text-secondary fw-semibold small text-uppercase mb-2">Gmail</label>
+                                    <label className="form-label text-secondary fw-semibold small text-uppercase mb-2">Mail</label>
                                     <input
                                         type="email"
                                         name="email"
                                         className="form-control py-2 px-3 rounded-3 border-light-subtle"
-                                        placeholder="Enter gmail identity"
+                                        placeholder="Email Address"
                                         value={formData.email}
                                         onChange={handleChange}
                                         style={{ backgroundColor: '#fdfdfd', height: '48px' }}
                                     />
                                 </div>
                                 <div className="col-12 col-md-6">
-                                    <label className="form-label text-secondary fw-semibold small text-uppercase mb-2">College Name</label>
+                                    <label className="form-label text-secondary fw-semibold small text-uppercase mb-2">College</label>
                                     <input
                                         type="text"
                                         name="college"
                                         className="form-control py-2 px-3 rounded-3 border-light-subtle"
-                                        placeholder="Assigned educational node"
+                                        placeholder="College/University"
                                         value={formData.college}
                                         onChange={handleChange}
                                         style={{ backgroundColor: '#fdfdfd', height: '48px' }}
@@ -166,7 +180,7 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
                                 <div className="d-flex align-items-center justify-content-between mb-4">
                                     <div className="d-flex align-items-center gap-2">
                                         <Wallet size={18} className="text-success" />
-                                        <h5 className="fw-bold text-dark mb-0" style={{ fontSize: '16px' }}>Student Fee Ledger</h5>
+                                        <h5 className="fw-bold text-dark mb-0" style={{ fontSize: '16px' }}>Fee Structure</h5>
                                     </div>
                                     {studentFee?.paymentStatus === 'COMPLETED' ? (
                                         <span className="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 border border-success border-opacity-10 fw-bold">SETTLED</span>
@@ -178,7 +192,7 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
                                 {isFeeLoading ? (
                                     <div className="text-center py-4 opacity-50">
                                         <div className="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-                                        <span className="small fw-bold">Syncing financial nodes...</span>
+                                        <span className="small fw-bold">Loading fee details...</span>
                                     </div>
                                 ) : (
                                     <div className="row g-4">
@@ -223,23 +237,7 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
                     </div>
                 </div>
 
-                {/* Sticky Action Bar */}
-                <div className="sticky-action-bar bg-white border-top p-4 d-flex justify-content-end gap-3 mt-4 rounded-top-4 shadow-lg">
-                    <button
-                        className="btn btn-outline-secondary px-5 py-2 fw-bold text-uppercase tracking-wider rounded-pill"
-                        style={{ fontSize: '12px' }}
-                        onClick={onCancel}
-                    >
-                        Discard
-                    </button>
-                    <button
-                        className="btn btn-primary px-5 py-2 fw-bold text-uppercase tracking-wider rounded-pill shadow-sm"
-                        style={{ fontSize: '12px', background: '#4f46e5' }}
-                        onClick={handleSave}
-                    >
-                        Sync Configuration
-                    </button>
-                </div>
+                {/* Removed bottom action bar to keep buttons at top */}
             <style>{`
                 .form-label { letter-spacing: 0.5px; }
                 .form-select, .form-control { border-width: 1.5px; }

@@ -13,10 +13,11 @@ import {
   CheckCircle2,
   Calendar,
   Filter,
-  ShieldHalf
+  ShieldHalf,
+  Command
 } from 'lucide-react';
 import { Card } from '../../../components/common/Components';
-import LeadsTable from './LeadsTable';
+import LeadTable from '../../../components/LeadTable';
 import CallLogDashboard from './CallLogDashboard';
 import PaymentHistory from '../../../components/PaymentHistory';
 import TicketManager from '../../../components/TicketManager';
@@ -43,7 +44,8 @@ const ManagerDashboardFilterHub = ({
   loading,
   hideFilters = false,
   dataType: externalDataType,
-  onDataTypeChange
+  onDataTypeChange,
+  refreshTrigger
 }) => {
   const { user } = useAuth();
   const [selectedMgrId, setSelectedMgrId] = useState('');
@@ -111,30 +113,7 @@ const ManagerDashboardFilterHub = ({
     }
     switch (dataType) {
       case 'Leads': {
-        const interestedCount = leads?.filter(l => ['INTERESTED', 'UNDER_REVIEW'].includes(l.status)).length || 0;
-        const convertedCount = leads?.filter(l => ['PAID', 'CONVERTED', 'SUCCESS', 'EMI'].includes(l.status)).length || 0;
-        const pendingCount = leads?.filter(l => ['FOLLOW_UP', 'NEW', 'IN_PROGRESS'].includes(l.status)).length || 0;
-        const lostCount = leads?.filter(l => ['LOST', 'NOT_INTERESTED', 'CLOSED', 'PAYMENT_FAILED'].includes(l.status)).length || 0;
-
-        return (
-          <div className="row g-3 mb-1 animate-fade-in">
-            <div className="col-12 col-md-4 col-xl">
-              <MetricCard title="Total Registry" icon={Users} color="primary" stats={{ primary: { value: leads?.length || 0, label: 'Global Nodes' } }} />
-            </div>
-            <div className="col-12 col-md-4 col-xl">
-              <MetricCard title="High Intent" icon={ShieldHalf} color="info" stats={{ primary: { value: Math.max(stats?.interestedCount || 0, interestedCount), label: 'Interested' } }} />
-            </div>
-            <div className="col-12 col-md-4 col-xl">
-              <MetricCard title="Success Nodes" icon={CheckCircle2} color="success" stats={{ primary: { value: Math.max(stats?.convertedCount || 0, convertedCount), label: 'Converted' } }} />
-            </div>
-            <div className="col-12 col-md-4 col-xl">
-              <MetricCard title="In-Pipeline" icon={Clock} color="warning" stats={{ primary: { value: Math.max(stats?.pendingCount || 0, pendingCount), label: 'Pending' } }} />
-            </div>
-            <div className="col-12 col-md-4 col-xl">
-              <MetricCard title="Terminated" icon={AlertCircle} color="danger" stats={{ primary: { value: Math.max(stats?.totalLostCount || 0, lostCount), label: 'Total Lost' } }} />
-            </div>
-          </div>
-        );
+        return null; // Removed redundant Registry cards per user request
       }
       case 'Calls':
         return (
@@ -168,7 +147,7 @@ const ManagerDashboardFilterHub = ({
               <MetricCard title="Awaiting Action" icon={Clock} color="danger" stats={{ primary: { value: stats?.pendingFollowups || 0, label: 'Pending' } }} />
             </div>
             <div className="col-12 col-md-6">
-              <MetricCard title="Daily Progress" icon={CheckCircle2} color="success" stats={{ primary: { value: stats?.todayFollowups || 0, label: 'Completed Today' } }} />
+              <MetricCard title="Daily Progress" icon={CheckCircle2} color="success" stats={{ primary: { value: stats?.completedToday || 0, label: 'Completed Today' } }} />
             </div>
           </div>
         );
@@ -209,7 +188,7 @@ const ManagerDashboardFilterHub = ({
       //         <h6 className="fw-black mb-1 text-uppercase tracking-widest small">Lead Transmission Ledger</h6>
       //         <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>CORE DATASET: LEADS</p>
       //       </div>
-      //       <LeadsTable
+      //       <LeadTable
       //         leads={leads || []}
       //         loadLeads={loadLeads}
       //         teamLeaders={initialTeamLeaders}
@@ -228,9 +207,9 @@ const ManagerDashboardFilterHub = ({
       //     </div>
       //   );
       case 'Calls':
-        return <CallLogDashboard hideHeader={true} userId={filters.userId} />;
+        return <CallLogDashboard hideHeader={true} userId={filters.userId} refreshTrigger={refreshTrigger} />;
       case 'Payments':
-        return <PaymentHistory role="MANAGER" hideHeader={true} userId={filters.userId} />;
+        return <PaymentHistory role="MANAGER" hideHeader={true} userId={filters.userId} refreshTrigger={refreshTrigger} />;
       case 'Follow Ups':
         return (
           <div className="premium-card overflow-hidden shadow-lg animate-fade-in">
@@ -238,7 +217,7 @@ const ManagerDashboardFilterHub = ({
               <h6 className="fw-black mb-1 text-uppercase tracking-widest small">Follow-up Registry</h6>
               <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>PENDING ENGAGEMENT NODES</p>
             </div>
-            <LeadsTable
+            <LeadTable
               leads={(leads || []).filter(l => l.status === 'FOLLOW_UP')}
               loadLeads={loadLeads}
               teamLeaders={initialTeamLeaders}
@@ -271,15 +250,15 @@ const ManagerDashboardFilterHub = ({
   };
 
   return (
-    <div className="d-flex flex-column gap-4">
+    <div className="d-flex flex-column gap-3">
       {!hideFilters && (
-        <div className="premium-card p-2 border-0 shadow-lg bg-surface bg-opacity-10 backdrop-blur rounded-pill px-4" style={{ backdropFilter: 'blur(20px)' }}>
-          <div className="d-flex align-items-center justify-content-between gap-2 overflow-x-auto no-scrollbar">
+        <div className="premium-card p-1 border-0 shadow-lg bg-surface bg-opacity-10 backdrop-blur rounded-pill px-3" style={{ backdropFilter: 'blur(20px)' }}>
+          <div className="d-flex align-items-center justify-content-between gap-2 overflow-x-auto no-scrollbar py-1">
             {/* Left: Title & Analysis Type */}
             <div className="d-flex align-items-center gap-3">
               <div className="d-flex align-items-center gap-2 pe-3 border-end border-white border-opacity-10 animate-fade-in">
-                <div className="p-2 bg-primary bg-opacity-10 text-primary rounded-circle">
-                  <Filter size={14} />
+                <div className={`text-primary ${isDarkMode ? 'opacity-75' : ''}`}>
+                  <Command size={16} strokeWidth={2.5} />
                 </div>
                 <div className="d-none d-xl-block">
                   <h6 className="fw-black mb-0 text-main tracking-widest text-uppercase" style={{ fontSize: '10px' }}>Command Center</h6>
@@ -289,7 +268,7 @@ const ManagerDashboardFilterHub = ({
 
               <div className="d-flex align-items-center gap-2">
                 {!isManager && (
-                  <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-30 p-1 px-3 rounded-pill border border-white border-opacity-5 animate-fade-in">
+                  <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-25 p-1 px-3 rounded-pill border border-white border-opacity-10 animate-fade-in">
                     <Users size={12} className="text-primary opacity-50" />
                     <select
                       className="bg-transparent border-0 text-main fw-black small text-uppercase tracking-wider outline-none py-1"
@@ -306,15 +285,15 @@ const ManagerDashboardFilterHub = ({
                         }));
                       }}
                     >
-                      <option value="">CHOOSE MANAGER</option>
+                      <option value="" className={isDarkMode ? 'bg-dark text-white' : 'bg-white text-dark'}>CHOOSE MANAGER</option>
                       {managers.map(m => (
-                        <option key={m.id} value={m.id}>{m.name}</option>
+                        <option key={m.id} value={m.id} className={isDarkMode ? 'bg-dark text-white' : 'bg-white text-dark'}>{m.name}</option>
                       ))}
                     </select>
                   </div>
                 )}
 
-                <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-30 p-1 px-3 rounded-pill border border-white border-opacity-5 animate-fade-in">
+                <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-25 p-1 px-3 rounded-pill border border-white border-opacity-10 animate-fade-in">
                   <ShieldHalf size={12} className="text-warning opacity-50" />
                   <select
                     className="bg-transparent border-0 text-main fw-black small text-uppercase tracking-wider outline-none py-1"
@@ -331,14 +310,14 @@ const ManagerDashboardFilterHub = ({
                     }}
                     disabled={!isManager && !selectedMgrId}
                   >
-                    <option value="">{(isManager || selectedMgrId) ? 'ALL TEAMS' : '---'}</option>
+                    <option value="" className={isDarkMode ? 'bg-dark text-white' : 'bg-white text-dark'}>{(isManager || selectedMgrId) ? 'ALL TEAMS' : '---'}</option>
                     {tls.map(tl => (
-                      <option key={tl.id} value={tl.id}>{tl.name}</option>
+                      <option key={tl.id} value={tl.id} className={isDarkMode ? 'bg-dark text-white' : 'bg-white text-dark'}>{tl.name}</option>
                     ))}
                   </select>
                 </div>
 
-                <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-30 p-1 px-3 rounded-pill border border-white border-opacity-5 animate-fade-in">
+                <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-25 p-1 px-3 rounded-pill border border-white border-opacity-10 animate-fade-in">
                   <User size={12} className="text-info opacity-50" />
                   <select
                     className="bg-transparent border-0 text-main fw-black small text-uppercase tracking-wider outline-none py-1"
@@ -354,9 +333,9 @@ const ManagerDashboardFilterHub = ({
                     }}
                     disabled={!effectiveMgr}
                   >
-                    <option value="">{effectiveMgr ? 'ALL ASSOCIATES' : '---'}</option>
+                    <option value="" className={isDarkMode ? 'bg-dark text-white' : 'bg-white text-dark'}>{effectiveMgr ? 'ALL ASSOCIATES' : '---'}</option>
                     {associates.map(member => (
-                      <option key={member.id} value={member.id}>{member.name}</option>
+                      <option key={member.id} value={member.id} className={isDarkMode ? 'bg-dark text-white' : 'bg-white text-dark'}>{member.name}</option>
                     ))}
                   </select>
                 </div>

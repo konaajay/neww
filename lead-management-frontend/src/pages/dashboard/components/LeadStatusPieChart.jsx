@@ -21,19 +21,17 @@ const LeadStatusPieChart = ({ leads, distribution, isDarkMode }) => {
     );
   }
 
-  // Use provided distribution or aggregate from leads
-  const finalDistribution = distribution || leads.reduce((acc, lead) => {
-    const status = lead.status || 'NEW';
-    acc[status] = (acc[status] || 0) + 1;
-    return acc;
-  }, {});
+  // Prioritize the pre-calculated distribution from the backend for absolute consistency
+  const finalDistribution = (distribution && Object.keys(distribution).length > 0) ? distribution : {};
 
   const totalCount = Object.values(finalDistribution).reduce((sum, v) => sum + v, 0);
 
-  const data = Object.keys(finalDistribution).map(status => ({
-    name: status.replace(/_/g, ' '),
-    value: finalDistribution[status]
-  })).sort((a, b) => b.value - a.value);
+  const data = Object.keys(finalDistribution)
+    .filter(status => finalDistribution[status] > 0) // Only show statuses with data
+    .map(status => ({
+      name: status.replace(/_/g, ' '),
+      value: finalDistribution[status]
+    })).sort((a, b) => b.value - a.value);
 
   const COLORS = {
     'NEW': '#6366f1',
@@ -43,7 +41,9 @@ const LeadStatusPieChart = ({ leads, distribution, isDarkMode }) => {
     'LOST': '#f43f5e',
     'WORKING': '#0ea5e9',
     'EMI': '#8b5cf6',
-    'FOLLOW UP': '#ec4899'
+    'FOLLOW UP': '#ec4899',
+    'SUCCESS': '#10b981',
+    'PENDING': '#f59e0b'
   };
 
   const getStatusColor = (status) => COLORS[status.toUpperCase()] || '#94a3b8';
@@ -71,7 +71,7 @@ const LeadStatusPieChart = ({ leads, distribution, isDarkMode }) => {
               cx="50%"
               cy="50%"
               innerRadius={60}
-              outerRadius={80}
+              outerRadius={81}
               paddingAngle={5}
               dataKey="value"
             >
@@ -84,7 +84,7 @@ const LeadStatusPieChart = ({ leads, distribution, isDarkMode }) => {
         </ResponsiveContainer>
       </div>
       <div className="p-3 border-top border-white border-opacity-5 d-flex flex-wrap justify-content-center gap-3">
-        {data.slice(0, 4).map((entry, index) => (
+        {data.map((entry, index) => (
           <div key={index} className="d-flex align-items-center gap-2">
             <div className="rounded-circle" style={{ width: 8, height: 8, backgroundColor: getStatusColor(entry.name) }}></div>
             <span className="fw-black text-muted text-uppercase" style={{ fontSize: '9px' }}>{entry.name} ({entry.value})</span>

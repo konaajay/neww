@@ -51,7 +51,7 @@ const StudentFeeModal = ({ isOpen, onClose, lead, theme = 'light' }) => {
                 <div className="d-flex align-items-center gap-2">
                   <span className={`p-1 rounded-circle ${fee?.paymentStatus === 'COMPLETED' ? 'bg-success' : 'bg-warning'}`} style={{ width: '6px', height: '6px' }}></span>
                   <small className="text-muted fw-bold opacity-50 text-uppercase tracking-widest" style={{ fontSize: '8px' }}>
-                    {lead?.name} • {lead?.serialNumber}
+                    {lead?.name}
                   </small>
                 </div>
               </div>

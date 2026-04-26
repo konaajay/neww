@@ -23,7 +23,10 @@ import {
   ShieldCheck,
   UserPlus,
   Clock,
-  AlertCircle
+  AlertCircle,
+  RefreshCcw,
+  Search,
+  ClipboardList
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import DashboardLayout from '../components/layout/DashboardLayout';
@@ -40,7 +43,7 @@ import TicketManager from '../components/TicketManager';
 
 import ManagerProfile from './dashboard/components/ManagerProfile';
 import authService from '../services/authService';
-import LeadIngestionModal from './dashboard/components/LeadIngestionModal';
+import LeadModal from './dashboard/components/LeadModal';
 import { useDashboardData } from './dashboard/hooks/useDashboardData';
 import { StatSkeleton, ChartSkeleton } from './dashboard/components/DashboardSkeletons';
 
@@ -49,12 +52,14 @@ const LazyRevenueTrendChart = React.lazy(() => import('./dashboard/components/Re
 const AssociateDashboard = () => {
   const { user, logout } = useAuth();
   const { isDarkMode } = useTheme();
+  const [isIngestionModalOpen, setIsIngestionModalOpen] = useState(false);
   const [manager, setManager] = useState(null);
   const [leads, setLeads] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const [filters, setFilters] = useState({
-    from: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0],
+    from: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
     to: new Date().toISOString().split('T')[0],
     userId: user?.id,
     currentUserId: user?.id
@@ -68,7 +73,6 @@ const AssociateDashboard = () => {
   // Invoice state
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [selectedInvoiceData, setSelectedInvoiceData] = useState(null);
-  const [isIngestionModalOpen, setIsIngestionModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
 
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -77,6 +81,7 @@ const AssociateDashboard = () => {
   const fetchData = async () => {
     try {
       const leadsRes = await associateService.fetchMyLeads();
+      console.log(">>> [DEBUG] My Leads Hub:", leadsRes.data);
       setLeads(Array.isArray(leadsRes.data) ? leadsRes.data : (leadsRes.data?.content || []));
     } catch (err) {
       console.error("Leads Fetch Error:", err);
@@ -124,20 +129,15 @@ const AssociateDashboard = () => {
     }
   };
 
-  const handleViewInvoice = async (lead) => {
-    try {
-      toast.info('Retrieving official receipt...');
-      const res = await paymentService.fetchInvoiceByLead(lead.id);
-      setSelectedInvoiceData(res.data);
-      setIsInvoiceModalOpen(true);
-    } catch (err) {
-      toast.error('Failed to retrieve invoice - no confirmed payment found');
-    }
+  const handleViewInvoice = (lead) => {
+    window.open(`/invoice/${lead.id}`, '_blank');
   };
 
   const handleAddLead = async (leadData) => {
     try {
-      await associateService.addLead(leadData);
+      console.log(">>> [DEBUG] Transmitting Lead:", leadData);
+      const res = await associateService.addLead(leadData);
+      console.log(">>> [DEBUG] Backend Response:", res.data);
       toast.success('Lead added! Tracking link sent.');
       fetchData();
       return true;
@@ -162,51 +162,96 @@ const AssociateDashboard = () => {
   return (
     <DashboardLayout
       activeTab={activeTab}
-      onTabChange={setActiveTab}
+      onTabChange={(id) => {
+        if (id === 'ingestion') setIsIngestionModalOpen(true);
+        else setActiveTab(id);
+      }}
       role="ASSOCIATE"
     >
       <div className="animate-fade-in d-flex flex-column gap-4">
         {/* GLOBAL RANGE FILTER */}
-        {activeTab !== 'edit-lead' && (
+        {activeTab !== 'edit-lead' && activeTab !== 'ingestion' && (
           <FiltersBar
             filters={filters}
             onChange={setFilters}
             onSync={handleSync}
-            title="Identity Node Metrics"
-            role="ASSOCIATE"
-            hideUserFilter={true}
+            title={user?.role === 'ASSOCIATE_TEAM_LEAD' ? "SQUAD CONTROL CENTER" : "IDENTITY NODE METRICS"}
+            role={user?.role}
+            currentUserId={user?.id}
+            hideUserFilter={user?.role === 'ASSOCIATE'}
           />
         )}
         {activeTab === 'overview' && (
           <div className="d-flex flex-column gap-4 animate-fade-in">
             <ManagerProfile manager={manager} />
 
-            {/* ROW 1: CRITICAL ACTIONS (4 CARDS) */}
-            <div className="row g-3 mb-3">
-              <div className="col-12 col-md-6 col-xl-3">
-                {dashboardLoading ? <StatSkeleton /> : <StatCard title="Today's Schedule" value={stats?.todayFollowups || 0} icon={<Clock size={18} />} color="secondary" onClick={() => setActiveTab('tasks')} />}
+            <div className="d-flex flex-column gap-3 animate-fade-in mb-4">
+              <div className="px-1">
+                <h5 className="fw-black text-main mb-1 text-uppercase tracking-widest small">Personal Command Center</h5>
+                <p className="text-muted small fw-bold opacity-50 mb-0" style={{ fontSize: '9px' }}>VIEWING INDIVIDUAL OPERATIONAL PERFORMANCE</p>
               </div>
-              <div className="col-12 col-md-6 col-xl-3">
-                {dashboardLoading ? <StatSkeleton /> : <StatCard title="Payment Overdue" value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(stats?.pendingPaymentsAmount || 0)} icon={<IndianRupee size={18} />} color="danger" unit="" onClick={() => setActiveTab('payments')} />}
-              </div>
-              <div className="col-12 col-md-6 col-xl-3">
-                {dashboardLoading ? <StatSkeleton /> : <StatCard title="Follow-up Overdue" value={stats?.pendingFollowups || 0} icon={<AlertCircle size={18} />} color="warning" onClick={() => setActiveTab('leads')} />}
-              </div>
-              <div className="col-12 col-md-6 col-xl-3">
-                {dashboardLoading ? <StatSkeleton /> : <StatCard title="30-Day Revenue Forecast" value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(stats?.forecastRevenue || 0)} icon={<TrendingUp size={18} />} color="info" unit="" onClick={() => setActiveTab('payments')} />}
-              </div>
-            </div>
 
-            {/* ROW 2: PERFORMANCE TOTALS (3 CARDS) */}
-            <div className="row g-3 mb-4 justify-content-center">
-              <div className="col-12 col-md-4 col-xl-4">
-                {dashboardLoading ? <StatSkeleton /> : <StatCard title="Total Leads" value={stats?.total || 0} icon={<Users size={18} />} color="primary" onClick={() => setActiveTab('leads')} />}
+              {/* ROW 1: CRITICAL ACTIONS (3 CARDS) */}
+              <div className="row g-3">
+                <div className="col-12 col-md-6 col-lg-4">
+                  {dashboardLoading ? <StatSkeleton /> : <StatCard
+                    title="Task Overdue"
+                    value={stats?.pendingFollowups || 0}
+                    icon={<AlertCircle size={18} />}
+                    color="danger"
+                    onClick={() => setActiveTab('tasks')}
+                  />}
+                </div>
+                <div className="col-12 col-md-6 col-lg-4">
+                  {dashboardLoading ? <StatSkeleton /> : <StatCard
+                    title="Payment Overdue"
+                    value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(stats?.pendingPaymentsAmount || 0)}
+                    icon={<IndianRupee size={18} />}
+                    color="danger"
+                    unit=""
+                    onClick={() => setActiveTab('payments')}
+                  />}
+                </div>
+                <div className="col-12 col-md-6 col-lg-4">
+                  {dashboardLoading ? <StatSkeleton /> : <StatCard
+                    title="Today Task"
+                    value={stats?.todayFollowups || 0}
+                    icon={<ClipboardList size={18} />}
+                    color="warning"
+                    onClick={() => setActiveTab('tasks')}
+                  />}
+                </div>
               </div>
-              <div className="col-12 col-md-4 col-xl-4">
-                {dashboardLoading ? <StatSkeleton /> : <StatCard title="Total Converted" value={stats?.convertedCount || 0} icon={<CheckCircle size={18} />} color="success" onClick={() => setActiveTab('leads')} />}
-              </div>
-              <div className="col-12 col-md-4 col-xl-4">
-                {dashboardLoading ? <StatSkeleton /> : <StatCard title="Total Revenue" value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(stats?.monthlyRevenue || 0)} icon={<Zap size={18} />} color="pink" unit="" onClick={() => setActiveTab('reports')} />}
+
+              {/* ROW 2: PERFORMANCE TOTALS (3 CARDS) */}
+              <div className="row g-3">
+                <div className="col-12 col-md-4 col-lg-4">
+                  {dashboardLoading ? <StatSkeleton /> : <StatCard
+                    title="Total Leads"
+                    value={stats?.totalLeads ?? leads.length}
+                    icon={<Users size={18} />}
+                    color="primary"
+                    onClick={() => setActiveTab('leads')}
+                  />}
+                </div>
+                <div className="col-12 col-md-4 col-lg-4">
+                  {dashboardLoading ? <StatSkeleton /> : <StatCard
+                    title="Total Converted"
+                    value={stats?.convertedCount ?? leads.filter(l => ['CONVERTED', 'PAID', 'EMI', 'SUCCESS'].includes(l.status)).length}
+                    icon={<CheckCircle size={18} />}
+                    color="success"
+                    onClick={() => setActiveTab('leads')}
+                  />}
+                </div>
+                <div className="col-12 col-md-4 col-xl-4">
+                  {dashboardLoading ? <StatSkeleton /> : <StatCard
+                    title="Today Follow up"
+                    value={stats?.todayFollowups || 0}
+                    icon={<Phone size={18} />}
+                    color="pink"
+                    onClick={() => setActiveTab('tasks')}
+                  />}
+                </div>
               </div>
             </div>
 
@@ -238,6 +283,20 @@ const AssociateDashboard = () => {
                   <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest small">Individual Lead Pool</h5>
                   <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>OPERATIONAL WORKFLOW & CONVERSION PIPELINE</p>
                 </div>
+                <div className="d-flex align-items-center gap-3 flex-grow-1 justify-content-center px-4">
+                  <div className="position-relative w-100" style={{ maxWidth: '400px' }}>
+                    <div className="position-absolute top-50 start-0 translate-middle-y ps-3 text-muted opacity-50">
+                      <Search size={14} />
+                    </div>
+                    <input
+                      placeholder="Search leads..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="form-control bg-surface bg-opacity-50 border border-white border-opacity-10 text-main py-2 ps-5 shadow-none rounded-pill focus:border-primary transition-all"
+                      style={{ fontSize: '12px' }}
+                    />
+                  </div>
+                </div>
                 <button
                   className="ui-btn ui-btn-primary px-4 py-2 rounded-pill shadow-glow animate-fade-in"
                   onClick={() => setIsIngestionModalOpen(true)}
@@ -249,6 +308,8 @@ const AssociateDashboard = () => {
               <div className="card-body p-0">
                 <LeadTable
                   leads={leads}
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
                   onUpdateStatus={handleUpdateStatus}
                   onUpdateLead={handleUpdateLead}
                   onEdit={(lead) => {
@@ -274,7 +335,11 @@ const AssociateDashboard = () => {
             onUpdateStatus={handleUpdateStatus}
             onSendPaymentLink={handleSendPaymentLink}
             fetchLeads={fetchData}
+            userId={user?.id}
             hideFilters={true}
+            startDate={filters.from}
+            endDate={filters.to}
+            refreshTrigger={refreshTrigger}
           />
         )}
         {activeTab === 'reports' && (
@@ -313,30 +378,33 @@ const AssociateDashboard = () => {
               <h5 className="fw-black mb-1 text-main text-uppercase tracking-widest small">Financial Transmission Archive</h5>
               <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>VIEW PERSONAL CONVERSION AND REVENUE HISTORY</p>
             </div>
-            <PaymentHistory 
-              role="ASSOCIATE" 
-              from={filters.from} 
-              to={filters.to} 
+            <PaymentHistory
+              role="ASSOCIATE"
+              from={filters.from}
+              to={filters.to}
               hideFilters={true}
+              refreshTrigger={refreshTrigger}
             />
           </div>
         )}
 
         {activeTab === 'attendance' && (
-          <AttendanceDashboard 
-            role="ASSOCIATE" 
-            startDate={filters.from} 
-            endDate={filters.to} 
+          <AttendanceDashboard
+            role="ASSOCIATE"
+            startDate={filters.from}
+            endDate={filters.to}
+            refreshTrigger={refreshTrigger}
             hideFilters={true}
           />
         )}
 
         {activeTab === 'call-logs' && (
           <div className="animate-fade-in">
-            <CallLogDashboard 
-              hideHeader={true} 
-              filters={filters} 
-              onChange={setFilters} 
+            <CallLogDashboard
+              hideHeader={true}
+              filters={filters}
+              onChange={setFilters}
+              refreshTrigger={refreshTrigger}
             />
           </div>
         )}
@@ -346,6 +414,7 @@ const AssociateDashboard = () => {
             <TicketManager role="ASSOCIATE" />
           </div>
         )}
+
 
         {activeTab === 'edit-lead' && (
           <LeadEditPage
@@ -375,7 +444,7 @@ const AssociateDashboard = () => {
         invoiceData={selectedInvoiceData}
       />
 
-      <LeadIngestionModal
+      <LeadModal
         isOpen={isIngestionModalOpen}
         onClose={() => setIsIngestionModalOpen(false)}
         onAddLead={handleAddLead}

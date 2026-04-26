@@ -3,8 +3,8 @@ import api from '../api/api';
 const associateService = {
   fetchMyLeads: () => api.get('/leads/my'),
   fetchPerformanceStats: (filters) => api.get('/leads/stats', { params: filters }),
-  updateStatus: (leadId, status, note) => api.put(`/leads/${leadId}/status`, null, { 
-    params: { status, note } 
+  updateStatus: (leadId, status, note, extraData = {}) => api.put(`/leads/${leadId}/status`, { 
+    status, note, ...extraData 
   }),
   recordOutcome: (leadId, outcomeData) => api.post(`/leads/${leadId}/record-outcome`, outcomeData),
   addLead: (leadData) => api.post('/leads', leadData),
@@ -29,6 +29,7 @@ const associateService = {
   startCall: (data) => api.post('/calls/start', data),
   endCall: (callId, data) => api.post(`/calls/end/${callId}`, data),
   fetchTodayReport: () => api.get('/calls/today'),
+  recordManualPayment: (data) => api.post('/payments/manual-record', data),
   getFeeStructure: (leadId) => api.get(`/leads/${leadId}/fee-structure`),
   fetchLeadById: (id) => api.get(`/leads/${id}`)
 };

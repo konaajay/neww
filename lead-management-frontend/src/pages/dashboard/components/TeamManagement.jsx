@@ -204,9 +204,6 @@ const TeamManagement = ({
             />
           </div>
 
-          <button className="ui-btn ui-btn-outline px-3 py-2 rounded-3 text-muted d-flex align-items-center gap-2" style={{ fontSize: '10px' }}>
-            <Zap size={12} /> FILTER
-          </button>
         </div>
       </div>
 

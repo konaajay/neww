@@ -16,6 +16,15 @@ const StudentFeePage = () => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({ fee: null, payments: [] });
   const [lead, setLead] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newPayment, setNewPayment] = useState({
+    amount: '',
+    paymentMethod: 'CASH',
+    paymentType: 'INSTALLMENT',
+    nextDueDate: '',
+    note: ''
+  });
 
   useEffect(() => {
     if (id) {
@@ -36,6 +45,24 @@ const StudentFeePage = () => {
       console.error("Failed to fetch data", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRecordPayment = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await associateService.recordManualPayment({
+        ...newPayment,
+        leadId: id
+      });
+      setShowModal(false);
+      setNewPayment({ amount: '', paymentMethod: 'CASH', paymentType: 'INSTALLMENT', nextDueDate: '', note: '' });
+      fetchData();
+    } catch (err) {
+      console.error("Payment failed", err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -66,12 +93,19 @@ const StudentFeePage = () => {
               <div>
                  <h4 className="fw-black text-dark mb-1 text-uppercase tracking-widest">Financial Ledger</h4>
                  <p className="text-muted small fw-bold mb-0 opacity-50" style={{ fontSize: '9px' }}>
-                    STUDENT PROTOCOL • ID: {lead?.serialNumber || 'PENDING'}
+                    STUDENT PROTOCOL
                  </p>
               </div>
            </div>
            
-           <div className="d-none d-md-flex gap-2">
+           <div className="d-none d-md-flex gap-3 align-items-center">
+              <button 
+                onClick={() => setShowModal(true)}
+                className="ui-btn ui-btn-primary px-4 py-2 rounded-pill d-flex align-items-center gap-2 shadow-glow fw-black text-uppercase tracking-widest"
+                style={{ fontSize: '10px' }}
+              >
+                <IndianRupee size={14} /> Record Installment
+              </button>
               <div className="px-4 py-2 bg-success bg-opacity-10 text-success rounded-pill border border-success border-opacity-10 d-flex align-items-center gap-2">
                  <ShieldCheck size={14} />
                  <span className="fw-black small text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Official Record Verified</span>
@@ -249,6 +283,91 @@ const StudentFeePage = () => {
                       </div>
                    </div>
                </div>
+            </div>
+          </div>
+        )}
+
+        {/* Record Installment Modal */}
+        {showModal && (
+          <div className="modal-backdrop d-flex align-items-center justify-content-center" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 1050, backdropFilter: 'blur(4px)' }}>
+            <div className="bg-white rounded-4 shadow-lg animate-slide-up" style={{ width: '100%', maxWidth: '500px', overflow: 'hidden' }}>
+              <div className="p-4 bg-primary text-white d-flex align-items-center justify-content-between">
+                <div className="d-flex align-items-center gap-3">
+                   <div className="p-2 bg-white bg-opacity-20 rounded-circle"><IndianRupee size={18} /></div>
+                   <div>
+                      <h5 className="mb-0 fw-black text-uppercase tracking-widest">Record Installment</h5>
+                      <small className="opacity-75 fw-bold" style={{ fontSize: '9px' }}>MANUAL TRANSMISSION PROTOCOL</small>
+                   </div>
+                </div>
+                <button onClick={() => setShowModal(false)} className="btn btn-link text-white p-0"><X size={24} /></button>
+              </div>
+              
+              <form onSubmit={handleRecordPayment} className="p-4">
+                <div className="mb-4">
+                  <label className="form-label small fw-black text-uppercase tracking-widest text-muted" style={{ fontSize: '9px' }}>Installment Value</label>
+                  <div className="input-group">
+                    <span className="input-group-text bg-light border-0 fw-black text-primary">₹</span>
+                    <input 
+                      type="number" 
+                      className="form-control bg-light border-0 p-3 fw-black" 
+                      placeholder="0.00" 
+                      required
+                      value={newPayment.amount}
+                      onChange={(e) => setNewPayment({...newPayment, amount: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                <div className="row g-3 mb-4">
+                  <div className="col-6">
+                    <label className="form-label small fw-black text-uppercase tracking-widest text-muted" style={{ fontSize: '9px' }}>Channel</label>
+                    <select 
+                      className="form-select bg-light border-0 p-3 small fw-bold"
+                      value={newPayment.paymentMethod}
+                      onChange={(e) => setNewPayment({...newPayment, paymentMethod: e.target.value})}
+                    >
+                      <option value="CASH">CASH</option>
+                      <option value="UPI">UPI / ONLINE</option>
+                      <option value="BANK_TRANSFER">BANK TRANSFER</option>
+                      <option value="CHEQUE">CHEQUE</option>
+                    </select>
+                  </div>
+                  <div className="col-6">
+                    <label className="form-label small fw-black text-uppercase tracking-widest text-muted" style={{ fontSize: '9px' }}>Next Protocol</label>
+                    <input 
+                      type="date" 
+                      className="form-control bg-light border-0 p-3 small fw-bold"
+                      value={newPayment.nextDueDate}
+                      onChange={(e) => setNewPayment({...newPayment, nextDueDate: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="form-label small fw-black text-uppercase tracking-widest text-muted" style={{ fontSize: '9px' }}>Interaction Note</label>
+                  <textarea 
+                    className="form-control bg-light border-0 p-3 small fw-bold" 
+                    rows="3" 
+                    placeholder="Input transaction context..."
+                    value={newPayment.note}
+                    onChange={(e) => setNewPayment({...newPayment, note: e.target.value})}
+                  ></textarea>
+                </div>
+
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="btn btn-primary w-100 py-3 rounded-pill fw-black text-uppercase tracking-widest shadow-glow d-flex align-items-center justify-content-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <span className="spinner-border spinner-border-sm"></span>
+                  ) : (
+                    <>
+                      <ShieldCheck size={18} /> AUTHORIZE RECORD
+                    </>
+                  )}
+                </button>
+              </form>
             </div>
           </div>
         )}

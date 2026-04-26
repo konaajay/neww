@@ -23,13 +23,26 @@ import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentPortal from './pages/PaymentPortal';
 import AssociateDashboard from './pages/AssociateDashboard';
 import StudentFeePage from './pages/StudentFeePage';
+import LeadStatusUpdatePage from './pages/LeadStatusUpdatePage';
+import InvoicePage from './pages/InvoicePage';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
 
-  if (loading) return <div className="loading">Loading...</div>;
-  if (!user) return <Navigate to="/login" />;
-  if (allowedRoles && !allowedRoles.includes(user.role)) return <Navigate to="/" />;
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  
+  if (allowedRoles) {
+    const userRole = (user.role || '').toUpperCase();
+    const hasAccess = allowedRoles.some(role => 
+      userRole === role.toUpperCase() || userRole === `ROLE_${role.toUpperCase()}`
+    );
+    
+    if (!hasAccess) {
+      console.warn(`Access denied for role: ${userRole}. Required: ${allowedRoles}`);
+      return <Navigate to="/login" replace />; // Redirect to login breaks the loop better if role is invalid
+    }
+  }
 
   return children;
 };
@@ -101,18 +114,35 @@ function App() {
                 </ProtectedRoute>
               } 
             />
+            <Route 
+              path="/leads/:id/status-update" 
+              element={
+                <ProtectedRoute>
+                  <LeadStatusUpdatePage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/invoice/:leadId" 
+              element={
+                <ProtectedRoute>
+                  <InvoicePage />
+                </ProtectedRoute>
+              } 
+            />
 
             <Route 
               path="/" 
               element={
                 user ? (
-                  user.role === 'ADMIN' ? 
-                    <Navigate to="/admin" /> : 
-                    user.role === 'MANAGER' ? 
-                      <Navigate to="/manager" /> : 
-                      user.role === 'TEAM_LEADER' ? 
-                        <Navigate to="/tl" /> : <Navigate to="/associate" />
-                ) : <Navigate to="/login" />
+                  (() => {
+                    const role = (user.role || '').toUpperCase();
+                    if (role.includes('ADMIN')) return <Navigate to="/admin" replace />;
+                    if (role.includes('MANAGER')) return <Navigate to="/manager" replace />;
+                    if (role.includes('TEAM_LEADER') || role.includes('TL')) return <Navigate to="/tl" replace />;
+                    return <Navigate to="/associate" replace />;
+                  })()
+                ) : <Navigate to="/login" replace />
               } 
             />
           </Routes>

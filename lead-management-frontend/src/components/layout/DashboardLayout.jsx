@@ -5,22 +5,14 @@ import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import CallOutcomeModal from '../CallOutcomeModal';
 
-const DashboardLayout = ({ children, activeTab, onTabChange, role }) => {
+const DashboardLayout = ({ children, activeTab, onTabChange, role, navbarExtras }) => {
   const { user, logout, clearCall } = useAuth();
   const { isDarkMode } = useTheme();
   const [endingCallLead, setEndingCallLead] = useState(null);
-  const [isCollapsed, setIsCollapsed] = useState(window.innerWidth < 1200);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   const toggleSidebar = () => {
-    if (windowWidth > 992) {
+    if (window.innerWidth >= 992) {
       setIsCollapsed(!isCollapsed);
     } else {
       setIsMobileOpen(!isMobileOpen);
@@ -30,7 +22,7 @@ const DashboardLayout = ({ children, activeTab, onTabChange, role }) => {
   return (
     <div className="dashboard-wrapper">
       <Sidebar
-        isOpen={windowWidth > 992 ? true : isMobileOpen}
+        isOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
         activeTab={activeTab}
         onTabChange={onTabChange}
@@ -39,18 +31,19 @@ const DashboardLayout = ({ children, activeTab, onTabChange, role }) => {
         onToggle={toggleSidebar}
       />
 
-      <div className={`main-content ${isCollapsed ? 'sidebar-closed' : ''}`} style={{ transition: 'margin-left 0.3s ease' }}>
+      <div className={`main-content ${isCollapsed ? 'sidebar-closed' : ''}`}>
         <Navbar 
-          isCollapsed={isCollapsed} 
           userEmail={user?.email} 
           onLogout={logout} 
           onToggleSidebar={toggleSidebar}
-          windowWidth={windowWidth}
+          navbarExtras={navbarExtras}
         />
-        
-        <div className="container-fluid p-4 animate-fade-in" style={{ marginTop: '20px' }}>
-          {children}
-        </div>
+
+        <main className="layout-body animate-fade-in">
+          <div className="container-fluid">
+            {children}
+          </div>
+        </main>
       </div>
 
 

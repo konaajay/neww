@@ -25,6 +25,8 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [audioDuration, setAudioDuration] = useState(0);
   const [isDurationLoading, setIsDurationLoading] = useState(false);
+  const [pipelineStages, setPipelineStages] = useState([]);
+  const [allStatuses, setAllStatuses] = useState([]);
 
   // New Payment / Installment State integration
   const [totalAmount, setTotalAmount] = useState('499');
@@ -62,17 +64,42 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme }) => {
     if (lead) {
       const currIdx = getStageIndex(lead.status);
       const nextStage = pipelineStages.find(s => getStageIndex(s.id) > currIdx);
-      setOutcome(nextStage ? nextStage.id : lead.status);
+      
+      // Prioritize pendingStatus from dropdown selection
+      const initialOutcome = lead.pendingStatus || (nextStage ? nextStage.id : lead.status);
+      setOutcome(initialOutcome);
       
       setPaymentAmount('');
       setPaymentMethod('UPI');
-      // If we are ending a specific call passed via lead object or extra prop
-      if (lead.activeCallId) {
-        setCallId(lead.activeCallId);
+      
+      // If triggered from dropdown change OR ending a specific call
+      if (lead.pendingStatus || lead.activeCallId) {
+        setCallId(lead.activeCallId || null);
         setShowAddNote(true);
+      } else {
+        setShowAddNote(false);
       }
     }
-  }, [lead]);
+  }, [lead, pipelineStages]);
+
+  useEffect(() => {
+    const fetchStages = async () => {
+      try {
+        const res = await adminService.fetchPipelineStages();
+        if (res.data) {
+          const active = res.data.filter(s => s.active);
+          setPipelineStages(active.slice(0, 6)); // First 6 for the stepper
+          setAllStatuses(active.map(s => ({
+            id: s.statusValue,
+            label: s.label.toLowerCase()
+          })));
+        }
+      } catch (err) {
+        console.error("Failed to load stages", err);
+      }
+    };
+    if (isOpen) fetchStages();
+  }, [isOpen]);
 
   if (!isOpen || !lead) return null;
 
@@ -100,6 +127,20 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme }) => {
         });
         clearCall();
         toast.success('Interaction Logged Successfully');
+      }
+
+      if (followUpDate) {
+        try {
+          await associateService.addLeadTask(lead.id, {
+            title: `Follow-up Required: ${outcome}`,
+            taskType: 'FOLLOW_UP',
+            dueDate: followUpDate,
+            description: note || `Scheduled follow-up for ${lead.name}`
+          });
+        } catch (taskErr) {
+          console.error("Failed to create task:", taskErr);
+          toast.warning("Status updated, but failed to schedule the calendar task.");
+        }
       }
 
       // Record outcome / update status via the provided onSubmit handler
@@ -157,23 +198,23 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme }) => {
 
   const isDarkMode = theme === 'dark';
 
-  // Define pipeline stages
-  const pipelineStages = [
-    { id: 'NEW', label: 'New', color: 'primary' },
-    { id: 'CONTACTED', label: 'Contacted', color: 'info' },
-    { id: 'FOLLOW_UP', label: 'Follow up', color: 'secondary' },
-    { id: 'INTERESTED', label: 'Interested', color: 'warning' },
-    { id: 'PAID', label: 'Converted', color: 'success' },
-    { id: 'LOST', label: 'Lost', color: 'danger' }
-  ];
-
   // Map backend status to stepper index
   const getStageIndex = (status) => {
     switch (status) {
       case 'NEW': return 0;
-      case 'CONTACTED': return 1;
-      case 'FOLLOW_UP': return 2;
-      case 'INTERESTED': return 3;
+      case 'CONTACTED': 
+      case 'NOT_ANSWERED':
+      case 'SWITCHED_OFF':
+        return 1;
+      case 'FOLLOW_UP':
+      case 'FOLLOWUP_1':
+      case 'FOLLOWUP_2':
+      case 'FOLLOWUP_3':
+        return 2;
+      case 'INTERESTED': 
+      case 'DEMO':
+      case 'PAYMENT_LINK_SENT':
+        return 3;
       case 'PAID':
       case 'CONVERTED':
       case 'EMI':
@@ -185,6 +226,7 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme }) => {
       default: return 0;
     }
   };
+
 
   const currentStageIndex = getStageIndex(lead.status);
   const selectedStageIndex = getStageIndex(outcome);
@@ -436,23 +478,23 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme }) => {
                         <div className="row g-3">
                           <div className="col-12 col-md-6">
                             <label className="form-label small fw-bold text-uppercase text-muted mb-2 tracking-wider">Status Override</label>
-                            <select
-                               className={`form-select fw-bold shadow-sm ${isDarkMode ? 'bg-secondary bg-opacity-25 text-white border-secondary border-opacity-50' : 'bg-light text-dark'}`}
+                               <select
+                               className={`form-select fw-bold shadow-sm text-capitalize ${isDarkMode ? 'bg-secondary bg-opacity-25 text-white border-secondary border-opacity-50' : 'bg-light text-dark'}`}
                                value={outcome}
                                onChange={(e) => setOutcome(e.target.value)}
                                style={{ cursor: 'pointer' }}
                              >
-                               {[...pipelineStages, { id: 'EMI', label: 'EMI PLAN SCHEDULED' }]
+                               {allStatuses
                                  .filter(s => {
                                    const stageIdx = getStageIndex(s.id);
                                    const currIdx = getStageIndex(lead.status);
                                    
-                                   // Rule 1: No regression (Hide past AND current stages to force forward move)
-                                   if (stageIdx <= currIdx) return false;
+                                   // Rule 1: No regression (Hide past stages, but allow switching within same stage cluster)
+                                   if (stageIdx < currIdx) return false;
                                    
                                    // Rule 2: Interested Bottleneck
                                    if (lead.status === 'INTERESTED') {
-                                     return ['PAID', 'CONVERTED', 'EMI', 'LOST'].includes(s.id);
+                                     return ['CONVERTED', 'EMI', 'LOST', 'NOT_INTERESTED', 'PAYMENT_LINK_SENT', 'DEMO', 'INTERESTED'].includes(s.id);
                                    }
                                    
                                    // If already terminal, don't allow change

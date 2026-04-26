@@ -115,8 +115,10 @@ const AttendanceWidget = ({ isCollapsed }) => {
           }
         } catch (err) {
           setError(err.response?.data?.message || 'Tracking failed');
-          if (err.response?.status === 400 || err.response?.status === 401) {
-            fetchStatus();
+          if (err.response?.status === 401) {
+             // Let api.js handle the redirect
+             console.warn('[Attendance] Unauthorized - stopping heartbeat');
+             if (heartbeatRef.current) clearInterval(heartbeatRef.current);
           }
         }
       },

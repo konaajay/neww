@@ -45,8 +45,20 @@ const LoginPage = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#030712', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ width: '100%', maxWidth: '400px', padding: '0 1rem' }}>
+    <div style={{ 
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: '#030712', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      zIndex: 9999,
+      overflowY: 'auto'
+    }}>
+      <div style={{ width: '100%', maxWidth: '400px', padding: '2rem 1rem' }}>
 
         {/* Branding */}
         <div className="text-center mb-4">

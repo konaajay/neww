@@ -22,9 +22,7 @@ const StatCard = ({ title, value, sub, icon, color = 'primary', unit = 'Nodes', 
       onClick={onClick}
       style={{ cursor: onClick ? 'pointer' : 'default' }}
     >
-      {/* Dynamic Background Glow */}
-      <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl opacity-10 group-hover:opacity-20 transition-opacity" 
-           style={{ backgroundColor: themeColor.base, transform: 'translate(40%, -40%)' }}></div>
+      {/* Dynamic Background Glow removed */}
       
       <div className="card-body p-3 relative z-10 d-flex flex-column h-100">
         <div className="d-flex align-items-center gap-2 mb-2">

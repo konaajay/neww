@@ -5,6 +5,9 @@ import { toast } from 'react-toastify';
 import { useTheme } from '../../../context/ThemeContext';
 import TargetModal from './TargetModal';
 
+
+import PipelineStageManagement from './PipelineStageManagement';
+
 const AttendanceSettings = () => {
     const { isDarkMode } = useTheme();
     const [offices, setOffices] = useState([]);
@@ -222,45 +225,34 @@ const AttendanceSettings = () => {
     return (
         <div className="container-fluid p-0 animate-fade-in">
             <div className="row g-4">
-                {/* Sidebar Navigation - Futuristic Node Console */}
-                <div className="col-12 col-lg-3">
-                    <div className={`premium-card p-3 border-0 ${isDarkMode ? 'bg-surface bg-opacity-40 backdrop-blur' : 'bg-white shadow-sm'} d-flex flex-column gap-3`} style={{ borderRadius: '24px' }}>
-                        <div className="px-2 pt-2">
-                            <h6 className={`fw-black ${isDarkMode ? 'text-main' : 'text-dark'} small tracking-widest text-uppercase opacity-40 mb-1`} style={{ fontSize: '9px' }}>System Control</h6>
-                            <p className="text-muted small fw-bold mb-0 opacity-30" style={{ fontSize: '8px' }}>IDENTITY NODES & PROTOCOLS</p>
-                        </div>
-
-                        <div className="d-flex flex-column gap-2">
-                            {[
-                                { id: 'offices', label: 'OFFICE LOCATIONS', icon: MapPin, color: 'primary' },
-                                { id: 'policies', label: 'COMPLIANCE POLICIES', icon: Shield, color: 'info' },
-                                { id: 'shifts', label: 'WORK SHIFTS', icon: Clock, color: 'warning' },
-                            ].map(btn => {
-                                const Icon = btn.icon;
-                                const isActive = activeSection === btn.id;
-                                return (
-                                    <button
-                                        key={btn.id}
-                                        onClick={() => setActiveSection(btn.id)}
-                                        className={`p-3 d-flex align-items-center gap-3 rounded-4 border transition-all ${isActive ? 'bg-primary border-primary shadow-glow' : `${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-5' : 'bg-light border-0'} text-muted hover-bg-surface`}`}
-                                        style={{ outline: 'none' }}
-                                    >
-                                        <div className={`p-2 rounded-3 ${isActive ? 'bg-white bg-opacity-20 text-white' : `bg-${btn.color} ${isDarkMode ? 'bg-opacity-10' : 'bg-opacity-20'} text-${btn.color}`}`}>
-                                            <Icon size={14} />
-                                        </div>
-                                        <div className="text-start">
-                                            <p className={`fw-black text-uppercase mb-0 tracking-widest ${isActive ? 'text-white' : (isDarkMode ? 'text-main' : 'text-dark')}`} style={{ fontSize: '9px' }}>{btn.label}</p>
-                                        </div>
-                                        {isActive && <div className="ms-auto w-1 h-3 bg-white rounded-pill opacity-50" style={{ width: '2px', height: '12px' }}></div>}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                {/* Horizontal Navigation Bar */}
+                <div className="col-12">
+                    <div className={`premium-card p-2 border-0 ${isDarkMode ? 'bg-surface bg-opacity-40 backdrop-blur' : 'bg-white shadow-sm'} d-flex flex-wrap gap-2 shadow-lg mb-2`} style={{ borderRadius: '20px' }}>
+                        {[
+                            { id: 'offices', label: 'Offices', icon: MapPin, color: 'primary' },
+                            { id: 'policies', label: 'Policies', icon: Shield, color: 'info' },
+                            { id: 'shifts', label: 'Shifts', icon: Clock, color: 'warning' },
+                            { id: 'pipeline-stages', label: 'Stages', icon: TargetIcon, color: 'danger' }
+                        ].map(btn => {
+                            const Icon = btn.icon;
+                            const isActive = activeSection === btn.id;
+                            return (
+                                <button
+                                    key={btn.id}
+                                    onClick={() => setActiveSection(btn.id)}
+                                    className={`flex-grow-1 p-3 d-flex align-items-center justify-content-center gap-2 rounded-4 border transition-all ${isActive ? 'bg-primary border-primary shadow-glow text-white' : `${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-5 text-muted' : 'bg-light border-0 text-muted'} hover-bg-surface`}`}
+                                    style={{ outline: 'none', minWidth: '150px' }}
+                                >
+                                    <Icon size={16} />
+                                    <span className="fw-black text-uppercase tracking-widest" style={{ fontSize: '10px' }}>{btn.label}</span>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
                 {/* Main Content Area */}
-                <div className="col-12 col-lg-9">
+                <div className="col-12">
                     {activeSection === 'offices' && (
                         <div className="d-flex flex-column gap-4 animate-fade-in">
                             <div className={`premium-card p-4 border-0 shadow-lg ${isDarkMode ? '' : 'bg-white'}`}>
@@ -368,71 +360,82 @@ const AttendanceSettings = () => {
                                         <Shield size={24} />
                                     </div>
                                     <div>
-                                        <h5 className={`fw-black ${isDarkMode ? 'text-main' : 'text-dark'} mb-0 text-uppercase tracking-widest`}>{editingPolicyId ? 'Modify Strategy' : 'Policy Engine'}</h5>
-                                        <p className="text-muted small fw-bold opacity-50 mb-0" style={{ fontSize: '9px' }}>CONFIGURE OPERATIONAL COMPLIANCE GATEWAY</p>
+                                        <h5 className={`fw-black ${isDarkMode ? 'text-main' : 'text-dark'} mb-0 text-uppercase tracking-widest`}>{editingPolicyId ? 'Edit Policy' : 'Attendance Policy'}</h5>
                                     </div>
                                 </div>
                                 <form onSubmit={handleCreatePolicy} className={`${isDarkMode ? 'bg-surface bg-opacity-20 border-white border-opacity-5' : 'bg-light border-0'} p-4 rounded-4 border`}>
                                     <div className="row g-4">
-                                        <div className="col-lg-4 border-end border-white border-opacity-5 pe-lg-4">
-                                            <div className="mb-4">
-                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Branch Target</label>
+                                        <div className="col-md-4">
+                                            <div className="mb-0">
+                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '10px' }}>Select Office</label>
                                                 <select
-                                                    className="ui-input py-2 rounded-3"
+                                                    className="ui-input py-2.5 rounded-3"
                                                     value={newPolicy.officeId} onChange={e => setNewPolicy({ ...newPolicy, officeId: e.target.value })}
                                                     required
                                                 >
-                                                    <option value="" className="text-dark">Select hub...</option>
+                                                    <option value="" className="text-dark">Select a location...</option>
                                                     {offices.map(o => (
                                                         <option key={o.id} value={o.id} className="text-dark">{o.name}</option>
                                                     ))}
                                                 </select>
                                             </div>
-                                            <div className="row g-3">
-                                                <div className="col-12">
-                                                    <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Out-of-Range Grace (m)</label>
-                                                    <input
-                                                        type="number" className="ui-input py-2 rounded-3"
-                                                        value={newPolicy.gracePeriodMinutes || 0} onChange={e => setNewPolicy({ ...newPolicy, gracePeriodMinutes: parseInt(e.target.value) || 0 })}
-                                                        placeholder="2" required
-                                                    />
-                                                </div>
+                                        </div>
+
+                                        <div className="col-md-4">
+                                            <div className="mb-0">
+                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '10px' }}>Location Grace (Min)</label>
+                                                <input
+                                                    type="number" className="ui-input py-2.5 rounded-3"
+                                                    value={newPolicy.gracePeriodMinutes || 0} onChange={e => setNewPolicy({ ...newPolicy, gracePeriodMinutes: parseInt(e.target.value) || 0 })}
+                                                    placeholder="2" required
+                                                />
                                             </div>
                                         </div>
 
-                                        <div className="col-lg-5 border-end border-white border-opacity-5 px-lg-4">
-                                            <label className="text-primary small fw-black text-uppercase mb-3 d-block" style={{ fontSize: '0.65rem' }}>Intermission Parameters</label>
+                                        <div className="col-md-4">
+                                            <div className="mb-0">
+                                                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '10px' }}>Full Day (Min)</label>
+                                                <input
+                                                    type="number" className="ui-input py-2.5 rounded-3"
+                                                    value={newPolicy.minimumWorkMinutes || 0} onChange={e => setNewPolicy({ ...newPolicy, minimumWorkMinutes: parseInt(e.target.value) || 0 })}
+                                                    placeholder="240" required
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="col-12">
+                                            <label className="text-primary small fw-black text-uppercase mb-3 d-block" style={{ fontSize: '10px' }}>Break Times</label>
                                             <div className="row g-3">
-                                                <div className="col-12">
+                                                <div className="col-md-6">
                                                     <div className={`p-3 rounded-4 border ${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-5' : 'bg-white border-dark border-opacity-5'} shadow-sm`}>
-                                                        <span className="small text-muted fw-bold d-block mb-3 opacity-75" style={{ fontSize: '0.65rem' }}>RECREATION WINDOW</span>
+                                                        <span className="small text-muted fw-bold d-block mb-3 opacity-75" style={{ fontSize: '10px' }}>SHORT BREAK</span>
                                                         <div className="d-flex align-items-center gap-2">
                                                             <div className="flex-grow-1">
-                                                                <label className="text-muted fs-xs fw-black d-block mb-1" style={{ fontSize: '7px' }}>START</label>
+                                                                <label className="text-muted fs-xs fw-black d-block mb-1" style={{ fontSize: '8px' }}>START</label>
                                                                 <input type="time" className="ui-input px-2 py-1.5 border-0 bg-transparent text-center fs-6"
                                                                     value={newPolicy.shortBreakStartTime} onChange={e => setNewPolicy({ ...newPolicy, shortBreakStartTime: e.target.value })} />
                                                             </div>
                                                             <ArrowRight size={12} className="text-muted opacity-20 mt-4" />
                                                             <div className="flex-grow-1">
-                                                                <label className="text-muted fs-xs fw-black d-block mb-1" style={{ fontSize: '7px' }}>END</label>
+                                                                <label className="text-muted fs-xs fw-black d-block mb-1" style={{ fontSize: '8px' }}>END</label>
                                                                 <input type="time" className="ui-input px-2 py-1.5 border-0 bg-transparent text-center fs-6"
                                                                     value={newPolicy.shortBreakEndTime} onChange={e => setNewPolicy({ ...newPolicy, shortBreakEndTime: e.target.value })} />
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="col-12">
+                                                <div className="col-md-6">
                                                     <div className={`p-3 rounded-4 border ${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-5' : 'bg-white border-dark border-opacity-5'} shadow-sm`}>
-                                                        <span className="small text-muted fw-bold d-block mb-3 opacity-75" style={{ fontSize: '0.65rem' }}>LUNCHEON WINDOW</span>
+                                                        <span className="small text-muted fw-bold d-block mb-3 opacity-75" style={{ fontSize: '10px' }}>LONG BREAK / LUNCH</span>
                                                         <div className="d-flex align-items-center gap-2">
                                                             <div className="flex-grow-1">
-                                                                <label className="text-muted fs-xs fw-black d-block mb-1" style={{ fontSize: '7px' }}>START</label>
+                                                                <label className="text-muted fs-xs fw-black d-block mb-1" style={{ fontSize: '8px' }}>START</label>
                                                                 <input type="time" className="ui-input px-2 py-1.5 border-0 bg-transparent text-center fs-6"
                                                                     value={newPolicy.longBreakStartTime} onChange={e => setNewPolicy({ ...newPolicy, longBreakStartTime: e.target.value })} />
                                                             </div>
                                                             <ArrowRight size={12} className="text-muted opacity-20 mt-4" />
                                                             <div className="flex-grow-1">
-                                                                <label className="text-muted fs-xs fw-black d-block mb-1" style={{ fontSize: '7px' }}>END</label>
+                                                                <label className="text-muted fs-xs fw-black d-block mb-1" style={{ fontSize: '8px' }}>END</label>
                                                                 <input type="time" className="ui-input px-2 py-1.5 border-0 bg-transparent text-center fs-6"
                                                                     value={newPolicy.longBreakEndTime} onChange={e => setNewPolicy({ ...newPolicy, longBreakEndTime: e.target.value })} />
                                                             </div>
@@ -442,32 +445,22 @@ const AttendanceSettings = () => {
                                             </div>
                                         </div>
 
-                                        <div className="col-lg-3 d-flex flex-column justify-content-between ps-lg-4">
-                                            <div className="d-flex flex-column gap-3">
-                                                <div>
-                                                    <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Active Threshold (min)</label>
-                                                    <input
-                                                        type="number" className="ui-input py-2 rounded-3"
-                                                        value={newPolicy.minimumWorkMinutes || 0} onChange={e => setNewPolicy({ ...newPolicy, minimumWorkMinutes: parseInt(e.target.value) || 0 })}
-                                                        placeholder="240" required
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="mt-4 d-flex flex-column gap-2">
-                                                <button type="submit" className="ui-btn ui-btn-primary w-100 rounded-pill shadow-glow py-2 fw-black text-uppercase tracking-widest" style={{ fontSize: '10px' }}>
+                                        <div className="col-12">
+                                            <div className="mt-2 d-flex gap-2">
+                                                <button type="submit" className="ui-btn ui-btn-primary px-5 rounded-pill shadow-glow py-2.5 fw-black text-uppercase tracking-widest" style={{ fontSize: '11px' }}>
                                                     <Save size={16} className="me-2" />
-                                                    {editingPolicyId ? 'SYNC ENGINE' : 'ACTIVATE ENGINE'}
+                                                    {editingPolicyId ? 'Update Settings' : 'Save Settings'}
                                                 </button>
                                                 {editingPolicyId && (
                                                     <button
                                                         type="button"
-                                                        className="ui-btn ui-btn-outline w-100 rounded-pill py-2 fw-black text-uppercase tracking-widest"
-                                                        style={{ fontSize: '10px' }}
+                                                        className="ui-btn ui-btn-outline px-5 rounded-pill py-2.5 fw-black text-uppercase tracking-widest"
+                                                        style={{ fontSize: '11px' }}
                                                         onClick={() => {
                                                             setEditingPolicyId(null);
                                                             setNewPolicy({ officeId: '', trackingIntervalSec: 300, shortBreakStartTime: '17:00', shortBreakEndTime: '17:10', longBreakStartTime: '13:00', longBreakEndTime: '14:00', gracePeriodMinutes: 2, maxAccuracyMeters: 100, minimumWorkMinutes: 240, maxIdleMinutes: 30 });
                                                         }}
-                                                    >ABORT</button>
+                                                    >Cancel</button>
                                                 )}
                                             </div>
                                         </div>
@@ -684,6 +677,12 @@ const AttendanceSettings = () => {
                     )}
 
 
+
+                    {activeSection === 'pipeline-stages' && (
+                        <div className="animate-fade-in">
+                            <PipelineStageManagement />
+                        </div>
+                    )}
 
                     {/* {activeSection === 'incentives' && (
                         <div className="d-flex flex-column gap-4 animate-fade-in">

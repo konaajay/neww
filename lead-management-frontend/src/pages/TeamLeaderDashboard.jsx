@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import useDebounce from '../hooks/useDebounce';
 import { Button, Card, Input, Table } from '../components/common/Components';
-import { LayoutDashboard, Users, TrendingUp, Zap, AlertCircle, Clock, LogOut, Sun, Moon, Menu, BarChart3, BarChart2, IndianRupee, Phone, Upload, CheckCircle, FileText, UserPlus, ShieldHalf, ChevronDown, ListTodo, CalendarCheck } from 'lucide-react';
+import { LayoutDashboard, Users, TrendingUp, Zap, AlertCircle, Clock, LogOut, Sun, Moon, Menu, BarChart3, BarChart2, IndianRupee, Phone, Upload, CheckCircle, FileText, UserPlus, ShieldHalf, ChevronDown, ListTodo, CalendarCheck, Search, ClipboardList } from 'lucide-react';
 import tlService from '../services/tlService';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -14,7 +14,6 @@ import TaskBoard from '../components/TaskBoard';
 import LeadEditPage from './dashboard/components/LeadEditPage';
 import FiltersBar from './dashboard/components/FiltersBar';
 import LeadForm from '../components/LeadForm';
-import BulkUploadModal from './dashboard/components/BulkUploadModal';
 import AttendanceDashboard from '../components/pages/AttendanceDashboard';
 import CallAnalyticsGrid from './dashboard/components/CallAnalyticsGrid';
 import MetricCommandCenter from './dashboard/components/MetricCommandCenter';
@@ -23,7 +22,7 @@ import CallLogDashboard from './dashboard/components/CallLogDashboard';
 
 import ManagerProfile from './dashboard/components/ManagerProfile';
 import authService from '../services/authService';
-import LeadIngestionModal from './dashboard/components/LeadIngestionModal';
+import LeadModal from './dashboard/components/LeadModal';
 import { useDashboardData } from './dashboard/hooks/useDashboardData';
 import { StatSkeleton, ChartSkeleton } from './dashboard/components/DashboardSkeletons';
 
@@ -40,6 +39,7 @@ const TeamLeaderDashboard = () => {
   const [leads, setLeads] = useState([]);
   const [activeTab, setActiveTab] = useState(localStorage.getItem('tl_activeTab') || 'overview');
   const [myDashboardSubTab, setMyDashboardSubTab] = useState('dashboard');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const [selectedAssignees, setSelectedAssignees] = useState([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -47,7 +47,7 @@ const TeamLeaderDashboard = () => {
 
   // Operational Filters
   const [filters, setFilters] = useState({
-    from: new Date().toISOString().split('T')[0],
+    from: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
     to: new Date().toISOString().split('T')[0],
     userId: null,
     teamId: user.id,
@@ -57,21 +57,30 @@ const TeamLeaderDashboard = () => {
   const debouncedFilters = useDebounce(filters, 400);
 
   // High-performance data synchronization via React Query
-  const { 
-    stats, 
-    performance, 
-    trend: trendData, 
-    loading: dashboardLoading, 
-    reload: syncDashboard 
+  const {
+    stats,
+    performance,
+    trend: trendData,
+    loading: dashboardLoading,
+    reload: syncDashboard
   } = useDashboardData(debouncedFilters, 'TEAM_LEADER');
 
   const [editingLead, setEditingLead] = useState(null);
   const [isIngestionModalOpen, setIsIngestionModalOpen] = useState(false);
+  const [taskFilter, setTaskFilter] = useState('ALL');
 
-  const handleTabChange = (tab) => {
+  const handleTabChange = (tab, extra = {}) => {
+    if (tab === 'ingestion') {
+      setIsIngestionModalOpen(true);
+      return;
+    }
     setActiveTab(tab);
     localStorage.setItem('tl_activeTab', tab);
-    
+
+    if (tab === 'tasks') {
+      setTaskFilter(extra.filter || 'ALL');
+    }
+
     // Tab-based data scoping: 
     // 'My Stats' forces personal scoping. Team tabs reset to team view.
     if (tab === 'my-stats') {
@@ -92,11 +101,14 @@ const TeamLeaderDashboard = () => {
         setManager(profileRes.data?.supervisor || profileRes.data?.manager);
       }
 
-      const leadsRes = await tlService.fetchTeamLeads({ 
-        from: debouncedFilters.from, 
-        to: debouncedFilters.to, 
-        userId: debouncedFilters.userId || debouncedFilters.teamId
-      });
+      const queryParams = {
+        from: debouncedFilters.from,
+        to: debouncedFilters.to
+      };
+      if (debouncedFilters.userId) {
+        queryParams.userId = debouncedFilters.userId;
+      }
+      const leadsRes = await tlService.fetchTeamLeads(queryParams);
       setLeads(Array.isArray(leadsRes.data) ? leadsRes.data : (leadsRes.data?.content || []));
     } catch (err) {
       console.error("Lookup Sync Error:", err);
@@ -189,6 +201,8 @@ const TeamLeaderDashboard = () => {
   };
 
 
+  const navbarExtras = null;
+
   return (
     <DashboardLayout
       title="Team leader console"
@@ -196,11 +210,40 @@ const TeamLeaderDashboard = () => {
       activeTab={activeTab}
       onTabChange={handleTabChange}
       role="TEAM_LEADER"
+      navbarExtras={navbarExtras}
     >
       <>
         <div className="animate-fade-in d-flex flex-column gap-3">
+          {/* PERSONAL HORIZONTAL NAVBAR - TOP PRIORITY */}
+          {activeTab === 'my-stats' && (
+            <div className="premium-card p-1 d-flex flex-wrap gap-1 border-white border-opacity-5 overflow-auto custom-scroll flex-nowrap mb-1" style={{ background: 'rgba(255,255,255,0.02)' }}>
+              {[
+                { id: 'dashboard', label: 'Home', icon: '📊' },
+                { id: 'leads', label: 'Individual Leads', icon: '👥' },
+                { id: 'tasks', label: 'Pending Tasks', icon: '📋' },
+                { id: 'attendance', label: 'Attendance Logs', icon: '📆' },
+                { id: 'revenue', label: 'My Revenue.', icon: '💰' },
+                { id: 'calls', label: 'My call Logs', icon: '📞' },
+                { id: 'reports', label: 'Performance', icon: '📈' },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setMyDashboardSubTab(tab.id)}
+                  className={`flex-grow-1 px-3 py-2 rounded-pill border-0 transition-all d-flex align-items-center justify-content-center gap-2 white-space-nowrap ${myDashboardSubTab === tab.id
+                    ? 'bg-primary text-white shadow-glow fw-black'
+                    : 'bg-transparent text-muted hover-bg-surface fw-bold'
+                    }`}
+                  style={{ fontSize: '10px', minWidth: 'fit-content' }}
+                >
+                  <span>{tab.icon}</span>
+                  <span className="text-uppercase tracking-widest">{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* GLOBAL RANGE FILTER */}
-          {activeTab !== 'edit-lead' && activeTab !== 'ingestion' && (
+          {activeTab !== 'edit-lead' && activeTab !== 'ingestion' && activeTab !== 'users' && (
             <FiltersBar
               filters={filters}
               onChange={setFilters}
@@ -212,111 +255,48 @@ const TeamLeaderDashboard = () => {
           )}
           {activeTab === 'my-stats' && (
             <div className="d-flex flex-column gap-3 animate-fade-in">
-              <div className="px-1">
+              <div className="px-1 mb-2">
                 <h5 className="fw-black text-main mb-1 text-uppercase tracking-widest small">Personal Command Center</h5>
                 <p className="text-muted small fw-bold opacity-50 mb-0" style={{ fontSize: '9px' }}>VIEWING INDIVIDUAL OPERATIONAL PERFORMANCE</p>
               </div>
 
-              {/* Personal Command Selector (Dropdown) */}
-              <div className="d-flex align-items-center gap-3 mb-2 px-1">
-                <div className="position-relative">
-                   <select 
-                      className="form-select bg-surface border border-white border-opacity-10 text-main fw-black text-uppercase tracking-widest rounded-pill px-4 py-2 shadow-sm appearance-none"
-                      style={{ fontSize: '9px', minWidth: '220px', cursor: 'pointer', outline: 'none' }}
-                      value={myDashboardSubTab}
-                      onChange={(e) => setMyDashboardSubTab(e.target.value)}
-                   >
-                      <option value="dashboard">📊 PERSONAL OVERVIEW</option>
-                      <option value="leads">👥 MY INDIVIDUAL LEADS</option>
-                      <option value="tasks">📋 MY PENDING TASKS</option>
-                      <option value="attendance">📆 MY ATTENDANCE LOGS</option>
-                      <option value="revenue">💰 MY REVENUE TRANSACTION</option>
-                      <option value="calls">📞 MY TELEPHONY LOGS</option>
-                      <option value="reports">📈 MY PERFORMANCE TRENDS</option>
-                   </select>
-                   <div className="position-absolute end-0 top-50 translate-middle-y me-3 pointer-events-none opacity-50">
-                      <ChevronDown size={12} />
-                   </div>
-                </div>
-              </div>
-
               <ManagerProfile manager={manager} />
-              
+
               {myDashboardSubTab === 'dashboard' && (
                 <>
-                  {/* ROW 1: CRITICAL ACTIONS (4 CARDS) */}
+                  {/* ROW 1: CRITICAL ACTIONS (3 CARDS) */}
                   <div className="row g-3 mb-3">
-                    <div className="col-12 col-md-6 col-xl-3">
-                      {dashboardLoading ? <StatSkeleton /> : <StatCard 
-                        title="Today's Schedule" 
-                        value={stats?.todayFollowups || 0} 
-                        icon={<Clock size={18} />} 
-                        color="secondary" 
-                        onClick={() => setMyDashboardSubTab('tasks')} 
+                    <div className="col-12 col-md-6 col-xl-4">
+                      {dashboardLoading ? <StatSkeleton /> : <StatCard
+                        title="Task Overdue"
+                        value={stats?.pendingFollowups || 0}
+                        icon={<AlertCircle size={18} />}
+                        color="danger"
+                        onClick={() => setMyDashboardSubTab('tasks')}
                       />}
                     </div>
-                    <div className="col-12 col-md-6 col-xl-3">
-                      {dashboardLoading ? <StatSkeleton /> : <StatCard 
-                        title="Payment Overdue" 
-                        value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(stats?.pendingPaymentsAmount || 0)} 
-                        icon={<IndianRupee size={18} />} 
-                        color="danger" 
-                        unit="" 
-                        onClick={() => setMyDashboardSubTab('revenue')} 
+                    <div className="col-12 col-md-6 col-xl-4">
+                      {dashboardLoading ? <StatSkeleton /> : <StatCard
+                        title="Payment Overdue"
+                        value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(stats?.pendingPaymentsAmount || 0)}
+                        icon={<IndianRupee size={18} />}
+                        color="danger"
+                        unit=""
+                        onClick={() => setMyDashboardSubTab('revenue')}
                       />}
                     </div>
-                    <div className="col-12 col-md-6 col-xl-3">
-                      {dashboardLoading ? <StatSkeleton /> : <StatCard 
-                        title="Follow-up Overdue" 
-                        value={stats?.pendingFollowups || 0} 
-                        icon={<AlertCircle size={18} />} 
-                        color="warning" 
-                        onClick={() => setMyDashboardSubTab('leads')} 
-                      />}
-                    </div>
-                    <div className="col-12 col-md-6 col-xl-3">
-                      {dashboardLoading ? <StatSkeleton /> : <StatCard 
-                        title="30-Day Revenue Forecast" 
-                        value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(stats?.forecastRevenue || 0)} 
-                        icon={<TrendingUp size={18} />} 
-                        color="info" 
-                        unit="" 
-                        onClick={() => setMyDashboardSubTab('revenue')} 
+                    <div className="col-12 col-md-6 col-xl-4">
+                      {dashboardLoading ? <StatSkeleton /> : <StatCard
+                        title="Today Task"
+                        value={stats?.todayFollowups || 0}
+                        icon={<ClipboardList size={18} />}
+                        color="warning"
+                        onClick={() => setMyDashboardSubTab('tasks')}
                       />}
                     </div>
                   </div>
 
-                  {/* ROW 2: PERFORMANCE TOTALS (3 CARDS) */}
-                  <div className="row g-3 mb-4 justify-content-center">
-                    <div className="col-12 col-md-4 col-xl-4">
-                      {dashboardLoading ? <StatSkeleton /> : <StatCard 
-                        title="Total Leads" 
-                        value={stats?.total || 0} 
-                        icon={<Users size={18} />} 
-                        color="primary" 
-                        onClick={() => setMyDashboardSubTab('leads')} 
-                      />}
-                    </div>
-                    <div className="col-12 col-md-4 col-xl-4">
-                      {dashboardLoading ? <StatSkeleton /> : <StatCard 
-                        title="Total Converted" 
-                        value={stats?.convertedCount || 0} 
-                        icon={<CheckCircle size={18} />} 
-                        color="success" 
-                        onClick={() => setMyDashboardSubTab('leads')} 
-                      />}
-                    </div>
-                    <div className="col-12 col-md-4 col-xl-4">
-                      {dashboardLoading ? <StatSkeleton /> : <StatCard 
-                        title="Total Revenue" 
-                        value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(stats?.monthlyRevenue || 0)} 
-                        icon={<Zap size={18} />} 
-                        color="pink" 
-                        unit="" 
-                        onClick={() => setMyDashboardSubTab('reports')} 
-                      />}
-                    </div>
-                  </div>
+                  <div className="mb-4"></div>
 
                   {/* CONVERSION VELOCITY TREND (PERSONAL) */}
                   <div className="row g-4 mb-4">
@@ -342,16 +322,17 @@ const TeamLeaderDashboard = () => {
               {myDashboardSubTab === 'leads' && (
                 <div className="premium-card border-0 shadow-lg overflow-hidden animate-fade-in">
                   <div className="card-header bg-transparent p-4 border-bottom border-white border-opacity-5">
-                      <h6 className="fw-black mb-0 text-main text-uppercase tracking-widest small">My Personal Leads</h6>
-                      <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>INDIVIDUAL PIPELINE MANAGEMENT</p>
+                    <h6 className="fw-black mb-0 text-main text-uppercase tracking-widest small">My Personal Leads</h6>
+                    <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>INDIVIDUAL PIPELINE MANAGEMENT</p>
                   </div>
-                  <LeadList 
+                  <LeadList
                     leads={leads.filter(l => l.assignedToId === user.id)}
                     role={user.role}
+                    teamLeaders={[user, ...associates.filter(a => a.id !== user?.id)].filter(Boolean)}
                     onUpdateStatus={handleUpdateStatus}
                     onRecordCallOutcome={handleRecordCallOutcome}
                     onSendPaymentLink={handleSendPaymentLink}
-                    onViewInvoice={() => {}} 
+                    onViewInvoice={() => { }}
                     onUpdateLead={handleUpdateLead}
                     onEdit={(lead) => {
                       setEditingLead(lead);
@@ -363,7 +344,7 @@ const TeamLeaderDashboard = () => {
 
               {myDashboardSubTab === 'tasks' && (
                 <div className="animate-fade-in">
-                  <TaskBoard 
+                  <TaskBoard
                     leads={leads.filter(l => l.assignedToId === user.id)}
                     theme={theme}
                     onUpdateStatus={handleUpdateStatus}
@@ -371,73 +352,54 @@ const TeamLeaderDashboard = () => {
                     fetchLeads={fetchData}
                     userId={user.id}
                     hideFilters={true}
+                    startDate={filters.from}
+                    endDate={filters.to}
                   />
                 </div>
               )}
 
               {myDashboardSubTab === 'attendance' && (
                 <div className="animate-fade-in">
-                  <AttendanceDashboard 
-                    role="TEAM_LEADER" 
-                    userId={user.id} 
+                  <AttendanceDashboard
+                    role="TEAM_LEADER"
+                    userId={user.id}
                     startDate={filters.from}
                     endDate={filters.to}
-                    hideFilters={true} 
+                    hideFilters={true}
                   />
                 </div>
               )}
 
               {myDashboardSubTab === 'revenue' && (
                 <div className="animate-fade-in">
-                   <PaymentHistory role="TEAM_LEADER" userId={user.id} from={filters.from} to={filters.to} hideHeader={true} />
+                  <PaymentHistory role="TEAM_LEADER" userId={user.id} from={filters.from} to={filters.to} hideHeader={true} />
                 </div>
               )}
 
               {myDashboardSubTab === 'calls' && (
                 <div className="animate-fade-in">
-                   <CallLogDashboard userId={user.id} hideHeader={true} filters={filters} onChange={setFilters} />
+                  <CallLogDashboard userId={user.id} hideHeader={true} filters={filters} onChange={setFilters} />
                 </div>
               )}
 
               {myDashboardSubTab === 'reports' && (
                 <div className="animate-fade-in d-flex flex-column gap-4">
-                    <div className="premium-card overflow-hidden shadow-lg border-0 h-100">
-                      <div className="card-header bg-transparent p-4 border-0 border-bottom border-white border-opacity-5">
-                          <h6 className="fw-black mb-0 text-main text-uppercase tracking-widest small">My Performance Analytics</h6>
-                          <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>INDIVIDUAL CONVERSION TRENDS</p>
-                      </div>
-                      <div className="card-body p-4" style={{ height: '400px' }}>
-                          <React.Suspense fallback={<ChartSkeleton />}>
-                            <RevenueTrendChart data={trendData} theme={theme} />
-                          </React.Suspense>
-                      </div>
+                  <div className="premium-card overflow-hidden shadow-lg border-0 h-100">
+                    <div className="card-header bg-transparent p-4 border-0 border-bottom border-white border-opacity-5">
+                      <h6 className="fw-black mb-0 text-main text-uppercase tracking-widest small">My Performance Analytics</h6>
+                      <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>INDIVIDUAL CONVERSION TRENDS</p>
                     </div>
+                    <div className="card-body p-4" style={{ height: '400px' }}>
+                      <React.Suspense fallback={<ChartSkeleton />}>
+                        <RevenueTrendChart data={trendData} theme={theme} />
+                      </React.Suspense>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
           )}
           {/* Operational Scope Filters handled globally */}
-
-          {filters.userId && (
-            <div className="d-flex align-items-center justify-content-between p-3 bg-primary bg-opacity-10 border border-primary border-opacity-20 rounded-4 animate-slide-in mb-1 shadow-glow">
-              <div className="d-flex align-items-center gap-3">
-                <div className="p-3 bg-primary bg-opacity-20 rounded-circle text-primary border border-primary border-opacity-30">
-                  <TrendingUp size={24} />
-                </div>
-                <div>
-                  <h4 className="fw-black mb-0 text-main text-uppercase tracking-widest">Squad Drill-Down</h4>
-                  <p className="text-muted small mb-0 fw-bold opacity-75">Viewing operational metrics for {associates.find(a => a.id === filters.userId)?.name || 'selected node'}</p>
-                </div>
-              </div>
-              <button
-                className="ui-btn ui-btn-outline btn-sm px-4 rounded-pill border-primary border-opacity-30 fw-black text-uppercase tracking-wider shadow-none"
-                onClick={() => setFilters({ ...filters, userId: null })}
-                style={{ fontSize: '11px' }}
-              >
-                ← RESET VIEW
-              </button>
-            </div>
-          )}
 
           {activeTab === 'overview' && (
             <div className="d-flex flex-column gap-4">
@@ -447,9 +409,11 @@ const TeamLeaderDashboard = () => {
                   role="TEAM_LEADER"
                   filters={filters}
                   theme={theme}
-                  onNavigate={(tab) => setActiveTab(tab === 'revenue' ? 'payments' : tab)}
+                  onNavigate={handleTabChange}
+                  leads={leads}
                 />
               </div>
+
 
               <div className="row g-4 animate-fade-in">
                 <div className="col-12 col-xl-8">
@@ -479,7 +443,7 @@ const TeamLeaderDashboard = () => {
                         <small className="text-muted fw-bold opacity-50" style={{ fontSize: '8px' }}>STATUS SEGMENTATION</small>
                       </div>
                       <div className="p-2 bg-success bg-opacity-10 text-success rounded-circle">
-                         <TrendingUp size={16} />
+                        <TrendingUp size={16} />
                       </div>
                     </div>
                     <div className="card-body p-0" style={{ height: '350px' }}>
@@ -491,158 +455,114 @@ const TeamLeaderDashboard = () => {
                 </div>
               </div>
 
-              <div className="row g-4 animate-fade-in">
-                <div className="col-12 col-md-3">
-                  <StatCard title="Interested" value={stats?.interestedCount || 0} sub="Hot Opportunities" icon={<Zap />} color="warning" />
-                </div>
-                <div className="col-12 col-md-3">
-                  <StatCard title="Total Lead Lost" value={stats?.totalLostCount || 0} sub="Historical Attrition" icon={<Phone />} color="danger" />
-                </div>
-                <div className="col-12 col-md-3">
-                  <StatCard title="Team Nodes" value={stats?.totalUsers || 0} sub="Active Squad Size" icon={<Users />} color="info" />
-                </div>
-                <div className="col-12 col-md-3">
-                  <StatCard title="Revenue (C)" value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(stats?.totalRevenue || 0)} sub="₹ Confirmed Capital" icon={<IndianRupee />} color="success" unit="" />
-                </div>
-              </div>
+              <div className="mb-4"></div>
 
-              <div className="row g-3">
-                <div className="col-12">
-                  <Card title="Team Efficiency Matrix" subtitle="Associate Pipeline & Sync Status">
-                    <div className="card-body p-0">
-                      <Table
-                        headers={[
-                          'S.NO',
-                          'Staff Member',
-                          'Identity Role',
-                          <div className="text-center">Active Load</div>,
-                          <div className="text-center">Success</div>,
-                          <div className="text-center">Risk</div>,
-                          <div className="text-end">Sync Rate</div>
-                        ]}
-                        data={performance || []}
-                        renderRow={(p, index) => (
-                          <>
-                            <td className="ps-4 text-muted fw-bold small" style={{ fontSize: '10px' }}>
-                              {index + 1}
-                            </td>
-                            <td
-                              onClick={() => {
-                                setFilters({ ...filters, userId: p.userId });
-                                toast.info(`Aggregating data for associate: ${p.username}`);
-                              }}
-                              className="ps-4 cursor-pointer hover-scale transition-all"
-                            >
-                              <div className="d-flex align-items-center gap-3">
-                                <div className="bg-primary bg-opacity-10 text-primary rounded-circle p-2 fw-black small border border-primary border-opacity-10 hover-shadow shadow-glow" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  {p.username.charAt(0).toUpperCase()}
-                                </div>
-                                <div className="d-flex flex-column">
-                                  <span className="fw-bold text-main small">{p.username}</span>
-                                  <span className="text-muted small opacity-50" style={{ fontSize: '9px' }}>VIEW MEMBER PROFILE</span>
-                                </div>
-                              </div>
-                            </td>
-                            <td><span className="ui-badge bg-surface text-muted small border-white border-opacity-10">{p.role || 'ASSOCIATE'}</span></td>
-                            <td className="text-center fw-bold">{p.totalLeads}</td>
-                            <td className="text-center text-success fw-bold">{p.convertedLeads}</td>
-                            <td className="text-center text-danger fw-bold">{p.lostLeads}</td>
-                            <td className="pe-4 text-end text-primary fw-black">
-                              {p.totalLeads > 0 ? ((p.convertedLeads / p.totalLeads) * 100).toFixed(1) : 0}%
-                            </td>
-                          </>
-                        )}
-                      />
-                    </div>
-                  </Card>
-                </div>
-              </div>
+
             </div>
           )}
 
           {activeTab === 'pipeline' && (
             <div className="animate-fade-in d-flex flex-column gap-3">
               {(() => {
-                const dateScopedLeads = (leads || []).filter(l => 
-                  new Date(l.createdAt) >= new Date(filters.from) && 
-                  new Date(l.createdAt) <= new Date(filters.to + 'T23:59:59')
-                );
+                const dateScopedLeads = (leads || []).filter(l => {
+                  const matchesDate = new Date(l.createdAt) >= new Date(filters.from) &&
+                                     new Date(l.createdAt) <= new Date(filters.to + 'T23:59:59');
+                  const matchesSearch = !searchTerm || 
+                    l.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    l.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    l.mobile?.includes(searchTerm);
+                  return matchesDate && matchesSearch;
+                });
                 return (
                   <>
-                  <div className="row g-3">
-                <div className="col-12 col-md-3">
-                  <StatCard
-                    title="Converted"
-                    value={dateScopedLeads.filter(l => ['PAID', 'CONVERTED', 'SUCCESS', 'EMI'].includes(l.status)).length}
-                    sub="Successful Transmissions"
-                    icon={<CheckCircle size={18} />}
-                    color="success"
-                  />
-                </div>
-                <div className="col-12 col-md-3">
-                  <StatCard
-                    title="Interested"
-                    value={dateScopedLeads.filter(l => l.status === 'INTERESTED' || l.status === 'UNDER_REVIEW').length}
-                    sub="Hot Opportunities"
-                    icon={<Zap size={18} />}
-                    color="warning"
-                  />
-                </div>
-                <div className="col-12 col-md-3">
-                  <StatCard
-                    title="Follow-up"
-                    value={dateScopedLeads.filter(l => l.status === 'FOLLOW_UP').length}
-                    sub="Active Operational Nodes"
-                    icon={<Clock size={18} />}
-                    color="info"
-                  />
-                </div>
-                <div className="col-12 col-md-3">
-                  <StatCard
-                    title="Lost"
-                    value={dateScopedLeads.filter(l => ['LOST', 'NOT_INTERESTED', 'PAYMENT_FAILED'].includes(l.status)).length}
-                    sub="Off-Pitch Terminations"
-                    icon={<AlertCircle size={18} />}
-                    color="danger"
-                  />
-                </div>
-              </div>
+                    <div className="row g-3">
+                      <div className="col-12 col-md-3">
+                        <StatCard
+                          title="Converted"
+                          value={dateScopedLeads.filter(l => ['PAID', 'CONVERTED', 'SUCCESS', 'EMI'].includes(l.status)).length}
+                          sub="Successful Transmissions"
+                          icon={<CheckCircle size={18} />}
+                          color="success"
+                        />
+                      </div>
+                      <div className="col-12 col-md-3">
+                        <StatCard
+                          title="Interested"
+                          value={dateScopedLeads.filter(l => l.status === 'INTERESTED' || l.status === 'UNDER_REVIEW').length}
+                          sub="Hot Opportunities"
+                          icon={<Zap size={18} />}
+                          color="warning"
+                        />
+                      </div>
+                      <div className="col-12 col-md-3">
+                        <StatCard
+                          title="Follow-up"
+                          value={dateScopedLeads.filter(l => l.status === 'FOLLOW_UP').length}
+                          sub="Active Operational Nodes"
+                          icon={<Clock size={18} />}
+                          color="info"
+                        />
+                      </div>
+                      <div className="col-12 col-md-3">
+                        <StatCard
+                          title="Lost"
+                          value={dateScopedLeads.filter(l => ['LOST', 'NOT_INTERESTED', 'PAYMENT_FAILED'].includes(l.status)).length}
+                          sub="Off-Pitch Terminations"
+                          icon={<AlertCircle size={18} />}
+                          color="danger"
+                        />
+                      </div>
+                    </div>
 
-              <div className="premium-card overflow-hidden shadow-lg border-0 mb-0">
-                <div className="card-header bg-transparent p-4 border-0 border-bottom border-white border-opacity-5 d-flex justify-content-between align-items-center">
-                  <div>
-                    <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest small">Lead Pipeline Terminal</h5>
-                    <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>STRATEGIC DATA MANAGEMENT & ASSIGNMENT</p>
-                  </div>
-                  <button
-                    className="ui-btn ui-btn-primary px-4 py-2 rounded-pill shadow-glow animate-fade-in"
-                    onClick={() => setActiveTab('ingestion')}
-                  >
-                    <UserPlus size={16} className="me-2" />
-                    Add Lead
-                  </button>
-                </div>
-                <div className="card-body p-0">
-                  <LeadList
-                    leads={dateScopedLeads}
-                    onUpdateStatus={handleUpdateStatus}
-                    onUpdateLead={handleUpdateLead}
-                    onEdit={(lead) => {
-                       setEditingLead(lead);
-                       setActiveTab('edit-lead');
-                    }}
-                    onSendPaymentLink={handleSendPaymentLink}
-                    onAssignLead={handleAssignLead}
-                    onRecordCallOutcome={handleRecordCallOutcome}
-                    associates={associates}
-                    role="TEAM_LEADER"
-                    currentUser={user}
-                    fetchLeads={fetchData}
-                  />
-                </div>
-              </div>
-              </>
-              )
+                    <div className="premium-card overflow-hidden shadow-lg border-0 mb-0">
+                      <div className="card-header bg-transparent p-4 border-0 border-bottom border-white border-opacity-5 d-flex justify-content-between align-items-center">
+                        <div>
+                          <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest small">Lead Pipeline Terminal</h5>
+                          <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>STRATEGIC DATA MANAGEMENT & ASSIGNMENT</p>
+                        </div>
+                        <div className="d-flex align-items-center gap-3 flex-grow-1 justify-content-center px-4">
+                          <div className="position-relative w-100" style={{ maxWidth: '400px' }}>
+                            <div className="position-absolute top-50 start-0 translate-middle-y ps-3 text-muted opacity-50">
+                              <Search size={14} />
+                            </div>
+                            <input
+                              placeholder="Search leads..."
+                              value={searchTerm}
+                              onChange={(e) => setSearchTerm(e.target.value)}
+                              className="form-control bg-surface bg-opacity-50 border border-white border-opacity-10 text-main py-2 ps-5 shadow-none rounded-pill focus:border-primary transition-all"
+                              style={{ fontSize: '12px' }}
+                            />
+                          </div>
+                        </div>
+                        <button
+                          className="ui-btn ui-btn-primary px-4 py-2 rounded-pill shadow-glow animate-fade-in"
+                          onClick={() => setIsIngestionModalOpen(true)}
+                        >
+                          <UserPlus size={16} className="me-2" />
+                          Add Lead
+                        </button>
+                      </div>
+                      <div className="card-body p-0">
+                        <LeadList
+                          leads={dateScopedLeads}
+                          onUpdateStatus={handleUpdateStatus}
+                          onUpdateLead={handleUpdateLead}
+                          onEdit={(lead) => {
+                            setEditingLead(lead);
+                            setActiveTab('edit-lead');
+                          }}
+                          onSendPaymentLink={handleSendPaymentLink}
+                          onAssignLead={handleAssignLead}
+                          onRecordCallOutcome={handleRecordCallOutcome}
+                          teamLeaders={[user, ...associates.filter(a => a.id !== user?.id)].filter(Boolean)}
+                          role="TEAM_LEADER"
+                          currentUser={user}
+                          fetchLeads={fetchData}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )
 
               })()}
             </div>
@@ -650,8 +570,8 @@ const TeamLeaderDashboard = () => {
 
           {activeTab === 'tasks' && (
             <TaskBoard
-              leads={(leads || []).filter(l => 
-                new Date(l.createdAt) >= new Date(filters.from) && 
+              leads={(leads || []).filter(l =>
+                new Date(l.createdAt) >= new Date(filters.from) &&
                 new Date(l.createdAt) <= new Date(filters.to + 'T23:59:59')
               )}
               theme={theme}
@@ -660,62 +580,16 @@ const TeamLeaderDashboard = () => {
               fetchLeads={fetchData}
               userId={filters.userId}
               hideFilters={true}
+              startDate={filters.from}
+              endDate={filters.to}
+              initialFilter={taskFilter}
+              refreshTrigger={refreshTrigger}
             />
           )}
 
           {activeTab === 'reports' && (
             <div className="d-flex flex-column gap-4">
-              {/* Squad Efficiency Snapshot */}
-              {(() => {
-                const squadStats = (performance || []).reduce((acc, p) => ({
-                  leads: acc.leads + (p.totalLeads || 0),
-                  converted: acc.converted + (p.convertedLeads || 0),
-                  lost: acc.lost + (p.lostLeads || 0),
-                  revenue: acc.revenue + (p.revenue || 0)
-                }), { leads: 0, converted: 0, lost: 0, revenue: 0 });
 
-                const squadConversion = squadStats.leads > 0
-                  ? ((squadStats.converted / squadStats.leads) * 100).toFixed(1)
-                  : "0.0";
-
-                return (
-                  <div className="row g-3 animate-fade-in">
-                    <div className="col-12 col-md-3">
-                      <div className="premium-card p-4 border border-white border-opacity-5 relative overflow-hidden h-100 shadow-glow">
-                        <div className="position-absolute top-0 end-0 p-3 opacity-10">
-                          <BarChart2 size={40} className="text-primary" />
-                        </div>
-                        <p className="text-muted small fw-bold text-uppercase tracking-widest mb-1" style={{ fontSize: '10px' }}>Squad Conversion</p>
-                        <h3 className="fw-black mb-0 text-main">{squadConversion}%</h3>
-                        <div className="progress mt-2 bg-secondary bg-opacity-10" style={{ height: '3px' }}>
-                          <div className="progress-bar bg-primary shadow-glow" style={{ width: `${squadConversion}%` }}></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-12 col-md-3">
-                      <div className="premium-card p-4 border border-white border-opacity-5 relative overflow-hidden h-100">
-                        <p className="text-muted small fw-bold text-uppercase tracking-widest mb-1" style={{ fontSize: '10px' }}>Active Pipeline</p>
-                        <h3 className="fw-black mb-0 text-main">{squadStats.leads}</h3>
-                        <small className="text-muted fw-bold opacity-50" style={{ fontSize: '9px' }}>TOTAL RANGE LEADS</small>
-                      </div>
-                    </div>
-                    <div className="col-12 col-md-3">
-                      <div className="premium-card p-4 border border-white border-opacity-5 relative overflow-hidden h-100">
-                        <p className="text-muted small fw-bold text-uppercase tracking-widest mb-1" style={{ fontSize: '10px' }}>Success Nodes</p>
-                        <h3 className="fw-black mb-0 text-success">{squadStats.converted}</h3>
-                        <small className="text-muted fw-bold opacity-50" style={{ fontSize: '9px' }}>COMPLETED TARGETS</small>
-                      </div>
-                    </div>
-                    <div className="col-12 col-md-3">
-                      <div className="premium-card p-4 border border-white border-opacity-5 relative overflow-hidden h-100">
-                        <p className="text-muted small fw-bold text-uppercase tracking-widest mb-1" style={{ fontSize: '10px' }}>Lost Assets</p>
-                        <h3 className="fw-black mb-0 text-danger">{squadStats.lost}</h3>
-                        <small className="text-muted fw-bold opacity-50" style={{ fontSize: '9px' }}>OFF-PITCH TERMINATIONS</small>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
 
               <Card title="Associate Performance Snapshot" subtitle="Current Operational Node Status">
                 <Table
@@ -744,10 +618,10 @@ const TeamLeaderDashboard = () => {
                       </td>
                       <td><span className="ui-badge bg-surface text-muted small" style={{ fontSize: '9px' }}>{p.role || 'ASSOCIATE'}</span></td>
                       <td className="text-center fw-bold">{p.totalLeads}</td>
-                      <td className="text-center text-success fw-bold">{p.convertedLeads}</td>
-                      <td className="text-center text-danger fw-bold">{p.lostLeads}</td>
+                      <td className="text-center text-success fw-bold">{p.convertedCount || 0}</td>
+                      <td className="text-center text-danger fw-bold">{p.lostCount || 0}</td>
                       <td className="pe-4 text-end text-primary fw-black">
-                        {p.totalLeads > 0 ? ((p.convertedLeads / p.totalLeads) * 100).toFixed(1) : 0}%
+                        {p.totalLeads > 0 ? (((p.convertedCount || 0) / p.totalLeads) * 100).toFixed(1) : 0}%
                       </td>
                     </>
                   )}
@@ -758,10 +632,10 @@ const TeamLeaderDashboard = () => {
 
           {activeTab === 'payments' && (
             <div className="d-flex flex-column gap-4">
-              <PaymentHistory 
-                role="TEAM_LEADER" 
-                from={filters.from} 
-                to={filters.to} 
+              <PaymentHistory
+                role="TEAM_LEADER"
+                from={filters.from}
+                to={filters.to}
                 userId={filters.userId}
                 hideFilters={true}
               />
@@ -769,8 +643,8 @@ const TeamLeaderDashboard = () => {
           )}
 
           {activeTab === 'attendance' && (
-            <AttendanceDashboard 
-              role="TEAM_LEADER" 
+            <AttendanceDashboard
+              role="TEAM_LEADER"
               userId={filters.userId}
               startDate={filters.from}
               endDate={filters.to}
@@ -780,7 +654,7 @@ const TeamLeaderDashboard = () => {
 
           {activeTab === 'call-logs' && (
             <div className="d-flex flex-column gap-4">
-              <CallLogDashboard 
+              <CallLogDashboard
                 filters={filters}
                 onChange={setFilters}
                 hideHeader={true}
@@ -788,18 +662,6 @@ const TeamLeaderDashboard = () => {
             </div>
           )}
 
-          {activeTab === 'ingestion' && (
-            <div className="animate-fade-in">
-              <LeadIngestionModal
-                isOpen={true}
-                isInline={true}
-                onAddLead={handleAddLead}
-                onSuccess={fetchData}
-                associates={associates.concat(user)}
-                onClose={() => setActiveTab('pipeline')}
-              />
-            </div>
-          )}
           {activeTab === 'tickets' && (
             <div className="animate-fade-in">
               <TicketManager role="TEAM_LEADER" />
@@ -807,7 +669,7 @@ const TeamLeaderDashboard = () => {
           )}
 
           {activeTab === 'edit-lead' && (
-            <LeadEditPage 
+            <LeadEditPage
               lead={editingLead}
               users={associates.concat(user)}
               role={user?.role}
@@ -827,7 +689,7 @@ const TeamLeaderDashboard = () => {
           )}
         </div>
 
-        <LeadIngestionModal
+        <LeadModal
           isOpen={isIngestionModalOpen}
           onClose={() => setIsIngestionModalOpen(false)}
           onAddLead={handleAddLead}

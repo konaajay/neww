@@ -10,7 +10,7 @@ import RecordPaymentModal from './RecordPaymentModal';
 import ManualPaymentModal from './ManualPaymentModal';
 import InvoiceModal from '../pages/dashboard/components/InvoiceModal';
 
-const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: externalTo, hideHeader = false, hideFilters = false }) => {
+const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: externalTo, hideHeader = false, hideFilters = false, refreshTrigger }) => {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [teamLeaders, setTeamLeaders] = useState([]);
@@ -43,15 +43,8 @@ const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: 
   const [dueFrom, setDueFrom] = useState('');
   const [dueTo, setDueTo] = useState('');
 
-  const handleViewInvoice = async (payment) => {
-    try {
-      toast.info('Retrieving official receipt...');
-      const res = await paymentService.fetchInvoiceByLead(payment.leadId);
-      setSelectedInvoiceData(res.data);
-      setIsInvoiceModalOpen(true);
-    } catch (err) {
-      toast.error('Failed to retrieve invoice. Ensure payment is confirmed.');
-    }
+  const handleViewInvoice = (payment) => {
+    window.open(`/invoice/${payment.leadId}`, '_blank');
   };
 
   const fetchTeamLeaders = async () => {
@@ -134,7 +127,7 @@ const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: 
   useEffect(() => {
     fetchHistory();
     fetchTeamLeaders();
-  }, [role, filters.startDate, filters.endDate, filters.tlId, filters.associateId, filters.status, externalUserId]);
+  }, [role, filters.startDate, filters.endDate, filters.tlId, filters.associateId, filters.status, externalUserId, refreshTrigger]);
 
   useEffect(() => {
     if (filters.tlId) {
@@ -174,8 +167,62 @@ const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: 
     return true;
   });
 
+  const paymentStats = {
+    totalRevenue: filteredPayments
+      .filter(p => p.status === 'PAID' || p.status === 'SUCCESS' || p.status === 'APPROVED')
+      .reduce((sum, p) => sum + p.amount, 0),
+    pendingRevenue: filteredPayments
+      .filter(p => p.status === 'PENDING' || p.status === 'FAILED')
+      .reduce((sum, p) => sum + p.amount, 0),
+    totalInvoiced: filteredPayments.reduce((sum, p) => sum + p.amount, 0),
+    overdueCount: filteredPayments.filter(p => {
+        const isOverdue = p.status === 'FAILED' || p.status === 'OVERDUE';
+        const isPending = p.status === 'PENDING' || p.status === 'INITIATED' || p.status === 'PARTIAL';
+        const now = new Date();
+        const targetDate = new Date(p.dueDate || p.createdAt);
+        return isOverdue || (isPending && targetDate < now);
+    }).length
+  };
+
   return (
     <div className="animate-fade-in mt-2">
+      {/* Financial Analytics Workspace */}
+      <div className="row g-3 mb-4 animate-fade-in">
+        <div className="col-12 col-md-4">
+          <div className="premium-card p-4 border-0 shadow-lg h-100 d-flex align-items-center gap-4 group hover-active-card overflow-hidden">
+             <div className="p-3 bg-success bg-opacity-10 rounded-4 text-success border border-success border-opacity-20 shadow-glow-sm">
+                <CheckCircle size={22} />
+             </div>
+             <div>
+                <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Collected</div>
+                <h3 className="fw-black text-main mb-0">₹{paymentStats.totalRevenue.toLocaleString()}</h3>
+             </div>
+          </div>
+        </div>
+        <div className="col-12 col-md-4">
+          <div className="premium-card p-4 border-0 shadow-lg h-100 d-flex align-items-center gap-4 group hover-active-card overflow-hidden">
+             <div className="p-3 bg-warning bg-opacity-10 rounded-4 text-warning border border-warning border-opacity-20 shadow-glow-sm">
+                <Clock size={22} />
+             </div>
+             <div>
+                <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Pending</div>
+                <h3 className="fw-black text-main mb-0">₹{paymentStats.pendingRevenue.toLocaleString()}</h3>
+             </div>
+          </div>
+        </div>
+        <div className="col-12 col-md-4">
+          <div className="premium-card p-4 border-0 shadow-lg h-100 d-flex align-items-center gap-4 group hover-active-card overflow-hidden">
+             <div className="p-3 bg-danger bg-opacity-10 rounded-4 text-danger border border-danger border-opacity-20 shadow-glow-sm">
+                <AlertCircle size={22} />
+             </div>
+             <div>
+                <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Overdue</div>
+                <h3 className="fw-black text-main mb-0">{paymentStats.overdueCount}</h3>
+             </div>
+          </div>
+        </div>
+      </div>
+
       <div className="mt-1"></div>
 
       <div className="premium-card overflow-hidden shadow-lg border-0 bg-surface bg-opacity-20">
@@ -294,8 +341,8 @@ const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: 
             <tbody>
               {filteredPayments.map((payment, index) => {
                 const emiId = payment.paymentGatewayId || `E-${(index + 1).toString().padStart(2, '0')}`;
-                const isOverdue = payment.status === 'FAILED';
-                const isPending = payment.status === 'PENDING';
+                const isOverdue = payment.status === 'FAILED' || payment.status === 'OVERDUE';
+                const isPending = payment.status === 'PENDING' || payment.status === 'INITIATED' || payment.status === 'PARTIAL';
                 const isPaid = payment.status === 'PAID' || payment.status === 'SUCCESS' || payment.status === 'APPROVED';
                 
                 const now = new Date();
@@ -307,7 +354,7 @@ const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: 
                   : new Date(payment.createdAt).toLocaleDateString('en-CA');
 
                 return (
-                  <tr key={payment.id} className="border-bottom border-white border-opacity-5 transition-all">
+                  <tr key={payment.id || `pay-${index}`} className="border-bottom border-white border-opacity-5 transition-all">
                     <td className="ps-4 py-4">
                       <span className="fw-bold text-main small">{emiId}</span>
                     </td>
