@@ -74,13 +74,7 @@ const ManagerDashboard = () => {
   const [manager, setManager] = useState(null);
   const [overviewDataType, setOverviewDataType] = useState('Leads');
 
-  const overviewModes = [
-    { id: 'Leads', label: 'Leads' },
-    { id: 'Calls', label: 'Calls' },
-    { id: 'Payments', label: 'Payments' },
-    { id: 'Follow Ups', label: 'Follow Ups' },
-    { id: 'Raised Tickets', label: 'Raised Tickets' }
-  ];
+  // Removed overviewModes per user request
 
 
   // Invoice state
@@ -449,7 +443,6 @@ const ManagerDashboard = () => {
             role="MANAGER"
             currentUserId={user?.id}
             hideUserFilter={activeTab === 'my-stats'}
-            modes={activeTab === 'overview' ? overviewModes : []}
             activeMode={overviewDataType}
             onModeChange={setOverviewDataType}
           />
@@ -674,8 +667,7 @@ const ManagerDashboard = () => {
               <div className="animate-fade-in">
                 <PaymentHistory
                   role="MANAGER"
-                  userId={filters.userId}
-                  teamId={filters.teamId}
+                  userId={filters.userId || filters.teamId}
                   from={filters.from}
                   to={filters.to}
                   hideHeader={true}
@@ -893,11 +885,11 @@ const ManagerDashboard = () => {
 
             {activeTab === 'payments' && (
               <div className="d-flex flex-column gap-3 animate-fade-in">
-                <PaymentHistory
+                 <PaymentHistory
                   role="MANAGER"
-                  userId={filters.userId}
                   from={filters.from}
                   to={filters.to}
+                  userId={filters.userId || filters.teamId}
                   hideHeader={true}
                   hideFilters={true}
                   refreshTrigger={refreshTrigger}

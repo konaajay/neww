@@ -11,11 +11,13 @@ import {
   XCircle,
   AlertCircle,
   ExternalLink,
-  X
+  X,
+  Edit
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import attendanceService from '../../services/attendanceService';
 import { useAuth } from '../../context/AuthContext';
+import AttendanceManualEntry from '../../pages/dashboard/components/AttendanceManualEntry';
 
 const AttendanceDashboard = ({ role, userId: externalUserId, teamId: externalTeamId, teamTree, startDate: externalStartDate, endDate: externalEndDate, refreshTrigger, hideFilters = false }) => {
   const { user } = useAuth();
@@ -33,6 +35,10 @@ const AttendanceDashboard = ({ role, userId: externalUserId, teamId: externalTea
   const [selectedUser, setSelectedUser] = useState(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [stats, setStats] = useState({ present: 0, absent: 0, late: 0 });
+  
+  // Manual Entry State
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [manualEntryTarget, setManualEntryTarget] = useState(null);
 
   // Sync with external props
   useEffect(() => {
@@ -196,9 +202,9 @@ const AttendanceDashboard = ({ role, userId: externalUserId, teamId: externalTea
     return `${h}h ${m}m`;
   };
 
-  const presentCount = logs.filter(l => (l.totalWorkMinutes || 0) >= 480).length;
-  const halfDayCount = logs.filter(l => (l.totalWorkMinutes || 0) >= 240 && (l.totalWorkMinutes || 0) < 480).length;
-  const absentCount = logs.length - presentCount - halfDayCount;
+  const presentCount = logs.filter(l => l.status === 'PRESENT').length;
+  const lateCount = logs.filter(l => l.status === 'LATE').length;
+  const absentCount = logs.filter(l => l.status === 'ABSENT').length;
 
   return (
     <div className={`container-fluid animate-fade-in ${externalUserId || externalStartDate ? 'p-0' : 'p-4'}`}>
@@ -243,11 +249,11 @@ const AttendanceDashboard = ({ role, userId: externalUserId, teamId: externalTea
           <div className="col-12 col-sm-6 col-lg-3">
             <div className="premium-card p-4 border-0 shadow-lg h-100 d-flex align-items-center gap-4 group hover-active-card overflow-hidden">
                <div className="p-3 bg-warning bg-opacity-10 rounded-4 text-warning border border-warning border-opacity-20 shadow-glow-sm">
-                  <Coffee size={22} />
+                  <Clock size={22} />
                </div>
                <div>
-                  <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Total Half Day</div>
-                  <h3 className="fw-black text-main mb-0">{halfDayCount}</h3>
+                  <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Total Late</div>
+                  <h3 className="fw-black text-main mb-0">{lateCount}</h3>
                </div>
             </div>
           </div>
@@ -314,7 +320,7 @@ const AttendanceDashboard = ({ role, userId: externalUserId, teamId: externalTea
               <div className="col-md-4 text-end">
                 <div className="d-flex align-items-center justify-content-end gap-3 text-muted small fw-bold opacity-50 mb-1">
                   <div className="d-flex align-items-center gap-1"><div className="bg-success rounded-circle" style={{ width: 8, height: 8 }}></div> PRESENT</div>
-                  <div className="d-flex align-items-center gap-1"><div className="bg-warning rounded-circle" style={{ width: 8, height: 8 }}></div> HALF DAY</div>
+                  <div className="d-flex align-items-center gap-1"><div className="bg-warning rounded-circle" style={{ width: 8, height: 8 }}></div> LATE</div>
                   <div className="d-flex align-items-center gap-1"><div className="bg-danger rounded-circle" style={{ width: 8, height: 8 }}></div> ABSENT</div>
                 </div>
               </div>
@@ -383,10 +389,10 @@ const AttendanceDashboard = ({ role, userId: externalUserId, teamId: externalTea
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className={`ui-badge ${log.status === 'PRESENT' ? 'bg-success bg-opacity-10 text-success border border-success border-opacity-20' :
-                        log.status === 'HALF_DAY' ? 'bg-warning bg-opacity-10 text-warning border border-warning border-opacity-20' :
+                        log.status === 'LATE' ? 'bg-warning bg-opacity-10 text-warning border border-warning border-opacity-20' :
                           'bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20'
                         }`} style={{ fontSize: '9px' }}>
-                        {log.status === 'PRESENT' ? 'PRESENT' : log.status === 'HALF_DAY' ? 'HALF DAY' : 'ABSENT'}
+                        {log.status === 'PRESENT' ? 'PRESENT' : log.status === 'LATE' ? 'LATE' : 'ABSENT'}
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -408,24 +414,42 @@ const AttendanceDashboard = ({ role, userId: externalUserId, teamId: externalTea
                     </td>
                     {(role === 'ADMIN' || role === 'MANAGER') && (
                       <td className="px-4 py-3 text-end">
-                        <button
-                          className="btn btn-link text-danger p-0 border-0 opacity-50 hover-opacity-100 transition-all"
-                          title="Force Punch Out (Close Session)"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (window.confirm(`Force close current attendance session for ${log.userName || log.userId}?`)) {
-                              try {
-                                await attendanceService.forceClockOut(log.userId);
-                                toast.success('Session closed successfully');
-                                fetchLogs();
-                              } catch (err) {
-                                toast.error('Failed to close session - user may already be offline');
+                        <div className="d-flex justify-content-end gap-2">
+                          <button
+                            className="btn btn-link text-primary p-0 border-0 opacity-50 hover-opacity-100 transition-all"
+                            title="Manual Correction"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setManualEntryTarget({
+                                userId: log.userId || log.user?.id,
+                                userName: log.userName || log.user?.name,
+                                date: log.displayDate || log.date,
+                                ...log
+                              });
+                              setShowManualModal(true);
+                            }}
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            className="btn btn-link text-danger p-0 border-0 opacity-50 hover-opacity-100 transition-all"
+                            title="Force Punch Out (Close Session)"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`Force close current attendance session for ${log.userName || log.userId}?`)) {
+                                try {
+                                  await attendanceService.forceClockOut(log.userId);
+                                  toast.success('Session closed successfully');
+                                  fetchLogs();
+                                } catch (err) {
+                                  toast.error('Failed to close session - user may already be offline');
+                                }
                               }
-                            }
-                          }}
-                        >
-                          <XCircle size={18} />
-                        </button>
+                            }}
+                          >
+                            <XCircle size={18} />
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -478,9 +502,9 @@ const AttendanceDashboard = ({ role, userId: externalUserId, teamId: externalTea
                     </div>
                     <div className="col-md-3">
                       <div className="p-3 bg-white bg-opacity-5 rounded-4 border border-white border-opacity-5">
-                        <div className="small text-white opacity-50 mb-1">Half Days</div>
+                        <div className="small text-white opacity-50 mb-1">Late Arrivals</div>
                         <div className="h4 fw-bold text-warning mb-0">
-                          {userHistory.filter(h => h.status === 'HALF_DAY').length} Days
+                          {userHistory.filter(h => h.status === 'LATE').length} Days
                         </div>
                       </div>
                     </div>
@@ -514,7 +538,7 @@ const AttendanceDashboard = ({ role, userId: externalUserId, teamId: externalTea
                             <td className="p-2 text-center text-info">{h.outsideCount || 0}</td>
                             <td className="p-2 text-end">
                               <span className={`badge rounded-pill ${h.status === 'PRESENT' ? 'bg-success text-success' :
-                                h.status === 'HALF_DAY' ? 'bg-warning text-warning' : 'bg-danger text-danger'
+                                h.status === 'LATE' ? 'bg-warning text-warning' : 'bg-danger text-danger'
                                 } bg-opacity-10 border border-current border-opacity-10`}>
                                 {h.status}
                               </span>
@@ -526,6 +550,66 @@ const AttendanceDashboard = ({ role, userId: externalUserId, teamId: externalTea
                   </div>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Entry Modal */}
+      {showManualModal && manualEntryTarget && (
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 1100, backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)' }}>
+          <div className="card border-0 shadow-lg bg-dark text-white rounded-4 w-100 mx-3" style={{ maxWidth: '750px', maxHeight: '95vh', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <div className="card-header border-bottom border-white border-opacity-10 p-4 d-flex justify-content-between align-items-center">
+              <div className="d-flex align-items-center gap-3">
+                <div className="p-2 bg-primary bg-opacity-10 rounded-3 text-primary shadow-glow">
+                  <Calendar size={20} />
+                </div>
+                <div>
+                  <h5 className="fw-black mb-0 text-uppercase tracking-tighter">Manual Sync: {manualEntryTarget.userName}</h5>
+                  <p className="text-white opacity-50 small mb-0 fw-bold" style={{ fontSize: '9px' }}>OVERRIDE ATTENDANCE PROTOCOL FOR {manualEntryTarget.date}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowManualModal(false)} className="btn btn-link text-white opacity-50 p-0 border-0 hover-opacity-100 transition-all">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="card-body p-4 overflow-auto">
+              <AttendanceManualEntry 
+                userId={manualEntryTarget.userId}
+                initialData={{
+                  date: formatDate(manualEntryTarget.date),
+                  // Attempt to map existing data if available
+                  loginTime: '09:00', 
+                  logoutTime: '18:00'
+                }}
+                onCancel={() => setShowManualModal(false)}
+                onSave={async (data) => {
+                  try {
+                    const res = await attendanceService.saveManualEntry({
+                      userId: manualEntryTarget.userId,
+                      loginTime: `${data.date}T${data.loginTime}:00`,
+                      logoutTime: `${data.date}T${data.logoutTime}:00`,
+                      longBreakStart: `${data.longBreakStart}:00`,
+                      longBreakEnd: `${data.longBreakEnd}:00`,
+                      shortBreakStart: `${data.shortBreakStart}:00`,
+                      shortBreakEnd: `${data.shortBreakEnd}:00`,
+                      minFullDayMinutes: data.minFullDayMinutes,
+                      minHalfDayMinutes: data.minHalfDayMinutes,
+                      shiftStart: `${data.shiftStart}:00`,
+                      graceMinutes: data.graceMinutes
+                    });
+                    if (res.success) {
+                      toast.success('Attendance record synchronized');
+                      setShowManualModal(false);
+                      fetchLogs();
+                    } else {
+                      toast.error(res.message || 'Synchronization failed');
+                    }
+                  } catch (err) {
+                    toast.error('Network protocol error during synchronization');
+                  }
+                }}
+              />
             </div>
           </div>
         </div>

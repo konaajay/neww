@@ -100,7 +100,7 @@ const MetricCommandCenter = ({ stats, role, filters, onNavigate, leads = [] }) =
             secondary: [
               { label: 'Absent', value: stats.absentCount || 0, color: 'danger' },
               { label: 'Present', value: stats.presentCount || 0, color: 'success' },
-              { label: 'Half Day', value: stats.halfDayCount || 0, color: 'warning' }
+              { label: 'Late', value: stats.lateCount || 0, color: 'warning' }
             ]
           }}
         />

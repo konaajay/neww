@@ -391,7 +391,7 @@ const AdminDashboard = () => {
 
         <div className="animate-fade-in">
           {/* GLOBAL RANGE FILTER */}
-          {activeTab !== 'edit-lead' && activeTab !== 'ingestion' && activeTab !== 'attendance-settings' && activeTab !== 'users' && activeTab !== 'onboard' && (
+          {activeTab !== 'edit-lead' && activeTab !== 'ingestion' && activeTab !== 'attendance-settings' && activeTab !== 'users' && activeTab !== 'onboard' && activeTab !== 'hierarchy' && (
             <FiltersBar
               filters={filters}
               onChange={setFilters}
@@ -833,7 +833,7 @@ const AdminDashboard = () => {
               <div className="mt-1"></div>
               <PaymentHistory
                 role="ADMIN"
-                userId={filters.userId}
+                userId={filters.userId || filters.teamId}
                 from={filters.from}
                 to={filters.to}
                 hideHeader={true}

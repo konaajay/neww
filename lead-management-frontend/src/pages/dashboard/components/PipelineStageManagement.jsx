@@ -115,7 +115,6 @@ const PipelineStageManagement = () => {
                         </div>
                         <div>
                             <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest">Pipeline Architecture</h5>
-                            <p className="text-muted small fw-bold opacity-50 mb-0" style={{fontSize: '9px'}}>BEHAVIOR-DRIVEN STATUS PROTOCOLS</p>
                         </div>
                     </div>
                     <button 
@@ -205,7 +204,7 @@ const PipelineStageManagement = () => {
                             <tr className={isDarkMode ? 'border-bottom border-white border-opacity-5' : 'border-bottom'}>
                                 <th className="ps-4 text-muted small fw-black text-uppercase tracking-widest py-4" style={{ fontSize: '9px', width: '80px' }}># ID</th>
                                 <th className="text-muted small fw-black text-uppercase tracking-widest py-4" style={{ fontSize: '9px' }}>Status Node</th>
-                                <th className="text-center text-muted small fw-black text-uppercase tracking-widest py-4" style={{ fontSize: '9px' }}>Behaviors</th>
+
                                 <th className="pe-4 text-end text-muted small fw-black text-uppercase tracking-widest py-4" style={{ fontSize: '9px', width: '120px' }}>Actions</th>
                             </tr>
                         </thead>
@@ -238,19 +237,7 @@ const PipelineStageManagement = () => {
                                             )}
                                         </div>
                                     </td>
-                                    <td className="text-center">
-                                        <div className="d-flex justify-content-center gap-3">
-                                            <div className={`p-2 rounded-pill d-flex align-items-center gap-1 ${stage.requireNote ? 'bg-primary bg-opacity-10 text-primary' : 'opacity-10'}`} title="Requires Note">
-                                                <MessageSquare size={12} />
-                                            </div>
-                                            <div className={`p-2 rounded-pill d-flex align-items-center gap-1 ${stage.requireDate ? 'bg-info bg-opacity-10 text-info' : 'opacity-10'}`} title="Requires Date">
-                                                <Calendar size={12} />
-                                            </div>
-                                            <div className={`p-2 rounded-pill d-flex align-items-center gap-1 ${stage.createTask ? 'bg-success bg-opacity-10 text-success' : 'opacity-10'}`} title="Auto Task">
-                                                <CheckSquare size={12} />
-                                            </div>
-                                        </div>
-                                    </td>
+
                                     <td className="pe-4 text-end">
                                         <div className="d-flex justify-content-end gap-2">
                                             <button 

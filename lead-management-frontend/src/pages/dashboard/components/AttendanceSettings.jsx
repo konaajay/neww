@@ -25,19 +25,19 @@ const AttendanceSettings = () => {
     const [selectedUserId, setSelectedUserId] = useState(null);
     const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
 
-    const [newOffice, setNewOffice] = useState({ name: '', latitude: 0, longitude: 0, radius: 100 });
-    const [newShift, setNewShift] = useState({ name: '', startTime: '09:00', endTime: '18:00', graceMinutes: 15, minHalfDayMinutes: 240, minFullDayMinutes: 480, officeId: '' });
+    const [newOffice, setNewOffice] = useState({ name: '', latitude: '', longitude: '', radius: '100' });
+    const [newShift, setNewShift] = useState({ name: '', startTime: '09:00', endTime: '18:00', graceMinutes: '', minHalfDayMinutes: '', minFullDayMinutes: '', officeId: '', breakMinutes: '0' });
     const [newPolicy, setNewPolicy] = useState({
         officeId: '',
-        trackingIntervalSec: 300,
+        trackingIntervalSec: '',
         shortBreakStartTime: '17:00',
         shortBreakEndTime: '17:10',
         longBreakStartTime: '13:00',
         longBreakEndTime: '14:00',
-        gracePeriodMinutes: 2,
-        maxAccuracyMeters: 100,
-        minimumWorkMinutes: 240,
-        maxIdleMinutes: 30
+        gracePeriodMinutes: '',
+        maxAccuracyMeters: '',
+        minimumWorkMinutes: '',
+        maxIdleMinutes: ''
     });
 
 
@@ -76,12 +76,39 @@ const AttendanceSettings = () => {
         fetchData();
     }, []);
 
+    useEffect(() => {
+        if (newShift.startTime && newShift.endTime) {
+            const [sH, sM] = newShift.startTime.split(':').map(Number);
+            const [eH, eM] = newShift.endTime.split(':').map(Number);
+            let diff = (eH * 60 + eM) - (sH * 60 + sM);
+            if (diff < 0) diff += 1440; // Handles overnight shifts (24 * 60)
+            
+            const breakMins = parseInt(newShift.breakMinutes) || 0;
+            const netDuration = Math.max(0, diff - breakMins);
+            
+            // Only update if changed to avoid infinite loop
+            if (newShift.minFullDayMinutes !== netDuration) {
+                setNewShift(prev => ({
+                    ...prev,
+                    minFullDayMinutes: netDuration,
+                    minHalfDayMinutes: Math.floor(netDuration / 2)
+                }));
+            }
+        }
+    }, [newShift.startTime, newShift.endTime, newShift.breakMinutes]);
+
     const handleCreateOffice = async (e) => {
         e.preventDefault();
         try {
-            await adminService.createOffice(newOffice);
+            const payload = {
+                ...newOffice,
+                latitude: parseFloat(newOffice.latitude),
+                longitude: parseFloat(newOffice.longitude),
+                radius: parseFloat(newOffice.radius)
+            };
+            await adminService.createOffice(payload);
             toast.success('Office location added');
-            setNewOffice({ name: '', latitude: 0, longitude: 0, radius: 100 });
+            setNewOffice({ name: '', latitude: '', longitude: '', radius: '100' });
             fetchData();
         } catch (err) {
             toast.error('Failed to create office');
@@ -114,6 +141,9 @@ const AttendanceSettings = () => {
         e.preventDefault();
         const payload = {
             ...newShift,
+            minHalfDayMinutes: parseInt(newShift.minHalfDayMinutes) || 0,
+            minFullDayMinutes: parseInt(newShift.minFullDayMinutes) || 0,
+            graceMinutes: parseInt(newShift.graceMinutes) || 0,
             office: newShift.officeId ? { id: parseInt(newShift.officeId) } : null
         };
         try {
@@ -125,7 +155,7 @@ const AttendanceSettings = () => {
                 toast.success('Work shift created');
             }
             setEditingShiftId(null);
-            setNewShift({ name: '', startTime: '09:00', endTime: '18:00', graceMinutes: 15, minHalfDayMinutes: 240, minFullDayMinutes: 480, officeId: '' });
+            setNewShift({ name: '', startTime: '09:00', endTime: '18:00', graceMinutes: '', minHalfDayMinutes: '', minFullDayMinutes: '', officeId: '', breakMinutes: '0' });
             fetchData();
         } catch (err) {
             toast.error(editingShiftId ? 'Failed to update shift' : 'Failed to create shift');
@@ -136,25 +166,31 @@ const AttendanceSettings = () => {
         e.preventDefault();
         if (!newPolicy.officeId) return toast.warning('Select an office first');
         try {
+            const payload = {
+                ...newPolicy,
+                gracePeriodMinutes: parseInt(newPolicy.gracePeriodMinutes) || 0,
+                minimumWorkMinutes: parseInt(newPolicy.minimumWorkMinutes) || 0,
+                trackingIntervalSec: parseInt(newPolicy.trackingIntervalSec) || 300,
+                maxAccuracyMeters: parseInt(newPolicy.maxAccuracyMeters) || 100,
+                maxIdleMinutes: parseInt(newPolicy.maxIdleMinutes) || 30
+            };
             if (editingPolicyId) {
-                await adminService.updatePolicy(editingPolicyId, newPolicy);
+                await adminService.updatePolicy(editingPolicyId, payload);
                 toast.success('Policy updated successfully');
             } else {
-                await adminService.createPolicy(newPolicy);
+                await adminService.createPolicy(payload);
                 toast.success('Policy active');
             }
             setEditingPolicyId(null);
             setNewPolicy({
                 officeId: '',
-                trackingIntervalSec: 300,
-                shortBreakStartTime: '17:00',
-                shortBreakEndTime: '17:10',
-                longBreakStartTime: '13:00',
-                longBreakEndTime: '14:00',
-                gracePeriodMinutes: 2,
-                maxAccuracyMeters: 100,
-                minimumWorkMinutes: 240,
-                maxIdleMinutes: 30
+                trackingIntervalSec: '',
+                shortBreakStartTime: '17:00', shortBreakEndTime: '17:10',
+                longBreakStartTime: '13:00', longBreakEndTime: '14:00',
+                gracePeriodMinutes: '',
+                maxAccuracyMeters: '',
+                minimumWorkMinutes: '',
+                maxIdleMinutes: ''
             });
             fetchData();
         } catch (err) {
@@ -280,7 +316,7 @@ const AttendanceSettings = () => {
                                                 <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Geofence Radius (meters)</label>
                                                 <input
                                                     type="number" className={`ui-input py-2.5 rounded-4 ${isDarkMode ? '' : 'bg-white border text-dark'}`}
-                                                    value={newOffice.radius || 100} onChange={e => setNewOffice({ ...newOffice, radius: parseInt(e.target.value) || 0 })}
+                                                    value={newOffice.radius} onChange={e => setNewOffice({ ...newOffice, radius: e.target.value })}
                                                     required
                                                 />
                                             </div>
@@ -290,7 +326,7 @@ const AttendanceSettings = () => {
                                                 <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Latitude Coordination</label>
                                                 <input
                                                     type="number" step="any" className={`ui-input py-2.5 rounded-4 ${isDarkMode ? '' : 'bg-white border text-dark'}`}
-                                                    value={newOffice.latitude || 0} onChange={e => setNewOffice({ ...newOffice, latitude: parseFloat(e.target.value) || 0 })}
+                                                    value={newOffice.latitude} onChange={e => setNewOffice({ ...newOffice, latitude: e.target.value })}
                                                     required
                                                 />
                                             </div>
@@ -298,7 +334,7 @@ const AttendanceSettings = () => {
                                                 <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Longitude Coordination</label>
                                                 <input
                                                     type="number" step="any" className={`ui-input py-2.5 rounded-4 ${isDarkMode ? '' : 'bg-white border text-dark'}`}
-                                                    value={newOffice.longitude || 0} onChange={e => setNewOffice({ ...newOffice, longitude: parseFloat(e.target.value) || 0 })}
+                                                    value={newOffice.longitude} onChange={e => setNewOffice({ ...newOffice, longitude: e.target.value })}
                                                     required
                                                 />
                                             </div>
@@ -386,7 +422,7 @@ const AttendanceSettings = () => {
                                                 <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '10px' }}>Location Grace (Min)</label>
                                                 <input
                                                     type="number" className="ui-input py-2.5 rounded-3"
-                                                    value={newPolicy.gracePeriodMinutes || 0} onChange={e => setNewPolicy({ ...newPolicy, gracePeriodMinutes: parseInt(e.target.value) || 0 })}
+                                                    value={newPolicy.gracePeriodMinutes} onChange={e => setNewPolicy({ ...newPolicy, gracePeriodMinutes: e.target.value })}
                                                     placeholder="2" required
                                                 />
                                             </div>
@@ -397,7 +433,7 @@ const AttendanceSettings = () => {
                                                 <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '10px' }}>Full Day (Min)</label>
                                                 <input
                                                     type="number" className="ui-input py-2.5 rounded-3"
-                                                    value={newPolicy.minimumWorkMinutes || 0} onChange={e => setNewPolicy({ ...newPolicy, minimumWorkMinutes: parseInt(e.target.value) || 0 })}
+                                                    value={newPolicy.minimumWorkMinutes} onChange={e => setNewPolicy({ ...newPolicy, minimumWorkMinutes: e.target.value })}
                                                     placeholder="240" required
                                                 />
                                             </div>
@@ -602,11 +638,37 @@ const AttendanceSettings = () => {
                                             </div>
                                         </div>
                                         <div className="col-md-6 ps-md-4 d-flex flex-column justify-content-between">
+                                            <div className="row g-3 mb-4">
+                                                <div className="col-4">
+                                                    <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Full Day (min)</label>
+                                                    <input
+                                                        type="number" className="ui-input py-2 rounded-3"
+                                                        value={newShift.minFullDayMinutes} onChange={e => setNewShift({ ...newShift, minFullDayMinutes: e.target.value })}
+                                                        placeholder="480" required
+                                                    />
+                                                </div>
+                                                <div className="col-4">
+                                                    <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Half Day (min)</label>
+                                                    <input
+                                                        type="number" className="ui-input py-2 rounded-3"
+                                                        value={newShift.minHalfDayMinutes} onChange={e => setNewShift({ ...newShift, minHalfDayMinutes: e.target.value })}
+                                                        placeholder="240" required
+                                                    />
+                                                </div>
+                                                <div className="col-4">
+                                                    <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Break (min)</label>
+                                                    <input
+                                                        type="number" className="ui-input py-2 rounded-3"
+                                                        value={newShift.breakMinutes} onChange={e => setNewShift({ ...newShift, breakMinutes: e.target.value })}
+                                                        placeholder="60"
+                                                    />
+                                                </div>
+                                            </div>
                                             <div className="mb-4">
                                                 <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '0.65rem' }}>Arrival Grace Limit (mins)</label>
                                                 <input
                                                     type="number" className="ui-input py-2 rounded-3"
-                                                    value={newShift.graceMinutes} onChange={e => setNewShift({ ...newShift, graceMinutes: parseInt(e.target.value) })}
+                                                    value={newShift.graceMinutes} onChange={e => setNewShift({ ...newShift, graceMinutes: e.target.value })}
                                                     required
                                                 />
                                             </div>

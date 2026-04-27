@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: (import.meta.env.VITE_API_URL || 'https://sales-crm-emzp.onrender.com') + '/api'
+  baseURL: (import.meta.env.VITE_API_URL || 'https://sales-backend-1-3tnk.onrender.com') + '/api'
 });
 
 api.interceptors.request.use((config) => {

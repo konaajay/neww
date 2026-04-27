@@ -59,6 +59,16 @@ export const attendanceService = {
   forceClockOut: async (userId) => {
     const response = await api.post(`/admin/attendance/force-clock-out/${userId}`);
     return response.data;
+  },
+
+  getPreview: async (data) => {
+    const response = await api.post('/attendance/preview', data);
+    return response.data;
+  },
+
+  saveManualEntry: async (data) => {
+    const response = await api.post('/attendance/manual', data);
+    return response.data;
   }
 };
 

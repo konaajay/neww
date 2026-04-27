@@ -636,7 +636,7 @@ const TeamLeaderDashboard = () => {
                 role="TEAM_LEADER"
                 from={filters.from}
                 to={filters.to}
-                userId={filters.userId}
+                userId={filters.userId || filters.teamId}
                 hideFilters={true}
               />
             </div>
