@@ -172,9 +172,12 @@ public class DashboardStatsService {
         return 0L;
     }
 
+    @Transactional(readOnly = true)
     public Collection<User> determineAllowedUsers(User requester, Long targetUserId, Long teamId) {
+        // Refresh requester to ensure we are in a session
+        User user = userRepository.findById(requester.getId()).orElse(requester);
         Set<User> users = new HashSet<>();
-        String role = (requester.getRole() != null) ? requester.getRole().getName() : "ASSOCIATE";
+        String role = (user.getRole() != null) ? user.getRole().getName() : "ASSOCIATE";
 
         if (role.equals("ADMIN")) {
             if (targetUserId != null) {
@@ -193,40 +196,37 @@ public class DashboardStatsService {
         } else if (role.equals("MANAGER") || role.equals("TEAM_LEADER")) {
             if (targetUserId != null) {
                 userRepository.findById(targetUserId).ifPresent(target -> {
-                    // For Admin, always allow. For Manager/TL, only if they have permission to see them
-                    if (role.equals("ADMIN")) {
+                    Set<User> subordinates = new HashSet<>();
+                    collectSubordinates(user, subordinates);
+                    boolean isDirectSub = user.getManagedAssociates() != null && user.getManagedAssociates().contains(target);
+                    if (subordinates.contains(target) || user.getId().equals(target.getId()) || isDirectSub) {
                         users.add(target);
-                    } else {
-                        Set<User> subordinates = new HashSet<>();
-                        collectSubordinates(requester, subordinates);
-                        // Fallback: If they manage this user directly, include them even if recursion is messy
-                        boolean isDirectSub = requester.getManagedAssociates() != null && requester.getManagedAssociates().contains(target);
-                        if (subordinates.contains(target) || requester.getId().equals(target.getId()) || isDirectSub) {
-                            users.add(target);
-                        }
                     }
                 });
             } else if (teamId != null) {
                 userRepository.findById(teamId).ifPresent(tl -> {
                     Set<User> subordinates = new HashSet<>();
-                    collectSubordinates(requester, subordinates);
-                    if (subordinates.contains(tl) || requester.getId().equals(tl.getId())) {
+                    collectSubordinates(user, subordinates);
+                    if (subordinates.contains(tl) || user.getId().equals(tl.getId())) {
                         users.add(tl);
                         collectSubordinates(tl, users);
                     }
                 });
             } else {
-                users.add(requester);
-                collectSubordinates(requester, users);
+                users.add(user);
+                collectSubordinates(user, users);
             }
         } else {
-            users.add(requester);
+            users.add(user);
         }
 
         return users;
     }
 
-    private void collectSubordinates(User user, Set<User> collector) {
+    @Transactional(readOnly = true)
+    public void collectSubordinates(User user, Set<User> collector) {
+        if (user == null) return;
+        
         if (user.getSubordinates() != null) {
             for (User sub : user.getSubordinates()) {
                 if (!collector.contains(sub)) {
