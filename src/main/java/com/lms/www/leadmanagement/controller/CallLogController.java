@@ -15,7 +15,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -192,7 +191,6 @@ public class CallLogController {
 
     @GetMapping("/admin/all")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'TEAM_LEADER')")
-    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<List<CallRecord>>> getAllLogsAdmin(
             @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) java.time.LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) java.time.LocalDate to,
@@ -201,8 +199,6 @@ public class CallLogController {
             // Diagnostic logging for 400 errors
             System.out.println("DEBUG: GET /admin/all - from=" + from + ", to=" + to + ", userId=" + userId);
             List<CallRecord> logs = callLogService.getAllLogsAdmin(from, to, userId, getCurrentUserId());
-            // Trigger lazy loading before returning to prevent serialization issues
-            logs.forEach(l -> { if(l.getLead() != null) l.getLead().getName(); });
             return ResponseEntity.ok(ApiResponse.success(logs));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(ApiResponse.error(e.getMessage()));
@@ -211,7 +207,6 @@ public class CallLogController {
 
     @GetMapping("/admin/stats")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'TEAM_LEADER')")
-    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<Map<String, Object>>> getGlobalStats(
             @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) java.time.LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) java.time.LocalDate to,
