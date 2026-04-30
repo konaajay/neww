@@ -60,8 +60,8 @@ public class WebSecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        // Public endpoints
-                        .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers(org.springframework.web.cors.CorsUtils::isPreFlightRequest).permitAll()
+                        .requestMatchers("/api/auth/login", "/error").permitAll()
 
                         // Restrict payment endpoints properly
                         .requestMatchers(HttpMethod.POST, "/api/payments/create").authenticated()
@@ -80,15 +80,17 @@ public class WebSecurityConfig {
                 .exceptionHandling(ex -> ex
 
                         .authenticationEntryPoint((req, res, e) -> {
+                            System.err.println("[SECURITY] 401 Unauthorized for: " + req.getRequestURI() + " | Error: " + e.getMessage());
                             res.setContentType("application/json");
                             res.setStatus(401);
-                            res.getWriter().write("{\"error\":\"Unauthorized\"}");
+                            res.getWriter().write("{\"error\":\"Unauthorized\", \"path\":\"" + req.getRequestURI() + "\"}");
                         })
 
                         .accessDeniedHandler((req, res, e) -> {
+                            System.err.println("[SECURITY] 403 Forbidden for: " + req.getRequestURI() + " | Error: " + e.getMessage());
                             res.setContentType("application/json");
                             res.setStatus(403);
-                            res.getWriter().write("{\"error\":\"Forbidden\"}");
+                            res.getWriter().write("{\"error\":\"Forbidden\", \"path\":\"" + req.getRequestURI() + "\"}");
                         }));
 
         return http.build();
@@ -102,17 +104,15 @@ public class WebSecurityConfig {
         // ✅ FIX: restrict origins
         config.setAllowedOrigins(List.of(
                 "http://localhost:3000",
+                "http://localhost:5173",
                 "http://100.85.146.60:3000",
                 "https://salescr.netlify.app",
                 "https://salescrms.netlify.app",
+                "https://hiiiiiiiiiiiiiiiiii.netlify.app",
                 "https://yourdomain.com"));
 
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-
-        config.setAllowedHeaders(List.of(
-                "Authorization",
-                "Content-Type"));
-
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
 
         var source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();

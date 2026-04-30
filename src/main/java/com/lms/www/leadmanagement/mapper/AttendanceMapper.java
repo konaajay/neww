@@ -70,13 +70,23 @@ public class AttendanceMapper {
                 .totalIdleHours(String.format("%dh %dm",
                         (s.getUnauthorizedOutsideMinutes() != null ? s.getUnauthorizedOutsideMinutes() : 0) / 60,
                         (s.getUnauthorizedOutsideMinutes() != null ? s.getUnauthorizedOutsideMinutes() : 0) % 60))
+                .lateMinutes(s.getLateMinutes() != null ? s.getLateMinutes() : 0)
+                .productiveMinutes(s.getTotalWorkMinutes())
+                .shortBreakMinutes(s.getShortBreakSeconds() != null ? (int)(s.getShortBreakSeconds()/60) : 0)
+                .longBreakMinutes(s.getLongBreakSeconds() != null ? (int)(s.getLongBreakSeconds()/60) : 0)
+                .late(s.isLate())
+                .loginTime(s.getCheckInTime())
+                .logoutTime(s.getCheckOutTime())
+                .breakStartTime(s.getBreakStartTime())
                 .build();
     }
 
     public AttendanceDTO toDTO(AttendanceSession s) {
         if (s == null)
             return null;
-        return toDTO(s, null, 0, "0h 0m", s.getCheckInTime().toLocalDate());
+        int mins = s.getTotalWorkMinutes() != null ? s.getTotalWorkMinutes() : 0;
+        String hours = String.format("%dh %dm", mins / 60, mins % 60);
+        return toDTO(s, null, mins, hours, s.getCheckInTime().toLocalDate());
     }
 
     public OfficeLocationDTO toDTO(OfficeLocation o) {

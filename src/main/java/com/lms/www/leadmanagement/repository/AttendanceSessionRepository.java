@@ -6,6 +6,7 @@ import jakarta.persistence.LockModeType;
 import jakarta.persistence.QueryHint;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -25,17 +26,22 @@ public interface AttendanceSessionRepository extends JpaRepository<AttendanceSes
                 SELECT s FROM AttendanceSession s
                 WHERE s.user.id = :userId
                 AND s.status IN :statuses
-                AND s.checkInTime >= s.user.joiningDate
+                AND (s.user.joiningDate IS NULL OR s.checkInTime >= s.user.joiningDate)
                 ORDER BY s.checkInTime DESC
             """)
-    Optional<AttendanceSession> findActiveSession(
-            Long userId,
-            List<AttendanceStatus> statuses);
+    List<AttendanceSession> _findActiveSession(
+            @org.springframework.data.repository.query.Param("userId") Long userId,
+            @org.springframework.data.repository.query.Param("statuses") List<AttendanceStatus> statuses,
+            Pageable pageable);
+
+    default Optional<AttendanceSession> findActiveSession(Long userId, List<AttendanceStatus> statuses) {
+        return _findActiveSession(userId, statuses, PageRequest.of(0, 1)).stream().findFirst();
+    }
 
     @Query("""
                 SELECT s FROM AttendanceSession s
                 WHERE s.user.id = :userId
-                AND s.user.joiningDate <= :endOfDay
+                AND (s.user.joiningDate IS NULL OR s.user.joiningDate <= :endOfDay)
                 AND (s.checkInTime <= :endOfDay
                 AND (s.checkOutTime IS NULL OR s.checkOutTime >= :startOfDay))
             """)
@@ -47,7 +53,7 @@ public interface AttendanceSessionRepository extends JpaRepository<AttendanceSes
     @Query("""
                 SELECT s FROM AttendanceSession s
                 WHERE s.user.id IN :userIds
-                AND s.user.joiningDate <= :end
+                AND (s.user.joiningDate IS NULL OR s.user.joiningDate <= :end)
                 AND (s.checkInTime <= :end
                 AND (s.checkOutTime IS NULL OR s.checkOutTime >= :start))
             """)
@@ -61,28 +67,40 @@ public interface AttendanceSessionRepository extends JpaRepository<AttendanceSes
                 SELECT s FROM AttendanceSession s
                 WHERE s.user.id = :userId
                 AND s.status IN :statuses
-                AND s.checkInTime >= s.user.joiningDate
+                AND (s.user.joiningDate IS NULL OR s.checkInTime >= s.user.joiningDate)
             """)
-    Optional<AttendanceSession> findByUserIdAndStatusIn(
+    List<AttendanceSession> _findByUserIdAndStatusIn(
             @org.springframework.data.repository.query.Param("userId") Long userId,
-            @org.springframework.data.repository.query.Param("statuses") List<AttendanceStatus> statuses);
+            @org.springframework.data.repository.query.Param("statuses") List<AttendanceStatus> statuses,
+            Pageable pageable);
+
+    default Optional<AttendanceSession> findByUserIdAndStatusIn(Long userId, List<AttendanceStatus> statuses) {
+        return _findByUserIdAndStatusIn(userId, statuses, PageRequest.of(0, 1)).stream().findFirst();
+    }
 
     @Query("""
                 SELECT s FROM AttendanceSession s
                 WHERE s.user.id = :userId
                 AND s.status IN :statuses
-                AND s.checkInTime >= s.user.joiningDate
+                AND (s.user.joiningDate IS NULL OR s.checkInTime >= s.user.joiningDate)
                 ORDER BY s.checkInTime DESC
             """)
-    Optional<AttendanceSession> findFirstByUserIdAndStatusInOrderByCheckInTimeDesc(
+    List<AttendanceSession> _findFirstByUserIdAndStatusInOrderByCheckInTimeDesc(
             @org.springframework.data.repository.query.Param("userId") Long userId,
-            @org.springframework.data.repository.query.Param("statuses") List<AttendanceStatus> statuses);
+            @org.springframework.data.repository.query.Param("statuses") List<AttendanceStatus> statuses,
+            Pageable pageable);
+
+    default Optional<AttendanceSession> findFirstByUserIdAndStatusInOrderByCheckInTimeDesc(Long userId,
+            List<AttendanceStatus> statuses) {
+        return _findFirstByUserIdAndStatusInOrderByCheckInTimeDesc(userId, statuses, PageRequest.of(0, 1)).stream()
+                .findFirst();
+    }
 
     @Query("""
                 SELECT s FROM AttendanceSession s
                 WHERE s.status IN :statuses
                 AND (s.lastLocationTime IS NULL OR s.lastLocationTime < :cutoffTime)
-                AND s.checkInTime >= s.user.joiningDate
+                AND (s.user.joiningDate IS NULL OR s.checkInTime >= s.user.joiningDate)
             """)
     List<AttendanceSession> findInactiveSessions(
             @org.springframework.data.repository.query.Param("statuses") List<AttendanceStatus> statuses,
@@ -92,7 +110,7 @@ public interface AttendanceSessionRepository extends JpaRepository<AttendanceSes
                 SELECT s FROM AttendanceSession s
                 WHERE s.user.id = :userId
                 AND s.status IN :statuses
-                AND s.checkInTime >= s.user.joiningDate
+                AND (s.user.joiningDate IS NULL OR s.checkInTime >= s.user.joiningDate)
                 ORDER BY s.checkInTime DESC
             """)
     List<AttendanceSession> findLatestStatusNoLock(
@@ -103,7 +121,7 @@ public interface AttendanceSessionRepository extends JpaRepository<AttendanceSes
     @Query("""
                 SELECT COUNT(DISTINCT s.user.id)
                 FROM AttendanceSession s
-                WHERE s.user.joiningDate <= :end
+                WHERE (s.user.joiningDate IS NULL OR s.user.joiningDate <= :end)
                 AND (s.checkInTime <= :end
                 AND (s.checkOutTime IS NULL OR s.checkOutTime >= :start))
             """)
@@ -114,7 +132,7 @@ public interface AttendanceSessionRepository extends JpaRepository<AttendanceSes
     @Query("""
                 SELECT COUNT(DISTINCT s.user.id)
                 FROM AttendanceSession s
-                WHERE s.user.joiningDate <= :end
+                WHERE (s.user.joiningDate IS NULL OR s.user.joiningDate <= :end)
                 AND s.isLate = true
                 AND (s.checkInTime <= :end
                 AND (s.checkOutTime IS NULL OR s.checkOutTime >= :start))
@@ -127,7 +145,7 @@ public interface AttendanceSessionRepository extends JpaRepository<AttendanceSes
                 SELECT COUNT(DISTINCT s.user.id)
                 FROM AttendanceSession s
                 WHERE s.user.id IN :userIds
-                AND s.user.joiningDate <= :end
+                AND (s.user.joiningDate IS NULL OR s.user.joiningDate <= :end)
                 AND (s.checkInTime <= :end
                 AND (s.checkOutTime IS NULL OR s.checkOutTime >= :start))
             """)
@@ -140,7 +158,7 @@ public interface AttendanceSessionRepository extends JpaRepository<AttendanceSes
                 SELECT COUNT(DISTINCT s.user.id)
                 FROM AttendanceSession s
                 WHERE s.user.id IN :userIds
-                AND s.user.joiningDate <= :end
+                AND (s.user.joiningDate IS NULL OR s.user.joiningDate <= :end)
                 AND s.isLate = true
                 AND (s.checkInTime <= :end
                 AND (s.checkOutTime IS NULL OR s.checkOutTime >= :start))

@@ -42,7 +42,7 @@ public class TeamLeaderController {
     @Autowired
     private com.lms.www.leadmanagement.service.LeadBulkUploadService bulkUploadService;
 
-    @PreAuthorize("hasAuthority('BULK_UPLOAD')")
+    @PreAuthorize("hasAnyAuthority('BULK_UPLOAD', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER')")
     @PostMapping("/leads/bulk-upload")
     public ResponseEntity<BulkUploadResponseDTO> bulkUploadLeads(
             @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
@@ -50,19 +50,19 @@ public class TeamLeaderController {
         return ResponseEntity.ok(bulkUploadService.uploadLeads(file, assignedToIds));
     }
 
-    @PreAuthorize("hasAuthority('VIEW_LEADS')")
+    @PreAuthorize("hasAnyAuthority('VIEW_LEADS', 'CREATE_LEADS', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER')")
     @PostMapping("/leads")
     public ResponseEntity<LeadDTO> createLeadByTL(@RequestBody LeadDTO leadDTO) {
         return ResponseEntity.ok(leadService.createLead(leadDTO));
     }
 
-    @PreAuthorize("hasAuthority('VIEW_LEADS')")
+    @PreAuthorize("hasAnyAuthority('VIEW_LEADS', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER')")
     @GetMapping("/leads/my")
     public ResponseEntity<List<LeadDTO>> getMyLeads() {
         return ResponseEntity.ok(leadService.getMyLeads());
     }
 
-    @PreAuthorize("hasAuthority('VIEW_LEADS')")
+    @PreAuthorize("hasAnyAuthority('VIEW_LEADS', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER')")
     @GetMapping("/leads/team")
     public ResponseEntity<List<LeadDTO>> getTeamLeads(
             @RequestParam(value = "userId", required = false) Long userId,
@@ -83,7 +83,7 @@ public class TeamLeaderController {
         return ResponseEntity.ok(stats);
     }
 
-    @PreAuthorize("hasAuthority('SEND_PAYMENT')")
+    @PreAuthorize("hasAnyAuthority('SEND_PAYMENT', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER')")
     @PostMapping("/leads/{id}/send-payment-link")
     public ResponseEntity<Map<String, Object>> sendPaymentLink(
             @PathVariable Long id,
@@ -116,14 +116,14 @@ public class TeamLeaderController {
     }
 
 
-    @PreAuthorize("hasAuthority('SEND_PAYMENT')")
+    @PreAuthorize("hasAnyAuthority('SEND_PAYMENT', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER')")
     @PostMapping("/leads/{id}/mark-paid")
     public ResponseEntity<Map<String, String>> markPaid(@PathVariable Long id) {
         leadPaymentService.markAsPaid(id);
         return ResponseEntity.ok(Map.of("message", "Lead marked as paid and user account created."));
     }
 
-    @PreAuthorize("hasAuthority('VIEW_LEADS')")
+    @PreAuthorize("hasAnyAuthority('VIEW_LEADS', 'UPDATE_LEAD_STATUS', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER')")
     @PutMapping("/leads/{id}/status")
     public ResponseEntity<LeadDTO> updateStatus(
             @PathVariable Long id, 
@@ -132,7 +132,7 @@ public class TeamLeaderController {
         return ResponseEntity.ok(leadService.updateStatus(id, status, note));
     }
 
-    @PreAuthorize("hasAuthority('VIEW_LEADS')")
+    @PreAuthorize("hasAnyAuthority('VIEW_LEADS', 'UPDATE_LEAD_STATUS', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER')")
     @PostMapping("/leads/{id}/reject")
     public ResponseEntity<LeadDTO> rejectLead(
             @PathVariable Long id, 
@@ -167,7 +167,7 @@ public class TeamLeaderController {
         return ResponseEntity.ok(leadPaymentService.getFilteredPaymentHistoryForTL(userDetails.getUsername(), startDate, endDate, status, userId));
     }
 
-    @PreAuthorize("hasAuthority('ASSIGN_TO_ASSOCIATE')")
+    @PreAuthorize("hasAnyAuthority('ASSIGN_TO_ASSOCIATE', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER')")
     @PostMapping("/leads/{leadId}/assign/{associateId}")
     public ResponseEntity<LeadDTO> assignLeadToAssociate(@PathVariable Long leadId, @PathVariable Long associateId) {
         return ResponseEntity.ok(leadService.assignLead(leadId, associateId));

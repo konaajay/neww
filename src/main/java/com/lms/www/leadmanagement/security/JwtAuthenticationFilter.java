@@ -27,31 +27,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain)
             throws ServletException, IOException {
-
+        String authHeader = request.getHeader("Authorization");
+        // System.out.println("[TRACE] Incoming: " + request.getMethod() + " " + request.getRequestURI() + " | Auth: " + (authHeader != null ? "Present" : "Missing"));
+        
         try {
             String jwt = parseJwt(request);
 
-            if (jwt != null && jwtUtils.validateJwtToken(jwt)
-                    && SecurityContextHolder.getContext().getAuthentication() == null) {
+            if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
+                if (SecurityContextHolder.getContext().getAuthentication() == null) {
+                    String username = jwtUtils.getUserNameFromJwtToken(jwt);
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                String username = jwtUtils.getUserNameFromJwtToken(jwt);
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities());
 
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                    authentication.setDetails(
+                            new WebAuthenticationDetailsSource().buildDetails(request));
 
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities());
-
-                authentication.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request));
-
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    System.out.println("[SECURITY] Authenticated user: " + username + " for path: " + request.getRequestURI());
+                }
+            } else if (jwt != null) {
+                System.err.println("[SECURITY] Invalid JWT token for path: " + request.getRequestURI());
             }
 
         } catch (Exception ex) {
-            // Do NOT print stacktrace in production
-            logger.error("JWT authentication failed: " + ex.getMessage());
+            System.err.println("[SECURITY] JWT authentication failed for path " + request.getRequestURI() + ": " + ex.getMessage());
         }
 
         filterChain.doFilter(request, response);

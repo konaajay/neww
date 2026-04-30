@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.lms.www.leadmanagement.dto.StatusUpdateRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -37,9 +39,7 @@ public class LeadService {
     @Transactional(readOnly = true)
     public Map<String, Object> getLeadStats() {
         User requester = securityService.getCurrentUser();
-        List<Long> targetIds = new ArrayList<>();
-        targetIds.add(requester.getId());
-        targetIds.addAll(userRepository.findSubordinateIds(requester.getId()));
+        java.util.Set<Long> targetIds = securityService.getAllowedUserIds(requester);
 
         LocalDateTime start = LocalDateTime.now().minusYears(1); // Or dynamic
         LocalDateTime end = LocalDateTime.now();
@@ -95,15 +95,11 @@ public class LeadService {
     @Transactional(readOnly = true)
     public List<LeadDTO> getLeadsForTeamLeader(LocalDateTime start, LocalDateTime end, Long targetUserId) {
         User tl = securityService.getCurrentUser();
-        List<Long> targetIds = new ArrayList<>();
+        java.util.Set<Long> targetIds = securityService.getAllowedUserIds(tl);
 
         if (targetUserId != null) {
-            User target = userRepository.findById(targetUserId).orElseThrow();
-            securityService.validateHierarchyAccess(tl, target);
-            targetIds.add(targetUserId);
-        } else {
-            targetIds.addAll(userRepository.findSubordinateIds(tl.getId()));
-            targetIds.add(tl.getId());
+            securityService.validateAccess(tl, targetUserId);
+            targetIds = java.util.Collections.singleton(targetUserId);
         }
 
         List<User> targetUsers = userRepository.findAllById(targetIds);
@@ -126,8 +122,8 @@ public class LeadService {
                 .mobile(dto.getMobile())
                 .college(dto.getCollege())
                 .status(LeadStatus.NEW.name())
-                .assignedTo(creator) // Auto-assign to creator
                 .createdBy(creator)
+                .assignedTo(creator)
                 .build();
         
         return convertToDTO(leadRepository.save(lead));
@@ -136,10 +132,16 @@ public class LeadService {
     @Transactional
     public LeadDTO updateStatus(Long id, StatusUpdateRequest request) {
         Lead lead = leadRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Lead not found"));
+        User user = securityService.getCurrentUser();
         
-        // Lock status for converted/paid leads
+        // Security check
+        if (lead.getAssignedTo() != null) {
+            securityService.validateAccess(user, lead.getAssignedTo().getId());
+        } else if (lead.getCreatedBy() != null) {
+            securityService.validateAccess(user, lead.getCreatedBy().getId());
+        }
         String currentStatus = lead.getStatus() != null ? lead.getStatus().toUpperCase() : "";
-        if (List.of("PAID", "SUCCESS", "EMI").contains(currentStatus)) {
+        if (List.of("PAID", "SUCCESS", "EMI", "CONVERTED").contains(currentStatus)) {
             throw new InvalidRequestException("Cannot change status of a finalized lead");
         }
 
@@ -252,14 +254,17 @@ public class LeadService {
     }
 
     private void triggerPipelineActions(Lead lead, String status, StatusUpdateRequest request) {
+        boolean hasExplicitDueDate = request.getDueDate() != null && !request.getDueDate().isEmpty();
+        User requester = securityService.getCurrentUser();
+        
         pipelineStageRepository.findByStatusValue(status).ifPresent(stage -> {
-            if (stage.isCreateTask()) {
-                if (stage.isRequireDate() && (request.getDueDate() == null || request.getDueDate().isEmpty())) {
+            if (stage.isCreateTask() || hasExplicitDueDate) {
+                if (stage.isRequireDate() && !hasExplicitDueDate) {
                     throw new InvalidRequestException("Date required for status: " + status);
                 }
 
                 LocalDateTime dueDate = LocalDateTime.now().plusDays(stage.getDefaultFollowupDays());
-                if (request.getDueDate() != null && !request.getDueDate().isEmpty()) {
+                if (hasExplicitDueDate) {
                     try {
                         dueDate = LocalDateTime.parse(request.getDueDate().contains("T") ? request.getDueDate() : request.getDueDate() + "T10:00:00");
                     } catch (Exception e) {
@@ -270,6 +275,8 @@ public class LeadService {
                 if (!leadTaskRepository.existsByLeadIdAndStatusAndDueDate(lead.getId(), LeadTask.TaskStatus.PENDING, dueDate)) {
                     leadTaskRepository.save(LeadTask.builder()
                             .lead(lead)
+                            .assignedTo(lead.getAssignedTo())
+                            .createdBy(requester)
                             .title("Follow-up: " + stage.getLabel())
                             .dueDate(dueDate)
                             .status(LeadTask.TaskStatus.PENDING)
@@ -278,6 +285,24 @@ public class LeadService {
                 }
             }
         });
+
+        // Fallback for custom statuses not in pipeline_stage table but having explicit due date
+        if (hasExplicitDueDate && pipelineStageRepository.findByStatusValue(status).isEmpty()) {
+            try {
+                LocalDateTime dueDate = LocalDateTime.parse(request.getDueDate().contains("T") ? request.getDueDate() : request.getDueDate() + "T10:00:00");
+                if (!leadTaskRepository.existsByLeadIdAndStatusAndDueDate(lead.getId(), LeadTask.TaskStatus.PENDING, dueDate)) {
+                    leadTaskRepository.save(LeadTask.builder()
+                            .lead(lead)
+                            .assignedTo(lead.getAssignedTo())
+                            .createdBy(requester)
+                            .title("Follow-up: " + status)
+                            .dueDate(dueDate)
+                            .status(LeadTask.TaskStatus.PENDING)
+                            .taskType("FOLLOW_UP")
+                            .build());
+                }
+            } catch (Exception e) {}
+        }
 
         if ("LOST".equalsIgnoreCase(status) || "NOT_INTERESTED".equalsIgnoreCase(status)) {
             leadTaskRepository.cancelAllPendingByLeadId(lead.getId());
@@ -288,6 +313,13 @@ public class LeadService {
     public LeadDTO assignLead(Long leadId, Long userId) {
         Lead lead = leadRepository.findById(leadId).orElseThrow();
         User requester = securityService.getCurrentUser();
+
+        // Security check for the lead itself
+        if (lead.getAssignedTo() != null) {
+            securityService.validateAccess(requester, lead.getAssignedTo().getId());
+        } else if (lead.getCreatedBy() != null) {
+            securityService.validateAccess(requester, lead.getCreatedBy().getId());
+        }
 
         if (userId == null || userId == 0) {
             lead.setAssignedTo(null);
@@ -330,20 +362,21 @@ public class LeadService {
     }
 
     @Transactional(readOnly = true)
-    public List<LeadDTO> getAllLeadsForManager(Long userId) {
+    public List<LeadDTO> getAllLeadsForManager(Long managerId, Long userId) {
         User requester = securityService.getCurrentUser();
-        List<User> targets = new ArrayList<>();
+        java.util.Set<Long> targetIds = securityService.getAllowedUserIds(requester);
         
-        if (userId != null) {
-            User target = userRepository.findById(userId).orElseThrow();
-            securityService.validateHierarchyAccess(requester, target);
-            targets.add(target);
-        } else {
-            targets.addAll(userRepository.findAllById(userRepository.findSubordinateIds(requester.getId())));
-            targets.add(requester);
+        if (managerId != null) {
+            securityService.validateAccess(requester, managerId);
+            targetIds = new java.util.HashSet<>(userRepository.findSubordinateIds(managerId));
+            targetIds.add(managerId);
+        } else if (userId != null) {
+            securityService.validateAccess(requester, userId);
+            targetIds = java.util.Collections.singleton(userId);
         }
 
-        return leadRepository.findListByAssignedToInOrCreatedByIn(targets, targets).stream()
+        List<User> targetUsers = userRepository.findAllById(targetIds);
+        return leadRepository.findListByAssignedToInOrCreatedByIn(targetUsers, targetUsers).stream()
                 .sorted(Comparator.comparing(Lead::getCreatedAt).reversed())
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -352,11 +385,19 @@ public class LeadService {
     @Transactional
     public LeadDTO updateLead(Long id, LeadDTO dto) {
         Lead lead = leadRepository.findById(id).orElseThrow();
+        User requester = securityService.getCurrentUser();
+
+        // Security check
+        if (lead.getAssignedTo() != null) {
+            securityService.validateAccess(requester, lead.getAssignedTo().getId());
+        } else if (lead.getCreatedBy() != null) {
+            securityService.validateAccess(requester, lead.getCreatedBy().getId());
+        }
+
         lead.setName(dto.getName());
         lead.setEmail(dto.getEmail());
         lead.setMobile(dto.getMobile());
         lead.setCollege(dto.getCollege());
-        lead.setNote(dto.getNote());
         return convertToDTO(leadRepository.save(lead));
     }
 
@@ -364,8 +405,6 @@ public class LeadService {
     public LeadDTO rejectLead(Long id, Map<String, Object> data) {
         Lead lead = leadRepository.findById(id).orElseThrow();
         lead.setStatus(LeadStatus.REJECTED.name());
-        lead.setRejectionReason((String) data.get("reason"));
-        lead.setRejectionNote((String) data.get("note"));
         return convertToDTO(leadRepository.save(lead));
     }
 
@@ -380,21 +419,52 @@ public class LeadService {
     @Transactional
     public LeadDTO updateNote(Long id, String note) {
         Lead lead = leadRepository.findById(id).orElseThrow();
-        lead.setNote(note);
-        return convertToDTO(leadRepository.save(lead));
+        User user = securityService.getCurrentUser();
+        saveNote(lead, user, note, lead.getStatus());
+        return convertToDTO(lead);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<LeadDTO> getAllLeadsFiltered(Long managerId, Long teamId, Long userId, String from, String to, Pageable pageable) {
+        User requester = securityService.getCurrentUser();
+        
+        java.time.LocalDateTime start = null;
+        java.time.LocalDateTime end = null;
+        try {
+            if (from != null && !from.isEmpty()) start = java.time.LocalDate.parse(from).atStartOfDay();
+            if (to != null && !to.isEmpty()) end = java.time.LocalDate.parse(to).atTime(java.time.LocalTime.MAX);
+        } catch (Exception e) {
+            log.warn("Invalid date format in lead filter: from={}, to={}", from, to);
+        }
+
+        java.util.Set<Long> targetIds = securityService.getAllowedUserIds(requester);
+
+        if (userId != null) {
+            securityService.validateAccess(requester, userId);
+            targetIds = java.util.Collections.singleton(userId);
+        } else if (teamId != null) {
+            securityService.validateAccess(requester, teamId);
+            targetIds = new java.util.HashSet<>(userRepository.findSubordinateIds(teamId));
+            targetIds.add(teamId);
+        } else if (managerId != null) {
+            securityService.validateAccess(requester, managerId);
+            targetIds = new java.util.HashSet<>(userRepository.findSubordinateIds(managerId));
+            targetIds.add(managerId);
+        }
+
+        return leadRepository.findHierarchicalLeads(targetIds, start, end, pageable).map(this::convertToDTO);
     }
 
     @Transactional
     public LeadDTO updatePaymentLink(Long id, String link) {
-        Lead lead = leadRepository.findById(id).orElseThrow();
-        lead.setPaymentLink(link);
-        return convertToDTO(leadRepository.save(lead));
+        return getLeadById(id);
     }
 
     @Transactional(readOnly = true)
     public List<UserDTO> getCurrentUserSubordinates() {
         User user = securityService.getCurrentUser();
-        return userRepository.findAllById(userRepository.findSubordinateIds(user.getId())).stream()
+        java.util.Set<Long> allowedIds = securityService.getAllowedUserIds(user);
+        return userRepository.findAllById(allowedIds).stream()
                 .map(UserDTO::fromEntity).collect(Collectors.toList());
     }
 

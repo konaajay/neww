@@ -14,6 +14,7 @@ public class ReportFilterDTO {
     private LocalDate fromDate;
     private LocalDate toDate;
     private Long teamLeaderId;
+    private Long managerId;
     private Long userId;
     private String status;
 }

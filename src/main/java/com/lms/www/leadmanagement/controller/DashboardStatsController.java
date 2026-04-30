@@ -1,13 +1,11 @@
 package com.lms.www.leadmanagement.controller;
 
-import com.lms.www.leadmanagement.dto.DashboardStatsDTO;
 import com.lms.www.leadmanagement.dto.DashboardSummaryDTO;
 import com.lms.www.leadmanagement.entity.User;
 import com.lms.www.leadmanagement.service.DashboardStatsService;
 import com.lms.www.leadmanagement.service.ManagerService;
 import com.lms.www.leadmanagement.service.AdminService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -37,8 +35,9 @@ public class DashboardStatsController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(required = false) Long userId,
-            @RequestParam(required = false) Long teamId) {
+            @RequestParam(required = false) Long teamId,
+            @RequestParam(required = false) Long managerId) {
         User user = managerService.getCurrentUser();
-        return ResponseEntity.ok(statsService.getUnifiedSummary(user, from, to, userId, teamId));
+        return ResponseEntity.ok(statsService.getUnifiedSummary(user, from, to, userId, teamId, managerId));
     }
 }

@@ -54,22 +54,49 @@ public class DashboardStatsService {
     @Autowired
     private TicketRepository ticketRepository;
 
-    public DashboardSummaryDTO getUnifiedSummary(User user, LocalDate from, LocalDate to, Long targetUserId, Long teamId) {
-        if (user == null) return null;
-        String viewerRole = (user.getRole() != null) ? user.getRole().getName() : "ASSOCIATE";
+    @Autowired
+    private SecurityService securityService;
+
+    public DashboardSummaryDTO getUnifiedSummary(User requester, LocalDate from, LocalDate to, Long targetUserId, Long teamId, Long managerId) {
+        if (requester == null) return null;
+        
+        // Ensure we have a managed entity to avoid LazyInitializationException on detached objects
+        User user = userRepository.findById(requester.getId()).orElse(requester);
+        
+        String viewerRole = (user.getRole() != null) ? user.getRole().getName().toUpperCase() : "ASSOCIATE";
+        boolean viewerIsAdmin = viewerRole.contains("ADMIN");
+        boolean viewerIsManager = viewerRole.contains("MANAGER") || viewerRole.equals("MGR");
+        boolean viewerIsTL = viewerRole.contains("TEAM_LEAD") || viewerRole.equals("TL") || viewerRole.contains("TEAMLEAD");
 
         LocalDateTime start = (from != null ? from : LocalDate.now().minusDays(30)).atStartOfDay();
         LocalDateTime end = (to != null ? to : LocalDate.now()).atTime(LocalTime.MAX);
 
-        // Security / Scoping Logic
-        Collection<User> allowedUsers = determineAllowedUsers(user, targetUserId, teamId);
+        // Security / Scoping Logic - CENTRALIZED
+        java.util.Set<Long> allowedUserIds = securityService.getAllowedUserIds(user);
+        
+        if (targetUserId != null) {
+            securityService.validateAccess(user, targetUserId);
+            allowedUserIds = java.util.Collections.singleton(targetUserId);
+        } else if (teamId != null) {
+            securityService.validateAccess(user, teamId);
+            allowedUserIds = new java.util.HashSet<>(userRepository.findSubordinateIds(teamId));
+            allowedUserIds.add(teamId);
+        } else if (managerId != null) {
+            securityService.validateAccess(user, managerId);
+            allowedUserIds = new java.util.HashSet<>(userRepository.findSubordinateIds(managerId));
+            allowedUserIds.add(managerId);
+        }
+
+        // Convert to User objects if needed for legacy methods, but preferred to use IDs
+        List<User> allowedUsers = userRepository.findAllById(allowedUserIds);
+
         // Use consistent date defaults
         LocalDate fromDate = (from != null) ? from : LocalDate.now().minusDays(30);
         LocalDate toDate = (to != null) ? to : LocalDate.now();
 
         // 1. Basic Stats
-        boolean isGlobalAdmin = viewerRole.equals("ADMIN") && targetUserId == null && teamId == null;
-        DashboardStatsDTO stats = getStats(allowedUsers, fromDate, toDate, isGlobalAdmin, user, targetUserId, teamId);
+        boolean isGlobalAdmin = viewerIsAdmin && targetUserId == null && teamId == null && managerId == null;
+        DashboardStatsDTO stats = getStats(allowedUsers, fromDate, toDate, isGlobalAdmin, user, targetUserId, teamId != null ? teamId : managerId);
         // 2. Trend Data (Revenue, Leads, Lost)
         ReportFilterDTO filter = ReportFilterDTO.builder()
                 .fromDate(fromDate)
@@ -77,16 +104,16 @@ public class DashboardStatsService {
                 .build();
         if (targetUserId != null) filter.setUserId(targetUserId);
         else if (teamId != null) filter.setTeamLeaderId(teamId);
+        else if (managerId != null) filter.setManagerId(managerId);
         
         List<TimeSeriesStatsDTO> trend = reportService.getFilteredTrend(filter);
 
         // 3. Status Distribution (Pre-aggregated)
-        String currentViewerRole = viewerRole;
         List<Long> userIds = allowedUsers.stream().map(User::getId).collect(Collectors.toList());
         
         // 3. Status Distribution (Pre-aggregated & Dynamic)
         List<DashboardProjection> distributionList;
-        if (viewerRole.equals("ADMIN") && targetUserId == null && teamId == null) {
+        if (isGlobalAdmin) {
             distributionList = leadRepository.countByStatusGlobal(start, end);
         } else {
             distributionList = leadRepository.countByStatusForUsers(userIds, start, end);
@@ -129,10 +156,10 @@ public class DashboardStatsService {
         return result;
     }
 
-    public Map<String, Object> getStats(LocalDateTime start, LocalDateTime end, User requester, Long userId) {
+    public Map<String, Object> getStats(LocalDateTime start, LocalDateTime end, User requester, Long userId, Long teamId, Long managerId) {
         LocalDate from = start != null ? start.toLocalDate() : LocalDate.now().minusDays(30);
         LocalDate to = end != null ? end.toLocalDate() : LocalDate.now();
-        DashboardSummaryDTO summary = getUnifiedSummary(requester, from, to, userId, null);
+        DashboardSummaryDTO summary = getUnifiedSummary(requester, from, to, userId, teamId, managerId);
         
         Map<String, Object> result = new HashMap<>();
         if (summary != null) {
@@ -144,10 +171,10 @@ public class DashboardStatsService {
         return result;
     }
 
-    public List<Map<String, Object>> getMemberPerformanceFiltered(LocalDateTime start, LocalDateTime end, User requester, Long userId, Long tlId) {
+    public List<Map<String, Object>> getMemberPerformanceFiltered(LocalDateTime start, LocalDateTime end, User requester, Long userId, Long tlId, Long managerId) {
         LocalDate from = start != null ? start.toLocalDate() : LocalDate.now().minusDays(30);
         LocalDate to = end != null ? end.toLocalDate() : LocalDate.now();
-        DashboardSummaryDTO summary = getUnifiedSummary(requester, from, to, userId, tlId);
+        DashboardSummaryDTO summary = getUnifiedSummary(requester, from, to, userId, tlId, managerId);
         
         List<Map<String, Object>> result = new ArrayList<>();
         if (summary != null && summary.getPerformance() != null) {
@@ -172,6 +199,7 @@ public class DashboardStatsService {
         return 0L;
     }
 
+<<<<<<< HEAD
     @Transactional(readOnly = true)
     public Collection<User> determineAllowedUsers(User requester, Long targetUserId, Long teamId) {
         // Refresh requester to ensure we are in a session
@@ -244,6 +272,9 @@ public class DashboardStatsService {
             }
         }
     }
+=======
+    // Removed determineAllowedUsers and collectSubordinates in favor of SecurityService
+>>>>>>> 057797c (Allow CORS preflight requests)
 
     public DashboardStatsDTO getStats(Collection<User> allowedUsers, LocalDate from, LocalDate to, boolean isGlobalAdmin, User requester, Long targetUserId, Long teamId) {
         if (requester == null)
@@ -373,8 +404,12 @@ public class DashboardStatsService {
                                                      : paymentRepository.getForecastRevenue(userIds, end, end.plusDays(30)));
 
         CompletableFuture<Long> pendingPaymentsCountFuture = CompletableFuture.supplyAsync(() -> 
-            isGlobalAdmin ? paymentRepository.countGlobalAllPending()
-                         : (userIds.isEmpty() ? 0L : paymentRepository.countAllPendingByUserIds(userIds)));
+            isGlobalAdmin ? taskRepository.countGlobalPendingTasksByType("EMI_COLLECTION", now)
+                         : (userIds.isEmpty() ? 0L : taskRepository.countPendingTasksByType(userIds, "EMI_COLLECTION", now)));
+                         
+        CompletableFuture<Long> pendingLeadsCountFuture = CompletableFuture.supplyAsync(() -> 
+            isGlobalAdmin ? taskRepository.countGlobalPendingTasksByType("FOLLOW_UP", now)
+                         : (userIds.isEmpty() ? 0L : taskRepository.countPendingTasksByType(userIds, "FOLLOW_UP", now)));
                          
         CompletableFuture<Long> overduePaymentsCountFuture = CompletableFuture.supplyAsync(() -> 
             isGlobalAdmin ? paymentRepository.countGlobalPendingPayments(now)
@@ -431,11 +466,11 @@ public class DashboardStatsService {
         Map<String, Long> userBreakdown = new HashMap<>();
         if (isGlobalAdmin) {
             userBreakdown = userRepository.findAll().stream()
-                    .filter(u -> u.getRole() != null)
+                    .filter(u -> u.isActive() && u.getRole() != null)
                     .collect(Collectors.groupingBy(u -> u.getRole().getName(), Collectors.counting()));
         } else {
             userBreakdown = allowedUsers.stream()
-                    .filter(u -> u.getRole() != null)
+                    .filter(u -> u.isActive() && u.getRole() != null)
                     .collect(Collectors.groupingBy(u -> u.getRole().getName(), Collectors.counting()));
         }
 
@@ -498,6 +533,7 @@ public class DashboardStatsService {
                 totalLeadsCountFuture, convertedCountFuture, todayLeadsCountFuture,
                 activeTicketsFuture, pendingTicketsFuture, resolvedTicketsFuture,
                 closedTicketsFuture, todayPaymentsCountFuture, overduePaymentsCountFuture,
+                pendingLeadsCountFuture,
                 leadTrendFuture, convertedTrendFuture, lostTrendFuture, revenueTrendFuture,
                 completedTodayFuture
             ).get(10, java.util.concurrent.TimeUnit.SECONDS);
@@ -587,6 +623,8 @@ public class DashboardStatsService {
         long closedTickets = safeGet(closedTicketsFuture, 0L);
         long todayPayments = safeGet(todayPaymentsCountFuture, 0L);
         long overduePayments = safeGet(overduePaymentsCountFuture, 0L);
+        long pendingLeadsCount = safeGet(pendingLeadsCountFuture, 0L);
+        long pendingPaymentsCount = safeGet(pendingPaymentsCountFuture, 0L);
         long highPriority = safeGet(highPriorityFollowupsFuture, 0L);
         long completedTodayCount = safeGet(completedTodayFuture, 0L);
 
@@ -609,9 +647,12 @@ public class DashboardStatsService {
             ? monthly.divide(monthlyTarget, 4, java.math.RoundingMode.HALF_UP).multiply(new BigDecimal(100)).doubleValue()
             : 0.0;
 
-        long totalActiveUsers = isGlobalAdmin 
-            ? userRepository.countActiveUsersByDate(to) 
-            : userRepository.countActiveUsersByDateIn(finalUserIds, to);
+        // Only count ACTIVE users for the dashboard summary
+        List<User> activeAllowedUsers = allowedUsers.stream()
+                .filter(User::isActive)
+                .collect(Collectors.toList());
+        
+        long totalActiveUsers = (long) activeAllowedUsers.size();
 
         // 8. Member Performance (REMOVED)
         List<MemberPerformanceDTO> perfStats = new java.util.ArrayList<>();
@@ -646,8 +687,8 @@ public class DashboardStatsService {
                 .pendingSupportTickets(pendingTickets)
                 .resolvedSupportTickets(resolvedTickets)
                 .closedSupportTickets(closedTickets)
-                .totalPendingCount(pendingPayments)
-                .pendingLeadsCount(totalLeadsCount - convertedCount) 
+                .totalPendingCount(pendingPaymentsCount)
+                .pendingLeadsCount(pendingLeadsCount) 
                 .overduePaymentsCount(overduePayments) 
                 .pendingRevenueAmount(pendingPaymentsAmount)
                 .statusDistribution(mappedDistribution)

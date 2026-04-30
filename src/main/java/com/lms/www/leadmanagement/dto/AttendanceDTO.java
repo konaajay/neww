@@ -24,6 +24,7 @@ public class AttendanceDTO {
     private Double lastLng;
     private LocalDateTime lastLocationTime;
     private LocalDateTime lastSeenTime;
+    private LocalDateTime breakStartTime;
 
     // Policy-driven fields for Frontend
     private Integer trackingIntervalSec;
@@ -43,4 +44,15 @@ public class AttendanceDTO {
 
     private Integer totalIdleMinutes;
     private String totalIdleHours;
+
+    private Integer lateMinutes;
+    private Integer productiveMinutes;
+    private Integer shortBreakMinutes;
+    private Integer longBreakMinutes;
+    private boolean late;
+    
+    private LocalDateTime loginTime;
+    private LocalDateTime logoutTime;
+
+    private String note;
 }

@@ -29,6 +29,9 @@ public class LeadBulkUploadService {
     @Autowired
     private LeadService leadService;
 
+    @Autowired
+    private SecurityService securityService;
+
     @PreAuthorize("hasAuthority('CREATE_LEADS')")
     public BulkUploadResponseDTO uploadLeads(MultipartFile file, String assignedToIds) {
         int total = 0;
@@ -37,18 +40,19 @@ public class LeadBulkUploadService {
         int failures = 0;
         List<String> errorList = new ArrayList<>();
 
-        List<User> assignees = new ArrayList<>();
+        User creator = securityService.getCurrentUser();
         if (assignedToIds != null && !assignedToIds.trim().isEmpty()) {
             for (String idStr : assignedToIds.split(",")) {
                 try {
-                    userRepository.findById(Long.parseLong(idStr.trim()))
-                            .ifPresent(assignees::add);
+                    Long targetId = Long.parseLong(idStr.trim());
+                    userRepository.findById(targetId).ifPresent(target -> {
+                        securityService.validateHierarchyAccess(creator, target);
+                        assignees.add(target);
+                    });
                 } catch (NumberFormatException ignored) {
                 }
             }
         }
-
-        User creator = leadService.getCurrentUser();
         int assigneeIndex = 0;
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {

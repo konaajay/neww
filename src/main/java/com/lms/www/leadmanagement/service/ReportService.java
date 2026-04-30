@@ -9,9 +9,9 @@ import com.lms.www.leadmanagement.entity.ReportScope;
 import com.lms.www.leadmanagement.repository.LeadRepository;
 import com.lms.www.leadmanagement.repository.PaymentRepository;
 import com.lms.www.leadmanagement.repository.UserRepository;
+import com.lms.www.leadmanagement.service.SecurityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,70 +35,39 @@ public class ReportService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private SecurityService securityService;
+
     public User getCurrentUser() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Logged in user not found"));
+        return securityService.getCurrentUser();
     }
 
-    private void collectSubordinates(User user, Set<User> collector) {
-        if (user.getSubordinates() != null) {
-            for (User sub : user.getSubordinates()) {
-                if (!collector.contains(sub)) {
-                    collector.add(sub);
-                    collectSubordinates(sub, collector);
-                }
-            }
-        }
-        if (user.getManagedAssociates() != null) {
-            for (User assoc : user.getManagedAssociates()) {
-                if (!collector.contains(assoc)) {
-                    collector.add(assoc);
-                    collectSubordinates(assoc, collector);
-                }
-            }
-        }
-    }
-
-    private Collection<User> determineAllowedUsers(User loggedInUser, ReportFilterDTO filter) {
-        Set<User> users = new HashSet<>();
+    private java.util.Set<Long> determineAllowedUserIds(User loggedInUser, ReportFilterDTO filter) {
+        java.util.Set<Long> allowedIds = securityService.getAllowedUserIds(loggedInUser);
 
         if (filter.getUserId() != null) {
-            Long uId = filter.getUserId();
-            if (uId == null) throw new IllegalArgumentException("User ID from filter is null");
-            userRepository.findById(uId).ifPresent(users::add);
-            return users;
+            securityService.validateAccess(loggedInUser, filter.getUserId());
+            return java.util.Collections.singleton(filter.getUserId());
         } else if (filter.getTeamLeaderId() != null) {
-            Long tlId = filter.getTeamLeaderId();
-            if (tlId == null) throw new IllegalArgumentException("Team Leader ID from filter is null");
-            userRepository.findById(tlId).ifPresent(tl -> {
-                users.add(tl);
-                collectSubordinates(tl, users);
-            });
-            return users;
+            securityService.validateAccess(loggedInUser, filter.getTeamLeaderId());
+            java.util.Set<Long> teamIds = new java.util.HashSet<>(userRepository.findSubordinateIds(filter.getTeamLeaderId()));
+            teamIds.add(filter.getTeamLeaderId());
+            return teamIds;
+        } else if (filter.getManagerId() != null) {
+            securityService.validateAccess(loggedInUser, filter.getManagerId());
+            java.util.Set<Long> managerIds = new java.util.HashSet<>(userRepository.findSubordinateIds(filter.getManagerId()));
+            managerIds.add(filter.getManagerId());
+            return managerIds;
         }
 
-        // Default: Scope-based
-        ReportScope scope = loggedInUser.getReportScope();
-        if (scope == null)
-            scope = ReportScope.OWN;
-
-        if (scope == ReportScope.ALL) {
-            return null; // Signals 'all users'
-        } else if (scope == ReportScope.TEAM) {
-            users.add(loggedInUser);
-            collectSubordinates(loggedInUser, users);
-        } else {
-            users.add(loggedInUser);
-        }
-
-        return users;
+        return allowedIds;
     }
 
     @PreAuthorize("hasAuthority('VIEW_REPORTS')")
     public LeadStatsDTO getFilteredStats(ReportFilterDTO filter) {
         User loggedInUser = getCurrentUser();
-        Collection<User> allowedUsers = determineAllowedUsers(loggedInUser, filter);
+        java.util.Set<Long> allowedIds = determineAllowedUserIds(loggedInUser, filter);
+        boolean isGlobalAdmin = securityService.isAdmin(loggedInUser) && filter.getUserId() == null && filter.getTeamLeaderId() == null && filter.getManagerId() == null;
 
         LocalDateTime start = filter.getFromDate() != null ? filter.getFromDate().atStartOfDay()
                 : LocalDate.now().minusDays(30).atStartOfDay();
@@ -108,8 +77,8 @@ public class ReportService {
         double totalRevenue = 0;
         long convertedCount = 0;
 
-        if (allowedUsers != null) {
-            List<Long> ids = allowedUsers.stream().map(User::getId).collect(Collectors.toList());
+        if (!isGlobalAdmin) {
+            List<Long> ids = new java.util.ArrayList<>(allowedIds);
             stats = ids.isEmpty() ? new HashMap<>() : leadRepository.getSummaryStats(ids, start, end);
             if (!ids.isEmpty()) {
                 List<Map<String, Object>> revData = paymentRepository.getRevenuePerUser(ids, start, end);
@@ -151,9 +120,9 @@ public class ReportService {
     @PreAuthorize("hasAuthority('VIEW_REPORTS')")
     public List<TimeSeriesStatsDTO> getFilteredTrend(ReportFilterDTO filter) {
         User loggedInUser = getCurrentUser();
-        Collection<User> allowedUsers = determineAllowedUsers(loggedInUser, filter);
-        List<Long> userIds = allowedUsers != null ? allowedUsers.stream().map(User::getId).collect(Collectors.toList())
-                : null;
+        java.util.Set<Long> allowedIds = determineAllowedUserIds(loggedInUser, filter);
+        boolean isGlobalAdmin = securityService.isAdmin(loggedInUser) && filter.getUserId() == null && filter.getTeamLeaderId() == null && filter.getManagerId() == null;
+        List<Long> userIds = !isGlobalAdmin ? new java.util.ArrayList<>(allowedIds) : null;
 
         LocalDateTime start = filter.getFromDate() != null ? filter.getFromDate().atStartOfDay()
                 : LocalDate.now().minusDays(7).atStartOfDay();
@@ -279,7 +248,8 @@ public class ReportService {
     @PreAuthorize("hasAuthority('VIEW_REPORTS')")
     public List<LeadDTO> getTodayFollowups(ReportFilterDTO filter) {
         User loggedInUser = getCurrentUser();
-        Collection<User> allowedUsers = determineAllowedUsers(loggedInUser, filter);
+        java.util.Set<Long> allowedIds = determineAllowedUserIds(loggedInUser, filter);
+        boolean isGlobalAdmin = securityService.isAdmin(loggedInUser) && filter.getUserId() == null && filter.getTeamLeaderId() == null;
 
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
         LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
@@ -288,7 +258,7 @@ public class ReportService {
                 .filter(l -> l.getFollowUpDate() != null &&
                         !l.getFollowUpDate().isBefore(startOfDay) &&
                         !l.getFollowUpDate().isAfter(endOfDay) &&
-                        (allowedUsers == null || allowedUsers.contains(l.getAssignedTo())))
+                        (isGlobalAdmin || (l.getAssignedTo() != null && allowedIds.contains(l.getAssignedTo().getId()))))
                 .map(LeadDTO::fromEntity)
                 .collect(Collectors.toList());
     }

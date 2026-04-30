@@ -46,13 +46,13 @@ public class AdminAttendanceController {
     }
 
     @PostMapping("/offices")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<OfficeLocation>> createOffice(@RequestBody OfficeLocation office) {
         return ResponseEntity.ok(ApiResponse.success(attendancePolicyService.createOffice(office)));
     }
 
     @PutMapping("/offices/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<OfficeLocation>> updateOffice(@PathVariable Long id, @RequestBody OfficeLocation office) {
         return ResponseEntity.ok(ApiResponse.success(attendancePolicyService.updateOffice(id, office)));
     }
@@ -71,13 +71,13 @@ public class AdminAttendanceController {
     }
 
     @PostMapping("/policies")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<AttendancePolicy>> createPolicy(@RequestBody AttendancePolicyDTO dto) {
         return ResponseEntity.ok(ApiResponse.success(attendancePolicyService.createPolicy(dto)));
     }
 
     @PutMapping("/policies/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<AttendancePolicy>> updatePolicy(@PathVariable Long id, @RequestBody AttendancePolicyDTO dto) {
         return ResponseEntity.ok(ApiResponse.success(attendancePolicyService.updatePolicy(id, dto)));
     }
@@ -130,5 +130,15 @@ public class AdminAttendanceController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<GlobalTarget>> updateGlobalTargets(@RequestBody GlobalTarget target) {
         return ResponseEntity.ok(ApiResponse.success(attendanceService.updateGlobalTarget(target)));
+    }
+
+    @PostMapping("/daily-note")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<ApiResponse<Void>> updateDailyNote(
+            @RequestParam Long userId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam String note) {
+        attendanceService.updateDailyNote(userId, date, note);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 }

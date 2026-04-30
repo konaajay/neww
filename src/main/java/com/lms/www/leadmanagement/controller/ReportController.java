@@ -27,6 +27,7 @@ public class ReportController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(required = false) Long teamLeaderId,
+            @RequestParam(required = false) Long managerId,
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) String status) {
         
@@ -37,6 +38,7 @@ public class ReportController {
                 .fromDate(startDate)
                 .toDate(endDate)
                 .teamLeaderId(teamLeaderId)
+                .managerId(managerId)
                 .userId(userId)
                 .status(status)
                 .build();
@@ -50,12 +52,14 @@ public class ReportController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(required = false) Long teamLeaderId,
+            @RequestParam(required = false) Long managerId,
             @RequestParam(required = false) Long userId) {
         
         ReportFilterDTO filter = ReportFilterDTO.builder()
                 .fromDate(from)
                 .toDate(to)
                 .teamLeaderId(teamLeaderId)
+                .managerId(managerId)
                 .userId(userId)
                 .build();
         

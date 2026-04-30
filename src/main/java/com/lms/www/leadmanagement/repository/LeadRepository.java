@@ -67,9 +67,24 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
     @Query("SELECT l FROM Lead l WHERE l.assignedTo IN :users OR l.createdBy = :creator")
     List<Lead> findByAssignedToInOrCreatedBy(@Param("users") Collection<User> users, @Param("creator") User creator);
 
+    @Query("SELECT l.id FROM Lead l LEFT JOIN l.assignedTo a " +
+            "WHERE (a.id IN :userIds OR (l.assignedTo IS NULL AND l.createdBy.id IN :userIds))")
+    List<Long> findLeadIdsByUserIds(@Param("userIds") Collection<Long> userIds);
+
     @EntityGraph(attributePaths = {"assignedTo", "createdBy", "updatedBy"})
-    @Query("SELECT l FROM Lead l WHERE l.assignedTo IN :users OR l.createdBy IN :creators")
-    List<Lead> findListByAssignedToInOrCreatedByIn(@Param("users") Collection<User> users, @Param("creators") Collection<User> creators);
+    @Query("SELECT l FROM Lead l LEFT JOIN FETCH l.assignedTo LEFT JOIN FETCH l.createdBy " +
+            "WHERE l.assignedTo IN :users OR l.createdBy IN :creators")
+    List<Lead> findListByAssignedToInOrCreatedByIn(@Param("users") java.util.Collection<User> users, @Param("creators") java.util.Collection<User> creators);
+
+    @EntityGraph(attributePaths = {"assignedTo", "createdBy", "updatedBy"})
+    @Query("SELECT l FROM Lead l LEFT JOIN l.assignedTo a LEFT JOIN l.createdBy c " +
+            "WHERE (a.id IN :userIds OR (a IS NULL AND c.id IN :userIds)) " +
+            "AND (:start IS NULL OR l.createdAt >= :start) " +
+            "AND (:end IS NULL OR l.createdAt <= :end)")
+    Page<Lead> findHierarchicalLeads(@Param("userIds") Collection<Long> userIds, 
+                                    @Param("start") LocalDateTime start, 
+                                    @Param("end") LocalDateTime end, 
+                                    Pageable pageable);
 
     @EntityGraph(attributePaths = {"assignedTo", "createdBy", "updatedBy"})
     @Query("SELECT l FROM Lead l WHERE l.assignedTo IN :users OR l.createdBy IN :creators")
@@ -123,8 +138,8 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
             "sum(case when UPPER(l.status) = 'REJECTED' then 1 else 0 end) as rejectedCount, " +
             "sum(case when UPPER(l.status) = 'REFUND' then 1 else 0 end) as refundCount, " +
             "sum(case when UPPER(l.status) IN ('LOST', 'NOT_INTERESTED') AND l.updatedAt BETWEEN :start AND :end then 1 else 0 end) as lostCount) " +
-            "FROM Lead l " +
-            "WHERE (l.assignedTo.id IN :userIds OR (l.assignedTo IS NULL AND l.createdBy.id IN :userIds))")
+            "FROM Lead l LEFT JOIN l.assignedTo a " +
+            "WHERE (a.id IN :userIds OR (l.assignedTo IS NULL AND l.createdBy.id IN :userIds))")
     Map<String, Long> getSummaryStats(
             @Param("userIds") Collection<Long> userIds,
             @Param("start") LocalDateTime start,
@@ -237,7 +252,8 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
     long countAllContacted();
 
     @Query("SELECT l.status as status, COUNT(l) as count FROM Lead l " +
-           "WHERE (l.assignedTo.id IN :userIds OR l.createdBy.id IN :userIds) " +
+           "LEFT JOIN l.assignedTo a " +
+           "WHERE (a.id IN :userIds OR (l.assignedTo IS NULL AND l.createdBy.id IN :userIds)) " +
            "AND l.createdAt BETWEEN :start AND :end GROUP BY l.status")
     List<DashboardProjection> countByStatusForUsers(
             @Param("userIds") Collection<Long> userIds,

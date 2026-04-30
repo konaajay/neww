@@ -36,8 +36,6 @@ public class Lead {
     @Column(name = "status")
     private String status = "NEW";
 
-    private String note;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_to")
     private User assignedTo;
@@ -50,14 +48,6 @@ public class Lead {
     @JoinColumn(name = "updated_by")
     private User updatedBy;
 
-    private String paymentLink;
-
-    private String paymentOrderId;
-
-    private String paymentSessionId;
-
-    private String rejectionReason;
-    private String rejectionNote;
     private Boolean followUpRequired;
     private LocalDateTime followUpDate;
     private String followUpType;

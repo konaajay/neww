@@ -70,7 +70,7 @@ public class AttendanceDataSeeder implements CommandLineRunner {
                     .radius(100000.0) // 100km radius for flexible testing
                     .build();
             officeRepository.save(hq);
-            System.out.println("SEEDING COMPLETE: Primary office node established.");
+            System.out.println("SEEDING COMPLETE: Primary office lead established.");
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.lms.www.leadmanagement.controller;
 
+import com.lms.www.leadmanagement.dto.ApiResponse;
 import com.lms.www.leadmanagement.dto.BulkUploadResponseDTO;
 import com.lms.www.leadmanagement.dto.LeadDTO;
 import com.lms.www.leadmanagement.dto.PaymentDTO;
@@ -46,19 +47,19 @@ public class ManagerController {
     @Autowired
     private DashboardStatsService statsService;
 
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("hasAnyAuthority('MANAGE_USERS', 'ROLE_ADMIN', 'ROLE_MANAGER')")
     @PostMapping("/team-leader")
     public ResponseEntity<UserDTO> createTeamLeader(@RequestBody UserDTO userDTO) {
         return ResponseEntity.ok(managerService.createTeamLeader(userDTO));
     }
 
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("hasAnyAuthority('MANAGE_USERS', 'ROLE_ADMIN', 'ROLE_MANAGER')")
     @GetMapping("/team-leaders")
-    public ResponseEntity<List<UserDTO>> getTeamLeaders() {
-        return ResponseEntity.ok(managerService.getAllManagedUsers());
+    public ResponseEntity<ApiResponse<List<UserDTO>>> getTeamLeaders() {
+        return ResponseEntity.ok(ApiResponse.success(managerService.getAllManagedUsers()));
     }
 
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("hasAnyAuthority('MANAGE_USERS', 'ROLE_ADMIN', 'ROLE_MANAGER')")
     @GetMapping("/team-tree")
     public ResponseEntity<java.util.List<UserDTO>> getTeamTree() {
         User manager = managerService.getCurrentUser();
@@ -81,8 +82,10 @@ public class ManagerController {
 
     @PreAuthorize("hasAuthority('VIEW_LEADS')")
     @GetMapping("/leads")
-    public ResponseEntity<List<LeadDTO>> getAllLeads(@RequestParam(value = "userId", required = false) Long userId) {
-        return ResponseEntity.ok(leadService.getAllLeadsForManager(userId));
+    public ResponseEntity<ApiResponse<List<LeadDTO>>> getAllLeads(
+            @RequestParam(value = "managerId", required = false) Long managerId,
+            @RequestParam(value = "userId", required = false) Long userId) {
+        return ResponseEntity.ok(ApiResponse.success(leadService.getAllLeadsForManager(managerId, userId)));
     }
 
     @PreAuthorize("hasAuthority('ASSIGN_TO_TL') or hasAuthority('ASSIGN_TO_ASSOCIATE') or hasAuthority('ADMIN')")
@@ -101,26 +104,26 @@ public class ManagerController {
         return ResponseEntity.ok(leadService.bulkAssignLeads(leadIds, userId));
     }
 
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("hasAnyAuthority('MANAGE_USERS', 'ROLE_ADMIN', 'ROLE_MANAGER')")
     @PostMapping("/users")
     public ResponseEntity<UserDTO> createUser(@RequestBody UserDTO userDTO) {
         return ResponseEntity.ok(managerService.createUser(userDTO));
     }
 
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("hasAnyAuthority('MANAGE_USERS', 'ROLE_ADMIN', 'ROLE_MANAGER')")
     @PutMapping("/users/{id}")
     public ResponseEntity<UserDTO> updateUser(@PathVariable Long id, @RequestBody UserDTO userDTO) {
         return ResponseEntity.ok(managerService.updateUser(id, userDTO));
     }
 
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("hasAnyAuthority('MANAGE_USERS', 'ROLE_ADMIN', 'ROLE_MANAGER')")
     @DeleteMapping("/users/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         managerService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("hasAnyAuthority('MANAGE_USERS', 'ROLE_ADMIN', 'ROLE_MANAGER')")
     @GetMapping("/permissions")
     public ResponseEntity<List<String>> getAllPermissions() {
         return ResponseEntity.ok(managerService.getAllPermissions());
@@ -129,16 +132,17 @@ public class ManagerController {
     @PreAuthorize("hasAuthority('MANAGE_USERS')")
     @GetMapping("/payments/history")
     public ResponseEntity<List<PaymentDTO>> getPaymentHistory(
+            @RequestParam(value = "managerId", required = false) Long managerId,
             @RequestParam(value = "userId", required = false) Long userId,
             @RequestParam(value = "tlId", required = false) Long tlId,
             @RequestParam(value = "associateId", required = false) Long associateId,
             @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "startDate", required = false) @DateTimeFormat(iso = ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(value = "endDate", required = false) @DateTimeFormat(iso = ISO.DATE_TIME) LocalDateTime endDate) {
-        if (userId == null && tlId == null && associateId == null) {
+        if (managerId == null && userId == null && tlId == null && associateId == null) {
             userId = managerService.getCurrentUser().getId();
         }
-        return ResponseEntity.ok(leadPaymentService.getFilteredPaymentHistory(userId, tlId, associateId, startDate, endDate, status));
+        return ResponseEntity.ok(leadPaymentService.getFilteredPaymentHistory(managerId, userId, tlId, associateId, startDate, endDate, status));
     }
 
     @PreAuthorize("hasAuthority('MANAGE_USERS')")
@@ -168,10 +172,12 @@ public class ManagerController {
     @GetMapping("/reports/member-performance")
     public ResponseEntity<List<Map<String, Object>>> getMemberPerformance(
             @RequestParam(value = "userId", required = false) Long userId,
+            @RequestParam(value = "teamId", required = false) Long teamId,
+            @RequestParam(value = "managerId", required = false) Long managerId,
             @RequestParam(value = "start", required = false) @DateTimeFormat(iso = ISO.DATE_TIME) LocalDateTime start,
             @RequestParam(value = "end", required = false) @DateTimeFormat(iso = ISO.DATE_TIME) LocalDateTime end) {
         User manager = managerService.getCurrentUser();
-        return ResponseEntity.ok(adminService.getMemberPerformanceFiltered(start, end, manager, userId, null));
+        return ResponseEntity.ok(adminService.getMemberPerformanceFiltered(start, end, manager, userId, teamId, managerId));
     }
 
     @PreAuthorize("hasAuthority('MANAGE_USERS')")
@@ -198,21 +204,21 @@ public class ManagerController {
         return ResponseEntity.ok(managerService.bulkAssignHierarchy(emailMap));
     }
 
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("hasAnyAuthority('MANAGE_USERS', 'ROLE_ADMIN', 'ROLE_MANAGER')")
     @GetMapping("/roles")
-    public ResponseEntity<List<RoleDTO>> getAllRoles() {
-        return ResponseEntity.ok(managerService.getAllRoles());
+    public ResponseEntity<ApiResponse<List<RoleDTO>>> getAllRoles() {
+        return ResponseEntity.ok(ApiResponse.success(managerService.getAllRoles()));
     }
 
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("hasAnyAuthority('MANAGE_USERS', 'ROLE_ADMIN', 'ROLE_MANAGER')")
     @GetMapping("/shifts")
-    public ResponseEntity<List<com.lms.www.leadmanagement.entity.AttendanceShift>> getAllShifts() {
-        return ResponseEntity.ok(attendanceService.getAllShifts());
+    public ResponseEntity<ApiResponse<List<com.lms.www.leadmanagement.entity.AttendanceShift>>> getAllShifts() {
+        return ResponseEntity.ok(ApiResponse.success(attendanceService.getAllShifts()));
     }
 
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("hasAnyAuthority('MANAGE_USERS', 'ROLE_ADMIN', 'ROLE_MANAGER')")
     @GetMapping("/offices")
-    public ResponseEntity<List<com.lms.www.leadmanagement.dto.OfficeLocationDTO>> getAllOffices() {
-        return ResponseEntity.ok(adminService.getAllOffices());
+    public ResponseEntity<ApiResponse<List<com.lms.www.leadmanagement.dto.OfficeLocationDTO>>> getAllOffices() {
+        return ResponseEntity.ok(ApiResponse.success(adminService.getAllOffices()));
     }
 }

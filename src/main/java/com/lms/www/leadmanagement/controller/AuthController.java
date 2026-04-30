@@ -23,7 +23,17 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest loginRequest, HttpServletRequest request) {
-        return ResponseEntity.ok(authService.authenticateUser(loginRequest, request));
+        System.out.println("[AUTH] Login attempt for user: " + loginRequest.getEmail());
+        try {
+            AuthResponse response = authService.authenticateUser(loginRequest, request);
+            System.out.println("[AUTH] Login successful for: " + loginRequest.getEmail());
+            System.out.println("[AUTH] Role in Response: " + response.getRole());
+            System.out.println("[AUTH] User ID: " + response.getId());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("[AUTH] Login failed for: " + loginRequest.getEmail() + " | Reason: " + e.getMessage());
+            throw e;
+        }
     }
 
     @PostMapping("/logout")

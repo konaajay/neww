@@ -17,7 +17,7 @@ public class AttendancePolicy {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "office_id", nullable = false)
     private OfficeLocation office;
 
@@ -36,13 +36,17 @@ public class AttendancePolicy {
     @Builder.Default
     private Integer trackingIntervalSec = 300;
     @Builder.Default
-    private Integer maxAccuracyMeters = 100;
+    private Integer maxAccuracyMeters = 100000;
     @Builder.Default
     private Integer minimumWorkMinutes = 240; // 4 Hours
+    @Builder.Default
+    private Integer halfDayMinutes = 120; // 2 Hours
     @Builder.Default
     private Integer maxIdleMinutes = 30; // Heartbeat failure timeout
 
     @Builder.Default
     private java.time.LocalTime shiftStartTime = java.time.LocalTime.of(9, 30);
+    @Builder.Default
+    private java.time.LocalTime shiftEndTime = java.time.LocalTime.of(18, 30);
 }
 

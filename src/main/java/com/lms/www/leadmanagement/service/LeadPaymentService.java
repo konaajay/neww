@@ -80,12 +80,14 @@ public class LeadPaymentService {
         mailService.sendEmail(lead.getEmail(), subject, body);
     }
 
+    @Transactional(readOnly = true)
     public List<UserDTO> getTeamLeaders() {
         return userRepository.findByRoleName("TEAM_LEADER").stream()
                 .map(UserDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public PaymentDTO generateInvoice(Long leadId) {
         return paymentRepository.findByLeadIdAndStatus(leadId, Payment.Status.PAID).stream()
                 .max(Comparator.comparing(Payment::getCreatedAt))
@@ -94,50 +96,38 @@ public class LeadPaymentService {
     }
 
     @Transactional(readOnly = true)
-    public List<PaymentDTO> getFilteredPaymentHistory(Long userId, Long tlId, Long associateId,
+    public List<PaymentDTO> getFilteredPaymentHistory(Long managerId, Long userId, Long tlId, Long associateId, 
             LocalDateTime start, LocalDateTime end, String status) {
         User requester = securityService.getCurrentUser();
-        
-        List<Long> allowedLeadIds;
-        List<Long> targetUserIds = new ArrayList<>();
+        java.util.Set<Long> targetUserIds = securityService.getAllowedUserIds(requester);
 
         if (userId != null) {
-            securityService.validateHierarchyAccess(requester, userRepository.findById(userId).orElseThrow());
-            targetUserIds.add(userId);
-            targetUserIds.addAll(userRepository.findSubordinateIds(userId));
+            securityService.validateAccess(requester, userId);
+            targetUserIds = java.util.Collections.singleton(userId);
         } else if (associateId != null) {
-            securityService.validateHierarchyAccess(requester, userRepository.findById(associateId).orElseThrow());
-            targetUserIds.add(associateId);
+            securityService.validateAccess(requester, associateId);
+            targetUserIds = java.util.Collections.singleton(associateId);
         } else if (tlId != null) {
-            User tl = userRepository.findById(tlId).orElseThrow();
-            securityService.validateHierarchyAccess(requester, tl);
+            securityService.validateAccess(requester, tlId);
+            targetUserIds = new java.util.HashSet<>(userRepository.findSubordinateIds(tlId));
             targetUserIds.add(tlId);
-            targetUserIds.addAll(userRepository.findSubordinateIds(tlId));
-        } else {
-            // Requester's full hierarchy
-            if (!securityService.isAdmin(requester)) {
-                targetUserIds.addAll(userRepository.findSubordinateIds(requester.getId()));
-                targetUserIds.add(requester.getId());
-            }
+        } else if (managerId != null) {
+            securityService.validateAccess(requester, managerId);
+            targetUserIds = new java.util.HashSet<>(userRepository.findSubordinateIds(managerId));
+            targetUserIds.add(managerId);
         }
+
+        boolean isGlobalAdmin = securityService.isAdmin(requester) && managerId == null && tlId == null && associateId == null && userId == null;
 
         Payment.Status pStatus = (status != null && !status.isEmpty()) ? Payment.Status.valueOf(status.toUpperCase()) : null;
 
         // Optimization: Use optimized lead fetching
-        if (targetUserIds.isEmpty()) {
-            // Admin Global View
+        if (isGlobalAdmin) {
             return paymentRepository.findFiltered(null, start, end, pStatus).stream()
                     .map(this::convertToDTO).collect(Collectors.toList());
         } else {
-            // Optimized query for hierarchy
-            List<Long> leadIds = leadRepository.findListByAssignedToInOrCreatedByIn(
-                    userRepository.findAllById(targetUserIds), 
-                    userRepository.findAllById(targetUserIds)
-            ).stream().map(Lead::getId).collect(Collectors.toList());
-
-            if (leadIds.isEmpty()) return Collections.emptyList();
-
-            return paymentRepository.findFiltered(leadIds, start, end, pStatus).stream()
+            // Optimized query for hierarchy using direct JOIN
+            return paymentRepository.findFilteredByUserHierarchy(new java.util.ArrayList<>(targetUserIds), start, end, pStatus).stream()
                     .map(this::convertToDTO).collect(Collectors.toList());
         }
     }
@@ -145,7 +135,8 @@ public class LeadPaymentService {
     @Transactional(readOnly = true)
     public List<PaymentDTO> getFilteredPaymentHistoryForTL(String username, LocalDateTime start, LocalDateTime end, String status, Long userId) {
         User tl = userRepository.findByEmail(username).orElseThrow();
-        return getFilteredPaymentHistory(userId, tl.getId(), null, start, end, status);
+        // TL looking at their team, we pass tl.getId() as tlId
+        return getFilteredPaymentHistory(null, userId, tl.getId(), null, start, end, status);
     }
 
     @Transactional
@@ -153,6 +144,11 @@ public class LeadPaymentService {
             PaymentSplitRequest splitRequest) {
         Lead lead = leadRepository.findById(leadId)
                 .orElseThrow(() -> new ResourceNotFoundException("Lead not found"));
+        
+        User requester = securityService.getCurrentUser();
+        if (lead.getAssignedTo() != null) {
+            securityService.validateAccess(requester, lead.getAssignedTo().getId());
+        }
 
         Payment payment = Payment.builder()
                 .leadId(leadId)
@@ -278,6 +274,11 @@ public class LeadPaymentService {
         BigDecimal totalAmount = data.containsKey("totalAmount") ? new BigDecimal(data.get("totalAmount").toString()) : amount;
         
         Lead lead = leadRepository.findById(leadId).orElseThrow(() -> new ResourceNotFoundException("Lead not found"));
+        User requester = securityService.getCurrentUser();
+        
+        if (lead.getAssignedTo() != null) {
+            securityService.validateAccess(requester, lead.getAssignedTo().getId());
+        }
 
         Payment payment = Payment.builder()
                 .leadId(leadId)
