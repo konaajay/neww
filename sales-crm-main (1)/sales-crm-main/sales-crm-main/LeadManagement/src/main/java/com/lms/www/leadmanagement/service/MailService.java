@@ -62,7 +62,7 @@ public class MailService {
         String subject = "Welcome to NEXUS CRM: Your Administrative Credentials";
         String body = String.format(
             "<h3>Welcome to the Team, %s!</h3>" +
-            "<p>Your official administrative node has been established on NEXUS CRM.</p>" +
+            "<p>Your official administrative lead has been established on NEXUS CRM.</p>" +
             "<div style='background:#f8fafc;padding:20px;border-left:4px solid #6366f1;border-radius:8px;'>" +
             "   <p style='margin-bottom:10px;'><strong>Login Credentials:</strong></p>" +
             "   <p style='margin:5px 0;'><strong>Username/Email:</strong> %s</p>" +

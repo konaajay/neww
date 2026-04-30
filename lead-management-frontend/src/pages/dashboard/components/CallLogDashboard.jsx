@@ -8,6 +8,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { Phone, PhoneOutgoing, Clock, User, Calendar, Search, Play, FileText, Upload } from 'lucide-react';
 import BulkUploadCallModal from './BulkUploadCallModal';
 import { toast } from 'react-toastify';
+import axios from 'axios';
 
 import FiltersBar from './FiltersBar';
 import CallAnalyticsGrid from './CallAnalyticsGrid';
@@ -30,6 +31,16 @@ const CallLogDashboard = ({ userId: externalUserId, hideHeader = false, filters:
         userId: externalUserId || ''
     });
 
+    const [debouncedFilters, setDebouncedFilters] = useState(propsFilters || internalFilters);
+
+    // Debounce filters to prevent API spam
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedFilters(propsFilters || internalFilters);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [propsFilters, internalFilters]);
+
     // Use external filters if provided, otherwise fall back to internal
     const filters = propsFilters || internalFilters;
     const setFilters = onPropsFiltersChange || setInternalFilters;
@@ -40,15 +51,20 @@ const CallLogDashboard = ({ userId: externalUserId, hideHeader = false, filters:
         }
     }, [externalUserId, propsFilters]);
 
-    const fetchData = async () => {
+    const fetchData = async (activeFiltersParam) => {
+        const activeFiltersSource = activeFiltersParam || debouncedFilters;
+        if (!activeFiltersSource.from || !activeFiltersSource.to) return;
+        
         setLoading(true);
         try {
             const activeFilters = { 
-                ...filters,
-                from: filters.from.split('T')[0],
-                to: filters.to.split('T')[0]
+                ...activeFiltersSource,
+                from: activeFiltersSource.from.split('T')[0],
+                to: activeFiltersSource.to.split('T')[0]
             };
-            const statsFilters = { from: activeFilters.from, to: activeFilters.to, userId: activeFilters.userId };
+            if (!activeFilters.userId) delete activeFilters.userId;
+            const statsFilters = { from: activeFilters.from, to: activeFilters.to };
+            if (activeFilters.userId) statsFilters.userId = activeFilters.userId;
 
             let logsCall, usersCall, statsCall;
 
@@ -85,15 +101,17 @@ const CallLogDashboard = ({ userId: externalUserId, hideHeader = false, filters:
             const statsPayload = statsRes.data;
             setStats(statsPayload?.data || statsPayload || null);
         } catch (err) {
-            toast.error('Failed to sync call logs');
+            if (!axios.isCancel(err)) {
+                toast.error('Failed to sync call logs');
+            }
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchData();
-    }, [filters.from, filters.to, filters.userId, refreshTrigger]);
+        fetchData(debouncedFilters);
+    }, [debouncedFilters, refreshTrigger]);
 
     const formatDuration = (seconds) => {
         if (!seconds) return '0s';
@@ -137,11 +155,11 @@ const CallLogDashboard = ({ userId: externalUserId, hideHeader = false, filters:
                         </button>
                     </div>
 
-                    <FiltersBar 
-                        filters={filters}
-                        onChange={setFilters}
-                        onSync={fetchData}
-                        title="INTERACTION HUB"
+                        <FiltersBar 
+                            filters={filters}
+                            onChange={setFilters}
+                            onSync={() => fetchData(debouncedFilters)}
+                            title="INTERACTION HUB"
                         role={role}
                         currentUserId={user?.id}
                     />

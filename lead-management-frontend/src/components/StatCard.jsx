@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTheme } from '../context/ThemeContext';
 
-const StatCard = ({ title, value, sub, icon, color = 'primary', unit = 'Nodes', onClick }) => {
+const StatCard = ({ title, value, sub, icon, color = 'primary', unit = 'Leads', onClick }) => {
   const { isDarkMode } = useTheme();
   
   const colorMap = {

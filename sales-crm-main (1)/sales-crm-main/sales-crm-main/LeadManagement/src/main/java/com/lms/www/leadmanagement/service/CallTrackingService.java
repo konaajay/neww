@@ -16,6 +16,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class CallTrackingService {
@@ -32,18 +33,22 @@ public class CallTrackingService {
     @Autowired
     private com.lms.www.leadmanagement.repository.LeadNoteRepository leadNoteRepository;
 
+    @Autowired
+    private SecurityService securityService;
+
     private static final ZoneId INDIA_ZONE = ZoneId.of("Asia/Kolkata");
 
     @Transactional
     public CallRecord startCall(Long userId, CallTrackingStartDTO dto) {
-        // Block if already an active call
-        callRecordRepository.findTopByUserIdAndEndTimeIsNullOrderByStartTimeDesc(userId)
-            .ifPresent(call -> {
-                throw new RuntimeException("An active interaction is already in progress. Terminate current session first.");
-            });
+        User requester = securityService.getCurrentUser();
+        securityService.validateAccess(requester, userId);
 
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
         Lead lead = dto.getLeadId() != null ? leadRepository.findById(dto.getLeadId()).orElse(null) : null;
+        
+        if (lead != null && lead.getAssignedTo() != null) {
+            securityService.validateAccess(requester, lead.getAssignedTo().getId());
+        }
 
         CallRecord record = CallRecord.builder()
                 .user(user)
@@ -142,10 +147,21 @@ public class CallTrackingService {
 
     @Transactional(readOnly = true)
     public DailyReportDTO getTodayReport() {
+        User requester = securityService.getCurrentUser();
+        java.util.Set<Long> allowedIds = securityService.getAllowedUserIds(requester);
+        boolean isGlobalAdmin = securityService.isAdmin(requester);
+
         LocalDateTime startOfDay = LocalDate.now(INDIA_ZONE).atStartOfDay();
         LocalDateTime endOfDay = LocalDate.now(INDIA_ZONE).atTime(23, 59, 59);
 
         List<DailyUserReportDTO> userReports = callRecordRepository.getDailyUserReports(startOfDay, endOfDay);
+        
+        // Apply security filter
+        if (!isGlobalAdmin) {
+            userReports = userReports.stream()
+                .filter(report -> allowedIds.contains(report.getUserId()))
+                .collect(Collectors.toList());
+        }
         
         long totalCalls = userReports.stream().mapToLong(DailyUserReportDTO::getCallCount).sum();
         long totalDuration = userReports.stream().mapToLong(DailyUserReportDTO::getTotalDuration).sum();

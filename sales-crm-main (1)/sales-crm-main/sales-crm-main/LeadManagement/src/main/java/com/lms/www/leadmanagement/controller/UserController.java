@@ -3,6 +3,7 @@ package com.lms.www.leadmanagement.controller;
 import com.lms.www.leadmanagement.dto.RoleDTO;
 import com.lms.www.leadmanagement.dto.UserDTO;
 import com.lms.www.leadmanagement.service.AdminService;
+import com.lms.www.leadmanagement.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +21,7 @@ import java.util.List;
 public class UserController {
 
     private final AdminService adminService;
+    private final UserService userService;
 
     @PreAuthorize("hasAuthority('MANAGE_USERS')")
     @GetMapping
@@ -46,7 +48,7 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("hasAnyAuthority('MANAGE_USERS', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER', 'MANAGER', 'TEAM_LEADER')")
     @GetMapping("/roles")
     public ResponseEntity<List<RoleDTO>> getAllRoles() {
         return ResponseEntity.ok(adminService.getAllRoles());
@@ -58,18 +60,19 @@ public class UserController {
         return ResponseEntity.ok(adminService.createRole(roleDTO));
     }
 
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("hasAnyAuthority('MANAGE_USERS', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER', 'MANAGER', 'TEAM_LEADER')")
     @GetMapping("/permissions")
     public ResponseEntity<List<String>> getAllPermissions() {
         return ResponseEntity.ok(adminService.getAllPermissions());
     }
 
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("hasAnyAuthority('MANAGE_USERS', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER', 'MANAGER', 'TEAM_LEADER')")
     @GetMapping("/team-leaders")
     public ResponseEntity<List<UserDTO>> getTeamLeaders() {
-        // Migration from AdminController
-        return ResponseEntity.ok(adminService.getAllUsers(Pageable.unpaged()).getContent().stream()
-                .filter(u -> "TEAM_LEADER".equals(u.getRole()))
+        // Enforce hierarchy filtering
+        return ResponseEntity.ok(userService.getAuthorizedUsers(org.springframework.data.domain.Pageable.unpaged())
+                .getContent().stream()
+                .filter(u -> "TEAM_LEADER".equals(u.getRole()) || "MANAGER".equals(u.getRole()))
                 .toList());
     }
 }

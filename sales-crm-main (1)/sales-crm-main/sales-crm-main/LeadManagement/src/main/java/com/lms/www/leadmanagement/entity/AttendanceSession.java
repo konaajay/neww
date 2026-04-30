@@ -70,6 +70,11 @@ public class AttendanceSession {
     private Long totalBreakSeconds = 0L;
 
     @Builder.Default
+    private Long shortBreakSeconds = 0L;
+    @Builder.Default
+    private Long longBreakSeconds = 0L;
+
+    @Builder.Default
     private Long unauthorizedOutsideSeconds = 0L;
 
     @Builder.Default
@@ -82,6 +87,9 @@ public class AttendanceSession {
     private Integer breakViolations = 0;
 
     private boolean isLate;
+    
+    @Builder.Default
+    private Integer lateMinutes = 0;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

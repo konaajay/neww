@@ -14,7 +14,7 @@ const InvoicePage = () => {
             try {
                 setLoading(true);
                 const res = await paymentService.fetchInvoiceByLead(leadId);
-                setInvoiceData(res.data);
+                setInvoiceData(res);
             } catch (err) {
                 toast.error('Failed to retrieve invoice.');
             } finally {
@@ -98,7 +98,7 @@ const InvoicePage = () => {
                 <div className="row g-4 mb-4 mb-md-5 pb-4 pb-md-5 border-bottom border-light">
                     <div className="col-12 col-md-7">
                         <div className="text-muted small text-uppercase fw-bold mb-2 opacity-50">Recipient Payload</div>
-                        <div className="fw-black h3 mb-1 text-break">{invoiceData.leadName.toUpperCase()}</div>
+                        <div className="fw-black h3 mb-1 text-break">{(invoiceData.leadName || 'Unnamed Record').toUpperCase()}</div>
                         <div className="text-muted font-monospace small">{invoiceData.mobile}</div>
                     </div>
 
@@ -119,7 +119,7 @@ const InvoicePage = () => {
                     <div className="d-flex flex-column flex-sm-row justify-content-between py-4 py-md-5 gap-3">
                         <div className="d-flex flex-column">
                             <span className="fw-bold h5 mb-1">{invoiceData.paymentType || 'OPERATIONAL SETTLEMENT'}</span>
-                            <span className="text-muted small fw-bold opacity-50">Authorized via Encryption Node</span>
+                            <span className="text-muted small fw-bold opacity-50">Authorized via Encryption Lead</span>
                         </div>
                         <strong className="h3 mb-0 fw-black text-nowrap">₹{invoiceData.amount}</strong>
                     </div>

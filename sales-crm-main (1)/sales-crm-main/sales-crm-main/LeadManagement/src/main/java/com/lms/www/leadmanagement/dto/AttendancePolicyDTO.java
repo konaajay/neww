@@ -51,5 +51,7 @@ public class AttendancePolicyDTO {
     @NotNull(message = "Max idle minutes is required")
     @Min(value = 1, message = "Max idle minutes must be at least 1")
     private Integer maxIdleMinutes;
+
+    private Integer halfDayMinutes;
 }
 

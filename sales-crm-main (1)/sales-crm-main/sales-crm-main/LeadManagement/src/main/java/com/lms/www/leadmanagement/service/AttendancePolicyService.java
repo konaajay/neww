@@ -81,18 +81,19 @@ public class AttendancePolicyService {
         OfficeLocation office = officeLocationRepository.findById(dto.getOfficeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Office not found"));
 
-        AttendancePolicy policy = AttendancePolicy.builder()
-                .office(office)
-                .shortBreakStartTime(dto.getShortBreakStartTime() != null ? LocalTime.parse(dto.getShortBreakStartTime()) : DEFAULT_SHORT_BREAK_START)
-                .shortBreakEndTime(dto.getShortBreakEndTime() != null ? LocalTime.parse(dto.getShortBreakEndTime()) : DEFAULT_SHORT_BREAK_END)
-                .longBreakStartTime(dto.getLongBreakStartTime() != null ? LocalTime.parse(dto.getLongBreakStartTime()) : DEFAULT_LONG_BREAK_START)
-                .longBreakEndTime(dto.getLongBreakEndTime() != null ? LocalTime.parse(dto.getLongBreakEndTime()) : DEFAULT_LONG_BREAK_END)
-                .gracePeriodMinutes(dto.getGracePeriodMinutes() != null ? dto.getGracePeriodMinutes() : DEFAULT_GRACE_PERIOD)
-                .trackingIntervalSec(dto.getTrackingIntervalSec() != null ? dto.getTrackingIntervalSec() : DEFAULT_TRACKING_INTERVAL)
-                .maxAccuracyMeters(dto.getMaxAccuracyMeters())
-                .minimumWorkMinutes(dto.getMinimumWorkMinutes())
-                .maxIdleMinutes(dto.getMaxIdleMinutes())
-                .build();
+        AttendancePolicy policy = attendancePolicyRepository.findByOfficeId(office.getId())
+                .orElse(AttendancePolicy.builder().office(office).build());
+
+        policy.setShortBreakStartTime(dto.getShortBreakStartTime() != null ? LocalTime.parse(dto.getShortBreakStartTime()) : DEFAULT_SHORT_BREAK_START);
+        policy.setShortBreakEndTime(dto.getShortBreakEndTime() != null ? LocalTime.parse(dto.getShortBreakEndTime()) : DEFAULT_SHORT_BREAK_END);
+        policy.setLongBreakStartTime(dto.getLongBreakStartTime() != null ? LocalTime.parse(dto.getLongBreakStartTime()) : DEFAULT_LONG_BREAK_START);
+        policy.setLongBreakEndTime(dto.getLongBreakEndTime() != null ? LocalTime.parse(dto.getLongBreakEndTime()) : DEFAULT_LONG_BREAK_END);
+        policy.setGracePeriodMinutes(dto.getGracePeriodMinutes() != null ? dto.getGracePeriodMinutes() : DEFAULT_GRACE_PERIOD);
+        policy.setTrackingIntervalSec(dto.getTrackingIntervalSec() != null ? dto.getTrackingIntervalSec() : DEFAULT_TRACKING_INTERVAL);
+        policy.setMaxAccuracyMeters(dto.getMaxAccuracyMeters());
+        policy.setMinimumWorkMinutes(dto.getMinimumWorkMinutes());
+        policy.setHalfDayMinutes(dto.getHalfDayMinutes());
+        policy.setMaxIdleMinutes(dto.getMaxIdleMinutes());
 
         return attendancePolicyRepository.save(policy);
     }
@@ -122,6 +123,11 @@ public class AttendancePolicyService {
 
     @Transactional
     public AttendanceShift createShift(AttendanceShift shift) {
+        if (shift.getOffice() != null) {
+            attendanceShiftRepository.findByOfficeId(shift.getOffice().getId()).ifPresent(existing -> {
+                shift.setId(existing.getId());
+            });
+        }
         return attendanceShiftRepository.save(shift);
     }
 

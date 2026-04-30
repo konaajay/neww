@@ -1,25 +1,49 @@
-import React, { useState, useMemo } from 'react';
-import { Search, Filter, Clock, AlertCircle, Calendar, User, AlignLeft, CheckSquare, RefreshCw, Plus, Phone, Mail } from 'lucide-react';
+import React, { useState, useMemo, useCallback } from 'react';
+import { Search, Clock, AlertCircle, Calendar, CheckSquare, RefreshCw, Plus, Phone, Mail } from 'lucide-react';
 import CallOutcomeModal from './CallOutcomeModal';
 import ManualTaskModal from './ManualTaskModal';
-import associateService from '../services/associateService';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
+import { useTasks } from '../features/leads/hooks/useTasks';
+import callApi from '../features/calls/api/callApi';
 
-const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilters = false, startDate, endDate, initialFilter = 'ALL', refreshTrigger }) => {
+const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, userId, managerId, teamId, startDate, endDate, initialFilter = 'ALL' }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState(initialFilter);
   const [selectedLead, setSelectedLead] = useState(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
-  const [cloudTasks, setCloudTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [reschedulingTask, setReschedulingTask] = useState(null);
   const { activeCall, startCall: logActiveCall } = useAuth();
   const [isStartingCall, setIsStartingCall] = useState(false);
+  
+  // React to initialFilter changes from parent
+  React.useEffect(() => {
+    if (initialFilter) {
+      setStatusFilter(initialFilter);
+    }
+  }, [initialFilter]);
 
   const isDarkMode = theme === 'dark';
 
+  // 1. DATA HOOKS (Single source of truth)
+  const filters = useMemo(() => ({
+    from: startDate,
+    to: endDate,
+    userId: userId,
+    managerId: managerId,
+    teamId: teamId
+  }), [startDate, endDate, userId, managerId, teamId]);
+
+  const { 
+    tasks: cloudTasks, 
+    loading, 
+    refresh: loadTasks, 
+    updateStatus, 
+    createTask 
+  } = useTasks(filters);
+
+  // 2. HANDLERS
   const handleStartCall = async (lead) => {
     if (activeCall) {
       toast.warning('Another interaction is currently active. Finish it first.');
@@ -28,54 +52,45 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
 
     setIsStartingCall(true);
     try {
-      const res = await associateService.startCall({
+      const res = await callApi.startCall({
         leadId: lead.id,
         phoneNumber: lead.mobile
       });
       
       const sessionData = {
-        callId: res.data.data.id,
+        callId: res.id, // Assuming safeRequest returns data directly
         leadId: lead.id,
         leadName: lead.name,
         phoneNumber: lead.mobile,
-        startTime: res.data.data.startTime
+        startTime: res.startTime
       };
       
       logActiveCall(sessionData);
       toast.success('Interaction sequence initiated');
-      // Open outcome modal immediately
       setSelectedLead({ lead });
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to initiate interaction');
+      toast.error('Failed to initiate interaction');
     } finally {
       setIsStartingCall(false);
     }
   };
 
-  const loadTasks = async () => {
-    setLoading(true);
-    try {
-      const res = await associateService.fetchHierarchicalTasks();
-      const taskData = Array.isArray(res.data) ? res.data : [];
-      setCloudTasks(taskData);
-    } catch (err) {
-      console.error("Task fetch failed", err);
-      setCloudTasks([]);
-    } finally {
-      setLoading(false);
-    }
+  const isToday = (dateInput) => {
+    if (!dateInput) return false;
+    const d = new Date(dateInput);
+    const today = new Date();
+    return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
   };
 
-  React.useEffect(() => {
-    loadTasks();
-  }, [userId, refreshTrigger]);
+  const isOverdue = (dateInput) => {
+    if (!dateInput) return false;
+    return new Date(dateInput) < new Date();
+  };
 
-  // Extract valid tasks from cloud data
-  const tasks = useMemo(() => {
+  const processedTasks = useMemo(() => {
     if (!Array.isArray(cloudTasks)) return [];
 
     return cloudTasks.map(t => {
-      // Calculate Priority based on due date
       let priority = 'Low';
       let priorityColor = 'success';
       let timeString = 'No date set';
@@ -84,8 +99,8 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
         const due = new Date(t.dueDate);
         const now = new Date();
         const diffMs = due - now;
-        const diffDays = diffMs / (1000 * 60 * 60 * 24);
         const diffHours = diffMs / (1000 * 60 * 60);
+        const diffDays = diffMs / (1000 * 60 * 60 * 24);
 
         if (diffHours < 0) {
           priority = 'High';
@@ -118,9 +133,8 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
     });
   }, [cloudTasks]);
 
-  // Apply Search and Filters
   const filteredTasks = useMemo(() => {
-    return tasks.filter(task => {
+    return processedTasks.filter(task => {
       const s = searchTerm.toLowerCase();
       const matchesSearch =
         (task.title || "").toLowerCase().includes(s) ||
@@ -133,40 +147,26 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
         const d = new Date(task.dueDate);
         const taskDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         matchesDate = taskDateStr === dateFilter;
-      } else if (hideFilters && startDate && endDate) {
-        if (!task.dueDate) return false;
-        const taskDate = new Date(task.dueDate);
-        const start = new Date(startDate);
-        const end = new Date(endDate + 'T23:59:59');
-        matchesDate = taskDate >= start && taskDate <= end;
       }
 
       let matchesStatus = true;
       if (statusFilter !== 'ALL') {
-        matchesStatus = task.priority && task.priority.toUpperCase() === statusFilter.toUpperCase();
+        if (statusFilter.toUpperCase() === 'TODAY') {
+          matchesStatus = task.dueDate && isToday(task.dueDate);
+        } else if (statusFilter.toUpperCase() === 'OVERDUE') {
+          matchesStatus = task.dueDate && isOverdue(task.dueDate) && task.status !== 'COMPLETED';
+        } else {
+          matchesStatus = task.priority && task.priority.toUpperCase() === statusFilter.toUpperCase();
+        }
       }
 
-      let matchesUser = true;
-      if (userId) {
-          const validUserIdStr = userId.toString();
-          matchesUser = (task.lead && task.lead.assignedToId?.toString() === validUserIdStr) || 
-                        (task.lead && task.lead.createdById?.toString() === validUserIdStr) ||
-                        (task.assigneeId?.toString() === validUserIdStr) ||
-                        (task.user?.id?.toString() === validUserIdStr);
-      }
-
-      return matchesSearch && matchesDate && matchesStatus && matchesUser;
+      return matchesSearch && matchesDate && matchesStatus;
     });
-  }, [tasks, searchTerm, dateFilter, statusFilter, userId, startDate, endDate]);
+  }, [processedTasks, searchTerm, dateFilter, statusFilter]);
 
   const handleUpdateTaskStatus = async (taskId, newStatus) => {
-    try {
-      await associateService.updateTaskStatus(taskId, newStatus);
-      toast.success(`Task marked as ${newStatus.toLowerCase()}`);
-      loadTasks();
-    } catch (err) {
-      toast.error("Failed to update task status");
-    }
+    await updateStatus({ taskId, status: newStatus });
+    toast.success(`Task marked as ${newStatus.toLowerCase()}`);
   };
 
   const handleLogInteraction = async (data) => {
@@ -174,174 +174,62 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
       const leadId = selectedLead.lead?.id || selectedLead.leadId;
       await onUpdateStatus(leadId, data.status, data.note, data.followUpDate);
       setSelectedLead(null);
-      loadTasks();
     }
   };
 
-  const isToday = (dateInput) => {
-    if (!dateInput) return false;
-    try {
-      let d;
-      if (Array.isArray(dateInput)) {
-        d = new Date(dateInput[0], dateInput[1] - 1, dateInput[2], dateInput[3] || 0, dateInput[4] || 0);
-      } else {
-        d = new Date(dateInput);
-      }
-      
-      const today = new Date();
-      return (
-        d.getDate() === today.getDate() &&
-        d.getMonth() === today.getMonth() &&
-        d.getFullYear() === today.getFullYear()
-      );
-    } catch (e) { 
-      console.error("isToday parse error:", e);
-      return false; 
-    }
-  };
+  // 3. DERIVED DATA
+
 
   return (
     <div className="d-flex flex-column gap-3 animate-fade-in pb-5">
-      {/* High-Fidelity Task Analytics Nodes */}
+      {/* Analytics Summary */}
       <div className="row g-3 mb-2">
-        <div className="col-12 col-md-4">
-          <div className="premium-card p-4 shadow-lg border-0 d-flex align-items-center gap-4 group hover-active-card overflow-hidden" 
-               style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px)', borderRadius: '24px' }}>
-            <div className="p-3 bg-primary bg-opacity-10 rounded-4 text-primary border border-primary border-opacity-20 shadow-glow-sm group-hover:scale-110 transition-all">
-              <Calendar size={22} />
-            </div>
-            <div>
-              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Today's Tasks</div>
-              <h2 className="fw-black text-main mb-0 tabular-nums" style={{ letterSpacing: '-1px' }}>
-                {filteredTasks.filter(t => t.status !== 'COMPLETED' && isToday(t.dueDate)).length}
-              </h2>
-            </div>
-          </div>
-        </div>
-        
-        <div className="col-12 col-md-4">
-          <div className="premium-card p-4 shadow-lg border-0 d-flex align-items-center gap-4 group hover-active-card overflow-hidden" 
-               style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px)', borderRadius: '24px' }}>
-            <div className="p-3 bg-danger bg-opacity-10 rounded-4 text-danger border border-danger border-opacity-20 shadow-glow-sm group-hover:scale-110 transition-all">
-              <AlertCircle size={22} />
-            </div>
-            <div>
-              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Overdue Tasks</div>
-              <h2 className="fw-black text-main mb-0 tabular-nums" style={{ letterSpacing: '-1px' }}>
-                {filteredTasks.filter(t => t.isOverdue && t.status !== 'COMPLETED').length}
-              </h2>
+        {[
+          { label: "Pending (Today)", icon: Calendar, color: "primary", value: filteredTasks.filter(t => t.status !== 'COMPLETED' && isToday(t.dueDate)).length },
+          { label: "Overdue Tasks", icon: AlertCircle, color: "danger", value: filteredTasks.filter(t => t.isOverdue && t.status !== 'COMPLETED').length },
+          { label: "Completed Today", icon: CheckSquare, color: "success", value: filteredTasks.filter(t => t.status?.toUpperCase() === 'COMPLETED' && isToday(t.updatedAt)).length }
+        ].map((stat, i) => (
+          <div key={i} className="col-12 col-md-4">
+            <div className="premium-card p-4 shadow-lg border-0 d-flex align-items-center gap-4" style={{ background: 'rgba(255, 255, 255, 0.03)', borderRadius: '24px' }}>
+              <div className={`p-3 bg-${stat.color} bg-opacity-10 rounded-4 text-${stat.color} border border-${stat.color} border-opacity-20 shadow-glow-sm`}>
+                <stat.icon size={22} />
+              </div>
+              <div>
+                <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>{stat.label}</div>
+                <h2 className="fw-black text-main mb-0 tabular-nums">{stat.value}</h2>
+              </div>
             </div>
           </div>
-        </div>
+        ))}
+      </div>
 
-        <div className="col-12 col-md-4">
-          <div className="premium-card p-4 shadow-lg border-0 d-flex align-items-center gap-4 group hover-active-card overflow-hidden" 
-               style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px)', borderRadius: '24px' }}>
-            <div className="p-3 bg-success bg-opacity-10 rounded-4 text-success border border-success border-opacity-20 shadow-glow-sm group-hover:scale-110 transition-all">
-              <CheckSquare size={22} />
-            </div>
-            <div>
-              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Completed Today</div>
-              <h2 className="fw-black text-main mb-0 tabular-nums" style={{ letterSpacing: '-1px' }}>
-                {filteredTasks.filter(t => t.status?.toUpperCase() === 'COMPLETED' && isToday(t.updatedAt)).length}
-              </h2>
-            </div>
+      {/* Search & Actions */}
+      <div className="px-1 d-flex justify-content-between align-items-center mb-1">
+        <div className="d-flex align-items-center gap-3">
+          <div className="input-group bg-white bg-opacity-5 rounded-pill border border-white border-opacity-10" style={{ width: '300px' }}>
+            <span className="input-group-text border-0 bg-transparent ps-3"><Search size={14} className="text-muted" /></span>
+            <input
+              type="text"
+              className="form-control border-0 bg-transparent text-main py-2 fw-bold"
+              placeholder="Search tasks..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ fontSize: '11px' }}
+            />
           </div>
+        </div>
+        <div className="d-flex gap-2">
+          <button onClick={() => setShowTaskModal(true)} className="ui-btn ui-btn-primary btn-sm px-4 rounded-pill fw-black text-uppercase tracking-widest shadow-glow">
+            <Plus size={14} /> NEW TASK
+          </button>
+          <button onClick={loadTasks} disabled={loading} className="btn btn-light btn-sm rounded-pill px-3 border shadow-sm">
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          </button>
         </div>
       </div>
 
-      {/* Unified Search and Filter Bar - Conditionally Hidden */}
-      {!hideFilters && (
-        <div className="px-1 mb-2">
-            <div className="row g-2 align-items-center">
-                <div className="col-md-5">
-                    <div className="input-group bg-white rounded-3 border border-light shadow-sm">
-                        <span className="input-group-text border-0 bg-transparent text-muted ms-2"><Search size={16} /></span>
-                        <input
-                            type="text"
-                            className="form-control border-0 bg-transparent shadow-none text-main py-2 fw-bold"
-                            placeholder="Search tasks or intel..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            style={{ fontSize: '14px' }}
-                        />
-                    </div>
-                </div>
-
-                <div className="col-md-4">
-                    <div className="d-flex gap-2">
-                        <div className="input-group bg-white rounded-3 border border-light shadow-sm flex-grow-1">
-                            <input
-                                type="date"
-                                className="form-control border-0 bg-transparent shadow-none text-main py-2 fw-bold"
-                                value={dateFilter}
-                                onChange={(e) => setDateFilter(e.target.value)}
-                                style={{ fontSize: '13px' }}
-                            />
-                        </div>
-                        <select
-                            className="form-select bg-white rounded-3 border border-light shadow-sm text-main py-2 fw-bold"
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            style={{ width: '130px', fontSize: '13px' }}
-                        >
-                            <option value="ALL">ALL STATUS</option>
-                            <option value="PENDING">ACTIVE</option>
-                            <option value="COMPLETED">HISTORY</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div className="col-md-3">
-                    <div className="d-flex gap-2">
-                        <button 
-                            className="btn btn-primary rounded-3 w-100 py-2 fw-bold text-uppercase d-flex align-items-center justify-content-center gap-2"
-                            onClick={() => setShowTaskModal(true)}
-                            style={{ fontSize: '12px' }}
-                        >
-                            <Plus size={16} /> ADD TASK
-                        </button>
-                        <button 
-                            className="btn btn-light rounded-3 px-3 py-2 border border-light shadow-sm"
-                            onClick={loadTasks}
-                            disabled={loading}
-                        >
-                            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-      )}
-
-      {/* Local search and Add Task when filters are hidden */}
-      {hideFilters && (
-        <div className="px-1 d-flex justify-content-between align-items-center mb-1">
-           <div className="d-flex align-items-center gap-2">
-              <CheckSquare size={16} className="text-primary opacity-50" />
-              <h6 className="fw-black text-main mb-0 small text-uppercase tracking-widest">Master Task Ledger</h6>
-           </div>
-           <div className="d-flex gap-2">
-              <button 
-                className="btn btn-primary btn-sm rounded-pill px-4 fw-black text-uppercase shadow-glow d-flex align-items-center gap-2"
-                onClick={() => setShowTaskModal(true)}
-                style={{ fontSize: '10px', padding: '10px 20px' }}
-              >
-                <Plus size={14} /> NEW TASK
-              </button>
-              <button 
-                  className="btn btn-light btn-sm rounded-pill px-3 border border-light shadow-sm"
-                  onClick={loadTasks}
-                  disabled={loading}
-              >
-                  <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-              </button>
-           </div>
-        </div>
-      )}
-
-      {/* Task Matrix - Table Layout as per sketch */}
-      <div className="premium-card overflow-hidden shadow-lg border-0 animate-fade-in">
+      {/* Task Ledger Table */}
+      <div className="premium-card overflow-hidden shadow-lg border-0">
         <div className="table-responsive">
           <table className="table ui-table mb-0 align-middle">
             <thead className="bg-surface bg-opacity-30">
@@ -349,87 +237,47 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
                 <th className="ps-4 text-muted small fw-black tracking-widest text-uppercase" style={{ fontSize: '9px', width: '60px' }}>S/NO</th>
                 <th className="text-muted small fw-black tracking-widest text-uppercase" style={{ fontSize: '9px' }}>NAME</th>
                 <th className="text-center text-muted small fw-black tracking-widest text-uppercase" style={{ fontSize: '9px', width: '60px' }}>CALL</th>
-                <th className="text-center text-muted small fw-black tracking-widest text-uppercase" style={{ fontSize: '9px', width: '60px' }}>MAIL</th>
                 <th className="text-muted small fw-black tracking-widest text-uppercase" style={{ fontSize: '9px' }}>DUE DATE</th>
+                <th className="text-muted small fw-black tracking-widest text-uppercase" style={{ fontSize: '9px' }}>CREATED BY</th>
                 <th className="text-muted small fw-black tracking-widest text-uppercase" style={{ fontSize: '9px' }}>STATUS</th>
-                <th className="text-muted small fw-black tracking-widest text-uppercase" style={{ fontSize: '9px' }}>FOLLOWUP TYPE</th>
                 <th className="pe-4 text-end text-muted small fw-black tracking-widest text-uppercase" style={{ fontSize: '9px' }}>UPDATE</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan="8" className="text-center py-5">
-                    <RefreshCw size={24} className="text-primary animate-spin mb-2 opacity-50" />
-                    <div className="text-muted small fw-black text-uppercase tracking-widest">Accessing Node Ledger...</div>
-                  </td>
-                </tr>
+                <tr><td colSpan="6" className="text-center py-5"><RefreshCw size={24} className="text-primary animate-spin mb-2" /></td></tr>
               ) : filteredTasks.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="text-center py-5 opacity-50">
-                    <CheckSquare size={32} className="mb-2" />
-                    <div className="small fw-black text-uppercase tracking-widest">Pipeline Clear - No Active Tasks</div>
-                  </td>
-                </tr>
+                <tr><td colSpan="6" className="text-center py-5 opacity-50"><CheckSquare size={32} className="mb-2" /></td></tr>
               ) : (
                 filteredTasks.map((task, idx) => (
                   <tr key={task.id} className="border-bottom border-light hover-bg-light-subtle cursor-pointer" onClick={() => setSelectedLead(task)}>
-                    <td className="ps-4">
-                       <span className="text-muted small">{idx + 1}</span>
-                    </td>
+                    <td className="ps-4"><span className="text-muted small">{idx + 1}</span></td>
                     <td>
                       <div className="d-flex flex-column">
                         <span className="fw-bold text-main small">{task.name}</span>
-                        <span className="text-muted small opacity-50" style={{ fontSize: '10px' }}>{task.lead?.email || 'SYSTEM'}</span>
+                        <span className="text-muted extra-small opacity-50">{task.lead?.email || 'SYSTEM'}</span>
                       </div>
                     </td>
                     <td className="text-center">
-                      <button 
-                        className={`p-1 border-0 bg-transparent text-success hover-scale ${activeCall ? 'opacity-25' : ''}`}
-                        disabled={isStartingCall || !!activeCall}
-                        onClick={(e) => { e.stopPropagation(); handleStartCall(task.lead); }}
-                        title="Start Interaction"
-                      >
+                      <button className="p-1 border-0 bg-transparent text-success" onClick={(e) => { e.stopPropagation(); handleStartCall(task.lead); }}>
                         <Phone size={14} />
                       </button>
                     </td>
-                    <td className="text-center">
-                      <a href={`mailto:${task.lead?.email}`} className="text-primary p-1 d-inline-block hover-scale" onClick={e => e.stopPropagation()}><Mail size={14} /></a>
-                    </td>
+                    <td><div className={`small fw-bold ${task.isOverdue ? 'text-danger' : 'text-main'}`}>{task.timeString}</div></td>
                     <td>
-                      <div className={`small fw-bold ${task.isOverdue ? 'text-danger' : 'text-main'}`}>
-                        {task.timeString}
+                      <div className="d-flex flex-column">
+                        <span className="fw-bold text-main extra-small text-uppercase opacity-75">{task.createdByName || 'System'}</span>
                       </div>
                     </td>
-                    <td className="text-center">
-                      <span className={`badge rounded-pill fw-bold ${
-                        task.status === 'COMPLETED' ? 'bg-success bg-opacity-10 text-success' : 
-                        task.isOverdue ? 'bg-danger bg-opacity-10 text-danger' : 'bg-warning bg-opacity-10 text-warning'
-                      }`} style={{ fontSize: '9px' }}>
-                        {task.status === 'COMPLETED' ? 'COMPLETED' : (task.isOverdue ? 'OVERDUE' : task.status)}
+                    <td>
+                      <span className={`badge rounded-pill fw-bold bg-${task.status === 'COMPLETED' ? 'success' : task.isOverdue ? 'danger' : 'warning'} bg-opacity-10 text-${task.status === 'COMPLETED' ? 'success' : task.isOverdue ? 'danger' : 'warning'}`} style={{ fontSize: '9px' }}>
+                        {task.status === 'COMPLETED' ? 'COMPLETED' : task.isOverdue ? 'OVERDUE' : 'PENDING'}
                       </span>
                     </td>
-                    <td>
-                      <span className="text-muted small text-uppercase fw-bold" style={{ fontSize: '9px' }}>{task.taskType?.replace(/_/g, ' ') || 'FOLLOW UP'}</span>
-                    </td>
                     <td className="pe-4 text-end">
-                      <div className="d-flex align-items-center justify-content-end gap-2">
-                        {task.status === 'PENDING' && (
-                          <button 
-                            className="btn btn-sm btn-outline-primary rounded-pill fw-bold py-1 px-3" 
-                            style={{ fontSize: '10px' }}
-                            onClick={(e) => { e.stopPropagation(); handleUpdateTaskStatus(task.id, 'COMPLETED'); }}
-                          >
-                            Complete
-                          </button>
-                        )}
-                        <button 
-                          className="btn btn-sm btn-link text-muted p-1"
-                          onClick={(e) => { e.stopPropagation(); setReschedulingTask(task); setShowTaskModal(true); }}
-                        >
-                          <RefreshCw size={14} />
-                        </button>
-                      </div>
+                      {task.status === 'PENDING' && (
+                        <button className="btn btn-sm btn-outline-primary rounded-pill py-1 px-3" style={{ fontSize: '10px' }} onClick={(e) => { e.stopPropagation(); handleUpdateTaskStatus(task.id, 'COMPLETED'); }}>Complete</button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -439,44 +287,19 @@ const TaskBoard = ({ leads, theme, onUpdateStatus, fetchLeads, userId, hideFilte
         </div>
       </div>
 
-      {/* Reused Lead Detail Modal Workspace! */}
-      <CallOutcomeModal
-        isOpen={!!selectedLead}
-        onClose={() => setSelectedLead(null)}
-        lead={selectedLead?.lead || selectedLead}
-        theme={theme}
-        onSubmit={handleLogInteraction}
-      />
-      <ManualTaskModal
-        show={showTaskModal}
-        onClose={() => {
-          setShowTaskModal(false);
-          setReschedulingTask(null);
-        }}
-        onTaskCreated={() => {
-          if (reschedulingTask) {
-            handleUpdateTaskStatus(reschedulingTask.id, 'RESCHEDULED');
-          }
-          loadTasks();
-        }}
+      {/* Modals */}
+      <CallOutcomeModal isOpen={!!selectedLead} onClose={() => setSelectedLead(null)} lead={selectedLead?.lead || selectedLead} theme={theme} onSubmit={handleLogInteraction} />
+      <ManualTaskModal 
+        show={showTaskModal} 
+        onClose={() => setShowTaskModal(false)} 
+        onTaskCreated={() => { setShowTaskModal(false); loadTasks(); }} 
         leads={leads}
-        initialData={reschedulingTask ? {
-          leadId: reschedulingTask.lead?.id || reschedulingTask.leadId,
-          title: `RESCHEDULED: ${reschedulingTask.title}`,
-          description: reschedulingTask.description,
-          taskType: reschedulingTask.taskType
-        } : null}
       />
 
       <style>{`
-        .hover-bg-light-subtle:hover { background: #f8f9fa; }
-        .hover-scale { transition: transform 0.2s; }
-        .hover-scale:hover { transform: scale(1.1); }
-        .fw-black { font-weight: 900; }
+        .extra-small { font-size: 8px; }
         .animate-spin { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </div>
   );

@@ -30,26 +30,32 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token && user) {
-      // Logic to verify token if needed
-    }
+    const savedUser = localStorage.getItem('user');
+    console.log("[AuthContext] session check:", { 
+      hasToken: !!token, 
+      hasUser: !!savedUser,
+      role: savedUser ? JSON.parse(savedUser).role : 'NONE'
+    });
     setLoading(false);
-  }, []);
+  }, [user]);
 
   const login = async (email, password) => {
+    console.log("[AuthContext] Attempting login for:", email);
     try {
       const response = await authService.login(email, password);
-      // Align with backend AuthResponse: token, id, email, role, name
       const { token, id, role, email: userEmail, name } = response.data;
       const userData = { id, email: userEmail, role, name: name || userEmail.split('@')[0] };
       
+      console.log("[AuthContext] Login success payload:", { id, role, userEmail });
+      
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(userData));
-      console.log("AuthContext: Login successful, userData stored:", userData);
       setUser(userData);
       return userData;
     } catch (error) {
-      throw error.response?.data?.message || 'Login failed';
+      const errorMsg = error.response?.data?.message || error.message || 'Login failed';
+      console.error("[AuthContext] Login error:", errorMsg, error.response?.status);
+      throw errorMsg;
     }
   };
 

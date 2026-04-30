@@ -7,6 +7,8 @@ import com.lms.www.leadmanagement.exception.InvalidRequestException;
 import com.lms.www.leadmanagement.exception.ResourceNotFoundException;
 import com.lms.www.leadmanagement.repository.RoleRepository;
 import com.lms.www.leadmanagement.repository.UserRepository;
+import com.lms.www.leadmanagement.repository.AttendanceShiftRepository;
+import com.lms.www.leadmanagement.repository.OfficeLocationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +25,8 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final AttendanceShiftRepository attendanceShiftRepository;
+    private final OfficeLocationRepository officeLocationRepository;
     private final PasswordEncoder passwordEncoder;
     private final SecurityService securityService;
     private final MailService mailService;
@@ -36,15 +40,9 @@ public class UserService {
     @Transactional(readOnly = true)
     public Page<UserDTO> getAuthorizedUsers(Pageable pageable) {
         User requester = securityService.getCurrentUser();
+        java.util.Set<Long> allowedIds = securityService.getAllowedUserIds(requester);
         
-        if (securityService.isAdmin(requester)) {
-            return userRepository.findAll(pageable).map(UserDTO::fromEntity);
-        }
-
-        List<Long> subordinateIds = userRepository.findSubordinateIds(requester.getId());
-        subordinateIds.add(requester.getId()); // Include self
-        
-        return userRepository.findByIdIn(subordinateIds, pageable).map(UserDTO::fromEntity);
+        return userRepository.findByIdIn(new java.util.ArrayList<>(allowedIds), pageable).map(UserDTO::fromEntity);
     }
 
     @Transactional
@@ -66,6 +64,13 @@ public class UserService {
                 .active(true)
                 .joiningDate(dto.getJoiningDate())
                 .build();
+
+        if (dto.getShiftId() != null) {
+            attendanceShiftRepository.findById(dto.getShiftId()).ifPresent(user::setShift);
+        }
+        if (dto.getOfficeId() != null) {
+            officeLocationRepository.findById(dto.getOfficeId()).ifPresent(user::setAssignedOffice);
+        }
 
         assignHierarchy(user, dto);
         User saved = userRepository.save(user);
@@ -99,11 +104,12 @@ public class UserService {
 
     private void assignHierarchy(User user, UserDTO dto) {
         if (dto.getSupervisorId() != null && dto.getSupervisorId() != 0) {
+            securityService.validateAccess(securityService.getCurrentUser(), dto.getSupervisorId());
             User supervisor = findById(dto.getSupervisorId());
             user.setSupervisor(supervisor);
             
             // Auto-link Manager
-            if ("TEAM_LEADER".equals(supervisor.getRole().getName())) {
+            if (supervisor.getSupervisor() != null && "TEAM_LEADER".equals(supervisor.getRole().getName())) {
                 user.setManager(supervisor.getSupervisor());
             } else if ("MANAGER".equals(supervisor.getRole().getName())) {
                 user.setManager(supervisor);

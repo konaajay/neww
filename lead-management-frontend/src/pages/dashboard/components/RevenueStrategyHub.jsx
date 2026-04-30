@@ -33,7 +33,7 @@ const RevenueStrategyHub = ({ users, onSync }) => {
                             <div>
                                 <h3 className="fw-black text-main mb-1 tracking-tighter text-uppercase">Revenue Strategy Hub</h3>
                                 <p className="text-muted small mb-0 opacity-75 fw-bold text-uppercase tracking-widest" style={{ fontSize: '10px' }}>
-                                    Performance Alignment & Capital Deployment Node
+                                    Performance Alignment & Capital Deployment Lead
                                 </p>
                             </div>
                         </div>
@@ -58,7 +58,7 @@ const RevenueStrategyHub = ({ users, onSync }) => {
                                 <div className="p-4 bg-surface bg-opacity-40 rounded-5 border border-white border-opacity-5 shadow-sm">
                                     <h6 className="fw-black text-main small tracking-widest text-uppercase mb-4 d-flex align-items-center gap-2">
                                         <Search size={14} className="text-muted" />
-                                        Node Registry
+                                        Lead Registry
                                     </h6>
                                     
                                     <div className="ui-input-group mb-4">
@@ -84,7 +84,7 @@ const RevenueStrategyHub = ({ users, onSync }) => {
                                                     </div>
                                                     <div className="overflow-hidden">
                                                         <p className="fw-black text-main text-uppercase mb-0 text-truncate" style={{ fontSize: '11px', letterSpacing: '-0.3px' }}>{u.name}</p>
-                                                        <span className="text-muted fw-bold opacity-40 text-uppercase" style={{ fontSize: '8px' }}>NODE {u.id.toString().slice(-6)} • {u.role}</span>
+                                                        <span className="text-muted fw-bold opacity-40 text-uppercase" style={{ fontSize: '8px' }}>LEAD {u.id.toString().slice(-6)} • {u.role}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -92,7 +92,7 @@ const RevenueStrategyHub = ({ users, onSync }) => {
                                         {filteredUsers.length === 0 && (
                                             <div className="py-5 text-center opacity-30">
                                                 <Search size={40} className="mb-2" />
-                                                <p className="small fw-black text-uppercase">No Nodes Detected</p>
+                                                <p className="small fw-black text-uppercase">No Leads Detected</p>
                                             </div>
                                         )}
                                     </div>
@@ -113,7 +113,7 @@ const RevenueStrategyHub = ({ users, onSync }) => {
                                                     {users.find(u => u.id === selectedUserId)?.name}
                                                 </h4>
                                                 <div className="d-flex align-items-center gap-2">
-                                                    <span className="ui-badge bg-success bg-opacity-10 text-success fw-black" style={{ fontSize: '9px' }}>ACTIVE NODE</span>
+                                                    <span className="ui-badge bg-success bg-opacity-10 text-success fw-black" style={{ fontSize: '9px' }}>ACTIVE LEAD</span>
                                                     <span className="text-muted small fw-bold opacity-40 text-uppercase">{scope === 'TEAM' ? 'Team Performance Cluster' : 'Individual Revenue Stream'}</span>
                                                 </div>
                                             </div>
@@ -147,7 +147,7 @@ const RevenueStrategyHub = ({ users, onSync }) => {
                                                 </div>
                                                 <div>
                                                     <h6 className="fw-black text-main text-uppercase mb-1" style={{ fontSize: '12px' }}>Operational Readiness</h6>
-                                                    <p className="text-muted small fw-bold opacity-60 mb-0 px-1">Deploy new revenue trajectory for this node</p>
+                                                    <p className="text-muted small fw-bold opacity-60 mb-0 px-1">Deploy new revenue trajectory for this lead</p>
                                                 </div>
                                             </div>
                                             <button 
@@ -164,7 +164,7 @@ const RevenueStrategyHub = ({ users, onSync }) => {
                                             <TargetIcon size={64} className="text-muted" />
                                         </div>
                                         <h5 className="fw-black text-muted text-uppercase tracking-widest small mb-2">Strategy Idle</h5>
-                                        <p className="text-muted small fw-bold opacity-50 text-center px-5 mb-0">Select a staff node from the registry to deploy revenue milestones</p>
+                                        <p className="text-muted small fw-bold opacity-50 text-center px-5 mb-0">Select a staff lead from the registry to deploy revenue milestones</p>
                                     </div>
                                 )}
                             </div>

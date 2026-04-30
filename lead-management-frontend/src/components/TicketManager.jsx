@@ -101,7 +101,7 @@ const TicketManager = ({ role, userId, memberIds = [] }) => {
       <div className={`animate-fade-in d-flex flex-column gap-4 min-vh-100 p-2 ${isDarkMode ? '' : 'text-dark'}`}>
          <div className="d-flex align-items-center justify-content-between mb-4">
             <div>
-               <h3 className={`fw-black ${isDarkMode ? 'text-main' : 'text-dark'} text-uppercase tracking-widest mb-1`}>Initialize Ticket Node</h3>
+               <h3 className={`fw-black ${isDarkMode ? 'text-main' : 'text-dark'} text-uppercase tracking-widest mb-1`}>Initialize Ticket Lead</h3>
                <p className="text-muted fw-bold opacity-50 small mb-0">ESTABLISHING DIRECT CONNECTION WITH STRATEGIC SUPPORT</p>
             </div>
             <button 
@@ -174,7 +174,7 @@ const TicketManager = ({ role, userId, memberIds = [] }) => {
                            type="submit" 
                            className="ui-btn ui-btn-primary w-100 py-3 rounded-pill fw-black text-uppercase tracking-widest shadow-glow"
                         >
-                           Initialize Ticket Node
+                           Initialize Ticket Lead
                         </button>
                      </div>
                   </form>
@@ -235,7 +235,7 @@ const TicketManager = ({ role, userId, memberIds = [] }) => {
           <table className="table table-hover align-middle mb-0">
             <thead className="bg-surface bg-opacity-30 border-bottom border-white border-opacity-5">
               <tr>
-                <th className="px-4 py-3 small fw-black text-muted text-uppercase tracking-widest" style={{ fontSize: '10px' }}>Index Node</th>
+                <th className="px-4 py-3 small fw-black text-muted text-uppercase tracking-widest" style={{ fontSize: '10px' }}>Index Lead</th>
                 <th className="px-4 py-3 small fw-black text-muted text-uppercase tracking-widest" style={{ fontSize: '10px' }}>Subject & Intel</th>
                 <th className="px-4 py-3 small fw-black text-muted text-uppercase tracking-widest text-center" style={{ fontSize: '10px' }}>Priority</th>
                 <th className="px-4 py-3 small fw-black text-muted text-uppercase tracking-widest text-center" style={{ fontSize: '10px' }}>Identity</th>
@@ -257,7 +257,7 @@ const TicketManager = ({ role, userId, memberIds = [] }) => {
                   <td colSpan="7" className="text-center py-5">
                     <div className="opacity-25 py-4">
                        <CheckCircle size={48} className="text-muted mb-2" />
-                       <div className="fw-black text-muted text-uppercase small">Zero active nodes in the support spectrum</div>
+                       <div className="fw-black text-muted text-uppercase small">Zero active leads in the support spectrum</div>
                     </div>
                   </td>
                 </tr>

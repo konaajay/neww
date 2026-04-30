@@ -15,6 +15,7 @@ import java.util.List;
 public class TicketService {
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
+    private final SecurityService securityService;
 
     @Transactional
     public Ticket createTicket(Ticket ticket, Long creatorId) {
@@ -27,20 +28,29 @@ public class TicketService {
         return ticketRepository.save(ticket);
     }
 
-    public List<Ticket> getMyTickets(Long userId) {
-        User user = userRepository.findById(userId)
+    public List<Ticket> getTeamTickets(Long requesterId) {
+        User requester = userRepository.findById(requesterId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        return ticketRepository.findByCreatedByOrderByIdDesc(user);
-    }
+        
+        java.util.Set<Long> allowedUserIds = securityService.getAllowedUserIds(requester);
+        boolean isGlobalAdmin = securityService.isAdmin(requester);
 
-    public List<Ticket> getAllTickets() {
-        return ticketRepository.findAllByOrderByIdDesc();
+        if (isGlobalAdmin) {
+            return ticketRepository.findAllByOrderByIdDesc();
+        } else {
+            return ticketRepository.findByUserIdIn(new java.util.ArrayList<>(allowedUserIds));
+        }
     }
 
     @Transactional
     public Ticket updateTicketStatus(Long ticketId, String status) {
+        User curUser = securityService.getCurrentUser();
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new RuntimeException("Ticket not found"));
+        
+        // Security check: Only creator or their hierarchy leads can update
+        securityService.validateAccess(curUser, ticket.getCreatedBy().getId());
+        
         ticket.setStatus(com.lms.www.leadmanagement.entity.TicketStatus.valueOf(status));
         return ticketRepository.save(ticket);
     }

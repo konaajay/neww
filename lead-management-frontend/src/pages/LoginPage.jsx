@@ -21,9 +21,11 @@ const LoginPage = () => {
       setLoading(true);
       const user = await login(email, password);
       toast.success('Login successful');
-      if (user?.role === 'ADMIN') navigate('/admin');
-      else if (user?.role === 'MANAGER') navigate('/manager');
-      else if (user?.role === 'TEAM_LEADER') navigate('/tl');
+      
+      const role = (user?.role || '').toUpperCase();
+      if (role === 'ADMIN') navigate('/admin');
+      else if (role === 'MANAGER' || role === 'MGR') navigate('/manager');
+      else if (role.includes('TEAM_LEADER') || role.includes('TL') || role.includes('TEAM_LEAD') || role.includes('TEAMLEAD')) navigate('/tl');
       else navigate('/associate');
     } catch (err) {
       console.error('Login error:', err);

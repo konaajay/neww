@@ -11,20 +11,25 @@ import java.util.Map;
 
 @Repository
 public interface CallRecordRepository extends JpaRepository<CallRecord, Long> {
-
+    @Query("SELECT c FROM CallRecord c LEFT JOIN FETCH c.lead LEFT JOIN FETCH c.user ORDER BY c.startTime DESC")
+    List<CallRecord> findAllWithFetch();
     java.util.Optional<CallRecord> findTopByUserIdAndEndTimeIsNullOrderByStartTimeDesc(Long userId);
 
     @Query("SELECT new com.lms.www.leadmanagement.dto.DailyUserReportDTO(c.user.id, c.user.name, COUNT(c), SUM(c.duration), AVG(c.duration)) " +
            "FROM CallRecord c WHERE c.startTime BETWEEN :start AND :end AND c.endTime IS NOT NULL GROUP BY c.user.id, c.user.name")
     List<com.lms.www.leadmanagement.dto.DailyUserReportDTO> getDailyUserReports(@Param("start") java.time.LocalDateTime start, @Param("end") java.time.LocalDateTime end);
 
-    List<CallRecord> findByUserIdOrderByStartTimeDesc(Long userId);
+    @Query("SELECT c FROM CallRecord c LEFT JOIN FETCH c.lead LEFT JOIN FETCH c.user WHERE c.user.id = :userId ORDER BY c.startTime DESC")
+    List<CallRecord> findByUserIdOrderByStartTimeDesc(@Param("userId") Long userId);
 
-    List<CallRecord> findByUserIdInOrderByStartTimeDesc(List<Long> userIds);
+    @Query("SELECT c FROM CallRecord c LEFT JOIN FETCH c.lead LEFT JOIN FETCH c.user WHERE c.user.id IN :userIds ORDER BY c.startTime DESC")
+    List<CallRecord> findByUserIdInOrderByStartTimeDesc(@Param("userIds") List<Long> userIds);
 
-    List<CallRecord> findByUserIdAndStartTimeBetweenOrderByStartTimeDesc(Long userId, java.time.LocalDateTime start, java.time.LocalDateTime end);
+    @Query("SELECT c FROM CallRecord c LEFT JOIN FETCH c.lead LEFT JOIN FETCH c.user WHERE c.user.id = :userId AND c.startTime BETWEEN :start AND :end ORDER BY c.startTime DESC")
+    List<CallRecord> findByUserIdAndStartTimeBetweenOrderByStartTimeDesc(@Param("userId") Long userId, @Param("start") java.time.LocalDateTime start, @Param("end") java.time.LocalDateTime end);
 
-    List<CallRecord> findByStartTimeBetweenOrderByStartTimeDesc(java.time.LocalDateTime start, java.time.LocalDateTime end);
+    @Query("SELECT c FROM CallRecord c LEFT JOIN FETCH c.lead LEFT JOIN FETCH c.user WHERE c.startTime BETWEEN :start AND :end ORDER BY c.startTime DESC")
+    List<CallRecord> findByStartTimeBetweenOrderByStartTimeDesc(@Param("start") java.time.LocalDateTime start, @Param("end") java.time.LocalDateTime end);
 
     @Query("SELECT new map(" +
            "COUNT(c) as totalCalls, " +
@@ -116,5 +121,6 @@ public interface CallRecordRepository extends JpaRepository<CallRecord, Long> {
            "FROM CallRecord c WHERE c.user.id IN :userIds AND c.startTime BETWEEN :start AND :end")
     Map<String, Object> getStatsForUsersByDate(@Param("userIds") List<Long> userIds, @Param("start") java.time.LocalDateTime start, @Param("end") java.time.LocalDateTime end);
 
-    List<CallRecord> findByUserIdInAndStartTimeBetweenOrderByStartTimeDesc(List<Long> userIds, java.time.LocalDateTime start, java.time.LocalDateTime end);
+    @Query("SELECT c FROM CallRecord c LEFT JOIN FETCH c.lead LEFT JOIN FETCH c.user WHERE c.user.id IN :userIds AND c.startTime BETWEEN :start AND :end ORDER BY c.startTime DESC")
+    List<CallRecord> findByUserIdInAndStartTimeBetweenOrderByStartTimeDesc(@Param("userIds") List<Long> userIds, @Param("start") java.time.LocalDateTime start, @Param("end") java.time.LocalDateTime end);
 }

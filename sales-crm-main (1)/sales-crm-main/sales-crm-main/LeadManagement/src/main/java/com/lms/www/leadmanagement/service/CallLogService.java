@@ -36,15 +36,19 @@ public class CallLogService {
     @Autowired
     private com.lms.www.leadmanagement.repository.LeadNoteRepository leadNoteRepository;
 
+    @Autowired
+    private SecurityService securityService;
+
     private static final String UPLOAD_DIR = "uploads/recordings/";
     private static final ZoneId INDIA_ZONE = ZoneId.of("Asia/Kolkata");
 
     @Transactional
     public CallRecord saveCallRecord(Long userId, Long leadId, String phoneNumber, String callType,
-                                     String status, String note, Integer duration,
-                                     LocalDateTime clientStartTime,
-                                     MultipartFile file) throws IOException {
-        if (userId == null) throw new IllegalArgumentException("User ID cannot be null");
+            String status, String note, Integer duration,
+            LocalDateTime clientStartTime,
+            MultipartFile file) throws IOException {
+        if (userId == null)
+            throw new IllegalArgumentException("User ID cannot be null");
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
         Lead lead = leadId != null ? leadRepository.findById(leadId).orElse(null) : null;
 
@@ -54,7 +58,8 @@ public class CallLogService {
         Path baseDir = Paths.get(System.getProperty("user.dir"), UPLOAD_DIR, String.valueOf(userId), dateStr);
         Files.createDirectories(baseDir);
 
-        // 2. Determine extension — Chrome MediaRecorder sends 'video/webm' for audio-only
+        // 2. Determine extension — Chrome MediaRecorder sends 'video/webm' for
+        // audio-only
         String ct = file.getContentType();
         String extension = getExtension(file.getOriginalFilename());
         if (("video/webm".equals(ct) || "audio/webm".equals(ct)) && !"webm".equalsIgnoreCase(extension)) {
@@ -68,11 +73,11 @@ public class CallLogService {
         Files.copy(file.getInputStream(), filePath);
 
         try {
-            LocalDateTime effectiveStart = clientStartTime != null ? clientStartTime : 
-                                         LocalDateTime.now(INDIA_ZONE).minusSeconds(duration != null ? duration : 0);
-            LocalDateTime effectiveEnd = clientStartTime != null ? 
-                                         effectiveStart.plusSeconds(duration != null ? duration : 0) : 
-                                         LocalDateTime.now(INDIA_ZONE);
+            LocalDateTime effectiveStart = clientStartTime != null ? clientStartTime
+                    : LocalDateTime.now(INDIA_ZONE).minusSeconds(duration != null ? duration : 0);
+            LocalDateTime effectiveEnd = clientStartTime != null
+                    ? effectiveStart.plusSeconds(duration != null ? duration : 0)
+                    : LocalDateTime.now(INDIA_ZONE);
 
             CallRecord callRecord = CallRecord.builder()
                     .user(user)
@@ -91,12 +96,13 @@ public class CallLogService {
             if (lead != null && status != null && !status.isEmpty()) {
                 try {
                     lead.setStatus(status.toUpperCase());
-                    lead.setNote(note);
+                    lead.setName(note);
                     lead.setUpdatedBy(user);
                     leadRepository.save(lead);
 
                     // Add History Note
-                    com.lms.www.leadmanagement.entity.LeadNote leadNote = com.lms.www.leadmanagement.entity.LeadNote.builder()
+                    com.lms.www.leadmanagement.entity.LeadNote leadNote = com.lms.www.leadmanagement.entity.LeadNote
+                            .builder()
                             .lead(lead)
                             .content("[Mobile Call Record] " + (note != null ? note : "No additional notes"))
                             .status(status)
@@ -121,11 +127,17 @@ public class CallLogService {
     }
 
     private String getExtension(String filename) {
-        if (filename == null || !filename.contains(".")) return "mp3";
+        if (filename == null || !filename.contains("."))
+            return "mp3";
         return filename.substring(filename.lastIndexOf(".") + 1);
     }
 
-    public List<CallRecord> getMyLogs(Long userId) {
+    public List<CallRecord> getMyLogs(Long userId, LocalDate from, LocalDate to) {
+        if (from != null) {
+            LocalDateTime start = from.atStartOfDay();
+            LocalDateTime end = (to != null ? to : from).atTime(23, 59, 59);
+            return callRecordRepository.findByUserIdAndStartTimeBetweenOrderByStartTimeDesc(userId, start, end);
+        }
         return callRecordRepository.findByUserIdOrderByStartTimeDesc(userId);
     }
 
@@ -155,7 +167,7 @@ public class CallLogService {
 
     private Map<String, Object> processStats(Map<String, Object> stats) {
         Map<String, Object> result = new HashMap<>();
-        
+
         // Handle nulls correctly using a helper
         result.put("totalCalls", asLong(stats.get("totalCalls")));
         result.put("totalDuration", asLong(stats.get("totalDuration")));
@@ -179,21 +191,27 @@ public class CallLogService {
     }
 
     private Long asLong(Object o) {
-        if (o == null) return 0L;
-        if (o instanceof Number) return ((Number) o).longValue();
+        if (o == null)
+            return 0L;
+        if (o instanceof Number)
+            return ((Number) o).longValue();
         return 0L;
     }
 
     private String formatDuration(Long totalSeconds) {
-        if (totalSeconds == null || totalSeconds == 0) return "0s";
+        if (totalSeconds == null || totalSeconds == 0)
+            return "0s";
         long h = totalSeconds / 3600;
         long m = (totalSeconds % 3600) / 60;
         long s = totalSeconds % 60;
-        
+
         StringBuilder sb = new StringBuilder();
-        if (h > 0) sb.append(h).append("h ");
-        if (m > 0) sb.append(m).append("m ");
-        if (s > 0 || sb.length() == 0) sb.append(s).append("s");
+        if (h > 0)
+            sb.append(h).append("h ");
+        if (m > 0)
+            sb.append(m).append("m ");
+        if (s > 0 || sb.length() == 0)
+            sb.append(s).append("s");
         return sb.toString().trim();
     }
 
@@ -202,7 +220,8 @@ public class CallLogService {
                 .orElseThrow(() -> new RuntimeException("Record not found"));
 
         if (!isAdmin && !record.getUser().getId().equals(requestingUserId)) {
-            throw new RuntimeException("Unauthorized access to recording");
+            User requester = userRepository.findById(requestingUserId).orElseThrow();
+            securityService.validateAccess(requester, record.getUser().getId());
         }
 
         String storedPath = record.getRecordingPath();
@@ -217,88 +236,50 @@ public class CallLogService {
     // --- Administrative Reporting ---
 
     public List<CallRecord> getAllLogsAdmin(LocalDate from, LocalDate to, Long targetUserId, Long requesterId) {
-        User requester = userRepository.findById(requesterId).orElseThrow(() -> new RuntimeException("Requester not found"));
-        String role = requester.getRole().getName();
+        User requester = userRepository.findById(requesterId)
+                .orElseThrow(() -> new RuntimeException("Requester not found"));
         
-        List<Long> allowedUserIds = new ArrayList<>();
-        if ("ADMIN".equals(role)) {
-            // Admin can see everything
-            if (targetUserId != null) allowedUserIds.add(targetUserId);
-        } else {
-            // Manager/TL hierarchy restriction
-            List<User> subordinates = new ArrayList<>();
-            subordinates.add(requester);
-            collectSubordinates(requester, subordinates);
-            
-            allowedUserIds = subordinates.stream().map(User::getId).collect(Collectors.toList());
-            
-            if (targetUserId != null) {
-                if (allowedUserIds.contains(targetUserId)) {
-                    allowedUserIds = Collections.singletonList(targetUserId);
-                } else {
-                    return Collections.emptyList(); // Unauthorized target
-                }
-            }
+        java.util.Set<Long> allowedUserIds = securityService.getAllowedUserIds(requester);
+        boolean isGlobalAdmin = securityService.isAdmin(requester) && targetUserId == null;
+
+        if (targetUserId != null) {
+            securityService.validateAccess(requester, targetUserId);
+            allowedUserIds = java.util.Collections.singleton(targetUserId);
         }
 
-        LocalDateTime start = (from != null) ? from.atStartOfDay() : null;
-        LocalDateTime end = (from != null) ? (to != null ? to : from).atTime(23, 59, 59) : null;
+        LocalDateTime start = (from != null) ? from.atStartOfDay() : LocalDateTime.now().minusYears(1);
+        LocalDateTime end = (from != null) ? (to != null ? to : from).atTime(23, 59, 59) : LocalDateTime.now();
 
-        if (allowedUserIds.isEmpty()) {
-            if (start != null && end != null) return callRecordRepository.findByStartTimeBetweenOrderByStartTimeDesc(start, end);
-            return callRecordRepository.findAll();
+        if (isGlobalAdmin) {
+            return callRecordRepository.findByStartTimeBetweenOrderByStartTimeDesc(start, end);
         } else {
-            return callRecordRepository.findByUserIdInAndStartTimeBetweenOrderByStartTimeDesc(allowedUserIds, 
-                start != null ? start : LocalDateTime.now().minusYears(1), 
-                end != null ? end : LocalDateTime.now());
+            return callRecordRepository.findByUserIdInAndStartTimeBetweenOrderByStartTimeDesc(new java.util.ArrayList<>(allowedUserIds),
+                    start, end);
         }
     }
 
-    public Map<String, Object> getGlobalStatsWithHierarchy(LocalDate from, LocalDate to, Long requesterId, Long targetUserId) {
-        User requester = userRepository.findById(requesterId).orElseThrow(() -> new RuntimeException("Requester not found"));
-        String role = requester.getRole().getName();
+    public Map<String, Object> getGlobalStatsWithHierarchy(LocalDate from, LocalDate to, Long requesterId,
+            Long targetUserId) {
+        User requester = userRepository.findById(requesterId)
+                .orElseThrow(() -> new RuntimeException("Requester not found"));
 
-        List<Long> userIds = new ArrayList<>();
-        if ("ADMIN".equals(role)) {
-            if (targetUserId != null) {
-                userIds.add(targetUserId);
-            } else {
-                return getGlobalStats(from, to);
-            }
-        } else {
-            List<User> subordinates = new ArrayList<>();
-            subordinates.add(requester);
-            collectSubordinates(requester, subordinates);
-            List<Long> squadIds = subordinates.stream().map(User::getId).collect(Collectors.toList());
+        java.util.Set<Long> userIds = securityService.getAllowedUserIds(requester);
+        boolean isGlobalAdmin = securityService.isAdmin(requester) && targetUserId == null;
 
-            if (targetUserId != null) {
-                if (squadIds.contains(targetUserId)) {
-                    userIds.add(targetUserId);
-                } else {
-                    return processStats(new HashMap<>()); // Unauthorized target
-                }
-            } else {
-                userIds.addAll(squadIds);
-            }
+        if (targetUserId != null) {
+            securityService.validateAccess(requester, targetUserId);
+            userIds = java.util.Collections.singleton(targetUserId);
+        }
+
+        if (isGlobalAdmin) {
+            return getGlobalStats(from, to);
         }
 
         LocalDateTime start = (from != null) ? from.atStartOfDay() : LocalDateTime.now().minusDays(365);
         LocalDateTime end = (to != null ? to : (from != null ? from : LocalDate.now())).atTime(23, 59, 59);
 
-        Map<String, Object> stats = callRecordRepository.getStatsForUsersByDate(userIds, start, end);
+        Map<String, Object> stats = callRecordRepository.getStatsForUsersByDate(new java.util.ArrayList<>(userIds), start, end);
         return processStats(stats);
     }
 
-    private void collectSubordinates(User user, List<User> collector) {
-        List<User> subs = new ArrayList<>();
-        subs.addAll(userRepository.findByManager(user));
-        subs.addAll(userRepository.findBySupervisor(user));
-        
-        for (User sub : subs) {
-            if (!collector.contains(sub)) {
-                collector.add(sub);
-                collectSubordinates(sub, collector);
-            }
-        }
-    }
 }

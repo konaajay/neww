@@ -8,7 +8,7 @@ const StatsCards = ({ stats }) => {
       <div className="col-12 col-sm-6 col-md-3">
         <StatCard 
           title="Revenue" 
-          value={`₹ ${stats?.totalRevenue?.toLocaleString() || 0}`} 
+          value={`₹ ${stats?.monthlyRevenue?.toLocaleString() || 0}`} 
           sub="Confirmed Transmission" 
           icon={<IndianRupee />} 
           color="primary" 

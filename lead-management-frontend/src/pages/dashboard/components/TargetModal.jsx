@@ -89,7 +89,7 @@ const TargetModal = ({ isOpen, onClose, userId, onSuccess }) => {
           <div className="p-3 bg-primary bg-opacity-5 rounded-3 border border-primary border-opacity-10 mb-4">
             <p className="small text-muted fw-bold mb-0 d-flex align-items-center gap-2">
               <Check size={12} className="text-primary" />
-              Strategic alignment for node {userId || 'system-wide'}
+              Strategic alignment for lead {userId || 'system-wide'}
             </p>
           </div>
 

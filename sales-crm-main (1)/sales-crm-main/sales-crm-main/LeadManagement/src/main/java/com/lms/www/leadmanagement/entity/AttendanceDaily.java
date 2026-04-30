@@ -48,12 +48,24 @@ public class AttendanceDaily {
     @Builder.Default
     private String status = "ABSENT";
 
+    private LocalDateTime loginTime;
+    private LocalDateTime logoutTime;
+
     @Builder.Default
-    private boolean isLate = false;
+    private Integer shortBreakMinutes = 0;
     @Builder.Default
-    private boolean isEarlyExit = false;
+    private Integer longBreakMinutes = 0;
     @Builder.Default
-    private int overtimeMinutes = 0;
+    private Integer productiveMinutes = 0;
+    @Builder.Default
+    private Integer lateMinutes = 0;
+    @Builder.Default
+    private Integer idleMinutes = 0;
+
+    @Builder.Default
+    private Boolean isEarlyExit = false;
+
+    private String note;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

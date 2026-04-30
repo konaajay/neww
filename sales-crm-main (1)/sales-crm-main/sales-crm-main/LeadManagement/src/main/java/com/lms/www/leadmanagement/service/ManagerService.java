@@ -9,6 +9,7 @@ import com.lms.www.leadmanagement.repository.AttendanceShiftRepository;
 import com.lms.www.leadmanagement.repository.PermissionRepository;
 import com.lms.www.leadmanagement.repository.RoleRepository;
 import com.lms.www.leadmanagement.repository.UserRepository;
+import com.lms.www.leadmanagement.repository.OfficeLocationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -42,6 +43,12 @@ public class ManagerService {
 
     @Autowired
     private AttendanceShiftRepository attendanceShiftRepository;
+    
+    @Autowired
+    private OfficeLocationRepository officeLocationRepository;
+
+    @Autowired
+    private SecurityService securityService;
 
     public User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -76,23 +83,19 @@ public class ManagerService {
 
     public List<UserDTO> getAllManagedUsers() {
         User manager = getCurrentUser();
-        List<User> subordinates = userRepository.findByManager(manager);
+        List<Long> subordinateIds = userRepository.findSubordinateIds(manager.getId());
+        List<User> subordinates = userRepository.findAllById(subordinateIds);
         
-        // Only sync if no subordinates are found, to avoid overhead on every fetch
-        if (subordinates.isEmpty()) {
-            syncOrphanedSubordinates(manager);
-            subordinates = userRepository.findByManager(manager);
-        }
+        // Include manager themselves so assignments to self show up correctly in lookups
+        List<UserDTO> allUsers = new java.util.ArrayList<>();
+        allUsers.add(UserDTO.fromEntity(manager));
         
-        // Include the manager themselves in the list so they are visible and selectable in the UI
-        java.util.List<User> allVisible = new java.util.ArrayList<>();
-        allVisible.add(manager);
-        allVisible.addAll(subordinates);
-        
-        return allVisible.stream()
+        allUsers.addAll(subordinates.stream()
                 .filter(u -> u.getRole() != null && !u.getRole().getName().equals("ADMIN"))
                 .map(UserDTO::fromEntity)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
+        
+        return allUsers;
     }
 
     private void syncOrphanedSubordinates(User manager) {
@@ -117,11 +120,12 @@ public class ManagerService {
 
         User supervisor = null;
         Long supId = userDTO.getSupervisorId();
+        User manager = securityService.getCurrentUser();
+
         if (supId != null) {
+            securityService.validateAccess(manager, supId);
             supervisor = userRepository.findById(supId).orElseThrow(() -> new RuntimeException("Supervisor not found"));
         }
-
-        User manager = getCurrentUser();
         User user = User.builder()
                 .name(userDTO.getName())
                 .email(userDTO.getEmail())
@@ -130,7 +134,15 @@ public class ManagerService {
                 .role(role)
                 .manager(manager)
                 .supervisor(supervisor)
+                .joiningDate(userDTO.getJoiningDate())
                 .build();
+
+        if (userDTO.getShiftId() != null) {
+            attendanceShiftRepository.findById(userDTO.getShiftId()).ifPresent(user::setShift);
+        }
+        if (userDTO.getOfficeId() != null) {
+            officeLocationRepository.findById(userDTO.getOfficeId()).ifPresent(user::setAssignedOffice);
+        }
         User savedUser = java.util.Objects.requireNonNull(userRepository.save(user));
         
         // Send Credentials to Mail
@@ -148,12 +160,10 @@ public class ManagerService {
         User associate = userRepository.findById(associateId).orElseThrow(() -> new RuntimeException("Associate not found"));
         User supervisor = userRepository.findById(supervisorId).orElseThrow(() -> new RuntimeException("Supervisor not found"));
         
-        // Ensure both belong to the current manager
-        User currentManager = getCurrentUser();
-        if (!associate.getManager().getId().equals(currentManager.getId()) || 
-            !supervisor.getManager().getId().equals(currentManager.getId())) {
-            throw new RuntimeException("Unauthorized: User does not belong to your team");
-        }
+        // Ensure both belong to the current manager's hierarchy
+        User currentManager = securityService.getCurrentUser();
+        securityService.validateAccess(currentManager, associateId);
+        securityService.validateAccess(currentManager, supervisorId);
 
         associate.setSupervisor(supervisor);
         return UserDTO.fromEntity(userRepository.save(associate));
@@ -164,16 +174,12 @@ public class ManagerService {
         User supervisor = userRepository.findById(supervisorId)
                 .orElseThrow(() -> new RuntimeException("Supervisor not found"));
         
-        User currentManager = getCurrentUser();
-        if (supervisor.getManager() == null || !supervisor.getManager().getId().equals(currentManager.getId())) {
-            throw new RuntimeException("Unauthorized: Supervisor does not belong to your team");
-        }
+        User currentManager = securityService.getCurrentUser();
+        securityService.validateAccess(currentManager, supervisorId);
 
         List<User> associates = userRepository.findAllById(associateIds);
         for (User associate : associates) {
-            if (associate.getManager() == null || !associate.getManager().getId().equals(currentManager.getId())) {
-                throw new RuntimeException("Unauthorized: Associate " + associate.getName() + " does not belong to your team");
-            }
+            securityService.validateAccess(currentManager, associate.getId());
             associate.setSupervisor(supervisor);
         }
         
@@ -184,7 +190,7 @@ public class ManagerService {
 
     @Transactional
     public Map<String, Object> bulkAssignHierarchy(Map<String, String> emailMap) {
-        User curManager = getCurrentUser();
+        User curManager = securityService.getCurrentUser();
         int success = 0;
         int failure = 0;
         List<String> errors = new java.util.ArrayList<>();
@@ -201,18 +207,19 @@ public class ManagerService {
                 User supervisor = supOpt.get();
                 
                 // Safety: check manage rights
-                if (associate.getManager() != null && associate.getManager().getId().equals(curManager.getId()) &&
-                    supervisor.getManager() != null && supervisor.getManager().getId().equals(curManager.getId())) {
+                try {
+                    securityService.validateAccess(curManager, associate.getId());
+                    securityService.validateAccess(curManager, supervisor.getId());
                     associate.setSupervisor(supervisor);
                     userRepository.save(associate);
                     success++;
-                } else {
+                } catch (Exception e) {
                     failure++;
-                    errors.add("Security Violation: " + assocEmail + " or " + supEmail + " is outside your nodal branch.");
+                    errors.add("Security Violation: " + assocEmail + " or " + supEmail + " is outside your branch.");
                 }
             } else {
                 failure++;
-                errors.add("Mapping failed: " + assocEmail + " -> " + supEmail + " (Nodes not found)");
+                errors.add("Mapping failed: " + assocEmail + " -> " + supEmail + " (Leads not found)");
             }
         }
         
@@ -225,6 +232,9 @@ public class ManagerService {
 
     public UserDTO updateUser(Long id, UserDTO userDTO) {
         if (id == null) throw new IllegalArgumentException("User ID cannot be null");
+        User curUser = securityService.getCurrentUser();
+        securityService.validateAccess(curUser, id);
+        
         User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         
         if (userDTO.getName() != null) user.setName(userDTO.getName());
@@ -238,7 +248,7 @@ public class ManagerService {
 
         if (userDTO.getSupervisorId() != null) {
             Long editSupId = userDTO.getSupervisorId();
-            if (editSupId == null) throw new IllegalArgumentException("Supervisor ID cannot be null");
+            securityService.validateAccess(curUser, editSupId);
             User supervisor = userRepository.findById(editSupId)
                     .orElseThrow(() -> new RuntimeException("Supervisor not found: " + editSupId));
             user.setSupervisor(supervisor);
@@ -249,12 +259,12 @@ public class ManagerService {
 
         if (userDTO.getShiftId() != null) {
             Long sId = userDTO.getShiftId();
-            if (sId == null) throw new IllegalArgumentException("Shift ID cannot be null");
-            AttendanceShift shift = attendanceShiftRepository.findById(sId)
-                    .orElseThrow(() -> new RuntimeException("Shift not found: " + sId));
-            user.setShift(shift);
-        } else {
-            user.setShift(null);
+            attendanceShiftRepository.findById(sId).ifPresent(user::setShift);
+        }
+        
+        if (userDTO.getOfficeId() != null) {
+            Long oId = userDTO.getOfficeId();
+            officeLocationRepository.findById(oId).ifPresent(user::setAssignedOffice);
         }
         
         if (userDTO.getPermissions() != null) {
@@ -288,9 +298,18 @@ public class ManagerService {
 
     public void deleteUser(Long id) {
         if (id == null) throw new IllegalArgumentException("User ID cannot be null");
+        User curUser = securityService.getCurrentUser();
+        securityService.validateAccess(curUser, id);
+        
         User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         if (user == null) throw new RuntimeException("Unexpected null user instance");
-        userRepository.delete(user);
+        
+        if (user.getRole() != null && "ADMIN".equals(user.getRole().getName())) {
+            throw new RuntimeException("CRITICAL: The System Administrator account cannot be deleted or deactivated.");
+        }
+        
+        user.setActive(false);
+        userRepository.save(user);
     }
 
     public List<String> getAllPermissions() {

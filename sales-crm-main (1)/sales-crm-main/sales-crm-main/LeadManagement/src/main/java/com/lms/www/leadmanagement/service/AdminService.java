@@ -32,6 +32,7 @@ public class AdminService {
     private final PermissionRepository permissionRepository;
     private final LeadRepository leadRepository;
     private final OfficeLocationRepository officeLocationRepository;
+    private final AttendanceShiftRepository attendanceShiftRepository;
     private final PasswordEncoder passwordEncoder;
 
     public List<OfficeLocationDTO> getAllOffices() {
@@ -64,7 +65,9 @@ public class AdminService {
 
     @Transactional
     public UserDTO updateUser(Long id, UserDTO dto) {
-        // Implementation logic moved to UserService or kept here if specific to Admin
+        User requester = securityService.getCurrentUser();
+        securityService.validateAccess(requester, id);
+
         User user = userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("User not found"));
         user.setName(dto.getName());
         user.setEmail(dto.getEmail());
@@ -72,11 +75,21 @@ public class AdminService {
         if (dto.getRole() != null) {
             user.setRole(roleRepository.findByName(dto.getRole()).orElseThrow());
         }
+        if (dto.getShiftId() != null) {
+            attendanceShiftRepository.findById(dto.getShiftId()).ifPresent(user::setShift);
+        }
+        if (dto.getOfficeId() != null) {
+            officeLocationRepository.findById(dto.getOfficeId()).ifPresent(user::setAssignedOffice);
+        }
+        user.setActive(dto.isActive());
         return UserDTO.fromEntity(userRepository.save(user));
     }
 
     @Transactional
     public void deactivateUser(Long id) {
+        User requester = securityService.getCurrentUser();
+        securityService.validateAccess(requester, id);
+        
         User user = userRepository.findById(id).orElseThrow();
         user.setActive(false);
         userRepository.save(user);
@@ -109,17 +122,13 @@ public class AdminService {
     @Transactional(readOnly = true)
     public List<LeadDTO> getUnassignedLeads() {
         User requester = securityService.getCurrentUser();
-        List<Lead> leads;
+        java.util.Set<Long> allowedIds = securityService.getAllowedUserIds(requester);
         
-        if (securityService.isAdmin(requester)) {
-            leads = leadRepository.findByAssignedToIsNull();
-        } else {
-            List<Long> subordinates = userRepository.findSubordinateIds(requester.getId());
-            subordinates.add(requester.getId());
-            
-            // Optimized query instead of stream filtering
-            leads = leadRepository.findByAssignedToIsNull().stream()
-                    .filter(l -> l.getCreatedBy() != null && subordinates.contains(l.getCreatedBy().getId()))
+        List<Lead> leads = leadRepository.findByAssignedToIsNull();
+        
+        if (!securityService.isAdmin(requester)) {
+            leads = leads.stream()
+                    .filter(l -> l.getCreatedBy() != null && allowedIds.contains(l.getCreatedBy().getId()))
                     .collect(Collectors.toList());
         }
         return leads.stream().map(LeadDTO::fromEntity).collect(Collectors.toList());
@@ -144,17 +153,29 @@ public class AdminService {
                     .map(UserDTO::fromEntityWithTree)
                     .collect(Collectors.toList());
         }
+        // Managers only see their subtree
         return List.of(UserDTO.fromEntityWithTree(requester));
     }
 
     public List<UserDTO> getManagers() {
-        return userRepository.findByRoleName("MANAGER").stream()
-                .map(UserDTO::fromEntity)
-                .collect(Collectors.toList());
+        User requester = securityService.getCurrentUser();
+        if (securityService.isAdmin(requester)) {
+            return userRepository.findByRoleName("MANAGER").stream()
+                    .map(UserDTO::fromEntity)
+                    .collect(Collectors.toList());
+        }
+        // Managers only see themselves
+        return List.of(UserDTO.fromEntity(requester));
     }
 
     public List<UserDTO> getTeamsByManager(Long managerId) {
-        User manager = userRepository.findById(managerId).orElseThrow();
+        User requester = securityService.getCurrentUser();
+        
+        // If managerId is null, use requester's ID if they are a manager
+        Long targetId = (managerId == null) ? requester.getId() : managerId;
+        securityService.validateAccess(requester, targetId);
+        
+        User manager = userRepository.findById(targetId).orElseThrow();
         return userRepository.findBySupervisor(manager).stream()
                 .filter(u -> "TEAM_LEADER".equals(u.getRole().getName()))
                 .map(UserDTO::fromEntity)
@@ -162,12 +183,18 @@ public class AdminService {
     }
 
     public List<UserDTO> getAssociates(Long teamId, Long managerId) {
-        // Implementation using optimized queries
+        User requester = securityService.getCurrentUser();
+        java.util.Set<Long> allowedIds = securityService.getAllowedUserIds(requester);
+        
         if (teamId != null) {
+            securityService.validateAccess(requester, teamId);
             return userRepository.findBySupervisor(userRepository.findById(teamId).orElseThrow()).stream()
+                    .filter(u -> allowedIds.contains(u.getId()))
                     .map(UserDTO::fromEntity).collect(Collectors.toList());
         } else if (managerId != null) {
+            securityService.validateAccess(requester, managerId);
             return userRepository.findByManager(userRepository.findById(managerId).orElseThrow()).stream()
+                    .filter(u -> allowedIds.contains(u.getId()))
                     .map(UserDTO::fromEntity).collect(Collectors.toList());
         }
         return Collections.emptyList();
@@ -200,8 +227,8 @@ public class AdminService {
         return userRepository.findAll(pageable).map(UserDTO::fromEntity);
     }
 
-    public Page<LeadDTO> getAllLeads(Pageable pageable) {
-        return leadRepository.findAll(pageable).map(LeadDTO::fromEntity);
+    public Page<LeadDTO> getAllLeads(Pageable pageable, Long managerId, Long teamId, Long userId, String from, String to) {
+        return leadService.getAllLeadsFiltered(managerId, teamId, userId, from, to, pageable);
     }
 
     public Map<String, Long> getLeadStats() {
@@ -209,25 +236,31 @@ public class AdminService {
     }
 
     public Map<String, Object> getDashboardStats(LocalDateTime start, LocalDateTime end, User requester, Long userId) {
-        return dashboardStatsService.getStats(start, end, requester, userId);
+        return dashboardStatsService.getStats(start, end, requester, userId, null, null);
     }
 
-    public List<Map<String, Object>> getMemberPerformanceFiltered(LocalDateTime start, LocalDateTime end, User requester, Long userId, Long tlId) {
-        return dashboardStatsService.getMemberPerformanceFiltered(start, end, requester, userId, tlId);
+    public List<Map<String, Object>> getMemberPerformanceFiltered(LocalDateTime start, LocalDateTime end, User requester, Long userId, Long tlId, Long managerId) {
+        return dashboardStatsService.getMemberPerformanceFiltered(start, end, requester, userId, tlId, managerId);
     }
 
     // --- Bulk Operations ---
 
     @Transactional
     public UserDTO assignSupervisor(Long assocId, Long supId) {
+        User requester = securityService.getCurrentUser();
+        securityService.validateAccess(requester, assocId);
+        securityService.validateAccess(requester, supId);
+
         User associate = userRepository.findById(assocId).orElseThrow();
         User supervisor = userRepository.findById(supId).orElseThrow();
         associate.setSupervisor(supervisor);
-        // Cascading manager
-        if ("TEAM_LEADER".equals(supervisor.getRole().getName())) {
-            associate.setManager(supervisor.getSupervisor());
-        } else if ("MANAGER".equals(supervisor.getRole().getName())) {
-            associate.setManager(supervisor);
+        
+        if (supervisor.getRole() != null) {
+            if ("TEAM_LEADER".equals(supervisor.getRole().getName())) {
+                associate.setManager(supervisor.getSupervisor());
+            } else if ("MANAGER".equals(supervisor.getRole().getName())) {
+                associate.setManager(supervisor);
+            }
         }
         return UserDTO.fromEntity(userRepository.save(associate));
     }

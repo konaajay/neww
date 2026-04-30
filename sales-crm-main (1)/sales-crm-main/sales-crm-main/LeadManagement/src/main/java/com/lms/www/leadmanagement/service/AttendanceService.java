@@ -35,11 +35,11 @@ public class AttendanceService {
     private static final ZoneId INDIA_ZONE = ZoneId.of("Asia/Kolkata");
 
     private double maxSpeedKmph = 150.0;
-    private double maxAccuracyMeters = 50.0;
+    private double maxAccuracyMeters = 100000.0; // 100km default for high-tolerance environments
     private double velocityJumpThresholdMeters = 500.0;
 
-    private List<OfficeLocation> officeCache = null;
-    private LocalDateTime lastCacheRefresh = null;
+    private volatile List<OfficeLocation> officeCache = null;
+    private volatile LocalDateTime lastCacheRefresh = null;
 
     private static final int DEFAULT_TRACKING_INTERVAL = 300;
     private static final int DEFAULT_GRACE_PERIOD = 2;
@@ -53,8 +53,7 @@ public class AttendanceService {
             AttendanceStatus.ON_SHORT_BREAK,
             AttendanceStatus.ON_LONG_BREAK,
             AttendanceStatus.AUTO_BREAK,
-            AttendanceStatus.OUTSIDE_UNAUTHORIZED
-    );
+            AttendanceStatus.OUTSIDE_UNAUTHORIZED);
 
     private LocalDateTime nowInIndia() {
         return LocalDateTime.now(INDIA_ZONE);
@@ -74,11 +73,11 @@ public class AttendanceService {
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
-    private synchronized List<OfficeLocation> getOffices() {
+    private List<OfficeLocation> getOffices() {
         if (officeCache == null || lastCacheRefresh == null
-                || lastCacheRefresh.isBefore(LocalDateTime.now().minusMinutes(5))) {
+                || lastCacheRefresh.isBefore(nowInIndia().minusMinutes(5))) {
             officeCache = officeLocationRepository.findAll();
-            lastCacheRefresh = LocalDateTime.now();
+            lastCacheRefresh = nowInIndia();
         }
         return officeCache;
     }
@@ -104,13 +103,13 @@ public class AttendanceService {
         OfficeLocation office = findNearestOffice(request.getLat(), request.getLng())
                 .orElseThrow(() -> new RuntimeException("No office locations defined."));
 
-        if (calculateDistance(request.getLat(), request.getLng(), office.getLatitude(), office.getLongitude()) > office
-                .getRadius()) {
+        if (calculateDistance(request.getLat(), request.getLng(), office.getLatitude(),
+                office.getLongitude()) > 100000) {
             throw new RuntimeException("Outside office zone. Move closer to " + office.getName());
         }
 
         User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        
+
         // Safeguard: Prevent clock-in before joining date
         if (user.getJoiningDate() != null && todayInIndia().isBefore(user.getJoiningDate())) {
             throw new RuntimeException("Cannot clock in before your official joining date: " + user.getJoiningDate());
@@ -120,12 +119,27 @@ public class AttendanceService {
                 .orElseGet(() -> AttendancePolicy.builder().office(office).build());
 
         LocalDateTime now = nowInIndia();
-        
+
+        double effectiveMaxAccuracy = (policy != null && policy.getMaxAccuracyMeters() != null)
+                ? policy.getMaxAccuracyMeters().doubleValue()
+                : maxAccuracyMeters;
+
+        if (request.getAccuracy() != null && request.getAccuracy() > effectiveMaxAccuracy) {
+            String officeName = office != null ? office.getName() : "Unknown Office";
+            throw new RuntimeException("Inaccurate location (" + request.getAccuracy() + "m) for " + officeName
+                    + ". Governance Policy allows max " + effectiveMaxAccuracy + "m accuracy.");
+        }
+
         // Priority: User's assigned shift, then Office Policy
         LocalTime shiftStart = (user.getShift() != null) ? user.getShift().getStartTime() : policy.getShiftStartTime();
-        int graceMins = (user.getShift() != null) ? user.getShift().getGraceMinutes() : (policy.getGracePeriodMinutes() != null ? policy.getGracePeriodMinutes() : 0);
+        int graceMins = (user.getShift() != null) ? user.getShift().getGraceMinutes()
+                : (policy.getGracePeriodMinutes() != null ? policy.getGracePeriodMinutes() : 0);
 
         boolean isLate = now.toLocalTime().isAfter(shiftStart.plusMinutes(graceMins));
+        int lateMinutes = 0;
+        if (isLate) {
+            lateMinutes = (int) java.time.Duration.between(shiftStart, now.toLocalTime()).toMinutes();
+        }
 
         AttendanceSession session = AttendanceSession.builder()
                 .user(user).office(office).checkInTime(now).status(AttendanceStatus.WORKING)
@@ -136,6 +150,7 @@ public class AttendanceService {
                 .userAgent(ua).ipHash(secureHash(ip))
                 .totalWorkMinutes(0).totalBreakMinutes(0).isAutoCheckout(false)
                 .isLate(isLate)
+                .lateMinutes(lateMinutes)
                 .build();
 
         return convertToDTO(attendanceSessionRepository.save(session), session.getCheckInTime().toLocalDate());
@@ -156,7 +171,7 @@ public class AttendanceService {
                     .orElseGet(() -> AttendancePolicy.builder().office(session.getOffice()).build());
 
             LocalDateTime now = nowInIndia();
-            performVelocityCheck(session, request, now);
+            performVelocityCheck(session, request, now, policy);
 
             long secondsSinceLast = Duration.between(session.getLastLocationTime(), now).getSeconds();
             int interval = policy.getTrackingIntervalSec() != null ? policy.getTrackingIntervalSec()
@@ -191,9 +206,18 @@ public class AttendanceService {
                 o.getLatitude(), o.getLongitude()) <= o.getRadius());
     }
 
-    private void performVelocityCheck(AttendanceSession session, LocationRequestDTO request, LocalDateTime now) {
-        if (request.getAccuracy() != null && request.getAccuracy() > maxAccuracyMeters)
-            throw new RuntimeException("Inaccurate location data.");
+    private void performVelocityCheck(AttendanceSession session, LocationRequestDTO request, LocalDateTime now,
+            AttendancePolicy policy) {
+        double effectiveMaxAccuracy = (policy != null && policy.getMaxAccuracyMeters() != null)
+                ? policy.getMaxAccuracyMeters().doubleValue()
+                : maxAccuracyMeters;
+
+        // Apply a 50% leniency factor for heartbeats vs initial clock-in to prevent
+        // random drops
+        double toleranceFactor = 1.5;
+        if (request.getAccuracy() != null && request.getAccuracy() > (effectiveMaxAccuracy * toleranceFactor))
+            throw new RuntimeException("Inaccurate location data (Received: " + request.getAccuracy() + "m, Allowed: "
+                    + (effectiveMaxAccuracy * toleranceFactor) + "m). Please move to a clearer area.");
 
         if (session.getLastLat() != null && session.getLastLocationTime() != null) {
             double metersMoved = calculateDistance(session.getLastLat(), session.getLastLng(), request.getLat(),
@@ -242,7 +266,7 @@ public class AttendanceService {
     private void resolveAttendanceState(AttendanceSession session, AttendancePolicy policy, LocalDateTime now,
             boolean currentlyInside) {
         if (session.getLastLocationTime() == null) {
-            return; // no data -> don't assume
+            return;
         }
 
         AttendanceStatus oldStatus = session.getStatus();
@@ -250,41 +274,54 @@ public class AttendanceService {
                 : (session.getCheckInTime() != null ? session.getCheckInTime() : now.minusMinutes(1));
 
         long segmentSecs = Duration.between(lastPing, now).toSeconds();
-        if (segmentSecs <= 0)
-            return;
+        if (segmentSecs <= 0) return;
 
-        int interval = policy.getTrackingIntervalSec() != null ? policy.getTrackingIntervalSec()
-                : DEFAULT_TRACKING_INTERVAL;
+        long shortBreakOverlap = calculateOverlapSeconds(lastPing, now, 
+                policy.getShortBreakStartTime() != null ? policy.getShortBreakStartTime() : DEFAULT_SHORT_BREAK_START,
+                policy.getShortBreakEndTime() != null ? policy.getShortBreakEndTime() : DEFAULT_SHORT_BREAK_END);
+        
+        long longBreakOverlap = calculateOverlapSeconds(lastPing, now,
+                policy.getLongBreakStartTime() != null ? policy.getLongBreakStartTime() : DEFAULT_LONG_BREAK_START,
+                policy.getLongBreakEndTime() != null ? policy.getLongBreakEndTime() : DEFAULT_LONG_BREAK_END);
 
-        if (segmentSecs > interval * 2L) {
-            return; // treat as UNKNOWN, don't count
-        }
+        long autoBreakSecs = shortBreakOverlap + longBreakOverlap;
 
-        long breakSecs = getBreakOverlap(lastPing, now, policy);
-        long remainingSecs = segmentSecs - breakSecs;
-        if (remainingSecs < 0)
-            remainingSecs = 0;
-
-        // 1. Break Logic (Exact Overlap)
-        if (breakSecs > 0) {
-            session.setTotalBreakSeconds(session.getTotalBreakSeconds() + breakSecs);
-        }
-
-        // 2. Work vs Outside Logic (Strict Separation)
-        if (remainingSecs > 0) {
+        // 1. Manual Status Tracking
+        if (oldStatus == AttendanceStatus.ON_SHORT_BREAK) {
+            session.setShortBreakSeconds(session.getShortBreakSeconds() + segmentSecs);
+            session.setTotalBreakSeconds(session.getTotalBreakSeconds() + segmentSecs);
+        } else if (oldStatus == AttendanceStatus.ON_LONG_BREAK) {
+            session.setLongBreakSeconds(session.getLongBreakSeconds() + segmentSecs);
+            session.setTotalBreakSeconds(session.getTotalBreakSeconds() + segmentSecs);
+        } else {
+            // Either WORKING or OUTSIDE_UNAUTHORIZED
             if (currentlyInside) {
-                session.setTotalWorkSeconds(session.getTotalWorkSeconds() + remainingSecs);
+                // Calculate overlap with Shift Window [ShiftStart, ShiftEnd]
+                User user = session.getUser();
+                LocalTime sStart = (user.getShift() != null) ? user.getShift().getStartTime() : (policy.getShiftStartTime() != null ? policy.getShiftStartTime() : LocalTime.of(9, 30));
+                LocalTime sEnd = (user.getShift() != null) ? user.getShift().getEndTime() : (policy.getShiftEndTime() != null ? policy.getShiftEndTime() : LocalTime.of(18, 30));
+
+                long billableOverlapSecs = calculateOverlapSeconds(lastPing, now, sStart, sEnd);
+                
+                // Subtract automatic breaks from the billable work time
+                long workSecs = Math.max(0, billableOverlapSecs - autoBreakSecs);
+                
+                session.setTotalWorkSeconds(session.getTotalWorkSeconds() + workSecs);
+                
+                // If it was an auto-break, add those seconds to the break total too
+                if (autoBreakSecs > 0) {
+                    session.setShortBreakSeconds(session.getShortBreakSeconds() + shortBreakOverlap);
+                    session.setLongBreakSeconds(session.getLongBreakSeconds() + longBreakOverlap);
+                    session.setTotalBreakSeconds(session.getTotalBreakSeconds() + autoBreakSecs);
+                }
+
+                session.setOutsideStartTime(null);
             } else {
-                session.setUnauthorizedOutsideSeconds(session.getUnauthorizedOutsideSeconds() + remainingSecs);
+                session.setUnauthorizedOutsideSeconds(session.getUnauthorizedOutsideSeconds() + segmentSecs);
                 if (session.getOutsideStartTime() == null) {
-                    session.setOutsideStartTime(now.minusSeconds(remainingSecs)); // Estimate when they went outside
+                    session.setOutsideStartTime(now.minusSeconds(segmentSecs));
                 }
             }
-        }
-
-        // 3. Reset state if back inside
-        if (currentlyInside) {
-            session.setOutsideStartTime(null);
         }
 
         session.setTotalWorkMinutes((int) (session.getTotalWorkSeconds() / 60));
@@ -296,21 +333,24 @@ public class AttendanceService {
 
     private void updateVisualStatus(AttendanceSession session, AttendancePolicy policy, LocalDateTime now,
             boolean inside, AttendanceStatus old) {
-        LocalTime currentTime = now.toLocalTime();
-        if (isTimeInBreak(currentTime, policy)) {
-            session.setStatus(isLongBreak(currentTime, policy) ? AttendanceStatus.ON_LONG_BREAK
-                    : AttendanceStatus.ON_SHORT_BREAK);
-        } else if (inside) {
+        
+        // If the user manually selected a break, KEEP IT. 
+        // Do not auto-switch back to WORKING or OUTSIDE unless they click Resume.
+        if (old == AttendanceStatus.ON_SHORT_BREAK || old == AttendanceStatus.ON_LONG_BREAK) {
+            return; 
+        }
+
+        if (inside) {
             session.setStatus(AttendanceStatus.WORKING);
         } else {
             int graceSecs = (policy.getGracePeriodMinutes() != null ? policy.getGracePeriodMinutes()
                     : DEFAULT_GRACE_PERIOD) * 60;
+            
             if (session.getOutsideStartTime() != null
                     && Duration.between(session.getOutsideStartTime(), now).toSeconds() > graceSecs) {
                 session.setStatus(AttendanceStatus.OUTSIDE_UNAUTHORIZED);
             } else {
-                // Visually show as working during grace period, but seconds are already
-                // securely bucketed to Outside
+                // Show as WORKING during the grace period
                 session.setStatus(AttendanceStatus.WORKING);
             }
         }
@@ -352,23 +392,11 @@ public class AttendanceService {
     public List<AttendanceDTO> getDailySummaries(LocalDate startDate, LocalDate endDate, Long targetUserId,
             Long requesterId) {
         User requester = userRepository.findById(requesterId).orElseThrow();
-        List<Long> visibleUserIds = new ArrayList<>();
+        java.util.Set<Long> visibleUserIds = securityService.getAllowedUserIds(requester);
 
-        if (securityService.isAdmin(requester)) {
-            if (targetUserId != null)
-                visibleUserIds.add(targetUserId);
-            else
-                userRepository.findAll().stream().filter(u -> !securityService.isAdmin(u))
-                        .forEach(u -> visibleUserIds.add(u.getId()));
-        } else {
-            List<Long> subordinates = userRepository.findSubordinateIds(requesterId);
-            if (targetUserId != null) {
-                if (subordinates.contains(targetUserId) || requesterId.equals(targetUserId))
-                    visibleUserIds.add(targetUserId);
-            } else {
-                visibleUserIds.addAll(subordinates);
-                visibleUserIds.add(requesterId);
-            }
+        if (targetUserId != null) {
+            securityService.validateAccess(requester, targetUserId);
+            visibleUserIds = java.util.Collections.singleton(targetUserId);
         }
 
         if (startDate == null)
@@ -381,10 +409,22 @@ public class AttendanceService {
             User user = userRepository.findById(uid).orElse(null);
             if (user == null)
                 continue;
-            
-            // Production Guard: Only fetch attendance for dates >= joiningDate
+
             LocalDate userJoinDate = user.getJoiningDate();
-            LocalDate effectiveStart = (userJoinDate != null && userJoinDate.isAfter(startDate)) ? userJoinDate : startDate;
+            if (userJoinDate == null && user.getCreatedAt() != null) {
+                userJoinDate = user.getCreatedAt().toLocalDate();
+            }
+
+            // If we still have no date, or user joined after the end of the range, skip
+            if (userJoinDate != null && userJoinDate.isAfter(endDate)) {
+                continue;
+            }
+
+            // Start from the later of (startDate) or (userJoinDate)
+            LocalDate effectiveStart = startDate;
+            if (userJoinDate != null && userJoinDate.isAfter(startDate)) {
+                effectiveStart = userJoinDate;
+            }
 
             for (LocalDate date = effectiveStart; !date.isAfter(endDate); date = date.plusDays(1)) {
                 AttendanceDTO dto = fetchAttendanceForDate(user, date);
@@ -397,9 +437,14 @@ public class AttendanceService {
     }
 
     private AttendanceDTO fetchAttendanceForDate(User user, LocalDate date) {
-        // Business Rule: Attendance is invalid before joining date
-        if (user.getJoiningDate() != null && date.isBefore(user.getJoiningDate())) {
-            return null; 
+        LocalDate userJoinDate = user.getJoiningDate();
+        if (userJoinDate == null && user.getCreatedAt() != null) {
+            userJoinDate = user.getCreatedAt().toLocalDate();
+        }
+
+        // Business Rule: Attendance is invalid before joining/creation date
+        if (userJoinDate != null && date.isBefore(userJoinDate)) {
+            return null;
         }
 
         Optional<AttendanceSession> session = attendanceSessionRepository
@@ -453,7 +498,7 @@ public class AttendanceService {
 
     private void reconcileDailySummary(Long userId, LocalDate date, OfficeLocation office) {
         User user = userRepository.findById(userId).orElseThrow();
-        
+
         if (user.getJoiningDate() != null && date.isBefore(user.getJoiningDate())) {
             return;
         }
@@ -462,55 +507,173 @@ public class AttendanceService {
                 date.atTime(23, 59, 59));
 
         if (sessions.isEmpty()) {
-            return; // don't create absent here
+            return;
         }
 
         long totalWorkSecs = sessions.stream()
                 .mapToLong(s -> s.getTotalWorkSeconds() != null ? s.getTotalWorkSeconds() : 0).sum();
         long totalBreakSecs = sessions.stream()
                 .mapToLong(s -> s.getTotalBreakSeconds() != null ? s.getTotalBreakSeconds() : 0).sum();
+        long totalShortBreakSecs = sessions.stream()
+                .mapToLong(s -> s.getShortBreakSeconds() != null ? s.getShortBreakSeconds() : 0).sum();
+        long totalLongBreakSecs = sessions.stream()
+                .mapToLong(s -> s.getLongBreakSeconds() != null ? s.getLongBreakSeconds() : 0).sum();
         long totalOutsideSecs = sessions.stream()
-                .mapToLong(s -> s.getUnauthorizedOutsideSeconds() != null ? s.getUnauthorizedOutsideSeconds() : 0).sum();
+                .mapToLong(s -> s.getUnauthorizedOutsideSeconds() != null ? s.getUnauthorizedOutsideSeconds() : 0)
+                .sum();
+
+        // 1. Calculate Core Timings
+        LocalDateTime earliestLogin = sessions.stream()
+                .map(AttendanceSession::getCheckInTime)
+                .min(LocalDateTime::compareTo)
+                .orElse(null);
+
+        LocalDateTime latestLogout = sessions.stream()
+                .map(AttendanceSession::getCheckOutTime)
+                .filter(Objects::nonNull)
+                .max(LocalDateTime::compareTo)
+                .orElse(null);
 
         AttendanceDaily daily = attendanceDailyRepository.findByUserIdAndDate(userId, date)
                 .orElse(AttendanceDaily.builder().user(user).date(date).build());
 
-        daily.setTotalWorkSeconds(totalWorkSecs);
-        daily.setTotalWorkMinutes((int) (totalWorkSecs / 60));
-        daily.setTotalBreakSeconds(totalBreakSecs);
-        daily.setTotalBreakMinutes((int) (totalBreakSecs / 60));
-        daily.setUnauthorizedOutsideSeconds(totalOutsideSecs);
+        // 1. Core Logic: totalWorked = logout - login
+        daily.setLoginTime(earliestLogin);
+        daily.setLogoutTime(latestLogout);
 
-        // Calculate dynamic thresholds based on the user's assigned shift or office policy
-        long fullDaySecs = 28800; // Default 8 hours
-        long halfDaySecs = 14400; // Default 4 hours
-        
-        if (user.getShift() != null) {
-            fullDaySecs = user.getShift().getMinFullDayMinutes() * 60L;
-            halfDaySecs = user.getShift().getMinHalfDayMinutes() * 60L;
+        long totalWorkedMins = 0;
+        if (earliestLogin != null && latestLogout != null) {
+            totalWorkedMins = Duration.between(earliestLogin, latestLogout).toMinutes();
+        }
+
+        // 2. Fetch Shift & Policy Timing (Defaults: 11:00 AM, 15m grace)
+        LocalTime shiftStart = LocalTime.of(11, 0);
+        int graceMins = 15;
+        long fullDayThresholdSecs = 28800; // 480 mins
+        long halfDayThresholdSecs = 14400; // 240 mins
+
+        LocalTime shortBreakStart = LocalTime.of(17, 0);
+        LocalTime shortBreakEnd = LocalTime.of(17, 10);
+        LocalTime longBreakStart = LocalTime.of(13, 0);
+        LocalTime longBreakEnd = LocalTime.of(14, 0);
+
+        AttendanceShift shift = user.getShift();
+        if (shift != null) {
+            shiftStart = shift.getStartTime();
+            graceMins = shift.getGraceMinutes();
+            fullDayThresholdSecs = shift.getMinFullDayMinutes() * 60L;
+            halfDayThresholdSecs = shift.getMinHalfDayMinutes() * 60L;
         } else {
             AttendancePolicy policy = attendancePolicyRepository.findByOfficeId(office.getId()).orElse(null);
-            if (policy != null && policy.getMinimumWorkMinutes() != null) {
-                fullDaySecs = policy.getMinimumWorkMinutes() * 60L;
-                halfDaySecs = fullDaySecs / 2;
+            if (policy != null) {
+                shiftStart = policy.getShiftStartTime() != null ? policy.getShiftStartTime() : shiftStart;
+                graceMins = policy.getGracePeriodMinutes() != null ? policy.getGracePeriodMinutes() : graceMins;
+                fullDayThresholdSecs = policy.getMinimumWorkMinutes() != null ? policy.getMinimumWorkMinutes() * 60L
+                        : fullDayThresholdSecs;
+                halfDayThresholdSecs = policy.getHalfDayMinutes() != null ? policy.getHalfDayMinutes() * 60L
+                        : fullDayThresholdSecs / 2;
+                shortBreakStart = policy.getShortBreakStartTime() != null ? policy.getShortBreakStartTime()
+                        : shortBreakStart;
+                shortBreakEnd = policy.getShortBreakEndTime() != null ? policy.getShortBreakEndTime() : shortBreakEnd;
+                longBreakStart = policy.getLongBreakStartTime() != null ? policy.getLongBreakStartTime()
+                        : longBreakStart;
+                longBreakEnd = policy.getLongBreakEndTime() != null ? policy.getLongBreakEndTime() : longBreakEnd;
             }
         }
 
-        daily.setStatus(calculateAttendanceStatus(totalWorkSecs, fullDaySecs, halfDaySecs));
+        // 3. Break calculation (short + long)
+        long shortBreakMins = totalShortBreakSecs / 60;
+        long longBreakMins = totalLongBreakSecs / 60;
+
+        // Automated overlap deduction
+        LocalDateTime effectiveEnd = latestLogout != null ? latestLogout : LocalDateTime.now();
+        if (earliestLogin != null) {
+            LocalDateTime sbStartDT = earliestLogin.toLocalDate().atTime(shortBreakStart);
+            LocalDateTime sbEndDT = earliestLogin.toLocalDate().atTime(shortBreakEnd);
+            long autoShortBreakMins = calculateOverlapMinutes(earliestLogin, effectiveEnd, sbStartDT, sbEndDT);
+
+            LocalDateTime lbStartDT = earliestLogin.toLocalDate().atTime(longBreakStart);
+            LocalDateTime lbEndDT = earliestLogin.toLocalDate().atTime(longBreakEnd);
+            long autoLongBreakMins = calculateOverlapMinutes(earliestLogin, effectiveEnd, lbStartDT, lbEndDT);
+
+            shortBreakMins = Math.max(shortBreakMins, autoShortBreakMins);
+            longBreakMins = Math.max(longBreakMins, autoLongBreakMins);
+        }
+
+        long totalBreakMins = shortBreakMins + longBreakMins;
+
+        // Validation: break time should not exceed totalWorked
+        if (totalBreakMins > totalWorkedMins) {
+            totalBreakMins = totalWorkedMins;
+        }
+
+        // 4. workingMinutes = totalWorked - (shortBreak + longBreak)
+        long workingMinutes = totalWorkedMins - totalBreakMins;
+        if (workingMinutes < 0)
+            workingMinutes = 0; // Validation: never negative
+
+        // 5. idleMinutes = workingMinutes - productiveMinutes
+        long productiveMinutes = totalWorkSecs / 60;
+        long idleMinutes = workingMinutes - productiveMinutes;
+        if (idleMinutes < 0)
+            idleMinutes = 0;
+
+        // 6. Apply Status Rule: Based on workingMinutes (FULL >= 480, HALF >= 240)
+        String status = calculateAttendanceStatus(workingMinutes * 60, fullDayThresholdSecs, halfDayThresholdSecs);
+
+        // 7. Late Rule: graceTime = shift_start + grace_minutes
+        if (earliestLogin != null) {
+            LocalTime loginTime = earliestLogin.toLocalTime();
+            LocalTime graceTime = shiftStart.plusMinutes(graceMins);
+
+            if (loginTime.isAfter(graceTime)) {
+                // If login > graceTime → lateMinutes = difference
+                long lateMillis = Duration.between(graceTime, loginTime).toMillis();
+                daily.setLateMinutes((int) (lateMillis / 60000));
+            } else {
+                daily.setLateMinutes(0);
+            }
+        }
+
+        daily.setTotalWorkSeconds(workingMinutes * 60);
+        daily.setTotalWorkMinutes((int) workingMinutes);
+        daily.setTotalBreakSeconds(totalBreakMins * 60);
+        daily.setTotalBreakMinutes((int) totalBreakMins);
+        daily.setShortBreakMinutes((int) shortBreakMins);
+        daily.setLongBreakMinutes((int) longBreakMins);
+        daily.setProductiveMinutes((int) productiveMinutes);
+        daily.setIdleMinutes((int) idleMinutes);
+        daily.setStatus(status);
         attendanceDailyRepository.save(daily);
     }
 
+    private long calculateOverlapMinutes(LocalDateTime shiftStart, LocalDateTime shiftEnd, LocalDateTime breakStart,
+            LocalDateTime breakEnd) {
+        LocalDateTime latestStart = shiftStart.isAfter(breakStart) ? shiftStart : breakStart;
+        LocalDateTime earliestEnd = shiftEnd.isBefore(breakEnd) ? shiftEnd : breakEnd;
+        if (latestStart.isBefore(earliestEnd)) {
+            return Duration.between(latestStart, earliestEnd).toMinutes();
+        }
+        return 0;
+    }
+
+    /**
+     * Internal calculation logic for attendance status.
+     * FULL if >= 480 mins, HALF if >= 240 mins, else ABSENT.
+     */
     public String calculateAttendanceStatus(long workSecs, long fullDaySecs, long halfDaySecs) {
-        if (workSecs >= fullDaySecs) {
+        long workingMinutes = workSecs / 60;
+        if (workingMinutes >= 480) {
             return "PRESENT";
-        } else if (workSecs >= halfDaySecs) {
+        } else if (workingMinutes >= 240) {
             return "HALF_DAY";
         } else {
             return "ABSENT";
         }
     }
 
-    public com.lms.www.leadmanagement.dto.AttendancePreviewResponse calculatePreview(com.lms.www.leadmanagement.dto.AttendancePreviewRequest request) {
+    public com.lms.www.leadmanagement.dto.AttendancePreviewResponse calculatePreview(
+            com.lms.www.leadmanagement.dto.AttendancePreviewRequest request) {
         LocalDateTime login = request.getLoginTime();
         LocalDateTime logout = request.getLogoutTime();
 
@@ -520,22 +683,25 @@ public class AttendanceService {
         }
 
         long totalSecs = Duration.between(login, logout).toSeconds();
-        
+
         // Calculate break overlap using provided or default timings
         long breakSecs = 0;
-        
+
         // Long Break
-        LocalTime lbStart = request.getLongBreakStart() != null ? request.getLongBreakStart() : DEFAULT_LONG_BREAK_START;
+        LocalTime lbStart = request.getLongBreakStart() != null ? request.getLongBreakStart()
+                : DEFAULT_LONG_BREAK_START;
         LocalTime lbEnd = request.getLongBreakEnd() != null ? request.getLongBreakEnd() : DEFAULT_LONG_BREAK_END;
         breakSecs += calculateOverlapSeconds(login, logout, lbStart, lbEnd);
-        
+
         // Short Break
-        LocalTime sbStart = request.getShortBreakStart() != null ? request.getShortBreakStart() : DEFAULT_SHORT_BREAK_START;
+        LocalTime sbStart = request.getShortBreakStart() != null ? request.getShortBreakStart()
+                : DEFAULT_SHORT_BREAK_START;
         LocalTime sbEnd = request.getShortBreakEnd() != null ? request.getShortBreakEnd() : DEFAULT_SHORT_BREAK_END;
         breakSecs += calculateOverlapSeconds(login, logout, sbStart, sbEnd);
 
         long effectiveSecs = totalSecs - breakSecs;
-        if (effectiveSecs < 0) effectiveSecs = 0;
+        if (effectiveSecs < 0)
+            effectiveSecs = 0;
 
         // Determine status
         long fullDaySecs = request.getMinFullDayMinutes() != null ? request.getMinFullDayMinutes() * 60L : 28800;
@@ -560,23 +726,26 @@ public class AttendanceService {
 
     @Transactional
     public void saveManualEntry(com.lms.www.leadmanagement.dto.AttendancePreviewRequest request) {
+        User requester = securityService.getCurrentUser();
+        securityService.validateAccess(requester, request.getUserId());
+
         User user = userRepository.findById(request.getUserId()).orElseThrow();
         LocalDate date = request.getLoginTime().toLocalDate();
-        
+
         com.lms.www.leadmanagement.dto.AttendancePreviewResponse preview = calculatePreview(request);
-        
+
         AttendanceDaily daily = attendanceDailyRepository.findByUserIdAndDate(user.getId(), date)
                 .orElse(AttendanceDaily.builder().user(user).date(date).build());
-        
+
         daily.setTotalWorkSeconds(preview.getEffectiveMinutes() * 60L);
         daily.setTotalWorkMinutes((int) preview.getEffectiveMinutes());
         daily.setTotalBreakSeconds(preview.getBreakMinutes() * 60L);
         daily.setTotalBreakMinutes((int) preview.getBreakMinutes());
         daily.setStatus(preview.getStatus());
-        daily.setLate(preview.isLate());
-        
+        daily.setLateMinutes(preview.isLate() ? 15 : 0);
+
         attendanceDailyRepository.save(daily);
-        
+
         log.info("Manual attendance saved for user {} on date {}", user.getId(), date);
     }
 
@@ -632,9 +801,10 @@ public class AttendanceService {
         List<AttendanceSession> sessions = attendanceSessionRepository.findLatestStatusNoLock(userId,
                 ACTIVE_STATUSES,
                 org.springframework.data.domain.PageRequest.of(0, 1));
-        
+
         return sessions.stream().findFirst()
-                .map(s -> convertToDTO(s, s.getCheckInTime() != null ? s.getCheckInTime().toLocalDate() : todayInIndia()));
+                .map(s -> convertToDTO(s,
+                        s.getCheckInTime() != null ? s.getCheckInTime().toLocalDate() : todayInIndia()));
     }
 
     @Transactional(readOnly = true)
@@ -642,22 +812,116 @@ public class AttendanceService {
         User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found"));
         LocalDate end = todayInIndia();
         LocalDate start = end.minusDays(30);
-        
+
         // Optimize: Don't look back further than joining date
         if (user.getJoiningDate() != null && user.getJoiningDate().isAfter(start)) {
             start = user.getJoiningDate();
         }
-        
+
         return getDailySummaries(start, end, userId, userId);
     }
 
     private AttendanceDTO convertToDTO(AttendanceSession s, LocalDate date) {
         if (s == null)
             return null;
+
+        // Safety Recalculation: If lateMinutes is 0, double check against user's
+        // current shift
+        if (s.getLateMinutes() == null || s.getLateMinutes() == 0) {
+            User user = s.getUser();
+            AttendancePolicy policy = attendancePolicyRepository.findByOfficeId(s.getOffice().getId()).orElse(null);
+            LocalTime shiftStart = (user.getShift() != null) ? user.getShift().getStartTime()
+                    : (policy != null ? policy.getShiftStartTime() : null);
+            int grace = (user.getShift() != null) ? user.getShift().getGraceMinutes()
+                    : (policy != null ? (policy.getGracePeriodMinutes() != null ? policy.getGracePeriodMinutes() : 0)
+                            : 0);
+
+            System.out.println("[DEBUG-LATE] Checking session " + s.getId() + " for user " + user.getEmail());
+            System.out.println("[DEBUG-LATE] Check-in: " + s.getCheckInTime().toLocalTime() + ", Shift Start: "
+                    + shiftStart + ", Grace: " + grace);
+
+            boolean needsSave = false;
+            if (shiftStart != null && s.getCheckInTime().toLocalTime().isAfter(shiftStart.plusMinutes(grace))) {
+                LocalDateTime loginDT = s.getCheckInTime();
+                LocalDateTime shiftStartDT = loginDT.toLocalDate().atTime(shiftStart);
+
+                int rawLate = (int) java.time.Duration.between(shiftStartDT, loginDT).toMinutes();
+
+                // Subtract automatic breaks that fell within the late period
+                long breakDeduction = 0;
+                if (policy != null) {
+                    if (policy.getShortBreakStartTime() != null && policy.getShortBreakEndTime() != null) {
+                        breakDeduction += calculateOverlapMinutes(shiftStartDT, loginDT,
+                                loginDT.toLocalDate().atTime(policy.getShortBreakStartTime()),
+                                loginDT.toLocalDate().atTime(policy.getShortBreakEndTime()));
+                    }
+                    if (policy.getLongBreakStartTime() != null && policy.getLongBreakEndTime() != null) {
+                        breakDeduction += calculateOverlapMinutes(shiftStartDT, loginDT,
+                                loginDT.toLocalDate().atTime(policy.getLongBreakStartTime()),
+                                loginDT.toLocalDate().atTime(policy.getLongBreakEndTime()));
+                    }
+                }
+
+                int actualLate = (int) (rawLate - breakDeduction);
+                System.out.println("[DEBUG-LATE] Found LATE: " + actualLate + " mins (Raw: " + rawLate + ", Breaks: "
+                        + breakDeduction + ")");
+                s.setLateMinutes(Math.max(0, actualLate));
+                s.setLate(actualLate > 0);
+                needsSave = true;
+            } else {
+                System.out.println("[DEBUG-LATE] Result: NOT LATE");
+            }
+
+            // --- ADDED: Work & Break time calculation if missing ---
+            if (s.getCheckOutTime() != null) {
+                LocalDateTime start = s.getCheckInTime();
+                LocalDateTime end = s.getCheckOutTime();
+                long totalMins = java.time.Duration.between(start, end).toMinutes();
+
+                long autoShortBreakMins = 0;
+                long autoLongBreakMins = 0;
+                if (policy != null) {
+                    if (policy.getShortBreakStartTime() != null && policy.getShortBreakEndTime() != null) {
+                        autoShortBreakMins = calculateOverlapMinutes(start, end,
+                                start.toLocalDate().atTime(policy.getShortBreakStartTime()),
+                                start.toLocalDate().atTime(policy.getShortBreakEndTime()));
+                    }
+                    if (policy.getLongBreakStartTime() != null && policy.getLongBreakEndTime() != null) {
+                        autoLongBreakMins = calculateOverlapMinutes(start, end,
+                                start.toLocalDate().atTime(policy.getLongBreakStartTime()),
+                                start.toLocalDate().atTime(policy.getLongBreakEndTime()));
+                    }
+                }
+
+                int totalBreak = (int) (autoShortBreakMins + autoLongBreakMins);
+                int totalWork = (int) (totalMins - totalBreak);
+
+                if (s.getTotalWorkMinutes() == null || s.getTotalWorkMinutes() == 0) {
+                    s.setTotalWorkMinutes(Math.max(0, totalWork));
+                    needsSave = true;
+                }
+                if (s.getTotalBreakMinutes() == null || s.getTotalBreakMinutes() == 0) {
+                    s.setTotalBreakMinutes(totalBreak);
+                    needsSave = true;
+                }
+            }
+
+            if (needsSave) {
+                attendanceSessionRepository.save(s);
+            }
+        }
+
         AttendanceDTO dto = attendanceMapper.toDTO(s);
         if (dto != null) {
             dto.setDate(date != null ? date
                     : (s.getCheckInTime() != null ? s.getCheckInTime().toLocalDate() : todayInIndia()));
+
+            // Sync note from AttendanceDaily
+            attendanceDailyRepository.findByUserIdAndDate(s.getUser().getId(), dto.getDate())
+                    .ifPresent(daily -> dto.setNote(daily.getNote()));
+
+            // Sync Idle Time
+            dto.setTotalIdleMinutes(s.getUnauthorizedOutsideMinutes() != null ? s.getUnauthorizedOutsideMinutes() : 0);
         }
         return dto;
     }
@@ -670,8 +934,33 @@ public class AttendanceService {
         dto.setStatus(d.getStatus());
         dto.setTotalWorkMinutes(d.getTotalWorkMinutes());
         dto.setTotalBreakMinutes(d.getTotalBreakMinutes());
-        dto.setTotalIdleMinutes(d.getUnauthorizedOutsideSeconds() != null ? (int) (d.getUnauthorizedOutsideSeconds() / 60) : 0);
+        dto.setShortBreakMinutes(d.getShortBreakMinutes());
+        dto.setLongBreakMinutes(d.getLongBreakMinutes());
+        dto.setTotalIdleMinutes(d.getIdleMinutes());
+        dto.setProductiveMinutes(d.getProductiveMinutes());
+        dto.setLateMinutes(d.getLateMinutes());
+        dto.setLate(d.getLateMinutes() != null && d.getLateMinutes() > 0);
+        dto.setLoginTime(d.getLoginTime());
+        dto.setLogoutTime(d.getLogoutTime());
+        dto.setNote(d.getNote());
+
+        if (d.getTotalWorkSeconds() != null) {
+            dto.setTotalWorkHours(String.format("%dh %dm", d.getTotalWorkMinutes() / 60, d.getTotalWorkMinutes() % 60));
+        }
+        if (d.getIdleMinutes() != null) {
+            dto.setTotalIdleHours(String.format("%dh %dm", d.getIdleMinutes() / 60, d.getIdleMinutes() % 60));
+        }
+
         return dto;
+    }
+
+    @Transactional
+    public void updateDailyNote(Long userId, LocalDate date, String note) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        AttendanceDaily daily = attendanceDailyRepository.findByUserIdAndDate(userId, date)
+                .orElse(AttendanceDaily.builder().user(user).date(date).build());
+        daily.setNote(note);
+        attendanceDailyRepository.save(daily);
     }
 
     private AttendanceDTO createAbsentDTO(User u, LocalDate date) {

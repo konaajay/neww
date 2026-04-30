@@ -16,6 +16,7 @@ import {
   ShieldHalf,
   Command
 } from 'lucide-react';
+import { useTheme } from '../../../context/ThemeContext';
 import { Card } from '../../../components/common/Components';
 import LeadTable from '../../../components/LeadTable';
 import CallLogDashboard from './CallLogDashboard';
@@ -48,6 +49,7 @@ const ManagerDashboardFilterHub = ({
   refreshTrigger
 }) => {
   const { user } = useAuth();
+  const { isDarkMode } = useTheme();
   const [selectedMgrId, setSelectedMgrId] = useState('');
   const [selectedTlId, setSelectedTlId] = useState('');
   const [selectedAssocId, setSelectedAssocId] = useState('');
@@ -158,7 +160,7 @@ const ManagerDashboardFilterHub = ({
               <MetricCard title="Pending Support" icon={AlertCircle} color="warning" stats={{ primary: { value: stats?.openTickets || 0, label: 'Open Tickets' } }} />
             </div>
             <div className="col-12 col-md-6">
-              <MetricCard title="Closed Nodes" icon={CheckCircle2} color="success" stats={{ primary: { value: stats?.resolvedTickets || 0, label: 'Resolved' } }} />
+              <MetricCard title="Closed Leads" icon={CheckCircle2} color="success" stats={{ primary: { value: stats?.resolvedTickets || 0, label: 'Resolved' } }} />
             </div>
           </div>
         );
@@ -170,14 +172,7 @@ const ManagerDashboardFilterHub = ({
   const [hubSearchTerm, setHubSearchTerm] = useState('');
 
   const renderTable = () => {
-    if (loading) {
-      return (
-        <div className="premium-card p-5 text-center mt-3 shadow-lg bg-surface bg-opacity-10 backdrop-blur" style={{ borderRadius: '24px' }}>
-          <div className="spinner-border text-primary opacity-25" style={{ width: '3rem', height: '3rem' }}></div>
-          <p className="mt-3 text-muted fw-bold small tracking-widest">SYNCHRONIZING SECURE LEDGER...</p>
-        </div>
-      );
-    }
+    if (loading) return null; // Removed unnecessary buffering section per user request
     switch (dataType) {
       case 'Leads':
         return null; // Deactivated per user request: "do nt sho eLead Transmission Ledger"
@@ -215,7 +210,7 @@ const ManagerDashboardFilterHub = ({
           <div className="premium-card overflow-hidden shadow-lg animate-fade-in">
             <div className="p-4 border-bottom border-white border-opacity-5">
               <h6 className="fw-black mb-1 text-uppercase tracking-widest small">Follow-up Registry</h6>
-              <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>PENDING ENGAGEMENT NODES</p>
+              <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>PENDING ENGAGEMENT LEADS</p>
             </div>
             <LeadTable
               leads={(leads || []).filter(l => l.status === 'FOLLOW_UP')}
@@ -354,13 +349,7 @@ const ManagerDashboardFilterHub = ({
       )}
 
 
-      {renderCards()}
-
-      {renderTable() && (
-        <div className="animate-slide-up">
-          {renderTable()}
-        </div>
-      )}
+      {/* Removed internal cards and table per user request for a simplified team dashboard */}
     </div>
   );
 };

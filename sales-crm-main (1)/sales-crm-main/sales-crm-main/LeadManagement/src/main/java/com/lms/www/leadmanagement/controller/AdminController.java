@@ -4,6 +4,7 @@ import com.lms.www.leadmanagement.dto.LeadDTO;
 import com.lms.www.leadmanagement.dto.PaymentDTO;
 import com.lms.www.leadmanagement.dto.RoleDTO;
 import com.lms.www.leadmanagement.dto.UserDTO;
+import com.lms.www.leadmanagement.dto.ApiResponse;
 import com.lms.www.leadmanagement.entity.User;
 import com.lms.www.leadmanagement.service.AdminService;
 import com.lms.www.leadmanagement.service.LeadPaymentService;
@@ -100,9 +101,15 @@ public class AdminController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'TEAM_LEADER')")
     @GetMapping("/leads")
-    public ResponseEntity<Page<LeadDTO>> getAllLeads(@PageableDefault(size = 20, sort = "createdAt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
+    public ResponseEntity<Page<LeadDTO>> getAllLeads(
+            @RequestParam(required = false) Long managerId,
+            @RequestParam(required = false) Long teamId,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            @PageableDefault(size = 20, sort = "createdAt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
         System.out.println("API CALL: GET /api/admin/leads?page=" + pageable.getPageNumber());
-        return ResponseEntity.ok(adminService.getAllLeads(pageable));
+        return ResponseEntity.ok(adminService.getAllLeads(pageable, managerId, teamId, userId, from, to));
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'TEAM_LEADER')")
@@ -126,22 +133,25 @@ public class AdminController {
     @GetMapping("/reports/member-performance")
     public ResponseEntity<List<Map<String, Object>>> getMemberPerformance(
             @RequestParam(value = "userId", required = false) Long userId,
+            @RequestParam(value = "teamId", required = false) Long teamId,
+            @RequestParam(value = "managerId", required = false) Long managerId,
             @RequestParam(value = "start", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime start,
             @RequestParam(value = "end", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime end) {
         User requester = adminService.getCurrentUser();
-        return ResponseEntity.ok(adminService.getMemberPerformanceFiltered(start, end, requester, userId, null));
+        return ResponseEntity.ok(adminService.getMemberPerformanceFiltered(start, end, requester, userId, teamId, managerId));
     }
 
-    @PreAuthorize("hasAuthority('MANAGE_USERS')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'TEAM_LEADER')")
     @GetMapping("/payments/history")
     public ResponseEntity<List<PaymentDTO>> getPaymentHistory(
+            @RequestParam(value = "managerId", required = false) Long managerId,
             @RequestParam(value = "userId", required = false) Long userId,
             @RequestParam(value = "tlId", required = false) Long tlId,
             @RequestParam(value = "associateId", required = false) Long associateId,
             @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "startDate", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime startDate,
             @RequestParam(value = "endDate", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime endDate) {
-        return ResponseEntity.ok(leadPaymentService.getFilteredPaymentHistory(userId, tlId, associateId, startDate, endDate, status));
+        return ResponseEntity.ok(leadPaymentService.getFilteredPaymentHistory(managerId, userId, tlId, associateId, startDate, endDate, status));
     }
 
     @PreAuthorize("hasAuthority('MANAGE_USERS')")
@@ -178,22 +188,22 @@ public class AdminController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @GetMapping("/managers")
-    public ResponseEntity<List<UserDTO>> getManagers() {
-        return ResponseEntity.ok(adminService.getManagers());
+    public ResponseEntity<ApiResponse<List<UserDTO>>> getManagers() {
+        return ResponseEntity.ok(ApiResponse.success(adminService.getManagers()));
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @GetMapping("/teams")
-    public ResponseEntity<List<UserDTO>> getTeamsByManager(@RequestParam Long managerId) {
-        return ResponseEntity.ok(adminService.getTeamsByManager(managerId));
+    public ResponseEntity<ApiResponse<List<UserDTO>>> getTeamsByManager(@RequestParam Long managerId) {
+        return ResponseEntity.ok(ApiResponse.success(adminService.getTeamsByManager(managerId)));
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @GetMapping("/associates")
-    public ResponseEntity<List<UserDTO>> getAssociatesFiltered(
+    public ResponseEntity<ApiResponse<List<UserDTO>>> getAssociatesFiltered(
             @RequestParam(required = false) Long teamId,
             @RequestParam(required = false) Long managerId) {
-        return ResponseEntity.ok(adminService.getAssociates(teamId, managerId));
+        return ResponseEntity.ok(ApiResponse.success(adminService.getAssociates(teamId, managerId)));
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")

@@ -30,17 +30,27 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
 
   if (loading) return null;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    console.log('[ProtectedRoute] No user found, redirecting to login');
+    return <Navigate to="/login" replace />;
+  }
   
   if (allowedRoles) {
-    const userRole = (user.role || '').toUpperCase();
-    const hasAccess = allowedRoles.some(role => 
-      userRole === role.toUpperCase() || userRole === `ROLE_${role.toUpperCase()}`
-    );
+    const userRole = (user.role || '').toUpperCase().replace('ROLE_', '');
+    const hasAccess = allowedRoles.some(role => {
+      const target = role.toUpperCase();
+      if (target === 'TEAM_LEADER') {
+        return ['TEAM_LEADER', 'TL', 'TEAM_LEAD', 'TEAMLEAD', 'TEAMLEADER'].includes(userRole);
+      }
+      if (target === 'MANAGER') {
+        return ['MANAGER', 'MGR', 'MANAGEMENT'].includes(userRole);
+      }
+      return userRole === target;
+    });
     
     if (!hasAccess) {
-      console.warn(`Access denied for role: ${userRole}. Required: ${allowedRoles}`);
-      return <Navigate to="/login" replace />; // Redirect to login breaks the loop better if role is invalid
+      console.warn(`[ProtectedRoute] Access denied. User Role: "${userRole}", Allowed: [${allowedRoles.join(', ')}]`);
+      return <Navigate to="/login" replace />;
     }
   }
 
@@ -92,7 +102,7 @@ function App() {
             <Route 
               path="/tl/*" 
               element={
-                <ProtectedRoute allowedRoles={['TEAM_LEADER']}>
+                <ProtectedRoute allowedRoles={['TEAM_LEADER', 'TL', 'TEAMLEAD', 'TEAMLEADER']}>
                   <TeamLeaderDashboard />
                 </ProtectedRoute>
               } 
@@ -138,8 +148,8 @@ function App() {
                   (() => {
                     const role = (user.role || '').toUpperCase();
                     if (role.includes('ADMIN')) return <Navigate to="/admin" replace />;
-                    if (role.includes('MANAGER')) return <Navigate to="/manager" replace />;
-                    if (role.includes('TEAM_LEADER') || role.includes('TL')) return <Navigate to="/tl" replace />;
+                    if (role.includes('MANAGER') || role === 'MGR') return <Navigate to="/manager" replace />;
+                    if (role.includes('TEAM_LEADER') || role.includes('TL') || role.includes('TEAM_LEAD') || role.includes('TEAMLEAD')) return <Navigate to="/tl" replace />;
                     return <Navigate to="/associate" replace />;
                   })()
                 ) : <Navigate to="/login" replace />

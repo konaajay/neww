@@ -94,7 +94,7 @@ const BulkIngestion = ({ onSuccess, assignees = [] }) => {
                         </div>
                         <div className="col-12 col-md-6">
                             <div className={`p-3 rounded-4 ${isDarkMode ? 'bg-black bg-opacity-20' : 'bg-white border'}`}>
-                                <p className="text-muted small mb-1 fw-black opacity-50">STATUS NODE</p>
+                                <p className="text-muted small mb-1 fw-black opacity-50">STATUS LEAD</p>
                                 <h4 className="mb-0 fw-black text-success">READY</h4>
                             </div>
                         </div>

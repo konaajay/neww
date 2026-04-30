@@ -16,7 +16,7 @@ const TeamTreeItem = ({ item, level = 0, onFocus, currentFocusId }) => {
   };
 
   return (
-    <div className="team-tree-node position-relative">
+    <div className="team-tree-lead position-relative">
       {/* Connector lines for nested items */}
       {level > 0 && (
         <div 
@@ -102,13 +102,7 @@ const TeamTree = ({ data, onFocus, currentFocusId, onAddUser }) => {
             </div>
           </div>
           
-          <button 
-            className="ui-btn ui-btn-outline btn-sm px-4 rounded-pill border-primary border-opacity-30 fw-black" 
-            style={{ fontSize: '10px' }}
-            onClick={() => onAddUser && onAddUser()}
-          >
-            ADD USER
-          </button>
+
         </div>
       </div>
       

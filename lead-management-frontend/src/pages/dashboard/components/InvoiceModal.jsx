@@ -97,7 +97,7 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
                     <div className="d-flex flex-column flex-sm-row justify-content-between py-4 py-md-5 gap-3">
                         <div className="d-flex flex-column">
                             <span className="fw-bold h5 mb-1">{invoiceData.paymentType || 'OPERATIONAL SETTLEMENT'}</span>
-                            <span className="text-muted small fw-bold opacity-50">Authorized via Encryption Node</span>
+                            <span className="text-muted small fw-bold opacity-50">Authorized via Encryption Lead</span>
                         </div>
                         <strong className="h3 mb-0 fw-black text-nowrap">₹{invoiceData.amount}</strong>
                     </div>

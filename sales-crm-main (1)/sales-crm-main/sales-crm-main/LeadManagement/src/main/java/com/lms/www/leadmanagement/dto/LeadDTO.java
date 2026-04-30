@@ -23,15 +23,9 @@ public class LeadDTO {
     private String status;
     private Long assignedToId;
     private String assignedToName;
-    private String paymentLink;
-    private String note;
-    private String paymentOrderId;
-    private String rejectionReason;
-    private String rejectionNote;
     private Boolean followUpRequired;
     private LocalDateTime followUpDate;
     private String followUpType;
-    private String paymentSessionId;
     private LocalDateTime nextPaymentDueDate;
     private String paymentStatus;
     @JsonProperty("hasOverdueTask")
@@ -58,15 +52,9 @@ public class LeadDTO {
                 .status(lead.getStatus() != null ? lead.getStatus() : "NEW")
                 .assignedToId(lead.getAssignedTo() != null ? lead.getAssignedTo().getId() : null)
                 .assignedToName(lead.getAssignedTo() != null ? lead.getAssignedTo().getName() : null)
-                .paymentLink(lead.getPaymentLink())
-                .paymentOrderId(lead.getPaymentOrderId())
-                .note(lead.getNote())
-                .rejectionReason(lead.getRejectionReason())
-                .rejectionNote(lead.getRejectionNote())
                 .followUpRequired(lead.getFollowUpRequired())
                 .followUpDate(lead.getFollowUpDate())
                 .followUpType(lead.getFollowUpType())
-                .paymentSessionId(lead.getPaymentSessionId())
                 .createdAt(lead.getCreatedAt())
                 .updatedAt(lead.getUpdatedAt())
                 .updatedById(lead.getUpdatedBy() != null ? lead.getUpdatedBy().getId() : null)

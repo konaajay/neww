@@ -180,7 +180,7 @@ const StudentFeeModal = ({ isOpen, onClose, lead, theme = 'light' }) => {
                     <Clock size={16} className="text-primary opacity-50" />
                     <p className="mb-0 text-muted" style={{ fontSize: '11px' }}>
                       Next Installment expected by <strong>{fee.nextDueDate ? new Date(fee.nextDueDate).toLocaleDateString() : 'N/A'}</strong>. 
-                      Automated follow-up tasks are linked to individual nodes.
+                      Automated follow-up tasks are linked to individual leads.
                     </p>
                 </div>
               </>

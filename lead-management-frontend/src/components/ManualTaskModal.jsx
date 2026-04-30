@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Calendar, AlignLeft, User, Target, Clock, CheckCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'react-toastify';
-import tlService from '../services/tlService';
+import taskService from '../services/taskService';
 import { useTheme } from '../context/ThemeContext';
 
 const ManualTaskModal = ({ show, onClose, onTaskCreated, leads, initialData }) => {
@@ -43,18 +43,19 @@ const ManualTaskModal = ({ show, onClose, onTaskCreated, leads, initialData }) =
     e.preventDefault();
     setLoading(true);
     try {
-      // Format ISO string to handle LocalDateTime.parse
-      const payload = {
-        ...formData,
+      const taskPayload = {
+        title: formData.title,
+        description: formData.description,
+        taskType: formData.taskType,
         dueDate: formData.dueDate ? `${formData.dueDate}T09:00:00` : null
       };
 
-      if (!payload.dueDate) {
+      if (!taskPayload.dueDate) {
         toast.error('Please select a schedule date');
         return;
       }
 
-      await tlService.createTask(payload);
+      await taskService.createTask(formData.leadId, taskPayload);
       toast.success('Task scheduled successfully');
       onTaskCreated();
       onClose();

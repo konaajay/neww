@@ -19,27 +19,27 @@ public class PipelineStageController {
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('VIEW_LEADS', 'ROLE_ADMIN', 'ADMIN')")
-    public ResponseEntity<List<PipelineStage>> getAllStages() {
-        return ResponseEntity.ok(pipelineStageRepository.findAllByOrderByOrderIndexAsc());
+    public ResponseEntity<com.lms.www.leadmanagement.dto.ApiResponse<List<PipelineStage>>> getAllStages() {
+        return ResponseEntity.ok(com.lms.www.leadmanagement.dto.ApiResponse.success(pipelineStageRepository.findAllByOrderByOrderIndexAsc()));
     }
 
     @GetMapping("/active")
-    public ResponseEntity<List<PipelineStage>> getActiveStages() {
-        return ResponseEntity.ok(pipelineStageRepository.findByActiveTrueOrderByOrderIndexAsc());
+    public ResponseEntity<com.lms.www.leadmanagement.dto.ApiResponse<List<PipelineStage>>> getActiveStages() {
+        return ResponseEntity.ok(com.lms.www.leadmanagement.dto.ApiResponse.success(pipelineStageRepository.findByActiveTrueOrderByOrderIndexAsc()));
     }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN')")
-    public ResponseEntity<?> createStage(@RequestBody PipelineStage stage) {
+    public ResponseEntity<com.lms.www.leadmanagement.dto.ApiResponse<?>> createStage(@RequestBody PipelineStage stage) {
         if (pipelineStageRepository.existsByStatusValue(stage.getStatusValue())) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Status value already exists"));
+            return ResponseEntity.badRequest().body(com.lms.www.leadmanagement.dto.ApiResponse.error("Status value already exists"));
         }
-        return ResponseEntity.ok(pipelineStageRepository.save(stage));
+        return ResponseEntity.ok(com.lms.www.leadmanagement.dto.ApiResponse.success(pipelineStageRepository.save(stage)));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN')")
-    public ResponseEntity<PipelineStage> updateStage(@PathVariable Long id, @RequestBody PipelineStage stageDetails) {
+    public ResponseEntity<com.lms.www.leadmanagement.dto.ApiResponse<PipelineStage>> updateStage(@PathVariable Long id, @RequestBody PipelineStage stageDetails) {
         PipelineStage stage = pipelineStageRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Stage not found"));
         
@@ -54,12 +54,12 @@ public class PipelineStageController {
         stage.setRequireDate(stageDetails.isRequireDate());
         stage.setCreateTask(stageDetails.isCreateTask());
         
-        return ResponseEntity.ok(pipelineStageRepository.save(stage));
+        return ResponseEntity.ok(com.lms.www.leadmanagement.dto.ApiResponse.success(pipelineStageRepository.save(stage)));
     }
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN')")
-    public ResponseEntity<?> deleteStage(@PathVariable Long id) {
+    public ResponseEntity<com.lms.www.leadmanagement.dto.ApiResponse<Void>> deleteStage(@PathVariable Long id) {
         pipelineStageRepository.deleteById(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(com.lms.www.leadmanagement.dto.ApiResponse.success(null));
     }
 }

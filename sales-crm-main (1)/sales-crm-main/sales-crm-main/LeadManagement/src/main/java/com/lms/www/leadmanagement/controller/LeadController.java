@@ -31,43 +31,43 @@ public class LeadController {
 
 
     @GetMapping("/stats")
-    @PreAuthorize("hasAuthority('VIEW_LEADS')")
+    @PreAuthorize("hasAnyAuthority('VIEW_LEADS', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER', 'ROLE_ASSOCIATE', 'ADMIN', 'MANAGER', 'TEAM_LEADER', 'ASSOCIATE')")
     public ResponseEntity<Map<String, Object>> getLeadStats() {
         return ResponseEntity.ok(leadService.getLeadStats());
     }
 
     @GetMapping("/my")
-    @PreAuthorize("hasAuthority('VIEW_LEADS')")
+    @PreAuthorize("hasAnyAuthority('VIEW_LEADS', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER', 'ROLE_ASSOCIATE', 'ADMIN', 'MANAGER', 'TEAM_LEADER', 'ASSOCIATE')")
     public ResponseEntity<List<LeadDTO>> getMyLeads() {
         return ResponseEntity.ok(leadService.getMyLeads());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('VIEW_LEADS')")
+    @PreAuthorize("hasAnyAuthority('VIEW_LEADS', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER', 'ROLE_ASSOCIATE', 'ADMIN', 'MANAGER', 'TEAM_LEADER', 'ASSOCIATE')")
     public ResponseEntity<LeadDTO> getLeadById(@PathVariable Long id) {
         return ResponseEntity.ok(leadService.getLeadById(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('CREATE_LEADS')")
+    @PreAuthorize("hasAnyAuthority('CREATE_LEADS', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER', 'ROLE_ASSOCIATE', 'ADMIN', 'MANAGER', 'TEAM_LEADER', 'ASSOCIATE')")
     public ResponseEntity<LeadDTO> createLead(@RequestBody LeadDTO leadDTO) {
         return ResponseEntity.ok(leadService.createLead(leadDTO));
     }
 
     @PostMapping("/bulk-upload")
-    @PreAuthorize("hasAuthority('BULK_UPLOAD')")
+    @PreAuthorize("hasAnyAuthority('BULK_UPLOAD', 'ROLE_ADMIN', 'ROLE_MANAGER')")
     public ResponseEntity<BulkUploadResponseDTO> bulkUploadLeads(@RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(bulkUploadService.uploadLeads(file, null));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('VIEW_LEADS')")
+    @PreAuthorize("hasAnyAuthority('VIEW_LEADS', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER', 'ROLE_ASSOCIATE', 'ADMIN', 'MANAGER', 'TEAM_LEADER', 'ASSOCIATE')")
     public ResponseEntity<LeadDTO> updateLead(@PathVariable Long id, @RequestBody LeadDTO leadDTO) {
         return ResponseEntity.ok(leadService.updateLead(id, leadDTO));
     }
 
     @PutMapping("/{id}/status")
-    @PreAuthorize("hasAuthority('UPDATE_LEAD_STATUS')")
+    @PreAuthorize("hasAnyAuthority('UPDATE_LEAD_STATUS', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER', 'ROLE_ASSOCIATE', 'ADMIN', 'MANAGER', 'TEAM_LEADER', 'ASSOCIATE')")
     public ResponseEntity<LeadDTO> updateStatus(
             @PathVariable Long id,
             @RequestBody com.lms.www.leadmanagement.dto.StatusUpdateRequest request) {
@@ -75,7 +75,7 @@ public class LeadController {
     }
 
     @PostMapping("/{id}/reject")
-    @PreAuthorize("hasAuthority('UPDATE_LEAD_STATUS')")
+    @PreAuthorize("hasAnyAuthority('UPDATE_LEAD_STATUS', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER', 'ROLE_ASSOCIATE', 'ADMIN', 'MANAGER', 'TEAM_LEADER', 'ASSOCIATE')")
     public ResponseEntity<LeadDTO> rejectLead(
             @PathVariable Long id,
             @RequestBody Map<String, Object> rejectionData) {
@@ -83,7 +83,7 @@ public class LeadController {
     }
 
     @PostMapping("/{id}/record-outcome")
-    @PreAuthorize("hasAuthority('UPDATE_LEAD_STATUS')")
+    @PreAuthorize("hasAnyAuthority('UPDATE_LEAD_STATUS', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER', 'ROLE_ASSOCIATE', 'ADMIN', 'MANAGER', 'TEAM_LEADER', 'ASSOCIATE')")
     public ResponseEntity<LeadDTO> recordCallOutcome(
             @PathVariable Long id,
             @RequestBody Map<String, Object> outcomeData) {
@@ -91,7 +91,7 @@ public class LeadController {
     }
 
     @GetMapping("/{id}/fee-structure")
-    @PreAuthorize("hasAuthority('VIEW_LEADS')")
+    @PreAuthorize("hasAnyAuthority('VIEW_LEADS', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER', 'ROLE_ASSOCIATE', 'ADMIN', 'MANAGER', 'TEAM_LEADER', 'ASSOCIATE')")
     public ResponseEntity<Map<String, Object>> getStudentFee(@PathVariable Long id) {
         return ResponseEntity.ok(leadPaymentService.getStudentFeeStructure(id));
     }

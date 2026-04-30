@@ -99,11 +99,15 @@ public class CallLogController {
     }
 
     @GetMapping("/my")
-    public ResponseEntity<ApiResponse<List<CallRecord>>> getMyLogs() {
+    public ResponseEntity<ApiResponse<List<CallRecord>>> getMyLogs(
+            @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) java.time.LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) java.time.LocalDate to) {
         try {
-            List<CallRecord> logs = callLogService.getMyLogs(getCurrentUserId());
+            List<CallRecord> logs = callLogService.getMyLogs(getCurrentUserId(), from, to);
             return ResponseEntity.ok(ApiResponse.success(logs));
         } catch (Exception e) {
+            System.err.println("CRITICAL ERROR: GET /call-records/my - " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.internalServerError().body(ApiResponse.error(e.getMessage()));
         }
     }

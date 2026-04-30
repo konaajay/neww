@@ -27,9 +27,9 @@ public class RevenueTargetController {
     private ManagerService managerService;
 
     @PostMapping("/set")
-    public ResponseEntity<?> setTarget(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<com.lms.www.leadmanagement.dto.ApiResponse<?>> setTarget(@RequestBody Map<String, Object> payload) {
         if (payload == null || !payload.containsKey("userId") || !payload.containsKey("amount")) {
-            return ResponseEntity.badRequest().body("Missing required target parameters (userId, amount)");
+            return ResponseEntity.badRequest().body(com.lms.www.leadmanagement.dto.ApiResponse.error("Missing required target parameters (userId, amount)"));
         }
         
         try {
@@ -40,8 +40,8 @@ public class RevenueTargetController {
 
             User targetUser = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
             
-            RevenueTarget target = targetRepository.findByUserIdAndMonthAndYear(userId, month, year)
-                    .orElse(RevenueTarget.builder().user(targetUser).month(month).year(year).build());
+            com.lms.www.leadmanagement.entity.RevenueTarget target = targetRepository.findByUserIdAndMonthAndYear(userId, month, year)
+                    .orElse(com.lms.www.leadmanagement.entity.RevenueTarget.builder().user(targetUser).month(month).year(year).build());
             
             target.setTargetAmount(amount);
             
@@ -49,19 +49,19 @@ public class RevenueTargetController {
             targetUser.setMonthlyTarget(amount);
             userRepository.save(targetUser);
             
-            return ResponseEntity.ok(targetRepository.save(target));
+            return ResponseEntity.ok(com.lms.www.leadmanagement.dto.ApiResponse.success(targetRepository.save(target)));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Target calibration failure: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(com.lms.www.leadmanagement.dto.ApiResponse.error("Target calibration failure: " + e.getMessage()));
         }
     }
 
     @GetMapping("/all")
-    public ResponseEntity<?> getAllTargets(@RequestParam Integer month, @RequestParam Integer year) {
-        return ResponseEntity.ok(targetRepository.findByMonthAndYear(month, year));
+    public ResponseEntity<com.lms.www.leadmanagement.dto.ApiResponse<java.util.List<com.lms.www.leadmanagement.entity.RevenueTarget>>> getAllTargets(@RequestParam Integer month, @RequestParam Integer year) {
+        return ResponseEntity.ok(com.lms.www.leadmanagement.dto.ApiResponse.success(targetRepository.findByMonthAndYear(month, year)));
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<?> getTargetForUser(@PathVariable Long userId, @RequestParam Integer month, @RequestParam Integer year) {
-        return ResponseEntity.ok(targetRepository.findByUserIdAndMonthAndYear(userId, month, year));
+    public ResponseEntity<com.lms.www.leadmanagement.dto.ApiResponse<java.util.Optional<com.lms.www.leadmanagement.entity.RevenueTarget>>> getTargetForUser(@PathVariable Long userId, @RequestParam Integer month, @RequestParam Integer year) {
+        return ResponseEntity.ok(com.lms.www.leadmanagement.dto.ApiResponse.success(targetRepository.findByUserIdAndMonthAndYear(userId, month, year)));
     }
 }

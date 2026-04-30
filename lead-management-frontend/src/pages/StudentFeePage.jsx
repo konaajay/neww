@@ -114,9 +114,9 @@ const StudentFeePage = () => {
         </div>
 
         {loading ? (
-          <div className="d-flex flex-column align-items-center justify-content-center py-5" style={{ minHeight: '50vh' }}>
-            <div className="spinner-border text-primary border-3 mb-4" role="status"></div>
-            <p className="text-muted fw-black small text-uppercase tracking-widest animate-pulse">Synchronizing Ledger...</p>
+          <div className="d-flex flex-column align-items-center justify-content-center py-5" style={{ minHeight: '30vh' }}>
+             <div className="shimmer rounded-4" style={{ width: '100%', height: '200px', maxWidth: '800px' }}></div>
+             <p className="text-muted fw-black small text-uppercase tracking-widest mt-4 opacity-50">Syncing Records...</p>
           </div>
         ) : !data.fee ? (
           <div className="d-flex flex-column align-items-center justify-content-center py-5 text-center">
@@ -124,7 +124,7 @@ const StudentFeePage = () => {
                 <AlertCircle size={80} />
              </div>
              <h3 className="fw-black text-dark mb-2">Registry Entry Missing</h3>
-             <p className="text-muted" style={{ maxWidth: '400px' }}>This node has not been funneled through the financial pipeline. Please initiate a conversion to generate this document.</p>
+             <p className="text-muted" style={{ maxWidth: '400px' }}>This lead has not been funneled through the financial pipeline. Please initiate a conversion to generate this document.</p>
              <button onClick={() => navigate(-1)} className="ui-btn ui-btn-primary px-5 py-2.5 rounded-pill mt-4">RETURN TO PIPELINE</button>
           </div>
         ) : (
@@ -140,7 +140,7 @@ const StudentFeePage = () => {
                      </div>
                      <div>
                         <h5 className="fw-black text-dark mb-0">{lead?.name}</h5>
-                        <small className="text-muted fw-bold text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Active Student Node</small>
+                        <small className="text-muted fw-bold text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Active Student Lead</small>
                      </div>
                   </div>
                   

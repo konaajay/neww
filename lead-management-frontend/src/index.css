@@ -604,3 +604,48 @@ h6 {
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Shimmer & Skeleton Loaders */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-anim 1.5s infinite;
+  border-radius: 4px;
+}
+
+[data-bs-theme="light"] .shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.03) 0%,
+    rgba(0, 0, 0, 0.08) 50%,
+    rgba(0, 0, 0, 0.03) 100%
+  );
+  background-size: 200% 100%;
+}
+
+@keyframes shimmer-anim {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.analytics-card.loading {
+  background: rgba(255, 255, 255, 0.02);
+  position: relative;
+  overflow: hidden;
+}
+
+[data-bs-theme="light"] .analytics-card.loading {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.shimmer.w-25 { width: 25% !important; }
+.shimmer.w-50 { width: 50% !important; }
+.shimmer.w-75 { width: 75% !important; }
+.shimmer.h-25 { height: 25% !important; }
+.shimmer.h-50 { height: 50% !important; }
+.shimmer.h-75 { height: 75% !important; }

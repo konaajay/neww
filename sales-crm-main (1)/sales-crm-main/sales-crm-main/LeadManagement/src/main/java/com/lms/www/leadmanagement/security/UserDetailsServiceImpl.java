@@ -18,11 +18,17 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     public UserDetails loadUserByUsername(String email) {
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("Invalid credentials"));
+                .orElseThrow(() -> {
+                    System.out.println("[DEBUG-AUTH] User not found in DB: " + email);
+                    return new UsernameNotFoundException("Invalid credentials");
+                });
 
         if (!user.isActive()) {
-            throw new UsernameNotFoundException("Account disabled");
+            System.out.println("[DEBUG-AUTH] User exists but is disabled (active=false): " + email);
+            throw new org.springframework.security.authentication.DisabledException("Account disabled");
         }
+        
+        System.out.println("[DEBUG-AUTH] User found and active: " + email + ", proceeding to password check.");
 
         return UserDetailsImpl.build(user);
     }

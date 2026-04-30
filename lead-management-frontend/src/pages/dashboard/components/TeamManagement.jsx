@@ -25,149 +25,87 @@ const TeamManagement = ({
     role: '',
     supervisorId: '',
     officeId: '',
+    shiftId: '',
     joiningDate: new Date().toISOString().split('T')[0]
   });
-  const [expandedIds, setExpandedIds] = useState([]);
+  const [userStatusFilter, setUserStatusFilter] = useState(true); // true = Active, false = Inactive
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Helper for strict ID comparison (normalizes types)
-  const isSameId = (a, b) => {
-    if (a === null || a === undefined || b === null || b === undefined) return false;
-    return Number(a) === Number(b);
-  };
+  const filteredUsers = teamLeaders.filter(u => {
+    const matchesSearch = u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      u.mobile?.includes(searchTerm);
+    const matchesStatus = u.active === userStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
-  const onSubmit = (e) => {
-    e.preventDefault();
-    handleCreateUser(formData);
-    setFormData({
-      name: '', email: '', mobile: '', password: '', role: '', supervisorId: '',
-      officeId: '',
-      joiningDate: new Date().toISOString().split('T')[0]
-    });
-    setActiveSubTab('active');
-  };
-
-  const toggleExpand = (id) => {
-    setExpandedIds(prev =>
-      prev.some(eid => isSameId(eid, id))
-        ? prev.filter(eid => !isSameId(eid, id))
-        : [...prev, id]
-    );
-  };
-
-  const filteredUsers = teamLeaders.filter(u =>
-    u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.mobile?.includes(searchTerm)
-  );
-
-
-
-
-
-  const UserRow = ({ user, level = 0, index, children }) => {
-    const isExpanded = expandedIds.some(eid => isSameId(eid, user.id));
-
-    // Check if the node actually has valid children elements passed
-    let childCount = 0;
-    React.Children.forEach(children, child => { if (child) childCount++; });
-    const hasChildren = childCount > 0;
-
+  const UserRow = ({ user, index }) => {
     return (
-      <React.Fragment>
-        <tr className={`border-bottom border-white border-opacity-5 transition-smooth hover-bg-surface ${level > 0 ? 'bg-surface bg-opacity-20' : ''}`} style={{ borderLeft: level > 0 ? `${level * 4}px solid var(--bs-primary)` : 'none' }}>
-          {/* 1. S/NO */}
-          <td className="ps-4 text-muted small fw-bold" style={{ width: '60px' }}>
-            {index !== undefined ? `${index}.` : ''}
-          </td>
+      <tr className="border-bottom border-white border-opacity-5 transition-smooth hover-bg-surface">
+        <td className="ps-4 text-muted small fw-bold" style={{ width: '60px' }}>
+          {index + 1}.
+        </td>
 
-          {/* 2. SUPERVISOR */}
-          <td className="">
-            <div className="d-flex flex-column">
-              <span className={`fw-black text-uppercase ${!user.supervisorName ? 'opacity-25' : 'text-primary'}`} style={{ fontSize: '9px', letterSpacing: '0.5px' }}>
-                {user.supervisorName || 'MASTER'}
-              </span>
-              <small className="text-muted fw-bold opacity-50" style={{ fontSize: '7px' }}>{user.supervisorName ? 'UPSTREAM NODE' : 'ROOT IDENTITY'}</small>
+        <td className="">
+          <div className="d-flex flex-column">
+            <span className={`fw-black text-uppercase ${!user.supervisorName ? 'opacity-25' : 'text-primary'}`} style={{ fontSize: '9px', letterSpacing: '0.5px' }}>
+              {user.supervisorName || 'MASTER'}
+            </span>
+            <small className="text-muted fw-bold opacity-50" style={{ fontSize: '7px' }}>{user.supervisorName ? 'UPSTREAM LEAD' : 'ROOT IDENTITY'}</small>
+          </div>
+        </td>
+
+        <td>
+          <div className="d-flex align-items-center gap-2">
+            <span className="fw-black text-main fs-6" style={{ letterSpacing: '-0.2px' }}>
+              {user.name}
+            </span>
+            <BarChart2
+              size={12}
+              className="text-primary cursor-pointer opacity-30 hover-opacity-100 transition-all"
+              onClick={() => { setSelectedPerfUserId(user.id); setActiveTab('overview'); }}
+            />
+          </div>
+        </td>
+
+        <td>
+          <span className="text-main fw-black font-monospace" style={{ fontSize: '10px' }}>{user.mobile || '---'}</span>
+        </td>
+
+        <td>
+          <span className="text-muted fw-bold opacity-75 font-monospace" style={{ fontSize: '9px' }}>{user.email || '---'}</span>
+        </td>
+
+        <td className="">
+          <div className={`badge rounded-pill px-2 py-1 ${user.role === 'MANAGER' ? 'bg-warning bg-opacity-10 text-warning' :
+            user.role === 'TEAM_LEADER' ? 'bg-primary bg-opacity-10 text-primary' :
+              'bg-light bg-opacity-5 text-muted'
+            }`} style={{ fontSize: '8px', fontWeight: '900', letterSpacing: '0.5px' }}>
+            {user.role?.replace(/_/g, ' ')}
+          </div>
+        </td>
+
+        <td className="">
+          <span className="text-muted small fw-bold opacity-75 font-monospace">{user.joiningDate || '---'}</span>
+        </td>
+
+        <td className="pe-4 text-end">
+          <div className="d-flex align-items-center justify-content-end gap-2">
+            <div className="d-flex gap-2 me-2 pe-2 border-end border-white border-opacity-10">
+              <a href={`tel:${user.mobile}`} className="btn btn-sm btn-link p-0 text-primary opacity-50 hover-opacity-100"><Phone size={13} /></a>
+              <a href={`https://wa.me/${user.mobile}`} target="_blank" rel="noreferrer" className="btn btn-sm btn-link p-0 text-success opacity-50 hover-opacity-100"><Zap size={13} /></a>
             </div>
-          </td>
 
-          {/* 3. NAME & HIERARCHY */}
-          <td style={{ paddingLeft: `${15 + (level * 25)}px` }}>
-            <div className="d-flex align-items-center gap-3">
-              {hasChildren ? (
-                <button
-                  className="btn btn-link link-primary p-0 shadow-none border-0 hover-scale"
-                  onClick={() => toggleExpand(user.id)}
-                >
-                  {isExpanded ? <ChevronDown size={14} className="text-primary" /> : <ChevronRight size={14} className="text-muted" />}
-                </button>
-              ) : level > 0 ? (
-                <div className="text-primary opacity-50" style={{ width: '14px' }}>↳</div>
-              ) : <div style={{ width: '14px' }} />}
-
-              <div className="d-flex align-items-center gap-2">
-                <div className="position-relative">
-                  <span className={`fw-black ${level === 0 ? 'text-main fs-6' : 'text-main small'}`} style={{ letterSpacing: '-0.2px' }}>
-                    {user.name}
-                  </span>
-                  {level > 0 && (
-                    <div className="position-absolute translate-middle-y start-0 h-100 border-start border-primary border-opacity-25" style={{ left: '-30px', top: '50%' }}></div>
-                  )}
-                </div>
-                <BarChart2
-                  size={12}
-                  className="text-primary cursor-pointer opacity-30 hover-opacity-100 transition-all"
-                  onClick={() => { setSelectedPerfUserId(user.id); setActiveTab('overview'); }}
-                />
-              </div>
-            </div>
-          </td>
-
-          {/* 4. PH */}
-          <td>
-            <span className="text-main fw-black font-monospace" style={{ fontSize: '10px' }}>{user.mobile || '---'}</span>
-          </td>
-
-          <td>
-            <span className="text-muted fw-bold opacity-75 font-monospace" style={{ fontSize: '9px' }}>{user.email || '---'}</span>
-          </td>
-
-          {/* 6. ROLE */}
-          <td className="">
-            <div className={`badge rounded-pill px-2 py-1 ${user.role === 'MANAGER' ? 'bg-warning bg-opacity-10 text-warning' :
-              user.role === 'TEAM_LEADER' ? 'bg-primary bg-opacity-10 text-primary' :
-                'bg-light bg-opacity-5 text-muted'
-              }`} style={{ fontSize: '8px', fontWeight: '900', letterSpacing: '0.5px' }}>
-              {user.role?.replace(/_/g, ' ')}
-            </div>
-          </td>
-
-          {/* 7. DOJ */}
-          <td className="">
-            <span className="text-muted small fw-bold opacity-75 font-monospace">{user.joiningDate || '---'}</span>
-          </td>
-
-          {/* 8. ACTIONS */}
-          <td className="pe-4 text-end">
-            <div className="d-flex align-items-center justify-content-end gap-2">
-              <div className="d-flex gap-2 me-2 pe-2 border-end border-white border-opacity-10">
-                <a href={`tel:${user.mobile}`} className="btn btn-sm btn-link p-0 text-primary opacity-50 hover-opacity-100"><Phone size={13} /></a>
-                <a href={`https://wa.me/${user.mobile}`} target="_blank" rel="noreferrer" className="btn btn-sm btn-link p-0 text-success opacity-50 hover-opacity-100"><Zap size={13} /></a>
-              </div>
-
-              <button onClick={() => handleEditUser(user)} className="btn btn-sm btn-link p-0 text-primary opacity-50 hover-opacity-100 transition-all hover-scale"><Edit size={13} /></button>
-              <button onClick={() => handleDeleteUser(user.id)} className="btn btn-sm btn-link p-0 text-danger opacity-50 hover-opacity-100 ms-1 transition-all hover-scale"><Trash2 size={13} /></button>
-            </div>
-          </td>
-        </tr>
-        {isExpanded && children}
-      </React.Fragment>
+            <button onClick={() => handleEditUser(user)} className="btn btn-sm btn-link p-0 text-primary opacity-50 hover-opacity-100 transition-all hover-scale"><Edit size={13} /></button>
+            <button onClick={() => handleDeleteUser(user.id)} className="btn btn-sm btn-link p-0 text-danger opacity-50 hover-opacity-100 ms-1 transition-all hover-scale"><Trash2 size={13} /></button>
+          </div>
+        </td>
+      </tr>
     );
   };
 
   return (
     <div className="animate-fade-in d-flex flex-column gap-4">
-      {/* Header & Section Switching - Sketch-inspired layout */}
       <div className="d-flex align-items-center justify-content-between px-1 bg-surface bg-opacity-10 p-4 rounded-4 border border-white border-opacity-5">
         <div className="d-flex align-items-center gap-4">
           <div>
@@ -176,7 +114,7 @@ const TeamManagement = ({
 
           <div className="d-flex gap-2 p-1.5 bg-surface bg-opacity-20 rounded-pill border border-white border-opacity-5 ms-4">
             {[
-              { id: 'active', label: 'Active User', icon: Users },
+              { id: 'active', label: 'Registered Personnel', icon: Users },
               { id: 'onboarding', label: 'Add user', icon: UserPlus },
             ].map(tab => (
               <button
@@ -192,18 +130,35 @@ const TeamManagement = ({
         </div>
 
         <div className="d-flex align-items-center gap-3">
+          {activeSubTab === 'active' && (
+            <div className="d-flex gap-2 p-1 bg-surface bg-opacity-20 rounded-3 border border-white border-opacity-5 me-2">
+              <button 
+                className={`btn btn-sm px-3 rounded-2 fw-black text-uppercase ${userStatusFilter ? 'btn-primary shadow-glow' : 'text-muted opacity-50'}`} 
+                style={{ fontSize: '8px' }}
+                onClick={() => setUserStatusFilter(true)}
+              >
+                Active
+              </button>
+              <button 
+                className={`btn btn-sm px-3 rounded-2 fw-black text-uppercase ${!userStatusFilter ? 'btn-danger shadow-glow' : 'text-muted opacity-50'}`} 
+                style={{ fontSize: '8px' }}
+                onClick={() => setUserStatusFilter(false)}
+              >
+                Inactive
+              </button>
+            </div>
+          )}
           <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-50 border border-white border-opacity-10 rounded-3 px-3 py-1.5" style={{ minWidth: '300px' }}>
             <Search size={14} className="text-muted opacity-50" />
             <input
               type="text"
               className="bg-transparent border-0 shadow-none text-main small fw-bold w-100"
-              placeholder="SEARCH NODES..."
+              placeholder="SEARCH PERSONNEL..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               style={{ fontSize: '10px', outline: 'none' }}
             />
           </div>
-
         </div>
       </div>
 
@@ -243,10 +198,10 @@ const TeamManagement = ({
                         const newRole = e.target.value;
                         let defaultSupId = formData.supervisorId;
                         if (newRole === 'MANAGER') {
-                          const adminNode = teamLeaders.find(u => u.role === 'ADMIN');
-                          if (adminNode) defaultSupId = adminNode.id;
+                          const adminLead = teamLeaders.find(u => u.role === 'ADMIN');
+                          if (adminLead) defaultSupId = adminLead.id;
                         } else {
-                          defaultSupId = ''; // Reset supervisor if role changes to avoid invalid reporting lines
+                          defaultSupId = ''; 
                         }
                         setFormData({ ...formData, role: newRole, supervisorId: defaultSupId });
                       }} required>
@@ -259,7 +214,7 @@ const TeamManagement = ({
                     <div className="col-md-4">
                       <label className="form-label small fw-black text-uppercase text-primary mb-2 tracking-widest" style={{ fontSize: '10px' }}>Hierarchy Mapping (Superior ID)</label>
                       <select className="ui-input py-3 w-100 border-primary border-opacity-30 fw-black text-uppercase tracking-widest cursor-pointer" value={formData.supervisorId} onChange={e => setFormData({ ...formData, supervisorId: e.target.value })} required>
-                        <option value="" className="text-dark">Select Direct Reporting Node...</option>
+                        <option value="" className="text-dark">Select Direct Reporting Lead...</option>
                         {teamLeaders.filter(u => {
                           if (formData.role === 'ASSOCIATE') return u.role === 'TEAM_LEADER';
                           if (formData.role === 'TEAM_LEADER') return u.role === 'MANAGER';
@@ -270,6 +225,22 @@ const TeamManagement = ({
                       </select>
                     </div>
                   )}
+                  
+                  <div className="col-md-4">
+                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Office Location</label>
+                    <select className="ui-input py-3 w-100 fw-black text-uppercase tracking-widest cursor-pointer" value={formData.officeId} onChange={e => setFormData({ ...formData, officeId: e.target.value })} required>
+                      <option value="" className="text-dark">Select Office...</option>
+                      {offices.map(o => <option key={o.id} value={o.id} className="text-dark">{o.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="col-md-4">
+                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Shift Timing</label>
+                    <select className="ui-input py-3 w-100 fw-black text-uppercase tracking-widest cursor-pointer" value={formData.shiftId} onChange={e => setFormData({ ...formData, shiftId: e.target.value })} required>
+                      <option value="" className="text-dark">Select Shift...</option>
+                      {shifts.map(s => <option key={s.id} value={s.id} className="text-dark">{s.name} ({s.startTime}-{s.endTime})</option>)}
+                    </select>
+                  </div>
 
                   <div className="col-12">
                     <button type="submit" className="btn btn-primary w-100 fw-black text-uppercase py-3 rounded-pill shadow-glow mt-2">Provision System Identity</button>
@@ -296,46 +267,18 @@ const TeamManagement = ({
                 </tr>
               </thead>
               <tbody>
-                {(() => {
-                  const rows = [];
-                  let globalIdx = 0;
-
-                  // 1. Root Nodes (Admins or those who have no supervisor in the current list)
-                  const rootNodes = filteredUsers.filter(u =>
-                    u.role === 'ADMIN' || !u.supervisorId || !filteredUsers.some(parent => isSameId(parent.id, u.supervisorId))
-                  );
-
-                  // 2. Helper to find subordinates
-                  const getSubordinates = (parentId) => filteredUsers.filter(u => isSameId(u.supervisorId, parentId));
-
-                  // 3. Depth-first render to build the branches
-                  const renderHierarchy = (user, level = 0, isRoot = false) => {
-                    const subordinates = getSubordinates(user.id);
-                    return (
-                      <UserRow
-                        key={user.id}
-                        user={user}
-                        level={level}
-                        index={isRoot ? ++globalIdx : undefined}
-                      >
-                        {subordinates.map(sub => renderHierarchy(sub, level + 1))}
-                      </UserRow>
-                    );
-                  };
-
-                  rootNodes.forEach(root => {
-                    rows.push(renderHierarchy(root, 0, true));
-                  });
-
-                  return rows.length > 0 ? rows : (
-                    <tr>
-                      <td colSpan="8" className="text-center py-5 opacity-50">
-                        <AlertCircle className="mb-2" size={24} />
-                        <div className="small fw-black text-uppercase tracking-widest">No matching personnel nodes found</div>
-                      </td>
-                    </tr>
-                  );
-                })()}
+                {filteredUsers.length > 0 ? (
+                  filteredUsers.map((user, idx) => (
+                    <UserRow key={user.id} user={user} index={idx} />
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="8" className="text-center py-5 opacity-50">
+                      <AlertCircle className="mb-2" size={24} />
+                      <div className="small fw-black text-uppercase tracking-widest">No matching personnel found</div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

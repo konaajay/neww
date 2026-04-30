@@ -62,7 +62,7 @@ const LeadEditModal = ({ isOpen, onClose, lead, onUpdate, role }) => {
                             <LeadForm
                                 onSubmit={handleSubmit}
                                 initialData={lead}
-                                title="Edit Vector Node"
+                                title="Edit Vector Lead"
                             />
                         </div>
                     </div>

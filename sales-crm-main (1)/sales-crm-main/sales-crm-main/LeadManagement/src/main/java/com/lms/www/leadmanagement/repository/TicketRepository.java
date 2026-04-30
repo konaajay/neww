@@ -18,4 +18,6 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     long countByUsersAndStatusIn(
             @org.springframework.data.repository.query.Param("users") java.util.Collection<com.lms.www.leadmanagement.entity.User> users, 
             @org.springframework.data.repository.query.Param("statuses") java.util.Collection<com.lms.www.leadmanagement.entity.TicketStatus> statuses);
+    @org.springframework.data.jpa.repository.Query("SELECT t FROM Ticket t WHERE t.createdBy.id IN :userIds ORDER BY t.id DESC")
+    List<Ticket> findByUserIdIn(@org.springframework.data.repository.query.Param("userIds") java.util.Collection<Long> userIds);
 }

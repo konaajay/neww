@@ -258,7 +258,7 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme }) => {
               <h4 className={`fw-black mb-0 d-flex align-items-center gap-3 tracking-tighter`}>
                 {lead.name}
                 <span className="badge bg-primary bg-opacity-10 text-primary rounded-pill small fw-black ls-1" style={{ fontSize: '0.6em', padding: '0.4em 1em', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
-                  ALPHA-NODE-{lead.id || '1000'}
+                  ALPHA-LEAD-{lead.id || '1000'}
                 </span>
               </h4>
             </div>
@@ -653,7 +653,7 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme }) => {
                               />
                             </div>
                             <small className="text-muted mt-2 d-block small" style={{ fontSize: '10px' }}>
-                              * Leave blank if no future follow-up node is required at this stage.
+                              * Leave blank if no future follow-up lead is required at this stage.
                             </small>
                           </div>
                         </div>
@@ -682,14 +682,7 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme }) => {
                 <div className={`card shadow-sm border-0 rounded-4 overflow-hidden p-4 flex-grow-1 ${isDarkMode ? 'bg-secondary bg-opacity-10' : 'bg-white'}`}>
                   <div className="d-flex justify-content-between align-items-center mb-4">
                     <h6 className={`fw-bold mb-0 ${isDarkMode ? 'text-white' : 'text-dark'}`}>Audit & Activity Timeline</h6>
-                    {!showAddNote && (
-                      <button
-                        className="btn btn-sm btn-outline-primary rounded-pill fw-bold d-flex align-items-center gap-1 px-3"
-                        onClick={() => setShowAddNote(true)}
-                      >
-                        <Plus size={14} /> Add Note
-                      </button>
-                    )}
+                    {/* Add Note button removed as per request */}
                   </div>
 
                   {/* Timeline Logic */}

@@ -39,6 +39,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT COUNT(u) FROM User u WHERE u.active = true AND (u.joiningDate IS NULL OR u.joiningDate <= :date)")
     long countActiveUsersByDate(@Param("date") java.time.LocalDate date);
 
-    @Query("SELECT COUNT(u) FROM User u WHERE u.id IN :userIds AND u.active = true AND (u.joiningDate IS NULL OR u.joiningDate <= :date)")
+    @Query("SELECT COUNT(u) FROM User u WHERE u.active = true AND u.id IN :userIds AND (u.joiningDate IS NULL OR u.joiningDate <= :date)")
     long countActiveUsersByDateIn(@Param("userIds") java.util.Collection<Long> userIds, @Param("date") java.time.LocalDate date);
+
+    @Query("SELECT u.id FROM User u")
+    java.util.List<Long> findAllIds();
 }

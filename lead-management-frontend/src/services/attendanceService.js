@@ -1,76 +1,21 @@
-import api from '../api/api';
+import api, { safeRequest } from '../api/api';
 
-export const attendanceService = {
-  clockIn: async (lat, lng, accuracy, deviceId, isMockLocation = false) => {
-    const response = await api.post('/attendance/clock-in', {
-      lat, lng, accuracy, deviceId, isMockLocation
-    });
-    return response.data;
-  },
-
-  trackLocation: async (lat, lng, accuracy, deviceId, isMockLocation = false) => {
-    if (lat === null || lat === undefined || lng === null || lng === undefined) {
-      console.warn('[Attendance] Skipping location track: Invalid coordinates');
-      return { success: false, message: 'Invalid coordinates' };
-    }
-    const response = await api.post('/attendance/track', {
-      lat, lng, accuracy, deviceId, isMockLocation
-    });
-    return response.data;
-  },
-
-  clockOut: async () => {
-    const response = await api.put('/attendance/clock-out', {});
-    return response.data;
-  },
-
-  getStatus: async () => {
-    const response = await api.get('/attendance/status');
-    return response.data;
-  },
-
-  getMyLogs: async () => {
-    const response = await api.get('/attendance/my-logs');
-    return response.data;
-  },
-
-  getAdminSummaries: async (startDate, userId, endDate) => {
-    const params = {};
-    if (startDate) params.startDate = startDate;
-    if (endDate) params.endDate = endDate;
-    // Fallback for legacy backend if it uses 'date'
-    if (startDate && !params.startDate) params.date = startDate;
-    
-    if (userId) params.userId = userId;
-    const response = await api.get('/admin/attendance/summaries', { params });
-    return response.data;
-  },
+const attendanceService = {
+  clockIn: (data) => safeRequest(api.post('/attendance/clock-in', data)),
+  clockOut: () => safeRequest(api.put('/attendance/clock-out')),
+  trackLocation: (data) => safeRequest(api.post('/attendance/track', data)),
+  startBreak: (type = 'SHORT') => safeRequest(api.post(`/attendance/break/start?type=${type}`)),
+  endBreak: () => safeRequest(api.post('/attendance/break/end')),
+  getStatus: () => safeRequest(api.get('/attendance/status')),
+  getMyLogs: () => safeRequest(api.get('/attendance/my-logs')),
   
-  startBreak: async (type = 'SHORT') => {
-    const response = await api.post(`/attendance/break/start?type=${type}`, {});
-    return response.data;
-  },
-
-  endBreak: async () => {
-    const response = await api.post('/attendance/break/end', {});
-    return response.data;
-  },
-
-  forceClockOut: async (userId) => {
-    const response = await api.post(`/admin/attendance/force-clock-out/${userId}`);
-    return response.data;
-  },
-
-  getPreview: async (data) => {
-    const response = await api.post('/attendance/preview', data);
-    return response.data;
-  },
-
-  saveManualEntry: async (data) => {
-    const response = await api.post('/attendance/manual', data);
-    return response.data;
-  }
+  // Admin/Manager operations
+  getOffices: () => safeRequest(api.get('/admin/attendance/offices')),
+  getShifts: () => safeRequest(api.get('/admin/attendance/shifts')),
+  getPolicies: () => safeRequest(api.get('/admin/attendance/policies')),
+  getDailySummaries: (params) => safeRequest(api.get('/admin/attendance/summaries', { params })),
+  saveManualEntry: (data) => safeRequest(api.post('/attendance/manual', data)),
+  previewManualEntry: (data) => safeRequest(api.post('/attendance/preview', data))
 };
 
 export default attendanceService;
-

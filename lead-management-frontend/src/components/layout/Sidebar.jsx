@@ -3,67 +3,65 @@ import {
   LayoutDashboard, Users, UserPlus, Layers, Target, TrendingUp, Settings,
   LogOut, Phone as PhoneIcon, Upload, IndianRupee, FileText, Menu, X, ShieldHalf, LifeBuoy
 } from 'lucide-react';
-import AttendanceWidget from './AttendanceWidget';
+import SidebarAttendance from './SidebarAttendance';
+
 
 const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, onToggle }) => {
   const getNavItems = () => {
-    switch (role) {
-      case 'ADMIN':
-        return [
-          // { id: 'my-stats', label: 'My Dashboard', icon: ShieldHalf },
-          { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
-          { id: 'team-dashboard', label: 'Team Dashboard', icon: LayoutDashboard },
-          { id: 'hierarchy', label: 'Users', icon: Layers },
-          { id: 'pipeline', label: 'Team Leads ', icon: Target },
-          // { id: 'ingestion', label: 'Add Lead', icon: UserPlus },
-          { id: 'tasks', label: 'Team Task ', icon: Layers },
-          { id: 'revenue', label: 'Revenue Stats', icon: IndianRupee },
-          { id: 'attendance-logs', label: 'Team Attendance', icon: FileText },
-          { id: 'call-logs', label: 'Team Calllogs', icon: PhoneIcon },
-          { id: 'attendance-settings', label: 'Global Settings', icon: Settings },
-        ];
-      case 'MANAGER':
-        return [
-          { id: 'my-stats', label: 'My HOME', icon: ShieldHalf },
-          { id: 'overview', label: 'Team Dashboard', icon: LayoutDashboard },
-          { id: 'pipeline', label: 'Team Leads', icon: Target },
-          // { id: 'ingestion', label: 'Add Lead', icon: UserPlus },
-          { id: 'payments', label: 'Team Revenue', icon: IndianRupee },
-          { id: 'call-logs', label: 'Team Calllogs', icon: PhoneIcon },
-          { id: 'attendance-logs', label: 'Team Attendance', icon: FileText }
-          , { id: 'tasks', label: 'Team Task ', icon: Layers },
-          // { id: 'tickets', label: 'Team Raise ticket', icon: ShieldHalf },
-          // { id: 'hierarchy', label: 'Team member', icon: Users },
-          { id: 'reports', label: 'Team Reports', icon: TrendingUp },
-        ];
-      case 'TEAM_LEADER':
-        return [
-          { id: 'my-stats', label: 'My Dashboard', icon: ShieldHalf },
-          { id: 'overview', label: 'Team Dashboard', icon: LayoutDashboard },
-          { id: 'pipeline', label: 'Team Leads', icon: Target },
-          // { id: 'ingestion', label: 'Add Lead', icon: UserPlus },
-          { id: 'tasks', label: 'Team Task ', icon: Layers },
-          { id: 'payments', label: 'Team Revenues', icon: IndianRupee },
-          { id: 'attendance', label: 'Team Attendance', icon: FileText },
-          { id: 'call-logs', label: 'Team Call Logs', icon: PhoneIcon },
-          { id: 'reports', label: 'Team Reports', icon: TrendingUp },
-          // { id: 'tickets', label: 'Raise Ticket', icon: ShieldHalf },
-        ];
-      case 'ASSOCIATE':
-        return [
-          { id: 'overview', label: 'My Home', icon: LayoutDashboard },
-          { id: 'leads', label: 'Leads', icon: Target },
-          // { id: 'ingestion', label: 'Add Lead', icon: UserPlus },
-          { id: 'tasks', label: 'Tasks', icon: Layers },
-          { id: 'call-logs', label: 'Call logs', icon: PhoneIcon },
-          { id: 'payments', label: 'Revenues', icon: IndianRupee },
-          { id: 'attendance', label: 'Attendance', icon: FileText },
-          { id: 'reports', label: 'Reports', icon: TrendingUp },
-          // { id: 'tickets', label: 'Raise Ticket', icon: ShieldHalf },
-        ];
-      default:
-        return [{ id: 'overview', label: 'Dashboard', icon: LayoutDashboard }];
+    const normalizedRole = (role || '').toUpperCase();
+
+    if (normalizedRole === 'ADMIN') {
+      return [
+        { id: 'overview', label: 'MY HOME', icon: LayoutDashboard },
+        { id: 'team-dashboard', label: 'Team Dashboard', icon: LayoutDashboard },
+        { id: 'users', label: 'USERS', icon: Users },
+        { id: 'hierarchy', label: 'Hierarchy', icon: Layers },
+        { id: 'attendance', label: 'Attendance logs', icon: FileText },
+        { id: 'leads', label: 'Team Leads ', icon: Target },
+        { id: 'tasks', label: 'Team Task ', icon: Layers },
+        { id: 'payments', label: 'Revenue Stats', icon: IndianRupee },
+        { id: 'calls', label: 'Team Calllogs', icon: PhoneIcon },
+        { id: 'settings', label: 'Global Settings', icon: Settings },
+      ];
     }
+
+    if (normalizedRole === 'MANAGER' || normalizedRole === 'MGR') {
+      return [
+        { id: 'my-stats', label: 'My HOME', icon: ShieldHalf },
+        { id: 'overview', label: 'Team Dashboard', icon: LayoutDashboard },
+        { id: 'users', label: 'Team Members', icon: Users },
+        { id: 'attendance', label: 'Attendance', icon: FileText },
+        { id: 'leads', label: 'Team Leads', icon: Target },
+        { id: 'payments', label: 'Team Revenue', icon: IndianRupee },
+        { id: 'calls', label: 'Team Calllogs', icon: PhoneIcon },
+        { id: 'tasks', label: 'Team Task ', icon: Layers },
+        { id: 'reports', label: 'Team Reports', icon: TrendingUp },
+      ];
+    }
+
+    if (normalizedRole.includes('TEAM_LEAD') || normalizedRole === 'TL' || normalizedRole.includes('TEAMLEAD')) {
+      return [
+        { id: 'my-stats', label: 'My HOME', icon: ShieldHalf },
+        { id: 'overview', label: 'Team Dashboard', icon: LayoutDashboard },
+        { id: 'attendance', label: 'Attendance', icon: FileText },
+        { id: 'leads', label: 'Team Leads', icon: Target },
+        { id: 'tasks', label: 'Team Task ', icon: Layers },
+        { id: 'payments', label: 'Team Revenues', icon: IndianRupee },
+        { id: 'calls', label: 'Team Call Logs', icon: PhoneIcon },
+        { id: 'reports', label: 'Team Reports', icon: TrendingUp },
+      ];
+    }
+
+    // Default to ASSOCIATE-style menu
+    return [
+      { id: 'overview', label: 'My Home', icon: LayoutDashboard },
+      { id: 'attendance', label: 'Attendance', icon: FileText },
+      { id: 'leads', label: 'Leads', icon: Target },
+      { id: 'tasks', label: 'Tasks', icon: Layers },
+      { id: 'calls', label: 'Call logs', icon: PhoneIcon },
+      { id: 'payments', label: 'Revenues', icon: IndianRupee },
+      { id: 'reports', label: 'Reports', icon: TrendingUp },
+    ];
   };
 
   const navItems = getNavItems();
@@ -94,7 +92,7 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
               </div>
             )}
             {isCollapsed && <ShieldHalf size={24} className="text-primary mx-auto" />}
-            
+
             <button
               className="btn btn-link text-main p-1 border-0 ms-2 hover-bg-surface rounded-circle transition-all d-none d-lg-flex"
               onClick={onToggle}
@@ -136,10 +134,7 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
             </div>
           </nav>
 
-          {/* Bottom Widget */}
-          <div className="mt-auto border-top border-white border-opacity-5 p-2 bg-surface bg-opacity-10">
-            <AttendanceWidget isCollapsed={isCollapsed && !isOpen} />
-          </div>
+          <SidebarAttendance isCollapsed={isCollapsed} />
         </div>
       </aside>
     </>

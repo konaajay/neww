@@ -66,7 +66,7 @@ const PipelineStageManagement = () => {
                 toast.success("Status configuration synchronized");
             } else {
                 await adminService.createPipelineStage(payload);
-                toast.success("New status node initialized");
+                toast.success("New status lead initialized");
             }
             
             resetForm();
@@ -94,13 +94,13 @@ const PipelineStageManagement = () => {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm("PURGE WARNING: Permanently decommission this status node?")) return;
+        if (!window.confirm("PURGE WARNING: Permanently decommission this status lead?")) return;
         try {
             await adminService.deletePipelineStage(id);
-            toast.success("Status node purged successfully");
+            toast.success("Status lead purged successfully");
             fetchStages();
         } catch (err) {
-            toast.error("Failed to purge node");
+            toast.error("Failed to purge lead");
         }
     };
 
@@ -174,7 +174,7 @@ const PipelineStageManagement = () => {
                                     </label>
 
                                     <button type="submit" className="ui-btn ui-btn-primary ms-auto px-4 py-3 rounded-4 shadow-glow fw-black text-uppercase tracking-widest d-flex align-items-center gap-2" style={{ fontSize: '10px' }}>
-                                        <Save size={14} /> {editingStage ? 'SYNC NODE' : 'INITIALIZE'}
+                                        <Save size={14} /> {editingStage ? 'SYNC LEAD' : 'INITIALIZE'}
                                     </button>
                                 </div>
                             </div>
@@ -203,7 +203,7 @@ const PipelineStageManagement = () => {
                         <thead>
                             <tr className={isDarkMode ? 'border-bottom border-white border-opacity-5' : 'border-bottom'}>
                                 <th className="ps-4 text-muted small fw-black text-uppercase tracking-widest py-4" style={{ fontSize: '9px', width: '80px' }}># ID</th>
-                                <th className="text-muted small fw-black text-uppercase tracking-widest py-4" style={{ fontSize: '9px' }}>Status Node</th>
+                                <th className="text-muted small fw-black text-uppercase tracking-widest py-4" style={{ fontSize: '9px' }}>Status Lead</th>
 
                                 <th className="pe-4 text-end text-muted small fw-black text-uppercase tracking-widest py-4" style={{ fontSize: '9px', width: '120px' }}>Actions</th>
                             </tr>
@@ -217,7 +217,7 @@ const PipelineStageManagement = () => {
                                 </tr>
                             ) : stages.length === 0 ? (
                                 <tr>
-                                  <td colSpan="4" className="text-center py-5 text-muted small fw-bold opacity-50">NO STATUS NODES FOUND</td>
+                                  <td colSpan="4" className="text-center py-5 text-muted small fw-bold opacity-50">NO STATUS LEADS FOUND</td>
                                 </tr>
                             ) : stages.map(stage => (
                                 <tr key={stage.id} className="transition-all hover:bg-white hover:bg-opacity-5">

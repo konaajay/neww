@@ -12,37 +12,42 @@ const UserEditModal = ({
   onSubmit, 
   roles = [], 
   permissions = [],
-  teamLeaders = [],
-  shifts = [],
-  offices = []
+  teamLeaders = []
 }) => {
   const { isDarkMode } = useTheme();
   const [showOtpPanel, setShowOtpPanel] = React.useState(false);
   const [resetData, setResetData] = React.useState({ otp: '', newPassword: '', serverOtp: '' });
   const [isGenerating, setIsGenerating] = React.useState(false);
+  const [offices, setOffices] = React.useState([]);
+  const [shifts, setShifts] = React.useState([]);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      adminService.fetchOffices().then(res => setOffices(res.data?.data || res.data || [])).catch(console.error);
+      adminService.fetchAttendanceShifts().then(res => setShifts(res.data?.data || res.data || [])).catch(console.error);
+    }
+  }, [isOpen]);
 
   if (!isOpen || !user) return null;
 
   // Defensive safety guards to prevent crashes if props are not arrays
-  const safeShifts = Array.isArray(shifts) ? shifts : [];
   const safeRoles = Array.isArray(roles) ? roles : [];
   const safePermissions = Array.isArray(permissions) ? permissions : [];
   const safeTeamLeaders = Array.isArray(teamLeaders) ? teamLeaders : [];
-  const safeOffices = Array.isArray(offices) ? offices : [];
 
   const isAllSelected = safePermissions.length > 0 && (user.permissions || []).length === safePermissions.length;
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
       setUser(prev => ({ ...prev, permissions: [...safePermissions] }));
-      toast.info("All Shield Nodes synchronized", { autoClose: 800 });
+      toast.info("All Shield Leads synchronized", { autoClose: 800 });
     } else {
       setUser(prev => ({ ...prev, permissions: [] }));
-      toast.warning("All Shield Nodes deauthorized", { autoClose: 800 });
+      toast.warning("All Shield Leads deauthorized", { autoClose: 800 });
     }
   };
 
-  const selectedShift = safeShifts.find(s => s?.id === user.shiftId);
+
 
   const handleGenerateOtp = async () => {
     setIsGenerating(true);
@@ -108,7 +113,7 @@ const UserEditModal = ({
               </div>
               <div>
                 <h6 className="fw-black text-main mb-0 text-uppercase tracking-widest fs-6">Edit Staff Profile</h6>
-                <small className="text-muted fw-bold opacity-50 text-uppercase d-block" style={{ fontSize: '7px', letterSpacing: '1px' }}>Operational Node Reconfiguration</small>
+                <small className="text-muted fw-bold opacity-50 text-uppercase d-block" style={{ fontSize: '7px', letterSpacing: '1px' }}>Operational Lead Reconfiguration</small>
               </div>
             </div>
             <button type="button" className="btn btn-link p-0 text-muted shadow-none border-0 transition-all hover-scale" onClick={onClose}><X size={20}/></button>
@@ -181,7 +186,43 @@ const UserEditModal = ({
                   </select>
                 </div>
 
-
+                <div className="col-12 col-md-4">
+                  <label className="form-label small fw-black text-uppercase text-muted mb-1 tracking-widest" style={{ fontSize: '9px' }}>Joining Date</label>
+                  <input 
+                    type="date" 
+                    className="form-control border border-white border-opacity-10 shadow-none bg-surface text-main fw-bold py-2 rounded-3 custom-date-input" 
+                    value={user.joiningDate || ''}
+                    onChange={(e) => setUser(prev => ({...prev, joiningDate: e.target.value}))}
+                    onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                    style={{ color: isDarkMode ? '#ffffff' : '#000000', opacity: 1 }}
+                  />
+                </div>
+                <div className="col-12 col-md-4">
+                  <label className="form-label small fw-black text-uppercase text-muted mb-1 tracking-widest" style={{ fontSize: '9px' }}>Office Location</label>
+                  <select 
+                    className="form-select border border-white border-opacity-10 shadow-none fw-bold bg-surface text-main py-2 rounded-3"
+                    value={user.officeId || ''}
+                    onChange={(e) => setUser(prev => ({...prev, officeId: e.target.value ? parseInt(e.target.value) : null}))}
+                  >
+                    <option value="">No Office Assigned</option>
+                    {offices.map(off => (
+                      <option key={off.id} value={off.id}>{off.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-12 col-md-4">
+                  <label className="form-label small fw-black text-uppercase text-muted mb-1 tracking-widest" style={{ fontSize: '9px' }}>Shift Timing</label>
+                  <select 
+                    className="form-select border border-white border-opacity-10 shadow-none fw-bold bg-surface text-main py-2 rounded-3"
+                    value={user.shiftId || ''}
+                    onChange={(e) => setUser(prev => ({...prev, shiftId: e.target.value ? parseInt(e.target.value) : null}))}
+                  >
+                    <option value="">No Shift Assigned</option>
+                    {shifts.map(sh => (
+                      <option key={sh.id} value={sh.id}>{sh.name} ({sh.startTime} - {sh.endTime})</option>
+                    ))}
+                  </select>
+                </div>
 
               </div>
             </div>

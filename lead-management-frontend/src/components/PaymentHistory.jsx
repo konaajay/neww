@@ -10,28 +10,42 @@ import RecordPaymentModal from './RecordPaymentModal';
 import ManualPaymentModal from './ManualPaymentModal';
 import InvoiceModal from '../pages/dashboard/components/InvoiceModal';
 
-const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: externalTo, hideHeader = false, hideFilters = false, refreshTrigger }) => {
+const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManagerId, teamId: externalTeamId, from: externalFrom, to: externalTo, hideHeader = false, hideFilters = false, refreshTrigger }) => {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [teamLeaders, setTeamLeaders] = useState([]);
   const [filters, setFilters] = useState({
     startDate: externalFrom || '',
     endDate: externalTo || '',
-    tlId: '',
+    managerId: externalManagerId || '',
+    tlId: externalTeamId || '',
     associateId: '',
+    userId: externalUserId || '',
     status: ''
   });
 
-  // Sync with external filters
+  const [debouncedFilters, setDebouncedFilters] = useState(filters);
+
+  // Debounce filters to prevent API spam
   useEffect(() => {
-    if (externalFrom || externalTo || externalUserId) {
-      setFilters(prev => ({
-        ...prev,
-        startDate: externalFrom || prev.startDate,
-        endDate: externalTo || prev.endDate
-      }));
-    }
-  }, [externalFrom, externalTo, externalUserId]);
+    const timer = setTimeout(() => {
+      setDebouncedFilters(filters);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [filters]);
+
+  // Sync with external filters — always respond, including null resets
+  useEffect(() => {
+    setFilters(prev => ({
+      ...prev,
+      startDate: externalFrom || prev.startDate,
+      endDate: externalTo || prev.endDate,
+      // Explicitly respect null (e.g. managerId=null for My Dashboard)
+      managerId: externalManagerId !== undefined ? (externalManagerId || '') : prev.managerId,
+      tlId: externalTeamId !== undefined ? (externalTeamId || '') : prev.tlId,
+      userId: externalUserId !== undefined ? (externalUserId || '') : prev.userId,
+    }));
+  }, [externalFrom, externalTo, externalUserId, externalManagerId, externalTeamId]);
 
   const [associates, setAssociates] = useState([]);
   const [fetchingAssociates, setFetchingAssociates] = useState(false);
@@ -51,27 +65,39 @@ const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: 
     if ((role === 'ADMIN' || role === 'MANAGER') && !externalUserId) {
       try {
         const res = role === 'ADMIN' ? await adminService.fetchUsers() : await managerService.fetchTeamLeaders();
-        const users = res.data.content || res.data;
-        setTeamLeaders(role === 'ADMIN' ? users.filter(u => u.role === 'TEAM_LEADER' || u.role === 'MANAGER') : users);
+        // Handle both direct array and ApiResponse object
+        const payload = res.data !== undefined ? res.data : res;
+        const users = payload?.content || payload || [];
+        
+        if (Array.isArray(users)) {
+          setTeamLeaders(role === 'ADMIN' ? users.filter(u => u.role === 'TEAM_LEADER' || u.role === 'MANAGER') : users);
+        }
       } catch (err) {
-        console.error('Failed to fetch team leaders');
+        console.error('Failed to fetch team leaders', err);
       }
     }
   };
 
-  const fetchHistory = async () => {
+  const fetchHistory = async (activeFiltersParam) => {
+    const activeFiltersSource = activeFiltersParam || debouncedFilters;
     setLoading(true);
     try {
-      const queryFilters = { ...filters };
-      if (externalUserId) queryFilters.userId = externalUserId;
+      const queryFilters = { ...activeFiltersSource };
+      // externalUserId is a strict self-filter (My Dashboard)
+      if (externalUserId) {
+        queryFilters.userId = externalUserId;
+        queryFilters.managerId = '';  // never send managerId for self view
+        queryFilters.associateId = '';
+      }
       // Map startDate/endDate to from/to for the API if necessary
       const apiFilters = {
         ...queryFilters,
-        from: queryFilters.startDate ? queryFilters.startDate.split('T')[0] : '',
-        to: queryFilters.endDate ? queryFilters.endDate.split('T')[0] : ''
+        startDate: queryFilters.startDate ? (queryFilters.startDate.includes('T') ? queryFilters.startDate : `${queryFilters.startDate}T00:00:00`) : '',
+        endDate: queryFilters.endDate ? (queryFilters.endDate.includes('T') ? queryFilters.endDate : `${queryFilters.endDate}T23:59:59`) : ''
       };
       const res = await paymentService.fetchHistory(role, apiFilters);
-      setPayments(res.data);
+      const payload = res.data !== undefined ? res.data : res;
+      setPayments(Array.isArray(payload) ? payload : (payload?.content || []));
     } catch (err) {
       toast.error('Failed to sync financial history');
     } finally {
@@ -118,16 +144,16 @@ const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: 
       }
       setAssociates(res.data);
     } catch (err) {
-      console.error('Failed to map associate nodes');
+      console.error('Failed to map associate leads');
     } finally {
       setFetchingAssociates(false);
     }
   };
 
   useEffect(() => {
-    fetchHistory();
+    fetchHistory(debouncedFilters);
     fetchTeamLeaders();
-  }, [role, filters.startDate, filters.endDate, filters.tlId, filters.associateId, filters.status, externalUserId, refreshTrigger]);
+  }, [role, debouncedFilters, externalUserId, refreshTrigger]);
 
   useEffect(() => {
     if (filters.tlId) {
@@ -150,7 +176,7 @@ const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: 
     setAssociates([]);
   };
 
-  if (loading && payments.length === 0) return (
+  if (loading && (!payments || payments.length === 0)) return (
     <div className="text-center py-5">
       <div className="spinner-border spinner-border-sm text-primary" role="status"></div>
       <p className="text-muted small fw-bold text-uppercase mt-3 tracking-widest" style={{ fontSize: '10px' }}>Synchronizing Ledger...</p>
@@ -158,7 +184,7 @@ const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: 
   );
 
   // Apply client-side filters for student name and due date
-  const filteredPayments = payments.filter(payment => {
+  const filteredPayments = (payments || []).filter(payment => {
     if (payment.status === 'CANCELLED') return false;
     if (studentSearch && !(payment.leadName || '').toLowerCase().includes(studentSearch.toLowerCase())) return false;
     const dueDateStr = payment.dueDate ? payment.dueDate.substring(0, 10) : (payment.createdAt ? payment.createdAt.substring(0, 10) : '');
@@ -167,15 +193,14 @@ const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: 
     return true;
   });
 
+  const successfulPayments = (payments || []).filter(p => ['PAID', 'SUCCESS', 'APPROVED', 'PARTIAL', 'COMPLETED'].includes(p.status));
   const paymentStats = {
-    totalRevenue: filteredPayments
-      .filter(p => p.status === 'PAID' || p.status === 'SUCCESS' || p.status === 'APPROVED')
-      .reduce((sum, p) => sum + p.amount, 0),
-    pendingRevenue: filteredPayments
+    totalRevenue: successfulPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0),
+    pendingRevenue: (payments || [])
       .filter(p => p.status === 'PENDING' || p.status === 'FAILED')
       .reduce((sum, p) => sum + p.amount, 0),
-    totalInvoiced: filteredPayments.reduce((sum, p) => sum + p.amount, 0),
-    overdueCount: filteredPayments.filter(p => {
+    totalInvoiced: (payments || []).reduce((sum, p) => sum + p.amount, 0),
+    overdueCount: (payments || []).filter(p => {
         const isOverdue = p.status === 'FAILED' || p.status === 'OVERDUE';
         const isPending = p.status === 'PENDING' || p.status === 'INITIATED' || p.status === 'PARTIAL';
         const now = new Date();
@@ -240,70 +265,8 @@ const PaymentHistory = ({ role, userId: externalUserId, from: externalFrom, to: 
           </div>
         )}
 
-        {/* Filters Wrapper - Conditionally hide if external filters provided */}
-        {!hideFilters && !externalUserId && !externalFrom && (
-          <div className="p-4 bg-surface bg-opacity-50 border-bottom border-white border-opacity-5 d-flex flex-wrap gap-4 align-items-end">
-            <div className="flex-grow-1" style={{ maxWidth: '180px' }}>
-              <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '9px', opacity: 0.6 }}>Operational Status</label>
-              <select className="ui-input py-1.5" name="status" value={filters.status} onChange={handleFilterChange}>
-                <option value="" className="text-dark">All Statuses</option>
-                <option value="PAID" className="text-dark">Cleared (Paid)</option>
-                <option value="PENDING" className="text-dark">Upcoming (Pending)</option>
-                <option value="FAILED" className="text-dark">Overdue (Failed)</option>
-              </select>
-            </div>
-            {(role === 'ADMIN' || role === 'MANAGER') && !externalUserId && (
-               <div className="flex-grow-1" style={{ maxWidth: '180px' }}>
-                 <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '9px', opacity: 0.6 }}>Team Leader Focus</label>
-                 <select className="ui-input py-1.5" name="tlId" value={filters.tlId} onChange={handleFilterChange}>
-                   <option value="" className="text-dark">Universal Access</option>
-                   {teamLeaders.map(tl => <option key={tl.id} value={tl.id} className="text-dark">{tl.name}</option>)}
-                 </select>
-               </div>
-            )}
-            {(role === 'ADMIN' || role === 'MANAGER' || role === 'TEAM_LEADER') && filters.tlId && !externalUserId && (
-              <div className="flex-grow-1" style={{ maxWidth: '180px' }}>
-                <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '9px', opacity: 0.6 }}>Associate Node</label>
-                <select className="ui-input py-1.5" name="associateId" value={filters.associateId} onChange={handleFilterChange} disabled={fetchingAssociates}>
-                   <option value="" className="text-dark">All Sub-Nodes</option>
-                   {associates.map(a => <option key={a.id} value={a.id} className="text-dark">{a.name}</option>)}
-                </select>
-              </div>
-            )}
-            <div className="flex-grow-1" style={{ minWidth: '160px' }}>
-              <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '9px', opacity: 0.6 }}>Student Search</label>
-              <input
-                type="text"
-                className="ui-input py-1.5"
-                placeholder="Filter by name..."
-                value={studentSearch}
-                onChange={e => setStudentSearch(e.target.value)}
-              />
-            </div>
-            <div className="flex-grow-1" style={{ minWidth: '140px' }}>
-              <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '9px', opacity: 0.6 }}>Due Date (Floor)</label>
-              <input
-                type="date"
-                className="ui-input py-1.5"
-                value={dueFrom}
-                onChange={e => setDueFrom(e.target.value)}
-              />
-            </div>
-            <div className="flex-grow-1" style={{ minWidth: '140px' }}>
-              <label className="text-muted small fw-bold text-uppercase mb-2 d-block" style={{ fontSize: '9px', opacity: 0.6 }}>Due Date (Ceiling)</label>
-              <input
-                type="date"
-                className="ui-input py-1.5"
-                value={dueTo}
-                onChange={e => setDueTo(e.target.value)}
-              />
-            </div>
-            <div className="d-flex gap-2">
-              <button onClick={fetchHistory} className="ui-btn ui-btn-primary px-4 rounded-pill shadow-glow py-1.5" style={{fontSize: '11px'}}>SYNC</button>
-              <button onClick={resetFilters} className="ui-btn ui-btn-secondary px-4 rounded-pill py-1.5" style={{fontSize: '11px'}}>RESET</button>
-            </div>
-          </div>
-        )}
+        {/* Removed local filter bar as per user request to simplify UI and rely on global filters */}
+
 
         {/* Local Search for External Filter Mode */}
         {!hideFilters && (externalUserId || externalFrom) && (
