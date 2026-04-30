@@ -8,8 +8,7 @@ export const useLookupData = (role) => {
     queryKey: ['users', role],
     queryFn: () => userApi.fetchUsers(),
     select: (data) => {
-      const users = data?.content || data || [];
-      return users.filter(u => u.active);
+      return data?.content || data || [];
     },
     staleTime: 10 * 60 * 1000,
     enabled: role === 'ADMIN'
@@ -36,8 +35,7 @@ export const useLookupData = (role) => {
     queryKey: ['teamLeaders', role],
     queryFn: () => userApi.fetchTeamLeaders(role),
     select: (data) => {
-      const tls = Array.isArray(data) ? data : (data?.data || []);
-      return tls.filter(u => u.active);
+      return Array.isArray(data) ? data : (data?.data || []);
     },
     staleTime: 10 * 60 * 1000,
     enabled: role === 'ADMIN' || role === 'MANAGER'
@@ -47,7 +45,7 @@ export const useLookupData = (role) => {
   const { data: subordinates, isLoading: loadingSubordinates } = useQuery({
     queryKey: ['subordinates', role],
     queryFn: () => userApi.fetchSubordinates(role),
-    select: (data) => (data || []).filter(u => u.active),
+    select: (data) => data || [],
     staleTime: 5 * 60 * 1000,
     enabled: role === 'TEAM_LEADER'
   });

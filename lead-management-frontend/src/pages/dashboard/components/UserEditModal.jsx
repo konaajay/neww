@@ -224,6 +224,22 @@ const UserEditModal = ({
                   </select>
                 </div>
 
+                <div className="col-12 mt-2">
+                  <div className={`form-check form-switch p-3 rounded-3 border border-white border-opacity-5 d-flex align-items-center ${user.active ? 'bg-success bg-opacity-10 border-success border-opacity-20' : 'bg-danger bg-opacity-10 border-danger border-opacity-20'}`}>
+                    <input 
+                      className="form-check-input ms-0 me-3 cursor-pointer" 
+                      type="checkbox" 
+                      id="activeStatus" 
+                      checked={user.active}
+                      onChange={(e) => setUser(prev => ({...prev, active: e.target.checked}))}
+                      style={{ width: '40px', height: '20px' }}
+                    />
+                    <label className={`form-check-label fw-black text-uppercase small tracking-widest ${user.active ? 'text-success' : 'text-danger'}`} htmlFor="activeStatus" style={{ fontSize: '10px' }}>
+                      {user.active ? 'Identity Active & Operational' : 'Identity Deactivated & Locked'}
+                    </label>
+                  </div>
+                </div>
+
               </div>
             </div>
             <div className="modal-footer border-0 p-3 p-md-4 d-flex flex-column flex-sm-row justify-content-end gap-2 gap-md-3 bg-card border-top border-white border-opacity-5">

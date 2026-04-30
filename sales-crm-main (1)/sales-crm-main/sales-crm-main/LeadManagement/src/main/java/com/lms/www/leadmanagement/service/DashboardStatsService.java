@@ -391,11 +391,11 @@ public class DashboardStatsService {
         Map<String, Long> userBreakdown = new HashMap<>();
         if (isGlobalAdmin) {
             userBreakdown = userRepository.findAll().stream()
-                    .filter(u -> u.getRole() != null)
+                    .filter(u -> u.isActive() && u.getRole() != null)
                     .collect(Collectors.groupingBy(u -> u.getRole().getName(), Collectors.counting()));
         } else {
             userBreakdown = allowedUsers.stream()
-                    .filter(u -> u.getRole() != null)
+                    .filter(u -> u.isActive() && u.getRole() != null)
                     .collect(Collectors.groupingBy(u -> u.getRole().getName(), Collectors.counting()));
         }
 
@@ -572,7 +572,12 @@ public class DashboardStatsService {
             ? monthly.divide(monthlyTarget, 4, java.math.RoundingMode.HALF_UP).multiply(new BigDecimal(100)).doubleValue()
             : 0.0;
 
-        long totalActiveUsers = (long) finalUserIds.size();
+        // Only count ACTIVE users for the dashboard summary
+        List<User> activeAllowedUsers = allowedUsers.stream()
+                .filter(User::isActive)
+                .collect(Collectors.toList());
+        
+        long totalActiveUsers = (long) activeAllowedUsers.size();
 
         // 8. Member Performance (REMOVED)
         List<MemberPerformanceDTO> perfStats = new java.util.ArrayList<>();

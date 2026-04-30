@@ -308,6 +308,7 @@ const AdminDashboard = () => {
             handleEditUser={setEditingUser}
             handleAssignSupervisor={handleAssignSupervisor}
             handleSync={handleSync}
+            canAdd={true}
           />
         )}
         {activeTab === 'hierarchy' && <TeamTree data={teamTree} />}

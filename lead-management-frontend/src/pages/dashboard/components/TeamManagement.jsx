@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Edit, Trash2, ChevronDown, ChevronRight, BarChart2, Users, Search, Phone, Zap, FileText, TrendingUp, AlertCircle } from 'lucide-react';
+import { UserPlus, Edit, Trash2, ChevronDown, ChevronRight, BarChart2, Users, Search, Phone, Zap, FileText, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 
 const TeamManagement = ({
@@ -13,7 +13,8 @@ const TeamManagement = ({
   handleAssignSupervisor,
   setSelectedPerfUserId,
   setActiveTab,
-  defaultShowForm = false
+  defaultShowForm = false,
+  canAdd = false
 }) => {
   const { isDarkMode } = useTheme();
   const [activeSubTab, setActiveSubTab] = useState(defaultShowForm ? 'onboarding' : 'active');
@@ -97,11 +98,32 @@ const TeamManagement = ({
             </div>
 
             <button onClick={() => handleEditUser(user)} className="btn btn-sm btn-link p-0 text-primary opacity-50 hover-opacity-100 transition-all hover-scale"><Edit size={13} /></button>
-            <button onClick={() => handleDeleteUser(user.id)} className="btn btn-sm btn-link p-0 text-danger opacity-50 hover-opacity-100 ms-1 transition-all hover-scale"><Trash2 size={13} /></button>
+            {user.active ? (
+              <button onClick={() => handleDeleteUser(user.id)} className="btn btn-sm btn-link p-0 text-danger opacity-50 hover-opacity-100 ms-1 transition-all hover-scale" title="Deactivate"><Trash2 size={13} /></button>
+            ) : (
+              <button onClick={() => handleEditUser({ ...user, active: true })} className="btn btn-sm btn-link p-0 text-success opacity-50 hover-opacity-100 ms-1 transition-all hover-scale" title="Reactivate"><CheckCircle size={13} /></button>
+            )}
           </div>
         </td>
       </tr>
     );
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    handleCreateUser(formData);
+    setFormData({
+      name: '',
+      email: '',
+      mobile: '',
+      password: '',
+      role: '',
+      supervisorId: '',
+      officeId: '',
+      shiftId: '',
+      joiningDate: new Date().toISOString().split('T')[0]
+    });
+    setActiveSubTab('active');
   };
 
   return (
@@ -114,9 +136,9 @@ const TeamManagement = ({
 
           <div className="d-flex gap-2 p-1.5 bg-surface bg-opacity-20 rounded-pill border border-white border-opacity-5 ms-4">
             {[
-              { id: 'active', label: 'Registered Personnel', icon: Users },
-              { id: 'onboarding', label: 'Add user', icon: UserPlus },
-            ].map(tab => (
+              { id: 'active', label: 'Registered Personnel', icon: Users, show: true },
+              { id: 'onboarding', label: 'Add user', icon: UserPlus, show: canAdd },
+            ].filter(tab => tab.show).map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveSubTab(tab.id)}
@@ -169,7 +191,7 @@ const TeamManagement = ({
               <div className="card-header bg-primary bg-opacity-5 p-4 border-0 border-bottom border-white border-opacity-5">
                 <h6 className="fw-black mb-0 text-primary text-uppercase tracking-widest small">Onboard New Personnel</h6>
               </div>
-              <form onSubmit={onSubmit} className="p-4 bg-surface bg-opacity-10">
+              <form onSubmit={handleSubmit} className="p-4 bg-surface bg-opacity-10">
                 <div className="row g-4">
                   <div className="col-md-6">
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Full Name</label>
