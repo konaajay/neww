@@ -572,9 +572,7 @@ public class DashboardStatsService {
             ? monthly.divide(monthlyTarget, 4, java.math.RoundingMode.HALF_UP).multiply(new BigDecimal(100)).doubleValue()
             : 0.0;
 
-        long totalActiveUsers = isGlobalAdmin 
-            ? userRepository.countActiveUsersByDate(to) 
-            : userRepository.countActiveUsersByDateIn(finalUserIds, to);
+        long totalActiveUsers = (long) finalUserIds.size();
 
         // 8. Member Performance (REMOVED)
         List<MemberPerformanceDTO> perfStats = new java.util.ArrayList<>();
