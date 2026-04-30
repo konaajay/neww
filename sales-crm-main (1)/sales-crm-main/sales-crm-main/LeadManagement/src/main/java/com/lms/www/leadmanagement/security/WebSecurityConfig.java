@@ -60,7 +60,7 @@ public class WebSecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        // Public endpoints
+                        .requestMatchers(org.springframework.web.cors.CorsUtils::isPreFlightRequest).permitAll()
                         .requestMatchers("/api/auth/login", "/error").permitAll()
 
                         // Restrict payment endpoints properly
