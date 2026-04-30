@@ -107,6 +107,7 @@ public class WebSecurityConfig {
                 "http://localhost:5173",
                 "http://100.85.146.60:3000",
                 "https://salescrms.netlify.app",
+                "https://hiiiiiiiiiiiiiiiiii.netlify.app",
                 "https://yourdomain.com"));
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
