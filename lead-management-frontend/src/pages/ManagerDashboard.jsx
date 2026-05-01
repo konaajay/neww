@@ -512,7 +512,7 @@ const ManagerDashboard = () => {
                 </Card>
               </div>
             </div>
-            <CallAnalyticsGrid filters={debouncedFilters} hideHeader={true} />
+            <CallAnalyticsGrid filters={debouncedFilters} hideHeader={true} isDarkMode={isDarkMode} />
           </div>
         )}
         

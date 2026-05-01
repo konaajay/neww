@@ -93,9 +93,10 @@ const CallAnalyticsGrid = ({ stats, loading, isDarkMode }) => {
                 <div key={idx} className="col-6 col-md-4 col-lg-3">
                     <div className="premium-card p-3 p-md-4 transition-all hover-lift h-100 position-relative border-0 shadow-lg"
                         style={{
-                            backgroundColor: isDarkMode ? '#1a1a25' : '#ffffff',
+                            backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : '#ffffff',
                             color: isDarkMode ? '#ffffff' : '#1a1a25',
-                            borderRadius: '1.25rem'
+                            borderRadius: '1.25rem',
+                            border: isDarkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.05)'
                         }}>
 
                         {card.isPremium && (
@@ -116,7 +117,7 @@ const CallAnalyticsGrid = ({ stats, loading, isDarkMode }) => {
                                     }}>
                                     {card.icon}
                                 </div>
-                                <h6 className="text-muted small fw-bold mb-0 opacity-75" style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>
+                                <h6 className="text-muted small fw-bold mb-0 opacity-75" style={{ fontSize: '13px', whiteSpace: 'nowrap' }}>
                                     {card.title}
                                 </h6>
                             </div>
@@ -124,7 +125,7 @@ const CallAnalyticsGrid = ({ stats, loading, isDarkMode }) => {
                             <div className="mt-auto">
                                 <div className="d-flex align-items-baseline gap-2 mb-1">
                                     <Phone size={14} className="opacity-50" />
-                                    <h3 className="fw-black mb-0" style={{ fontSize: '24px', letterSpacing: '-0.01em' }}>
+                                    <h3 className="fw-black mb-0" style={{ fontSize: '28px', letterSpacing: '-0.01em' }}>
                                         {card.value}
                                     </h3>
                                 </div>
