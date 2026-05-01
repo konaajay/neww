@@ -107,6 +107,7 @@ public class WebSecurityConfig {
                 "http://127.0.0.1:[*]",
                 "http://100.85.146.60:[*]",
                 "https://*.netlify.app",
+                "https://salessaless.netlify.app",
                 "https://yourdomain.com"));
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
