@@ -207,6 +207,7 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme }) => {
       case 'SWITCHED_OFF':
         return 1;
       case 'FOLLOW_UP':
+      case 'CALL_BACK':
       case 'FOLLOWUP_1':
       case 'FOLLOWUP_2':
       case 'FOLLOWUP_3':
@@ -505,6 +506,27 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme }) => {
                                  .map(s => <option key={s.id} value={s.id}>{s.label}</option>)
                                }
                              </select>
+                          </div>
+
+                          <div className="col-12 mt-4">
+                            <div className="d-flex flex-wrap gap-2">
+                              {[
+                                { id: 'CALL_BACK', label: 'Call Back', color: 'warning' },
+                                { id: 'FOLLOW_UP', label: 'Follow Up', color: 'info' },
+                                { id: 'CONVERTED', label: 'Converted', color: 'success' },
+                                { id: 'LOST', label: 'Lost', color: 'danger' }
+                              ].map(btn => (
+                                <button
+                                  key={btn.id}
+                                  type="button"
+                                  onClick={() => setOutcome(btn.id)}
+                                  className={`btn btn-sm rounded-pill px-3 fw-black tracking-widest text-uppercase transition-all ${outcome === btn.id ? `btn-${btn.color} shadow-glow` : (isDarkMode ? 'btn-outline-secondary opacity-50' : 'btn-outline-secondary opacity-50')}`}
+                                  style={{ fontSize: '9px', minWidth: '100px' }}
+                                >
+                                  {btn.label}
+                                </button>
+                              ))}
+                            </div>
                           </div>
  
                           {(outcome === 'PAID' || outcome === 'CONVERTED' || outcome === 'EMI') && (

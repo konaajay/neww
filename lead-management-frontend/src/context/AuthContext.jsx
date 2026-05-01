@@ -31,20 +31,47 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
-    console.log("[AuthContext] session check:", { 
-      hasToken: !!token, 
-      hasUser: !!savedUser,
-      role: savedUser ? JSON.parse(savedUser).role : 'NONE'
-    });
+    
+    if (token && savedUser) {
+      // Refresh profile data from server to keep shift/office info fresh
+      authService.getProfile().then(res => {
+        const fullUser = res.data;
+        const userData = { 
+          id: fullUser.id, 
+          email: fullUser.email, 
+          role: fullUser.role, 
+          name: fullUser.name,
+          mobile: fullUser.mobile,
+          shiftTime: fullUser.shiftTime,
+          officeName: fullUser.officeName,
+          latitude: fullUser.latitude,
+          longitude: fullUser.longitude
+        };
+        localStorage.setItem('user', JSON.stringify(userData));
+        setUser(userData);
+      }).catch(err => {
+        console.warn("[AuthContext] Profile sync failed:", err);
+      });
+    }
+
     setLoading(false);
-  }, [user]);
+  }, []);
 
   const login = async (email, password) => {
     console.log("[AuthContext] Attempting login for:", email);
     try {
       const response = await authService.login(email, password);
-      const { token, id, role, email: userEmail, name } = response.data;
-      const userData = { id, email: userEmail, role, name: name || userEmail.split('@')[0] };
+      const { token, id, role, email: userEmail, name, shiftTime, officeName, latitude, longitude } = response.data;
+      const userData = { 
+        id, 
+        email: userEmail, 
+        role, 
+        name: name || userEmail.split('@')[0],
+        shiftTime,
+        officeName,
+        latitude,
+        longitude
+      };
       
       console.log("[AuthContext] Login success payload:", { id, role, userEmail });
       
@@ -96,8 +123,29 @@ export const AuthProvider = ({ children }) => {
     setActiveCall(null);
   };
 
+  const updateProfile = async (updates) => {
+    try {
+      const res = await api.put('/auth/profile', updates);
+      const fullUser = res.data;
+      const userData = { 
+        ...user,
+        name: fullUser.name,
+        mobile: fullUser.mobile,
+        shiftTime: fullUser.shiftTime,
+        officeName: fullUser.officeName
+      };
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+      toast.success('Identity profile synchronized');
+      return true;
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Profile update failed');
+      return false;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, loginDemo, logout, loading, activeCall, startCall, clearCall }}>
+    <AuthContext.Provider value={{ user, login, loginDemo, logout, loading, activeCall, startCall, clearCall, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

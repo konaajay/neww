@@ -5,7 +5,7 @@ const api = axios.create({
     ? `http://${window.location.hostname}:8081/api` 
     : (import.meta.env.VITE_API_URL ? (import.meta.env.VITE_API_URL.endsWith('/api') ? import.meta.env.VITE_API_URL : `${import.meta.env.VITE_API_URL}/api`) : 'https://sales-backend-1-3tnk.onrender.com/api')
   ),
-  timeout: 10000
+  timeout: 60000
 });
 
 // Parameter cleaning utility

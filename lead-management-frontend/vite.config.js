@@ -6,7 +6,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'https://sales-crm-emzp.onrender.com',
+        target: 'http://localhost:8081',
         changeOrigin: true
       }
     }

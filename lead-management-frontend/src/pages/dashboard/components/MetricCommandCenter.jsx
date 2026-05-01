@@ -90,7 +90,7 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
     <div className="row g-3 mb-4 animate-fade-in-up">
       <div className="col-12 col-md-4 col-xl">
         <MetricCard
-          title="Attendance"
+          title="Who's Working"
           icon={Users}
           color="primary"
           onClick={() => handleNav('attendance', `/attendance-logs?from=${filters.from}&to=${filters.to}`)}
@@ -107,13 +107,14 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
 
       <div className="col-12 col-md-4 col-xl">
         <MetricCard
-          title="USERS"
+          title="TEAM"
           icon={Users}
           color="info"
           onClick={() => handleNav('users', '/users')}
           stats={{
-            primary: { value: statsMemo.totalUsers, label: 'Staff' },
+            primary: { value: statsMemo.totalUsers, label: role === 'ADMIN' ? 'Staff (incl. Admin)' : 'Staff' },
             secondary: [
+              ...(role === 'ADMIN' ? [{ label: 'Admin', value: statsMemo.getCount('ADMIN'), color: 'success' }] : []),
               { label: 'Manager', value: statsMemo.getCount('MANAGER'), color: 'primary' },
               { label: 'TeamLead', value: statsMemo.getCount('TEAM_LEADER'), color: 'info' },
               { label: 'Associate', value: statsMemo.getCount('ASSOCIATE'), color: 'warning' },
@@ -124,7 +125,7 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
 
       <div className="col-12 col-md-4 col-xl">
         <MetricCard
-          title="PENDING"
+          title="TODAY"
           icon={Clock}
           color="secondary"
           onClick={() => handleNav('tasks', '/tasks', { filter: 'TODAY' })}
@@ -140,7 +141,7 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
 
       <div className="col-12 col-md-4 col-xl">
         <MetricCard
-          title="OVERDUE"
+          title="MISSED"
           icon={AlertCircle}
           color="danger"
           onClick={() => handleNav('tasks', '/tasks', { filter: 'OVERDUE' })}

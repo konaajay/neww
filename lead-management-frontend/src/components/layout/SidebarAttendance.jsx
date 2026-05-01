@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { LogIn, LogOut, Coffee, Timer, MapPin, CheckCircle2, Clock } from 'lucide-react';
+import { LogIn, LogOut, Coffee, Timer, MapPin, CheckCircle2, Clock, ChevronUp, ChevronDown } from 'lucide-react';
 import { toast } from 'react-toastify';
 import attendanceService from '../../services/attendanceService';
 
@@ -10,6 +10,7 @@ const SidebarAttendance = ({ isCollapsed }) => {
     const [elapsed, setElapsed] = useState({ h: 0, m: 0, s: 0 });
     const heartbeatRef = useRef(null);
     const timerRef = useRef(null);
+    const [isExpanded, setIsExpanded] = useState(true);
 
     const isPunchedIn = !!(status?.checkInTime);
     const isOnBreak = status?.status === 'ON_SHORT_BREAK' || status?.status === 'ON_LONG_BREAK';
@@ -149,7 +150,7 @@ const SidebarAttendance = ({ isCollapsed }) => {
                         });
                         const data = parseStatus(res);
                         setStatus(data);
-                        toast.success('Shift started');
+                        toast.success('Punched in');
                     } catch (err) {
                         toast.error(err?.response?.data?.message || err?.response?.data?.error || 'Clock-in failed');
                     }
@@ -177,7 +178,7 @@ const SidebarAttendance = ({ isCollapsed }) => {
             await attendanceService.clockOut();
             setStatus(null);
             setElapsed({ h: 0, m: 0, s: 0 });
-            toast.success('Shift ended');
+            toast.success('Punched out');
         } catch (err) {
             toast.error('Clock-out failed');
         }
@@ -202,11 +203,11 @@ const SidebarAttendance = ({ isCollapsed }) => {
 
     // ── Helpers ────────────────────────────────────────────────────────────
     const getStatusLabel = () => {
-        if (!isPunchedIn) return 'STANDBY';
+        if (!isPunchedIn) return 'OFF DUTY';
         switch (status?.status) {
             case 'WORKING': return 'WORKING';
-            case 'ON_SHORT_BREAK': return 'SHORT BREAK';
-            case 'ON_LONG_BREAK': return 'LONG BREAK';
+            case 'ON_SHORT_BREAK': return 'BREAK';
+            case 'ON_LONG_BREAK': return 'BREAK';
             case 'OUTSIDE_UNAUTHORIZED': return 'OUTSIDE';
             default: return status?.status || 'ACTIVE';
         }
@@ -255,20 +256,31 @@ const SidebarAttendance = ({ isCollapsed }) => {
     return (
         <div className="mx-3 mb-4 p-3 rounded-4 border animate-fade-in shadow-sm">
             {/* Header */}
-            <div className="d-flex align-items-center justify-content-between mb-3">
+            <div 
+                className="d-flex align-items-center justify-content-between mb-3 cursor-pointer" 
+                onClick={() => setIsExpanded(!isExpanded)}
+                style={{ cursor: 'pointer' }}
+            >
                 <div className="d-flex align-items-center gap-2">
                     <div className={`p-1 rounded-pill bg-${color} bg-opacity-10 text-${color}`}>
                         <Timer size={13} />
                     </div>
-                    <span className="fw-black tracking-widest text-muted" style={{ fontSize: '9px' }}>ATTENDANCE</span>
+                    <span className="fw-black tracking-widest text-main" style={{ fontSize: '10px' }}>PUNCH PANEL</span>
                 </div>
-                <div
-                    className={`px-2 rounded-pill bg-${color} bg-opacity-10 text-${color} border border-${color} border-opacity-10`}
-                    style={{ fontSize: '8px', padding: '2px 6px' }}
-                >
-                    <span className="fw-black">{getStatusLabel()}</span>
+                <div className="d-flex align-items-center gap-2">
+                    <div
+                        className={`px-2 rounded-pill bg-${color} bg-opacity-10 text-${color} border border-${color} border-opacity-10`}
+                        style={{ fontSize: '8px', padding: '2px 6px' }}
+                    >
+                        <span className="fw-black">{getStatusLabel()}</span>
+                    </div>
+                    {isExpanded ? <ChevronUp size={14} className="text-muted" /> : <ChevronDown size={14} className="text-muted" />}
                 </div>
             </div>
+
+            {isExpanded && (
+                <>
+
 
             {!isPunchedIn ? (
                 <button
@@ -283,13 +295,13 @@ const SidebarAttendance = ({ isCollapsed }) => {
                 <div className="d-flex flex-column gap-2">
                     {/* Live timer + location box */}
                     <div className="p-3 border rounded-4 position-relative overflow-hidden mb-2 shadow-sm" style={{ backgroundColor: 'var(--bs-light)' }}>
-                        <div className="position-absolute top-0 end-0 p-3 opacity-10" style={{ transform: 'translate(20%,-20%)' }}>
-                            <MapPin size={48} />
-                        </div>
+                    <div className="position-absolute top-0 end-0 p-3 opacity-10" style={{ transform: 'translate(10%,-10%)' }}>
+                        <MapPin size={24} />
+                    </div>
                         <div className="d-flex flex-column position-relative" style={{ zIndex: 1 }}>
                             {status?.lastLat && (
-                                <span className="fw-bold text-muted mb-2" style={{ fontSize: '9px' }}>
-                                    {Number(status.lastLat).toFixed(3)}, {Number(status.lastLng).toFixed(3)}
+                                <span className="fw-black text-main mb-2 d-block" style={{ fontSize: '10px', letterSpacing: '0.05em' }}>
+                                    {Number(status.lastLat).toFixed(4)}, {Number(status.lastLng).toFixed(4)}
                                 </span>
                             )}
 
@@ -306,9 +318,9 @@ const SidebarAttendance = ({ isCollapsed }) => {
                                 <span className="fw-bold text-muted" style={{ fontSize: '10px' }}>
                                     Work: {status?.totalWorkHours || '0h 0m'}
                                 </span>
-                                <span className="fw-bold text-muted" style={{ fontSize: '10px' }}>
-                                    <Coffee size={10} className="me-1" />
-                                    {status?.totalIdleHours || '0h 0m'}
+                                <span className="fw-bold text-muted d-flex align-items-center gap-1" style={{ fontSize: '10px' }}>
+                                    <Coffee size={10} />
+                                    Break: {status?.totalIdleHours || '0h 0m'}
                                 </span>
                             </div>
                         </div>
@@ -358,11 +370,13 @@ const SidebarAttendance = ({ isCollapsed }) => {
                                 className="w-100 py-2 rounded-3 bg-transparent text-danger border border-danger border-opacity-50 fw-black d-flex align-items-center justify-content-center gap-2 transition-all"
                                 style={{ fontSize: '11px' }}
                             >
-                                <LogOut size={13} /> Punch Out
+                                <LogOut size={13} /> PUNCH OUT
                             </button>
                         </div>
                     </div>
                 </div>
+            )}
+                </>
             )}
         </div>
     );

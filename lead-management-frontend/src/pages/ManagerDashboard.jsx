@@ -46,7 +46,9 @@ const ManagerDashboard = () => {
   const { isDarkMode } = useTheme();
   const theme = isDarkMode ? 'dark' : 'light';
 
-  const [activeTab, setActiveTab] = useState(localStorage.getItem('mgr_activeTab') || 'overview');
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('mgr_activeTab') || 'overview';
+  });
   const [myDashboardSubTab, setMyDashboardSubTab] = useState('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterUnassigned, setFilterUnassigned] = useState(false);
@@ -56,6 +58,7 @@ const ManagerDashboard = () => {
   const [isIngestionModalOpen, setIsIngestionModalOpen] = useState(false);
   const [taskFilter, setTaskFilter] = useState('ALL');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [bulkAssignTlId, setBulkAssignTlId] = useState('');
 
   // 1. Stable Filters
   const [filterState, setFilterState] = useState({
@@ -80,7 +83,8 @@ const ManagerDashboard = () => {
 
   const {
     leads, loading: leadsLoading, refetch: refreshLeads,
-    handleUpdateLead, assignLead, deleteLead, recordCallOutcome
+    updateLead, assignLead, deleteLead, recordCallOutcome,
+    selectedLeadIds, toggleSelection, bulkAssignLeads
   } = useLeads(debouncedFilters, 'MANAGER');
 
   const {
@@ -149,6 +153,7 @@ const ManagerDashboard = () => {
   const stats = dashboardData?.stats || {};
   const trend = dashboardData?.trend || [];
   const performance = dashboardData?.performance || [];
+  const statusDistribution = dashboardData?.statusDistribution || {};
 
   const statsWithPerf = useMemo(() => ({
     ...stats,
@@ -279,6 +284,7 @@ const ManagerDashboard = () => {
                 { id: 'revenue', label: 'Revenue Trans.', icon: '💰' },
                 { id: 'calls', label: 'Telephony Logs', icon: '📞' },
                 { id: 'reports', label: 'Performance', icon: '📈' },
+                { id: 'attendance', label: 'Attendance', icon: '📅' },
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -325,11 +331,11 @@ const ManagerDashboard = () => {
                 <div className="card-body p-0">
                   <LeadTable
                     leads={leads.filter(l => l.assignedToId === user?.id || (!l.assignedToId && l.createdById === user?.id))}
-                    onUpdateLead={handleUpdateLead}
+                    onUpdateLead={(id, data) => updateLead({ id, data })}
                     onRecordCallOutcome={handleRecordCallOutcome}
                     onSendPaymentLink={handleSendPaymentLink}
                     onViewInvoice={handleViewInvoice}
-                    teamLeaders={teamLeaders}
+                    teamLeaders={teamLeaders.some(u => u.id === user?.id) ? teamLeaders : [user, ...teamLeaders]}
                     role="MANAGER"
                     loadLeads={refreshLeads}
                     loading={leadsLoading}
@@ -351,6 +357,7 @@ const ManagerDashboard = () => {
             )}
             {myDashboardSubTab === 'revenue' && <PaymentHistory role="MANAGER" userId={user?.id} managerId={null} from={filterState.from} to={filterState.to} hideHeader={true} />}
             {myDashboardSubTab === 'calls' && <CallLogDashboard userId={user?.id} hideHeader={true} filters={filterState} onChange={setFilterState} />}
+            {myDashboardSubTab === 'attendance' && <AttendanceDashboard filters={{ ...filterState, userId: user?.id }} role="MANAGER" />}
             {myDashboardSubTab === 'reports' && (
               <div className="row g-4 animate-fade-in">
                 <div className="col-12 col-xl-8">
@@ -409,66 +416,93 @@ const ManagerDashboard = () => {
           </div>
         )}
         {activeTab === 'leads' && (
-          <div className="premium-card overflow-hidden shadow-lg border-0">
-            <div className="card-header bg-transparent p-4 border-0 border-bottom border-white border-opacity-5 d-flex justify-content-between align-items-center">
-              <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest small">Squad Lead pool</h5>
-              <div className="d-flex align-items-center gap-2">
-                <div className="position-relative">
-                  <Search size={14} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" />
-                  <input
-                    placeholder="Search squad leads..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="form-control bg-surface border-white border-opacity-10 py-2 ps-5 rounded-pill"
-                    style={{ fontSize: '11px', width: '220px' }}
-                  />
+          <div className="d-flex flex-column gap-3">
+            <div className="row g-3 mb-2 animate-fade-in">
+              {[
+                { label: 'Call Back', value: (stats.statusDistribution?.CALL_BACK || 0), color: 'warning', icon: '📞' },
+                { label: 'Follow Up', value: (stats.statusDistribution?.FOLLOW_UP || 0), color: 'info', icon: '⏳' },
+                { label: 'Converted', value: (stats.statusDistribution?.CONVERTED || stats.statusDistribution?.PAID || 0), color: 'success', icon: '✅' },
+                { label: 'Lost', value: (stats.statusDistribution?.LOST || 0), color: 'danger', icon: '❌' }
+              ].map((card, i) => (
+                <div key={i} className="col-6 col-md-3">
+                  <div className="premium-card p-3 border border-white border-opacity-10 shadow-sm d-flex align-items-center gap-3" style={{ borderRadius: '20px', background: 'rgba(255,255,255,0.02)' }}>
+                    <div className={`p-2 rounded-3 bg-${card.color} bg-opacity-10 text-${card.color}`}>
+                      <span style={{ fontSize: '18px' }}>{card.icon}</span>
+                    </div>
+                    <div>
+                      <h4 className="mb-0 fw-black text-main">{card.value}</h4>
+                      <small className="text-muted fw-bold text-uppercase tracking-widest" style={{ fontSize: '8px' }}>{card.label}</small>
+                    </div>
+                  </div>
                 </div>
-                <button className="ui-btn ui-btn-primary btn-sm px-4 rounded-pill" onClick={() => setIsIngestionModalOpen(true)}>
-                  <UserPlus size={14} className="me-2" />
-                  Add Lead
-                </button>
-                <button className="ui-btn ui-btn-outline btn-sm px-4 rounded-pill" onClick={() => refreshLeads()}>LIVE SYNC</button>
-              </div>
+              ))}
             </div>
-            <div className="card-body p-0">
-              <LeadTable
-                leads={filteredLeadsList}
-                onUpdateLead={handleUpdateLead}
-                handleAssignLead={(leadId, targetId) => assignLead({ leadId, targetId })}
-                onRecordCallOutcome={handleRecordCallOutcome}
-                onSendPaymentLink={handleSendPaymentLink}
-                onViewInvoice={handleViewInvoice}
-                teamLeaders={teamLeaders}
-                role="MANAGER"
-                loadLeads={refreshLeads}
-                loading={leadsLoading}
-              />
+
+            <div className="premium-card overflow-hidden shadow-lg border-0">
+              <div className="card-header bg-transparent p-4 border-0 border-bottom border-white border-opacity-5 d-flex justify-content-between align-items-center">
+                <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest small">Squad Lead pool</h5>
+                <div className="d-flex align-items-center gap-2">
+                  <div className="position-relative">
+                    <Search size={14} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" />
+                    <input
+                      placeholder="Search squad leads..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="form-control bg-surface border-white border-opacity-10 py-2 ps-5 rounded-pill"
+                      style={{ fontSize: '11px', width: '200px' }}
+                    />
+                  </div>
+                  <button className="ui-btn ui-btn-primary btn-sm px-4 rounded-pill" onClick={() => setIsIngestionModalOpen(true)}>Add Lead</button>
+                </div>
+              </div>
+              <div className="card-body p-0">
+                <LeadTable
+                  leads={filteredLeads}
+                  onUpdateLead={(id, data) => updateLead({ id, data })}
+                  handleAssignLead={(leadId, targetId) => assignLead({ leadId, targetId: targetId || 0 })}
+                  onRecordCallOutcome={(leadId, data) => recordCallOutcome({ leadId, data })}
+                  onViewInvoice={handleViewInvoice}
+                  onEdit={(lead) => navigate(`/leads/${lead.id}/edit`)}
+                  loading={leadsLoading}
+                  teamLeaders={teamLeaders}
+                  role="MANAGER"
+                />
+              </div>
             </div>
           </div>
         )}
-        {activeTab === 'attendance' && <AttendanceDashboard filters={filterState} role="MANAGER" />}
-        {activeTab === 'users' && <TeamManagement teamLeaders={teamLeaders} roles={roles} permissions={permissions} handleCreateUser={handleCreateUser} handleDeleteUser={handleDeleteUser} handleEditUser={setEditingUser} handleAssignSupervisor={handleAssignSupervisor} setActiveTab={setActiveTab} />}
-        {activeTab === 'hierarchy' && <TeamTree data={teamTree} />}
-        {activeTab === 'tasks' && (
-          <TaskBoard 
-            leads={filteredLeadsList} 
-            theme={theme} 
-            onUpdateStatus={refreshLeads} 
-            loadLeads={refreshLeads} 
-            userId={filterState.userId} 
-            teamId={filterState.teamId}
-            managerId={user?.id}
-            startDate={filterState.from} 
-            endDate={filterState.to} 
-            initialFilter={taskFilter}
-          />
-        )}
         {activeTab === 'payments' && <PaymentHistory role="MANAGER" managerId={filterState.userId ? null : user?.id} userId={filterState.userId || null} teamId={filterState.teamId || null} from={filterState.from} to={filterState.to} hideHeader={true} />}
         {activeTab === 'calls' && <CallLogDashboard userId={filterState.userId} filters={debouncedFilters} hideHeader={true} />}
-        {activeTab === 'reports' && <CallAnalyticsGrid filters={debouncedFilters} hideHeader={true} />}
+        {activeTab === 'reports' && (
+          <div className="d-flex flex-column gap-4 animate-fade-in">
+            <div className="row g-4">
+              <div className="col-12 col-xl-8">
+                <Card title="Revenue & Pipeline Trend">
+                  <div className="py-3" style={{ height: '360px' }}>
+                    <React.Suspense fallback={<ChartSkeleton />}>
+                      <RevenueTrendChart data={trend} theme={theme} />
+                    </React.Suspense>
+                  </div>
+                </Card>
+              </div>
+              <div className="col-12 col-xl-4">
+                <Card title="Pipeline Status Map">
+                  <div className="py-2" style={{ height: '360px' }}>
+                    <React.Suspense fallback={<ChartSkeleton />}>
+                      <LeadStatusPieChart distribution={statusDistribution} leads={filteredLeadsList} isDarkMode={isDarkMode} />
+                    </React.Suspense>
+                  </div>
+                </Card>
+              </div>
+            </div>
+            <CallAnalyticsGrid filters={debouncedFilters} hideHeader={true} />
+          </div>
+        )}
+        
+        {/* Modals moved inside the main wrapping div */}
+        <LeadModal isOpen={isIngestionModalOpen} onClose={() => setIsIngestionModalOpen(false)} onAddLead={handleAddLead} onSuccess={handleSync} associates={teamLeaders} />
+        <InvoiceModal isOpen={!!selectedInvoice} onClose={() => setSelectedInvoice(null)} invoiceData={selectedInvoice} />
       </div>
-      <LeadModal isOpen={isIngestionModalOpen} onClose={() => setIsIngestionModalOpen(false)} onAddLead={handleAddLead} onSuccess={handleSync} associates={teamLeaders} />
-      <InvoiceModal isOpen={!!selectedInvoice} onClose={() => setSelectedInvoice(null)} invoiceData={selectedInvoice} />
     </DashboardLayout>
   );
 };

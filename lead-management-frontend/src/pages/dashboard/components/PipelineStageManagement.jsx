@@ -204,7 +204,9 @@ const PipelineStageManagement = () => {
                             <tr className={isDarkMode ? 'border-bottom border-white border-opacity-5' : 'border-bottom'}>
                                 <th className="ps-4 text-muted small fw-black text-uppercase tracking-widest py-4" style={{ fontSize: '9px', width: '80px' }}># ID</th>
                                 <th className="text-muted small fw-black text-uppercase tracking-widest py-4" style={{ fontSize: '9px' }}>Status Lead</th>
-
+                                <th className="text-muted small fw-black text-uppercase tracking-widest py-4 text-center" style={{ fontSize: '9px' }}>Note Req.</th>
+                                <th className="text-muted small fw-black text-uppercase tracking-widest py-4 text-center" style={{ fontSize: '9px' }}>Date Req.</th>
+                                <th className="text-muted small fw-black text-uppercase tracking-widest py-4 text-center" style={{ fontSize: '9px' }}>Task</th>
                                 <th className="pe-4 text-end text-muted small fw-black text-uppercase tracking-widest py-4" style={{ fontSize: '9px', width: '120px' }}>Actions</th>
                             </tr>
                         </thead>
@@ -229,12 +231,27 @@ const PipelineStageManagement = () => {
                                             <div className={`p-2 rounded-3 bg-${stage.color || 'primary'} bg-opacity-10 text-${stage.color || 'primary'}`}>
                                                 <Zap size={14} />
                                             </div>
-                                            <span className="fw-black text-main text-uppercase tracking-wider small">
+                                            <span className="fw-black text-main text-uppercase tracking-tighter" style={{ fontSize: '13px' }}>
                                                 {stage.label}
                                             </span>
                                             {stage.statusValue === 'NEW' && (
                                                 <span className="px-2 py-0.5 rounded-pill bg-success bg-opacity-10 text-success fw-black" style={{ fontSize: '7px' }}>ROOT</span>
                                             )}
+                                        </div>
+                                    </td>
+                                    <td className="text-center">
+                                        <div className={`d-inline-flex p-1 rounded-circle ${stage.requireNote ? 'bg-primary bg-opacity-10 text-primary' : 'bg-surface bg-opacity-20 text-muted opacity-25'}`}>
+                                            <ShieldCheck size={14} />
+                                        </div>
+                                    </td>
+                                    <td className="text-center">
+                                        <div className={`d-inline-flex p-1 rounded-circle ${stage.requireDate ? 'bg-primary bg-opacity-10 text-primary' : 'bg-surface bg-opacity-20 text-muted opacity-25'}`}>
+                                            <Calendar size={14} />
+                                        </div>
+                                    </td>
+                                    <td className="text-center">
+                                        <div className={`d-inline-flex p-1 rounded-circle ${stage.createTask ? 'bg-primary bg-opacity-10 text-primary' : 'bg-surface bg-opacity-20 text-muted opacity-25'}`}>
+                                            <CheckSquare size={14} />
                                         </div>
                                     </td>
 

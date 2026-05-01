@@ -96,4 +96,9 @@ public class LeadController {
         return ResponseEntity.ok(leadPaymentService.getStudentFeeStructure(id));
     }
 
+    @GetMapping("/{id}/history")
+    @PreAuthorize("hasAnyAuthority('VIEW_LEADS', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER', 'ROLE_ASSOCIATE', 'ADMIN', 'MANAGER', 'TEAM_LEADER', 'ASSOCIATE')")
+    public ResponseEntity<List<com.lms.www.leadmanagement.dto.LeadAuditLogDTO>> getLeadHistory(@PathVariable Long id) {
+        return ResponseEntity.ok(leadService.getLeadHistory(id));
+    }
 }

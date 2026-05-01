@@ -31,7 +31,11 @@ public class PipelineStageController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<com.lms.www.leadmanagement.dto.ApiResponse<?>> createStage(@RequestBody PipelineStage stage) {
-        if (pipelineStageRepository.existsByStatusValue(stage.getStatusValue())) {
+        // Standardize status value
+        String standardizedStatus = com.lms.www.leadmanagement.entity.LeadStatus.fromString(stage.getStatusValue()).name();
+        stage.setStatusValue(standardizedStatus);
+
+        if (pipelineStageRepository.existsByStatusValue(standardizedStatus)) {
             return ResponseEntity.badRequest().body(com.lms.www.leadmanagement.dto.ApiResponse.error("Status value already exists"));
         }
         return ResponseEntity.ok(com.lms.www.leadmanagement.dto.ApiResponse.success(pipelineStageRepository.save(stage)));
@@ -43,6 +47,10 @@ public class PipelineStageController {
         PipelineStage stage = pipelineStageRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Stage not found"));
         
+        // Standardize status value
+        String standardizedStatus = com.lms.www.leadmanagement.entity.LeadStatus.fromString(stageDetails.getStatusValue()).name();
+        stage.setStatusValue(standardizedStatus);
+
         stage.setLabel(stageDetails.getLabel());
         stage.setColor(stageDetails.getColor());
         stage.setAnalyticBucket(stageDetails.getAnalyticBucket());

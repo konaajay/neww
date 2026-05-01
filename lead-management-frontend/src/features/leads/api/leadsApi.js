@@ -51,7 +51,7 @@ const leadsApi = {
     else if (role === 'MANAGER') prefix = '/manager';
     else if (role === 'TEAM_LEADER') prefix = '/tl';
     
-    return safeRequest(api.post(`${prefix}/leads/bulk-assign`, { leadIds, userId }));
+    return safeRequest(api.post(`${prefix}/leads/bulk-assign`, { leadIds, tlId: userId }));
   },
 
   recordCallOutcome: (leadId, data) => safeRequest(api.post(`/leads/${leadId}/record-outcome`, data)),

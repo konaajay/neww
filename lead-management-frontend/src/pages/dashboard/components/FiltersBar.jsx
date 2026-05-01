@@ -7,7 +7,7 @@ const FiltersBar = ({
   filters,
   onChange,
   onSync,
-  title = "COMMAND CENTER",
+  title = "FILTERS",
   role = "",
   currentUserId,
   hideUserFilter = false
@@ -55,7 +55,7 @@ const FiltersBar = ({
       if (!list) return;
       const arr = Array.isArray(list) ? list : [list];
       arr.forEach(n => {
-        if (isRole(n.role, targetRole)) results.push(n);
+        if (isRole(n.role, targetRole) && n.active !== false) results.push(n);
         if (n.subordinates) collect(n.subordinates);
       });
     };
@@ -71,21 +71,21 @@ const FiltersBar = ({
 
   const tls = useMemo(() => {
     if (role === 'MANAGER') {
-      return (teamLeaders || []).filter(u => isRole(u.role, 'TEAM_LEADER') || isRole(u.role, 'MANAGER'));
+      return (teamLeaders || []).filter(u => (isRole(u.role, 'TEAM_LEADER') || isRole(u.role, 'MANAGER')) && u.active !== false);
     }
     if (role === 'ADMIN' && filters.managerId) {
       const mgr = findInTree(teamTree, filters.managerId);
-      return mgr?.subordinates?.filter(u => isRole(u.role, 'TEAM_LEADER')) || [];
+      return mgr?.subordinates?.filter(u => isRole(u.role, 'TEAM_LEADER') && u.active !== false) || [];
     }
     return [];
   }, [role, teamLeaders, teamTree, filters.managerId, findInTree, isRole]);
 
   const associates = useMemo(() => {
-    if (role === 'TEAM_LEADER') return subordinates || [];
+    if (role === 'TEAM_LEADER') return (subordinates || []).filter(u => u.active !== false);
     if ((role === 'ADMIN' || role === 'MANAGER') && filters.teamId) {
       // For Admin/Manager, look inside the selected TL's subordinates
       const tl = findInTree(teamTree || teamLeaders, filters.teamId);
-      return tl?.subordinates?.filter(u => isRole(u.role, 'ASSOCIATE')) || [];
+      return tl?.subordinates?.filter(u => isRole(u.role, 'ASSOCIATE') && u.active !== false) || [];
     }
     return [];
   }, [role, subordinates, teamTree, teamLeaders, filters.teamId, findInTree, isRole]);
@@ -262,7 +262,7 @@ const FiltersBar = ({
             className="ui-btn ui-btn-primary btn-sm px-4 rounded-pill d-flex align-items-center gap-2 shadow-glow"
           >
             <RefreshCcw size={11} />
-            <span className="fw-black text-uppercase tracking-widest" style={{ fontSize: '9px' }}>SYNC</span>
+            <span className="fw-black text-uppercase tracking-widest" style={{ fontSize: '9px' }}>UPDATE</span>
           </button>
         </div>
       </div>
@@ -272,6 +272,11 @@ const FiltersBar = ({
         .filter-select { background: transparent; border: 0; color: var(--text-main); font-weight: 800; font-size: 9px; text-transform: uppercase; outline: none; min-width: 80px; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
+        input[type="date"] {
+            color-scheme: ${isDarkMode ? 'dark' : 'light'};
+            background: transparent;
+        }
+
         /* Ensure picker covers input but remains invisible */
         input[type="date"]::-webkit-calendar-picker-indicator {
           position: absolute;

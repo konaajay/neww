@@ -61,7 +61,7 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         .requestMatchers(org.springframework.web.cors.CorsUtils::isPreFlightRequest).permitAll()
-                        .requestMatchers("/api/auth/login", "/error").permitAll()
+                        .requestMatchers("/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password", "/error").permitAll()
 
                         // Restrict payment endpoints properly
                         .requestMatchers(HttpMethod.POST, "/api/payments/create").authenticated()
@@ -107,6 +107,7 @@ public class WebSecurityConfig {
                 "http://localhost:5173",
                 "http://100.85.146.60:3000",
                 "https://salescrms.netlify.app",
+                "https://hiiiiiiiiiiiiiii.netlify.app",
                 "https://hiiiiiiiiiiiiiiiiii.netlify.app",
                 "https://yourdomain.com"));
 

@@ -141,7 +141,7 @@ const SystemSettings = () => {
                         <form onSubmit={handleSubmitOffice} className="row g-4">
 
                             <div className="col-md-6">
-                                <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block ps-2" style={{ fontSize: '9px' }}>Node Identifier</label>
+                                <label className="text-main small fw-black text-uppercase tracking-widest mb-2 d-block ps-2" style={{ fontSize: '10px' }}>Node Identifier</label>
                                 <input 
                                     className="ui-input py-3 px-4 rounded-4 fw-bold w-100"
                                     placeholder="e.g. Hyderabad Global Hub"
@@ -150,7 +150,7 @@ const SystemSettings = () => {
                                 />
                             </div>
                             <div className="col-md-6">
-                                <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block ps-2" style={{ fontSize: '9px' }}>Latitude Coordination</label>
+                                <label className="text-main small fw-black text-uppercase tracking-widest mb-2 d-block ps-2" style={{ fontSize: '10px' }}>Latitude Coordination</label>
                                 <input 
                                     className="ui-input py-3 px-4 rounded-4 fw-bold w-100"
                                     placeholder="e.g. 17.3850"
@@ -159,7 +159,7 @@ const SystemSettings = () => {
                                 />
                             </div>
                             <div className="col-md-6">
-                                <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block ps-2" style={{ fontSize: '9px' }}>Geofence Radius (Meters)</label>
+                                <label className="text-main small fw-black text-uppercase tracking-widest mb-2 d-block ps-2" style={{ fontSize: '10px' }}>Geofence Radius (Meters)</label>
                                 <input 
                                     className="ui-input py-3 px-4 rounded-4 fw-bold w-100"
                                     value={officeData.radius}
@@ -167,7 +167,7 @@ const SystemSettings = () => {
                                 />
                             </div>
                             <div className="col-md-6">
-                                <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block ps-2" style={{ fontSize: '9px' }}>Longitude Coordination</label>
+                                <label className="text-main small fw-black text-uppercase tracking-widest mb-2 d-block ps-2" style={{ fontSize: '10px' }}>Longitude Coordination</label>
                                 <input 
                                     className="ui-input py-3 px-4 rounded-4 fw-bold w-100"
                                     placeholder="e.g. 78.4867"
@@ -217,11 +217,11 @@ const SystemSettings = () => {
                                     <div className="d-flex flex-column gap-2 border-top border-white border-opacity-5 pt-3">
                                         <div className="d-flex justify-content-between">
                                             <span className="text-muted small fw-black text-uppercase" style={{ fontSize: '8px' }}>Coordinates</span>
-                                            <span className="text-info small fw-bold">{office.latitude}, {office.longitude}</span>
+                                            <span className="text-info small fw-black">{office.latitude}, {office.longitude}</span>
                                         </div>
                                         <div className="d-flex justify-content-between">
                                             <span className="text-muted small fw-black text-uppercase" style={{ fontSize: '8px' }}>Geofence</span>
-                                            <span className="text-primary small fw-bold">{office.radius} Meters</span>
+                                            <span className="text-primary small fw-black">{office.radius} Meters</span>
                                         </div>
                                     </div>
                                 </div>

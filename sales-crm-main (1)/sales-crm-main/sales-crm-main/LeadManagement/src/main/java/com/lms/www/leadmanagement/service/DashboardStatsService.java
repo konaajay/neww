@@ -284,27 +284,23 @@ public class DashboardStatsService {
                          : leadRepository.countByAssignedToIdInAndStatusInAndCreatedAtBetween(userIds, activeStatuses, start.minusMonths(12), end));
 
         CompletableFuture<long[]> attendanceStatsFuture = CompletableFuture.supplyAsync(() -> {
-            long present = 0, halfDay = 0, absent = 0;
-            LocalDate statDate = dayStart.toLocalDate();
+            long present = 0, late = 0, absent = 0;
             
-            List<User> usersToCheck = (isGlobalAdmin && !hasFilter) ? userRepository.findAll() : new ArrayList<>(allowedUsers);
-            
-            for (User u : usersToCheck) {
-                if (u.getJoiningDate() != null && statDate.isBefore(u.getJoiningDate())) {
-                    continue; 
-                }
-                
-                Optional<AttendanceDaily> d = attendanceDailyRepository.findByUserIdAndDate(u.getId(), statDate);
-                if (d.isPresent()) {
-                    String status = d.get().getStatus();
-                    if ("PRESENT".equals(status)) present++;
-                    else if ("HALF_DAY".equals(status)) halfDay++;
-                    else absent++;
-                } else {
-                    absent++;
-                }
+            if (isGlobalAdmin && !hasFilter) {
+                present = attendanceRepository.countPresentUsers(dayStart, dayEnd);
+                late = attendanceRepository.countLateUsers(dayStart, dayEnd);
+            } else {
+                present = attendanceRepository.countPresentUsersIn(userIds, dayStart, dayEnd);
+                late = attendanceRepository.countLateUsersIn(userIds, dayStart, dayEnd);
             }
-            return new long[]{present, halfDay, absent};
+            
+            // Total active users in this scope
+            long totalScopeUsers = ((isGlobalAdmin && !hasFilter) 
+                ? userRepository.countActiveUsersByDate(dayStart.toLocalDate()) 
+                : userIds.size());
+            absent = Math.max(0, totalScopeUsers - present);
+            
+            return new long[]{present, late, absent};
         });
 
         // 2. Revenue Block
@@ -646,5 +642,7 @@ public class DashboardStatsService {
         }
     }
 
-
+    public List<User> determineAllowedUsers(User user, Long a, Long b) {
+        return new ArrayList<>();
+    }
 }

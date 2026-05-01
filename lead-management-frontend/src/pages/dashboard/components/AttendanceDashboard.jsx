@@ -43,11 +43,14 @@ const AttendanceDashboard = ({ filters, role }) => {
 
     const fetchLogs = useCallback(async () => {
         try {
-            if (filters?.userId && (role === 'ADMIN' || role === 'MANAGER')) {
+            // Determine which user to fetch logs for (Associate > TL > Manager)
+            const targetUserId = filters?.userId || filters?.teamId || filters?.managerId;
+
+            if (targetUserId && (role === 'ADMIN' || role === 'MANAGER' || role === 'TEAM_LEADER')) {
                 const res = await attendanceService.getDailySummaries({
                     startDate: filters.from,
                     endDate: filters.to,
-                    userId: filters.userId
+                    userId: targetUserId
                 });
                 setLogs(res.data || res || []);
             } else {
@@ -68,12 +71,18 @@ const AttendanceDashboard = ({ filters, role }) => {
 
     const handleUpdateNote = async () => {
         try {
-            await adminService.updateAttendanceNote(noteModal.userId, noteModal.date, noteValue);
-            toast.success("Note protocol updated");
+            // Robust local date formatting (YYYY-MM-DD)
+            let formattedDate = noteModal.date;
+            if (typeof formattedDate !== 'string' || !formattedDate.includes('-')) {
+                const d = new Date(noteModal.date);
+                formattedDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            }
+            
+            toast.success("Note Saved");
             setNoteModal(null);
             fetchLogs();
         } catch (err) {
-            toast.error("Failed to synchronize note");
+            toast.error("Could not save note");
         }
     };
 
@@ -91,11 +100,11 @@ const AttendanceDashboard = ({ filters, role }) => {
                             deviceId: "WEB_OS_CLIENT"
                         };
                         await attendanceService.clockIn(data);
-                        toast.success("Shift synchronized successfully");
+                        toast.success("Punched in");
                         fetchStatus();
                         fetchLogs();
                     } catch (err) {
-                        toast.error(err.response?.data?.message || "Clock-in protocol failed");
+                        toast.error(err.response?.data?.message || "Punch in failed");
                     }
                 },
                 (error) => {
@@ -111,14 +120,14 @@ const AttendanceDashboard = ({ filters, role }) => {
     };
 
     const handleClockOut = async () => {
-        if (!window.confirm("PROTOCOL WARNING: Terminate current shift?")) return;
+        if (!window.confirm("Do you want to punch out?")) return;
         try {
             await attendanceService.clockOut();
-            toast.success("Shift terminated and synchronized");
+            toast.success("Punched out");
             fetchStatus();
             fetchLogs();
         } catch (err) {
-            toast.error("Clock-out protocol failed");
+            toast.error("Punch out failed");
         }
     };
 
@@ -126,14 +135,14 @@ const AttendanceDashboard = ({ filters, role }) => {
         try {
             if (status?.status?.includes('BREAK')) {
                 await attendanceService.endBreak();
-                toast.success("Break terminated. Resuming operations.");
+                toast.success("Break ended");
             } else {
                 await attendanceService.startBreak(type);
-                toast.info(`${type} break protocol initiated`);
+                toast.info(`Started ${type} break`);
             }
             fetchStatus();
         } catch (err) {
-            toast.error("Break protocol failure");
+            toast.error("Break failed");
         }
     };
 
@@ -157,8 +166,7 @@ const AttendanceDashboard = ({ filters, role }) => {
     }
 
     const summaryStats = {
-        present: logs.filter(l => l.status === 'PRESENT' || l.status === 'WORKING').length,
-        halfDay: logs.filter(l => l.status === 'HALF_DAY').length,
+        present: logs.filter(l => l.status === 'PRESENT' || l.status === 'WORKING' || l.status === 'PUNCHED_OUT').length,
         absent: logs.filter(l => l.status === 'ABSENT').length,
         late: logs.filter(l => l.lateMinutes > 0).length
     };
@@ -169,11 +177,10 @@ const AttendanceDashboard = ({ filters, role }) => {
             <div className="row g-4">
                 {[
                     { label: 'PRESENT', value: summaryStats.present, icon: CheckCircle2, color: 'success' },
-                    { label: 'HALF DAY', value: summaryStats.halfDay, icon: Clock, color: 'warning' },
                     { label: 'ABSENT', value: summaryStats.absent, icon: X, color: 'danger' },
                     { label: 'LATE', value: summaryStats.late, icon: AlertCircle, color: 'info' }
                 ].map((s, i) => (
-                    <div key={i} className="col-md-3">
+                    <div key={i} className="col-md-4">
                         <div className={`premium-card p-4 d-flex align-items-center gap-4 transition-smooth ${isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-white shadow-sm'}`} style={{ borderRadius: '24px' }}>
                             <div className={`p-3 bg-${s.color} bg-opacity-10 text-${s.color} rounded-4 shadow-glow`} style={{ boxShadow: `0 0 20px -5px var(--bs-${s.color})` }}>
                                 <s.icon size={24} />
@@ -196,12 +203,12 @@ const AttendanceDashboard = ({ filters, role }) => {
                             <History size={20} />
                         </div>
                         <div>
-                            <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest">Mission Logs</h5>
-                            <p className="text-muted small mb-0 opacity-50 fw-bold">30-DAY OPERATIONAL HISTORY</p>
+                            <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest">Attendance Logs</h5>
+                            <p className="text-muted small mb-0 opacity-50 fw-bold">PAST 30 DAYS</p>
                         </div>
                     </div>
                     <div className="d-flex gap-2">
-                        <button className="ui-btn ui-btn-outline rounded-pill px-4 btn-sm" onClick={fetchLogs}>SYNC LOGS</button>
+                        <button className="ui-btn ui-btn-outline rounded-pill px-4 btn-sm" onClick={fetchLogs}>UPDATE</button>
                     </div>
                 </div>
 
@@ -272,8 +279,9 @@ const AttendanceDashboard = ({ filters, role }) => {
                                     <td className="pe-5 py-4 text-end">
                                         <div className="d-flex align-items-center justify-content-end gap-2">
                                             {log.note && (
-                                                <div className="badge bg-primary bg-opacity-10 text-primary fw-bold p-2 rounded-3 border border-primary border-opacity-10" style={{ fontSize: '9px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                    {log.note}
+                                                <div className="d-flex align-items-center gap-2 px-3 py-2 bg-primary bg-opacity-10 text-primary rounded-pill border border-primary border-opacity-10 shadow-sm" style={{ fontSize: '10px', maxWidth: '180px' }}>
+                                                    <MessageSquare size={10} className="flex-shrink-0" />
+                                                    <span className="fw-black text-uppercase tracking-tighter text-truncate">{log.note}</span>
                                                 </div>
                                             )}
                                             {(role === 'ADMIN' || role === 'MANAGER') && (
@@ -297,7 +305,7 @@ const AttendanceDashboard = ({ filters, role }) => {
                             {logs.length === 0 && (
                                 <tr>
                                     <td colSpan={(role === 'ADMIN' || role === 'MANAGER') ? 10 : 9} className="text-center py-5 opacity-30 fw-black text-uppercase tracking-widest small">
-                                        NO MISSION LOGS DETECTED IN LOCAL REGISTRY
+                                        NO LOGS FOUND
                                     </td>
                                 </tr>
                             )}
@@ -311,15 +319,20 @@ const AttendanceDashboard = ({ filters, role }) => {
                 <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 9999, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}>
                     <div className={`premium-card p-5 border-0 shadow-lg ${isDarkMode ? 'bg-surface' : 'bg-white'}`} style={{ borderRadius: '32px', width: '400px' }}>
                         <div className="d-flex justify-content-between align-items-center mb-4">
-                            <h5 className="fw-black text-main text-uppercase mb-0 tracking-widest">Add Note/Permission</h5>
+                            <h5 className="fw-black text-main text-uppercase mb-0 tracking-widest">
+                                {noteModal.note ? 'Edit Note/Permission' : 'Add Note/Permission'}
+                            </h5>
                             <button className="btn btn-link text-muted p-0 border-0" onClick={() => setNoteModal(null)}>
                                 <X size={20} />
                             </button>
                         </div>
                         <div className="mb-4">
-                            <p className="text-muted small fw-bold mb-2">DATE: {new Date(noteModal.date).toLocaleDateString()}</p>
+                            <div className="d-flex justify-content-between align-items-center mb-2">
+                                <p className="text-muted small fw-bold mb-0">DATE: {new Date(noteModal.date).toLocaleDateString()}</p>
+                                {noteModal.note && <span className="badge bg-warning bg-opacity-10 text-warning fw-black" style={{ fontSize: '8px' }}>EDIT NOTE</span>}
+                            </div>
                             <textarea 
-                                className={`form-control bg-opacity-10 border-0 rounded-4 p-3 text-main ${isDarkMode ? 'bg-white' : 'bg-dark'}`}
+                                className={`form-control bg-opacity-10 border-0 rounded-4 p-3 text-main ${isDarkMode ? 'bg-dark' : 'bg-light'}`}
                                 rows="4"
                                 value={noteValue}
                                 onChange={(e) => setNoteValue(e.target.value)}
@@ -331,7 +344,7 @@ const AttendanceDashboard = ({ filters, role }) => {
                             onClick={handleUpdateNote}
                             className="w-100 py-3 rounded-pill bg-primary text-white border-0 shadow-glow fw-black d-flex align-items-center justify-content-center gap-2 transition-all hover-scale"
                         >
-                            <Save size={18} /> SAVE PROTOCOL
+                            <Save size={18} /> SAVE
                         </button>
                     </div>
                 </div>

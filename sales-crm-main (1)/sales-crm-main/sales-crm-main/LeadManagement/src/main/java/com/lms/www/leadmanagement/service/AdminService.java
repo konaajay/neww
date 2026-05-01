@@ -93,6 +93,7 @@ public class AdminService {
         User user = userRepository.findById(id).orElseThrow();
         user.setActive(false);
         userRepository.save(user);
+        leadRepository.unassignNonFinalizedLeads(id);
     }
 
     @Transactional

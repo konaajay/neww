@@ -25,7 +25,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
         if (!user.isActive()) {
             System.out.println("[DEBUG-AUTH] User exists but is disabled (active=false): " + email);
-            throw new org.springframework.security.authentication.DisabledException("Account disabled");
+            throw new org.springframework.security.authentication.DisabledException("Account inactive");
         }
         
         System.out.println("[DEBUG-AUTH] User found and active: " + email + ", proceeding to password check.");

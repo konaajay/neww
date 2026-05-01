@@ -29,7 +29,6 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
       return [
         { id: 'my-stats', label: 'My HOME', icon: ShieldHalf },
         { id: 'overview', label: 'Team Dashboard', icon: LayoutDashboard },
-        { id: 'users', label: 'Team Members', icon: Users },
         { id: 'attendance', label: 'Attendance', icon: FileText },
         { id: 'leads', label: 'Team Leads', icon: Target },
         { id: 'payments', label: 'Team Revenue', icon: IndianRupee },

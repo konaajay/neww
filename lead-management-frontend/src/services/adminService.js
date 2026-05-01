@@ -46,7 +46,7 @@ const adminService = {
   
   fetchGlobalTargets: () => safeRequest(api.get('/admin/attendance/global-targets')),
   updateGlobalTargets: (data) => safeRequest(api.post('/admin/attendance/global-targets', data)),
-  updateAttendanceNote: (userId, date, note) => safeRequest(api.post('/admin/attendance/daily-note', null, { params: { userId, date, note } })),
+  updateAttendanceNote: (userId, date, note) => safeRequest(api.post('/admin/attendance/daily-note', { userId, date, note })),
 
   // Pipeline Configuration
   fetchPipelineStages: () => safeRequest(api.get('/admin/pipeline-stages')),

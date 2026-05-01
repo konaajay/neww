@@ -1,8 +1,9 @@
-import { Search, Users, ShieldHalf, Zap, FileText, Edit, CreditCard, Trash2, Wallet, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Users, ShieldHalf, Zap, FileText, Edit, CreditCard, Trash2, Wallet, ChevronLeft, ChevronRight, History } from 'lucide-react';
 import { Table } from './common/Components';
 import LeadEditModal from './LeadEditModal';
 import CallOutcomeModal from './CallOutcomeModal';
 import GeneratePaymentLinkModal from './GeneratePaymentLinkModal';
+import LeadHistoryModal from './LeadHistoryModal';
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
@@ -32,6 +33,7 @@ const LeadTable = ({
   const { isDarkMode } = useTheme();
   const [selectedEditLead, setSelectedEditLead] = useState(null);
   const [selectedOutcomeLead, setSelectedOutcomeLead] = useState(null);
+  const [selectedHistoryLead, setSelectedHistoryLead] = useState(null);
   const [selectedPaymentLead, setSelectedPaymentLead] = useState(null);
   const navigate = useNavigate();
 
@@ -76,7 +78,7 @@ const LeadTable = ({
   if (loading) return (
     <div className="p-5 text-center">
       <div className="spinner-border text-primary opacity-50"></div>
-      <p className="mt-3 text-muted fw-black small text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Synchronizing Registry...</p>
+      <p className="mt-3 text-muted fw-black small text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Loading Leads...</p>
     </div>
   );
 
@@ -90,26 +92,31 @@ const LeadTable = ({
                 <ShieldHalf size={16} />
               </div>
               <div className="d-flex flex-column">
-                <span className="text-main fw-black small text-uppercase tracking-widest">{selectedLeadIds.length} Leads Intercepted</span>
-                <small className="text-primary fw-bold opacity-75" style={{ fontSize: '9px' }}>AWAITING BULK PROPAGATION COMMAND</small>
+                <span className="text-main fw-black small text-uppercase tracking-widest">{selectedLeadIds.length} Leads Selected</span>
+                <small className="text-primary fw-bold opacity-75" style={{ fontSize: '9px' }}>CHOOSE WHERE TO MOVE THEM</small>
               </div>
             </div>
             <div className="d-flex gap-3 align-items-center">
               <select
-                className="form-select bg-dark bg-opacity-60 border border-white border-opacity-20 text-main py-2 px-4 rounded-pill shadow-none"
-                style={{ width: '240px', fontSize: '11px', appearance: 'none' }}
+                className="form-select bg-surface bg-opacity-20 border border-white border-opacity-10 text-main py-2 px-4 rounded-pill shadow-none"
+                style={{ width: '240px', fontSize: '11px', appearance: 'none', background: 'rgba(255,255,255,0.05)' }}
                 value={bulkAssignTlId}
                 onChange={(e) => setBulkAssignTlId(e.target.value)}
               >
-                <option value="">REDIRECT TO COMMANDER...</option>
-                {teamLeaders.map(u => <option key={u.id} value={u.id}>{u.name.toUpperCase()} — {u.role}</option>)}
+                <option value="">SELECT PERSON...</option>
+                {teamLeaders.filter(u => u.active).map(u => <option key={u.id} value={u.id}>{u.name.toUpperCase()} — {u.role}</option>)}
               </select>
               <button
-                onClick={() => handleBulkAssign(bulkAssignTlId, teamLeaders)}
+                onClick={() => {
+                  if (!bulkAssignTlId) {
+                    return alert('Please select a target member first');
+                  }
+                  handleBulkAssign(bulkAssignTlId);
+                }}
                 className="ui-btn ui-btn-primary px-5 py-2 rounded-pill shadow-glow fw-black tracking-widest"
                 style={{ fontSize: '10px' }}
               >
-                EXECUTE TRANSFER
+                MOVE LEADS
               </button>
             </div>
           </div>
@@ -121,16 +128,34 @@ const LeadTable = ({
           headers={[
             <div className="d-flex align-items-center gap-3" style={{ width: '60px' }}>
               {role !== 'ASSOCIATE' && (
-                <input className="form-check-input" type="checkbox" onChange={toggleSelectAll} style={{ width: '14px', height: '14px' }} />
+                <input 
+                  className="form-check-input mt-0 cursor-pointer" 
+                  type="checkbox" 
+                  checked={currentItems.filter(l => !l.assignedToId).length > 0 && currentItems.filter(l => !l.assignedToId).every(l => selectedLeadIds.includes(l.id))}
+                  onChange={(e) => {
+                    const unassignedItems = currentItems.filter(l => !l.assignedToId);
+                    if (e.target.checked) {
+                      unassignedItems.forEach(l => {
+                        if (!selectedLeadIds.includes(l.id)) toggleSelection(l.id);
+                      });
+                    } else {
+                      unassignedItems.forEach(l => {
+                        if (selectedLeadIds.includes(l.id)) toggleSelection(l.id);
+                      });
+                    }
+                  }}
+                  style={{ width: '14px', height: '14px' }} 
+                />
               )}
-              <span>SL NO</span>
+              <span>S/N</span>
             </div>,
             <div style={{ width: '180px' }}>NAME</div>,
             <div style={{ width: '220px' }}>EMAIL</div>,
             <div style={{ width: '140px' }}>PHONE</div>,
-            ...(role !== 'ASSOCIATE' ? [<div style={{ width: '150px' }}>ASSIGNED</div>] : []),
+            <div style={{ width: '130px' }}>SOURCE</div>,
+            ...(role !== 'ASSOCIATE' ? [<div style={{ width: '150px' }}>ASSIGNED TO</div>] : []),
             <div style={{ width: '150px' }}>STATUS</div>,
-            'ACTIONS'
+            'MANAGE'
           ]}
           data={currentItems}
           renderRow={(lead, index) => (
@@ -138,7 +163,9 @@ const LeadTable = ({
               <td className="ps-4">
                 <div className="d-flex align-items-center gap-3">
                   {role !== 'ASSOCIATE' && !lead.assignedToId ? (
-                    <input className="form-check-input mt-0" type="checkbox" checked={selectedLeadIds.includes(lead.id)} onChange={() => toggleSelection(lead.id)} style={{ width: '14px', height: '14px' }} />
+                    <input className="form-check-input mt-0 cursor-pointer" type="checkbox" checked={selectedLeadIds.includes(lead.id)} onChange={() => toggleSelection(lead.id)} style={{ width: '14px', height: '14px' }} />
+                  ) : role !== 'ASSOCIATE' ? (
+                    <div style={{ width: '14px' }}></div> // Spacer for assigned leads
                   ) : null}
                   <span className="text-muted fw-black small" style={{ fontSize: '10px' }}>
                     {(currentPage - 1) * itemsPerPage + index + 1}
@@ -148,6 +175,14 @@ const LeadTable = ({
               <td><span className="fw-black text-main small text-uppercase tracking-wider">{lead.name}</span></td>
               <td><span className="text-info small fw-black opacity-75" style={{ fontSize: '10px' }}>{lead.email?.toLowerCase() || '—'}</span></td>
               <td><span className="text-primary small fw-black opacity-75" style={{ fontSize: '10px' }}>{lead.mobile}</span></td>
+              <td>
+                <div className="d-flex flex-column">
+                  <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '9px', opacity: 0.6 }}>
+                    {lead.createdByName ? (lead.createdByName.toUpperCase().includes('SYSTEM') ? 'ADMIN' : lead.createdByName.split(' ')[0]) : 'ADMIN'}
+                  </span>
+                  <small className="text-main fw-black opacity-40" style={{ fontSize: '7px' }}>ASSIGNED BY</small>
+                </div>
+              </td>
               {role !== 'ASSOCIATE' && (
                 <td>
                   {(() => {
@@ -156,29 +191,28 @@ const LeadTable = ({
                       // Lead is assigned to an associate/non-TL — show their name, not "UNASSIGNED"
                       return (
                         <select
-                          className="form-select bg-surface bg-opacity-20 border-0 text-main py-1 px-2 fw-black text-uppercase"
+                          className={`form-select bg-surface bg-opacity-20 border-0 ${!lead.assignedToId ? 'text-danger fw-black' : 'text-main'} py-1 px-2 fw-black text-uppercase`}
                           style={{ width: '130px', fontSize: '10px', borderRadius: '8px' }}
                           onChange={(e) => handleAssignLead && handleAssignLead(lead.id, e.target.value, teamLeaders)}
                           value={lead.assignedToId}
                         >
+                          <option value="" className="text-danger">UNASSIGNED</option>
                           <option value={lead.assignedToId}>
                             {lead.assignedToName ? lead.assignedToName.split(' ')[0].toUpperCase() : 'ASSOCIATE'} ✓
                           </option>
-                          {teamLeaders.map(u => <option key={u.id} value={u.id}>{u.name.toUpperCase()}</option>)}
+                          {teamLeaders.filter(u => u.active || u.id === lead.assignedToId).map(u => <option key={u.id} value={u.id}>{u.name.toUpperCase()}</option>)}
                         </select>
                       );
                     }
                     return (
                       <select
-                        className="form-select bg-surface bg-opacity-20 border-0 text-main py-1 px-2 fw-black text-uppercase"
+                        className={`form-select bg-surface bg-opacity-20 border-0 ${!lead.assignedToId ? 'text-danger fw-black' : 'text-main'} py-1 px-2 fw-black text-uppercase`}
                         style={{ width: '130px', fontSize: '10px', borderRadius: '8px' }}
                         onChange={(e) => handleAssignLead && handleAssignLead(lead.id, e.target.value, teamLeaders)}
                         value={lead.assignedToId || ''}
                       >
-                        <option value="">
-                          {lead.assignedToId ? 'UNASSIGNED' : (lead.createdByName ? `UNASSIGNED` : 'UNASSIGNED')}
-                        </option>
-                        {teamLeaders.map(u => <option key={u.id} value={u.id}>{u.name.toUpperCase()} {u.id === lead.assignedToId ? '✓' : ''}</option>)}
+                        <option value="" className="text-danger">UNASSIGNED</option>
+                        {teamLeaders.filter(u => u.active || u.id === lead.assignedToId).map(u => <option key={u.id} value={u.id}>{u.name.toUpperCase()} {u.id === lead.assignedToId ? '✓' : ''}</option>)}
                       </select>
                     );
                   })()}
@@ -212,6 +246,9 @@ const LeadTable = ({
                       <button className="p-2 border-0 bg-transparent text-primary hover-scale" onClick={() => setSelectedOutcomeLead(lead)}>
                         <Zap size={15} />
                       </button>
+                      <button className="p-2 border-0 bg-transparent text-info hover-scale" onClick={() => setSelectedHistoryLead(lead)}>
+                        <History size={15} />
+                      </button>
                       <button className="p-2 border-0 bg-transparent text-warning hover-scale" onClick={() => onEdit ? onEdit(lead) : setSelectedEditLead(lead)}>
                         <Edit size={15} />
                       </button>
@@ -224,11 +261,6 @@ const LeadTable = ({
                             <Wallet size={15} />
                           </button>
                         </>
-                      )}
-                      {role !== 'ASSOCIATE' && (
-                        <button className="p-2 border-0 bg-transparent text-danger hover-scale" onClick={() => onDeleteLead && onDeleteLead(lead.id)}>
-                          <Trash2 size={15} />
-                        </button>
                       )}
                     </>
                   )}
@@ -266,6 +298,15 @@ const LeadTable = ({
           else if (onUpdateStatus) await onUpdateStatus(selectedOutcomeLead.id, data.status, data);
           setSelectedOutcomeLead(null);
         }} 
+      />
+      <LeadHistoryModal 
+        isOpen={!!selectedHistoryLead} 
+        onClose={() => setSelectedHistoryLead(null)} 
+        lead={selectedHistoryLead} 
+        onEdit={(lead) => {
+          if (onEdit) onEdit(lead);
+          else setSelectedEditLead(lead);
+        }}
       />
     </div>
   );

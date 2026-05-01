@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { ShieldCheck, UserCog, Users, User, Sparkles, Eye, EyeOff } from 'lucide-react';
+import { ShieldCheck, UserCog, Users, User, Sparkles, Eye, EyeOff, Key } from 'lucide-react';
+import ForgotPasswordModal from '../components/layout/ForgotPasswordModal';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [show, setShow] = useState(false);
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -29,11 +31,9 @@ const LoginPage = () => {
       else navigate('/associate');
     } catch (err) {
       console.error('Login error:', err);
-      if (err?.response?.status === 500) {
-        toast.error('Server Error (500): Database connection failed. Please check backend Aiven config/IP allowlist.');
-      } else {
-        toast.error(err?.response?.data?.message || 'Login failed - Check credentials');
-      }
+      // AuthContext throws the message string directly
+      const msg = typeof err === 'string' ? err : (err?.response?.data?.message || 'Login failed - Check credentials');
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -119,6 +119,16 @@ const LoginPage = () => {
                   {show ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              <div className="text-end mt-2">
+                <button 
+                  type="button" 
+                  onClick={() => setIsForgotModalOpen(true)}
+                  className="btn btn-link p-0 text-primary fw-bold text-decoration-none"
+                  style={{ fontSize: '11px' }}
+                >
+                  Forgot password?
+                </button>
+              </div>
             </div>
 
             <button
@@ -135,6 +145,7 @@ const LoginPage = () => {
 
         </div>
       </div>
+      <ForgotPasswordModal isOpen={isForgotModalOpen} onClose={() => setIsForgotModalOpen(false)} />
     </div>
   );
 };

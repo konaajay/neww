@@ -329,6 +329,11 @@ const ManagerDashboardFilterHub = ({
                     disabled={!effectiveMgr}
                   >
                     <option value="" className={isDarkMode ? 'bg-dark text-white' : 'bg-white text-dark'}>{effectiveMgr ? 'ALL ASSOCIATES' : '---'}</option>
+                    {effectiveMgr && (
+                      <option value="-1" className={isDarkMode ? 'bg-dark text-danger fw-black' : 'bg-white text-danger fw-black'}>
+                        ⚠️ UNASSIGNED LEADS
+                      </option>
+                    )}
                     {associates.map(member => (
                       <option key={member.id} value={member.id} className={isDarkMode ? 'bg-dark text-white' : 'bg-white text-dark'}>{member.name}</option>
                     ))}

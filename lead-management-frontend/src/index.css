@@ -299,11 +299,11 @@ h6 {
 }
 
 /* Inputs Restored */
-.ui-input {
+.ui-input, .form-control {
   background: var(--bg-input);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  color: var(--text-main);
+  border-radius: var(--radius-md) !important;
+  color: var(--text-main) !important;
   padding: 10px 14px;
   width: 100%;
   font-weight: 500;
@@ -312,10 +312,18 @@ h6 {
   transition: all 0.2s ease;
 }
 
-.ui-input:focus {
-  border-color: var(--primary);
-  background: var(--bg-card);
-  box-shadow: 0 0 0 4px var(--primary-glow);
+.ui-input:focus, .form-control:focus {
+  border-color: var(--primary) !important;
+  background: var(--bg-card) !important;
+  box-shadow: 0 0 0 4px var(--primary-glow) !important;
+}
+
+input[type="date"] {
+    color-scheme: dark;
+}
+
+[data-bs-theme="light"] input[type="date"] {
+    color-scheme: light;
 }
 
 /* Status Badges (Vibrant like Old UI) */

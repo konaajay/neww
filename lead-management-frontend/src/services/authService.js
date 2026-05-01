@@ -6,7 +6,9 @@ const authService = {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
   },
-  getProfile: () => api.get('/auth/me')
+  getProfile: () => api.get('/auth/me'),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (email, otp, newPassword) => api.post('/auth/reset-password', { email, otp, newPassword })
 };
 
 export default authService;

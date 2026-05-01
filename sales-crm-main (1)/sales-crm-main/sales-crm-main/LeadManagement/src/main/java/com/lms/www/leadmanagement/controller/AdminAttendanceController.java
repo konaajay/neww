@@ -23,7 +23,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin/attendance")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'TEAM_LEADER')")
+@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'TEAM_LEADER', 'ASSOCIATE')")
 public class AdminAttendanceController {
 
     private final AttendanceService attendanceService;
@@ -134,10 +134,13 @@ public class AdminAttendanceController {
 
     @PostMapping("/daily-note")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    public ResponseEntity<ApiResponse<Void>> updateDailyNote(
-            @RequestParam Long userId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam String note) {
+    public ResponseEntity<ApiResponse<Void>> updateDailyNote(@RequestBody java.util.Map<String, Object> body) {
+        if (body == null || body.get("userId") == null || body.get("date") == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        Long userId = Long.valueOf(body.get("userId").toString());
+        LocalDate date = LocalDate.parse(body.get("date").toString());
+        String note = body.get("note") != null ? body.get("note").toString() : "";
         attendanceService.updateDailyNote(userId, date, note);
         return ResponseEntity.ok(ApiResponse.success(null));
     }

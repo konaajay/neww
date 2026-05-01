@@ -92,13 +92,16 @@ const CallLogDashboard = ({ userId: externalUserId, hideHeader = false, filters:
 
             const [logsRes, usersRes, statsRes] = await Promise.all([logsCall, usersCall, statsCall]);
 
-            const logsPayload = logsRes.data;
-            setLogs(Array.isArray(logsPayload) ? logsPayload : (logsPayload?.data || []));
+            // Resilient parsing: Check if logsRes is direct array or ApiResponse wrapped
+            const logsPayload = logsRes?.data || logsRes;
+            const finalLogs = Array.isArray(logsPayload) ? logsPayload : (logsPayload?.data || []);
+            setLogs(finalLogs);
 
             const usersPayload = usersRes.data;
             setUsers(usersPayload?.content || (Array.isArray(usersPayload) ? usersPayload : []));
 
-            const statsPayload = statsRes.data;
+            // Same for stats
+            const statsPayload = statsRes?.data || statsRes;
             setStats(statsPayload?.data || statsPayload || null);
         } catch (err) {
             if (!axios.isCancel(err)) {

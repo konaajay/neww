@@ -9,6 +9,7 @@ const TeamManagement = ({
   shifts,
   handleCreateUser,
   handleDeleteUser,
+  handleUpdateUser,
   handleEditUser,
   handleAssignSupervisor,
   setSelectedPerfUserId,
@@ -101,7 +102,7 @@ const TeamManagement = ({
             {user.active ? (
               <button onClick={() => handleDeleteUser(user.id)} className="btn btn-sm btn-link p-0 text-danger opacity-50 hover-opacity-100 ms-1 transition-all hover-scale" title="Deactivate"><Trash2 size={13} /></button>
             ) : (
-              <button onClick={() => handleEditUser({ ...user, active: true })} className="btn btn-sm btn-link p-0 text-success opacity-50 hover-opacity-100 ms-1 transition-all hover-scale" title="Reactivate"><CheckCircle size={13} /></button>
+              <button onClick={() => handleUpdateUser(user.id, { ...user, active: true })} className="btn btn-sm btn-link p-0 text-success opacity-50 hover-opacity-100 ms-1 transition-all hover-scale" title="Reactivate"><CheckCircle size={13} /></button>
             )}
           </div>
         </td>
@@ -170,15 +171,19 @@ const TeamManagement = ({
               </button>
             </div>
           )}
-          <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-50 border border-white border-opacity-10 rounded-3 px-3 py-1.5" style={{ minWidth: '300px' }}>
-            <Search size={14} className="text-muted opacity-50" />
+          <div className="position-relative flex-grow-1 flex-sm-grow-0" style={{ maxWidth: '300px' }}>
+            <Search size={14} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted opacity-50" />
             <input
-              type="text"
-              className="bg-transparent border-0 shadow-none text-main small fw-bold w-100"
-              placeholder="SEARCH PERSONNEL..."
+              placeholder="Search personnel registry..."
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              style={{ fontSize: '10px', outline: 'none' }}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="form-control bg-surface border-white border-opacity-10 py-2.5 ps-5 rounded-pill transition-all"
+              style={{ 
+                fontSize: '11px', 
+                width: '100%', 
+                background: 'rgba(255,255,255,0.02)',
+                boxShadow: 'inset 0 1px 1px rgba(0,0,0,0.2)'
+              }}
             />
           </div>
         </div>
@@ -189,7 +194,7 @@ const TeamManagement = ({
           <div className="col-12 col-xl-8">
             <div className="premium-card overflow-hidden shadow-glow border-0">
               <div className="card-header bg-primary bg-opacity-5 p-4 border-0 border-bottom border-white border-opacity-5">
-                <h6 className="fw-black mb-0 text-primary text-uppercase tracking-widest small">Onboard New Personnel</h6>
+                <h6 className="fw-black mb-0 text-primary text-uppercase tracking-widest small">Create User</h6>
               </div>
               <form onSubmit={handleSubmit} className="p-4 bg-surface bg-opacity-10">
                 <div className="row g-4">
@@ -228,7 +233,7 @@ const TeamManagement = ({
                         setFormData({ ...formData, role: newRole, supervisorId: defaultSupId });
                       }} required>
                       <option value="" className="text-dark">Select Target Role...</option>
-                      {roles.map(r => <option key={r.id} value={r.name} className="text-dark">{r.name.replace(/_/g, ' ')}</option>)}
+                      {roles.filter(r => r.name !== 'USER').map(r => <option key={r.id} value={r.name} className="text-dark">{r.name.replace(/_/g, ' ')}</option>)}
                     </select>
                   </div>
 
@@ -265,7 +270,7 @@ const TeamManagement = ({
                   </div>
 
                   <div className="col-12">
-                    <button type="submit" className="btn btn-primary w-100 fw-black text-uppercase py-3 rounded-pill shadow-glow mt-2">Provision System Identity</button>
+                    <button type="submit" className="btn btn-primary w-100 fw-black text-uppercase py-3 rounded-pill shadow-glow mt-2">Create User</button>
                   </div>
                 </div>
               </form>

@@ -126,6 +126,21 @@ public class CallLogService {
         }
     }
 
+    @Transactional
+    public void recordManualCall(User user, Lead lead, String status, String note) {
+        CallRecord record = CallRecord.builder()
+                .user(user)
+                .lead(lead)
+                .phoneNumber(lead != null ? lead.getMobile() : null)
+                .callType("OUTGOING")
+                .status(status)
+                .notes(note)
+                .startTime(LocalDateTime.now(INDIA_ZONE))
+                .endTime(LocalDateTime.now(INDIA_ZONE))
+                .build();
+        callRecordRepository.save(record);
+    }
+
     private String getExtension(String filename) {
         if (filename == null || !filename.contains("."))
             return "mp3";
