@@ -159,14 +159,14 @@ const LeadStatusUpdatePage = () => {
         </button>
 
         <div className={`premium-card border-0 shadow-lg rounded-4 animate-fade-in ${isDarkMode ? 'bg-surface' : 'bg-white'}`}>
-          <div className="px-4 py-3 border-bottom border-white border-opacity-5 d-flex align-items-center justify-content-between bg-primary bg-opacity-5">
+          <div className={`px-4 py-4 border-bottom border-secondary border-opacity-10 d-flex align-items-center justify-content-between ${isDarkMode ? 'bg-surface bg-opacity-50' : 'bg-white'}`}>
             <div className="d-flex align-items-center gap-3">
               <div className="p-2 bg-primary bg-opacity-10 text-primary rounded-3 shadow-glow-sm">
                 <ShieldCheck size={20} />
               </div>
               <div>
-                <h5 className="mb-0 fw-black text-main text-uppercase tracking-tighter">Status Transmission Terminal</h5>
-                <small className="text-muted fw-bold tracking-widest text-uppercase" style={{ fontSize: '10px', opacity: 0.8 }}>LEAD: {lead?.name}</small>
+                <h4 className="mb-0 fw-bold text-main text-uppercase tracking-tight">Lead Status Update</h4>
+                <small className="text-muted fw-semibold tracking-wider text-uppercase" style={{ fontSize: '11px', opacity: 0.8 }}>LEAD: {lead?.name}</small>
               </div>
             </div>
           </div>
@@ -177,12 +177,12 @@ const LeadStatusUpdatePage = () => {
                 {/* Simplified Status & Date Row */}
                 <div className="row g-4 align-items-center">
                   <div className={['LOST', 'NOT_INTERESTED', 'REJECTED', 'CONVERTED'].includes(selectedStatus?.toUpperCase()) ? "col-12" : "col-12 col-md-6"}>
-                    <label className="form-label small fw-black text-uppercase text-main tracking-widest mb-2 d-block">System Status</label>
-                    <div className="d-flex align-items-center gap-3 p-3 rounded-4 bg-primary bg-opacity-10 border border-primary">
-                      <Zap size={20} className="text-primary" />
+                    <label className="form-label small fw-bold text-uppercase text-muted tracking-wider mb-2 d-block">System Status</label>
+                    <div className={`d-flex align-items-center gap-3 p-3 rounded-4 border border-secondary border-opacity-10 ${isDarkMode ? 'bg-white bg-opacity-5' : 'bg-light'}`}>
+                      <Activity size={22} className="text-primary" />
                       <div>
-                        <span className="fw-black text-main text-uppercase tracking-wider d-block">{selectedStatus || 'SELECT STATUS'}</span>
-                        <small className="text-primary fw-black text-uppercase" style={{ fontSize: '9px' }}>PIPELINE PROPAGATION ACTIVE</small>
+                        <span className="fw-bold text-main text-uppercase tracking-normal d-block fs-5">{selectedStatus || 'SELECT STATUS'}</span>
+                        <small className="text-muted fw-bold text-uppercase" style={{ fontSize: '10px' }}>UPDATING LEAD PIPELINE</small>
                       </div>
                       {!initialStatus && lead?.status?.toUpperCase() !== 'CONVERTED' && (
                         <button type="button" onClick={() => setShowStatusList(!showStatusList)} className="ms-auto btn btn-sm p-0 text-primary fw-black text-uppercase tracking-widest" style={{ fontSize: '9px' }}>
@@ -208,7 +208,7 @@ const LeadStatusUpdatePage = () => {
                     <div className="col-12 col-md-6">
                       <label className="form-label small fw-black text-uppercase text-main tracking-widest mb-2 d-block">Follow-up Calendar</label>
                       <div
-                        className="d-flex align-items-center gap-3 p-3 rounded-4 bg-white border border-secondary border-opacity-10 cursor-pointer transition-all hover:border-primary"
+                        className={`d-flex align-items-center gap-3 p-3 rounded-4 border border-secondary border-opacity-10 cursor-pointer transition-all hover:border-primary ${isDarkMode ? 'bg-white bg-opacity-5' : 'bg-white'}`}
                         onClick={(e) => {
                           const input = e.currentTarget.querySelector('input');
                           if (input && input.showPicker) input.showPicker();
@@ -244,7 +244,7 @@ const LeadStatusUpdatePage = () => {
                               setSelectedStatus(stage.statusValue);
                               if (!initialStatus) setShowStatusList(false);
                             }}
-                            className={`p-3 rounded-4 border cursor-pointer transition-all ${selectedStatus === stage.statusValue ? 'bg-primary bg-opacity-10 border-primary shadow-glow-sm' : 'bg-white border-secondary border-opacity-10 opacity-60 hover:opacity-100 hover:border-primary'}`}
+                            className={`p-3 rounded-4 border cursor-pointer transition-all ${selectedStatus === stage.statusValue ? 'bg-primary bg-opacity-10 border-primary shadow-glow-sm' : isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-10 opacity-60 hover:opacity-100 hover:border-primary' : 'bg-white border-secondary border-opacity-10 opacity-60 hover:opacity-100 hover:border-primary'}`}
                           >
                             <span className={`fw-black small text-uppercase tracking-wider ${selectedStatus === stage.statusValue ? 'text-primary' : 'text-muted'}`}>{stage.label}</span>
                           </div>
@@ -255,76 +255,81 @@ const LeadStatusUpdatePage = () => {
                 )}
 
                 {/* Converted Status - Payment Logic */}
-                <div className="p-3 rounded-4 bg-white border border-secondary border-opacity-10 animate-fade-in shadow-sm">
-                  <div className="d-flex align-items-center gap-2 mb-3 px-1">
-                    <IndianRupee size={14} className="text-primary" />
-                    <h6 className="mb-0 fw-black text-uppercase tracking-widest small text-main">Payment Protocol</h6>
-                  </div>
+                {selectedStatus?.toUpperCase() === 'CONVERTED' && (
+                  <div className={`p-4 rounded-4 border border-secondary border-opacity-10 animate-fade-in shadow-sm ${isDarkMode ? 'bg-white bg-opacity-5' : 'bg-white'}`}>
+                    <div className="d-flex align-items-center gap-2 mb-4 px-1">
+                      <IndianRupee size={16} className="text-primary" />
+                      <h6 className="mb-0 fw-bold text-uppercase tracking-wider text-main">Payment Details</h6>
+                    </div>
 
                   <div className="row g-2 mb-3">
-                    <div className="col-6">
-                      <button
-                        type="button"
-                        onClick={() => setPaymentType('FULL')}
-                        className={`w-100 py-2.5 rounded-3 border fw-black text-uppercase tracking-widest small transition-all ${paymentType === 'FULL' ? 'bg-primary text-white border-primary shadow-glow-sm' : 'bg-white text-muted border-transparent opacity-50'}`}
-                        style={{ fontSize: '10px' }}
-                      >
-                        Full Settlement
-                      </button>
-                    </div>
-                    <div className="col-6">
-                      <button
-                        type="button"
-                        onClick={() => setPaymentType('EMI')}
-                        className={`w-100 py-2 rounded-3 border fw-black text-uppercase tracking-widest small transition-all ${paymentType === 'EMI' ? 'bg-primary text-white border-primary shadow-glow-sm' : 'bg-transparent text-muted border-secondary border-opacity-20 opacity-50 hover-bg-opacity'}`}
-                        style={{ fontSize: '9px' }}
-                      >
-                        EMI Installments
-                      </button>
-                    </div>
+                      <div className="col-6">
+                        <button
+                          type="button"
+                          onClick={() => setPaymentType('FULL')}
+                          className={`w-100 py-3 rounded-3 border fw-bold text-uppercase tracking-wider transition-all ${paymentType === 'FULL' ? 'bg-primary text-white border-primary shadow-glow-sm' : isDarkMode ? 'bg-white bg-opacity-10 text-muted border-transparent' : 'bg-light text-muted border-secondary border-opacity-10'}`}
+                          style={{ fontSize: '11px' }}
+                        >
+                          Full Settlement
+                        </button>
+                      </div>
+                      <div className="col-6">
+                        <button
+                          type="button"
+                          onClick={() => setPaymentType('EMI')}
+                          className={`w-100 py-3 rounded-3 border fw-bold text-uppercase tracking-wider transition-all ${paymentType === 'EMI' ? 'bg-primary text-white border-primary shadow-glow-sm' : isDarkMode ? 'bg-white bg-opacity-10 text-muted border-transparent' : 'bg-light text-muted border-secondary border-opacity-10'}`}
+                          style={{ fontSize: '11px' }}
+                        >
+                          EMI Installments
+                        </button>
+                      </div>
                   </div>
 
                   {paymentType === 'EMI' && (
                     <div className="p-3 rounded-4 bg-white shadow-sm animate-slide-up">
                       <div className="row g-2">
                         <div className="col-6">
-                          <label className="form-label small fw-black text-uppercase text-main" style={{ fontSize: '9px' }}>Package Total</label>
+                          <label className="form-label fw-bold text-uppercase text-muted mb-2" style={{ fontSize: '10px' }}>Package Total</label>
                           <input
                             type="number"
-                            className="form-control form-control-sm border-0 bg-light rounded-2 fw-bold"
+                            className={`form-control form-control-lg border-0 rounded-3 fw-bold ${isDarkMode ? 'bg-white bg-opacity-10 text-white' : 'bg-light text-dark'}`}
+                            style={{ fontSize: '14px' }}
                             value={totalAmount}
                             onChange={(e) => setTotalAmount(e.target.value)}
                           />
                         </div>
                         <div className="col-6">
-                          <label className="form-label small fw-black text-uppercase text-main" style={{ fontSize: '9px' }}>Commitment</label>
+                          <label className="form-label fw-bold text-uppercase text-muted mb-2" style={{ fontSize: '10px' }}>Commitment</label>
                           <input
                             type="number"
-                            className="form-control form-control-sm border border-secondary border-opacity-10 bg-white rounded-2 fw-bold"
+                            className={`form-control form-control-lg border border-secondary border-opacity-10 rounded-3 fw-bold ${isDarkMode ? 'bg-surface text-white' : 'bg-white text-dark'}`}
+                            style={{ fontSize: '14px' }}
                             value={initialAmount}
                             onChange={(e) => setInitialAmount(e.target.value)}
                           />
                         </div>
                       </div>
 
-                      <div className="mt-3">
-                        <div className="d-flex align-items-center justify-content-between mb-2">
-                          <label className="form-label small fw-black text-uppercase text-main mb-0" style={{ fontSize: '9px' }}>Installments</label>
-                          <button type="button" onClick={addInstallment} className="btn btn-sm btn-link text-primary text-decoration-none fw-black p-0" style={{ fontSize: '10px' }}>+ ADD</button>
+                      <div className="mt-4">
+                        <div className="d-flex align-items-center justify-content-between mb-3">
+                          <label className="form-label fw-bold text-uppercase text-muted mb-0" style={{ fontSize: '10px' }}>Installment Breakdown</label>
+                          <button type="button" onClick={addInstallment} className="btn btn-sm btn-link text-primary text-decoration-none fw-bold p-0" style={{ fontSize: '11px' }}>+ ADD NEW</button>
                         </div>
                         <div className="d-flex flex-column gap-2">
                           {installments.map((inst, idx) => (
                             <div key={idx} className="d-flex align-items-center gap-2 animate-fade-in">
                               <input
                                 type="number"
-                                className="form-control form-control-sm border-0 bg-light rounded-2 fw-bold"
+                                className={`form-control border-0 rounded-3 fw-bold ${isDarkMode ? 'bg-white bg-opacity-10 text-white' : 'bg-light text-dark'}`}
+                                style={{ fontSize: '13px' }}
                                 placeholder="Amount"
                                 value={inst.amount}
                                 onChange={(e) => handleInstallmentChange(idx, 'amount', e.target.value)}
                               />
                               <input
                                 type="date"
-                                className="form-control form-control-sm border border-secondary border-opacity-10 bg-white rounded-2 fw-bold cursor-pointer"
+                                className={`form-control border border-secondary border-opacity-10 rounded-3 fw-bold cursor-pointer ${isDarkMode ? 'bg-surface text-white' : 'bg-white text-dark'}`}
+                                style={{ fontSize: '13px' }}
                                 value={inst.dueDate}
                                 onClick={(e) => e.target.showPicker && e.target.showPicker()}
                                 onChange={(e) => handleInstallmentChange(idx, 'dueDate', e.target.value)}
@@ -336,8 +341,8 @@ const LeadStatusUpdatePage = () => {
                           ))}
                         </div>
 
-                        <div className={`mt-3 p-2 rounded-3 text-center fw-black text-uppercase tracking-widest ${isMatch ? 'bg-success bg-opacity-10 text-success' : 'bg-danger bg-opacity-10 text-danger'}`} style={{ fontSize: '9px' }}>
-                          {isMatch ? 'Balanced' : `Remaining: ₹${balanceRemaining}`}
+                        <div className={`mt-4 p-3 rounded-3 text-center fw-bold text-uppercase tracking-wider ${isMatch ? 'bg-success bg-opacity-10 text-success' : 'bg-danger bg-opacity-10 text-danger'}`} style={{ fontSize: '11px' }}>
+                          {isMatch ? 'Total Balanced' : `Pending Balance: ₹${balanceRemaining}`}
                         </div>
                       </div>
                     </div>
@@ -345,12 +350,12 @@ const LeadStatusUpdatePage = () => {
 
                   {paymentType === 'FULL' && (
                     <div className="p-3 rounded-4 bg-white shadow-sm animate-slide-up text-center">
-                      <label className="form-label small fw-black text-uppercase text-main d-block mb-1" style={{ fontSize: '9px' }}>Total Settlement</label>
-                      <div className="d-flex align-items-center justify-content-center gap-2">
-                        <IndianRupee size={12} className="text-primary" />
+                      <div className="d-flex align-items-center justify-content-center gap-3">
+                        <IndianRupee size={20} className="text-primary" />
                         <input
                           type="number"
-                          className="form-control form-control-sm border border-secondary border-opacity-10 bg-white rounded-2 fw-bold text-center w-50"
+                          className={`form-control form-control-lg border border-secondary border-opacity-10 rounded-3 fw-bold text-center w-50 ${isDarkMode ? 'bg-surface text-white' : 'bg-white text-dark'}`}
+                          style={{ fontSize: '18px' }}
                           value={totalAmount}
                           onChange={(e) => setTotalAmount(e.target.value)}
                         />
@@ -358,12 +363,13 @@ const LeadStatusUpdatePage = () => {
                     </div>
                   )}
                 </div>
+              )}
 
 
-                <div>
-                  <label className="form-label small fw-black text-uppercase text-main tracking-widest mb-2 d-block px-1">Interaction Note</label>
+                <div className="mt-2">
+                  <label className="form-label small fw-bold text-uppercase text-muted tracking-wider mb-2 d-block px-1">Interaction Notes</label>
                   <textarea
-                    className="form-control border border-secondary border-opacity-10 rounded-4 p-4 bg-white shadow-sm fw-bold transition-all focus-border-primary"
+                    className={`form-control border border-secondary border-opacity-10 rounded-4 p-4 shadow-sm fw-bold transition-all focus-border-primary ${isDarkMode ? 'bg-white bg-opacity-5 text-white' : 'bg-white text-dark'}`}
                     rows="3"
                     placeholder="Input interaction context here..."
                     style={{ outline: 'none' }}
@@ -375,7 +381,7 @@ const LeadStatusUpdatePage = () => {
                 {/* Submit */}
                 <div className="pt-4 border-top border-white border-opacity-5 d-flex justify-content-end">
                   <button type="submit" disabled={isSubmitting} className="ui-btn ui-btn-primary px-5 py-3 rounded-pill shadow-glow fw-black text-uppercase tracking-widest">
-                    {isSubmitting ? 'AUTHORIZING...' : 'AUTHORIZE UPDATE'}
+                    {isSubmitting ? 'UPDATING...' : 'UPDATE LEAD'}
                   </button>
                 </div>
               </div>

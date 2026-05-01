@@ -218,13 +218,16 @@ const FiltersBar = ({
         {/* Right Section: Date Range + Controls */}
         <div className="d-flex align-items-center gap-2">
           <div className="d-flex align-items-center gap-2">
-            <div className={`d-flex align-items-center gap-2 p-2 px-3 rounded-pill border cursor-pointer hover-bg-opacity ${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-10' : 'bg-light border-light'}`}>
+            <div 
+              className={`d-flex align-items-center gap-2 p-2 px-3 rounded-pill border cursor-pointer hover-bg-opacity ${isDarkMode ? 'border-white border-opacity-10 shadow-inner' : 'border-light'}`}
+              style={{ background: isDarkMode ? 'rgba(255,255,255,0.05)' : '#f8f9fa' }}
+            >
               <CalendarDays size={12} className="text-primary" />
               <div className="position-relative">
                 <input
                   type="date"
                   className="bg-transparent border-0 text-main fw-bold cursor-pointer"
-                  style={{ fontSize: '10px', outline: 'none', width: '100px' }}
+                  style={{ fontSize: '10px', outline: 'none', width: '100px', background: 'transparent', color: 'inherit' }}
                   value={filters.from || ""}
                   onClick={(e) => { e.stopPropagation(); if (e.target.showPicker) e.target.showPicker(); }}
                   onChange={(e) => handleFilterChange('from', e.target.value)}
@@ -234,13 +237,16 @@ const FiltersBar = ({
 
             <span className="opacity-25 text-muted">TO</span>
 
-            <div className={`d-flex align-items-center gap-2 p-2 px-3 rounded-pill border cursor-pointer hover-bg-opacity ${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-10' : 'bg-light border-light'}`}>
+            <div 
+              className={`d-flex align-items-center gap-2 p-2 px-3 rounded-pill border cursor-pointer hover-bg-opacity ${isDarkMode ? 'border-white border-opacity-10 shadow-inner' : 'border-light'}`}
+              style={{ background: isDarkMode ? 'rgba(255,255,255,0.05)' : '#f8f9fa' }}
+            >
               <CalendarDays size={12} className="text-primary" />
               <div className="position-relative">
                 <input
                   type="date"
                   className="bg-transparent border-0 text-main fw-bold cursor-pointer"
-                  style={{ fontSize: '10px', outline: 'none', width: '100px' }}
+                  style={{ fontSize: '10px', outline: 'none', width: '100px', background: 'transparent', color: 'inherit' }}
                   value={filters.to || ""}
                   onClick={(e) => { e.stopPropagation(); if (e.target.showPicker) e.target.showPicker(); }}
                   onChange={(e) => handleFilterChange('to', e.target.value)}
@@ -268,15 +274,10 @@ const FiltersBar = ({
       </div>
 
       <style>{`
-        .filter-select-wrapper { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 50px; padding: 4px 16px; }
+        .filter-select-wrapper { background: ${isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'}; border: 1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}; border-radius: 50px; padding: 4px 16px; }
         .filter-select { background: transparent; border: 0; color: var(--text-main); font-weight: 800; font-size: 9px; text-transform: uppercase; outline: none; min-width: 80px; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        input[type="date"] {
-            color-scheme: ${isDarkMode ? 'dark' : 'light'};
-            background: transparent;
-        }
-
         /* Ensure picker covers input but remains invisible */
         input[type="date"]::-webkit-calendar-picker-indicator {
           position: absolute;

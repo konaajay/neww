@@ -206,15 +206,15 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
       {/* Search & Actions */}
       <div className="px-1 d-flex justify-content-between align-items-center mb-1">
         <div className="d-flex align-items-center gap-3">
-          <div className="input-group bg-white bg-opacity-5 rounded-pill border border-white border-opacity-10" style={{ width: '300px' }}>
-            <span className="input-group-text border-0 bg-transparent ps-3"><Search size={14} className="text-muted" /></span>
+          <div className={`input-group ${isDarkMode ? 'bg-surface' : 'bg-light'} rounded-pill border border-secondary border-opacity-20`} style={{ width: '320px' }}>
+            <span className="input-group-text border-0 bg-transparent ps-3"><Search size={16} className="text-muted" /></span>
             <input
               type="text"
-              className="form-control border-0 bg-transparent text-main py-2 fw-bold"
+              className="form-control border-0 bg-transparent text-main py-2.5 fw-bold"
               placeholder="Search tasks..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ fontSize: '11px' }}
+              style={{ fontSize: '13px' }}
             />
           </div>
         </div>

@@ -99,7 +99,7 @@ const LeadTable = ({
             <div className="d-flex gap-3 align-items-center">
               <select
                 className="form-select bg-surface bg-opacity-20 border border-white border-opacity-10 text-main py-2 px-4 rounded-pill shadow-none"
-                style={{ width: '240px', fontSize: '11px', appearance: 'none', background: 'rgba(255,255,255,0.05)' }}
+                style={{ width: '260px', fontSize: '13px', appearance: 'none', background: 'rgba(255,255,255,0.05)' }}
                 value={bulkAssignTlId}
                 onChange={(e) => setBulkAssignTlId(e.target.value)}
               >
@@ -114,7 +114,7 @@ const LeadTable = ({
                   handleBulkAssign(bulkAssignTlId);
                 }}
                 className="ui-btn ui-btn-primary px-5 py-2 rounded-pill shadow-glow fw-black tracking-widest"
-                style={{ fontSize: '10px' }}
+                style={{ fontSize: '12px' }}
               >
                 MOVE LEADS
               </button>

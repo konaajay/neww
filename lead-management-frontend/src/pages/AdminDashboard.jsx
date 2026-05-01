@@ -345,7 +345,7 @@ const AdminDashboard = () => {
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="form-control bg-surface border-white border-opacity-10 py-2 ps-5 rounded-pill transition-all fw-bold"
-                      style={{ fontSize: '11px', background: 'rgba(255,255,255,0.03)' }}
+                      style={{ fontSize: '14px', background: 'rgba(255,255,255,0.03)' }}
                     />
                   </div>
                   <button className="ui-btn ui-btn-primary btn-sm px-4 rounded-pill fw-black text-uppercase tracking-widest" style={{ fontSize: '10px' }} onClick={() => setIsIngestionModalOpen(true)}>

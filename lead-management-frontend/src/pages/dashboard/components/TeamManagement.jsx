@@ -144,7 +144,7 @@ const TeamManagement = ({
                 key={tab.id}
                 onClick={() => setActiveSubTab(tab.id)}
                 className={`px-4 py-2 rounded-pill border-0 fw-black text-uppercase tracking-widest transition-all d-flex align-items-center gap-2 ${activeSubTab === tab.id ? 'bg-primary text-white shadow-glow' : 'bg-transparent text-muted opacity-50 hover:opacity-100'}`}
-                style={{ fontSize: '9px' }}
+                style={{ fontSize: '11px' }}
               >
                 {tab.label}
               </button>
@@ -157,14 +157,14 @@ const TeamManagement = ({
             <div className="d-flex gap-2 p-1 bg-surface bg-opacity-20 rounded-3 border border-white border-opacity-5 me-2">
               <button 
                 className={`btn btn-sm px-3 rounded-2 fw-black text-uppercase ${userStatusFilter ? 'btn-primary shadow-glow' : 'text-muted opacity-50'}`} 
-                style={{ fontSize: '8px' }}
+                style={{ fontSize: '10px' }}
                 onClick={() => setUserStatusFilter(true)}
               >
                 Active
               </button>
               <button 
                 className={`btn btn-sm px-3 rounded-2 fw-black text-uppercase ${!userStatusFilter ? 'btn-danger shadow-glow' : 'text-muted opacity-50'}`} 
-                style={{ fontSize: '8px' }}
+                style={{ fontSize: '10px' }}
                 onClick={() => setUserStatusFilter(false)}
               >
                 Inactive
