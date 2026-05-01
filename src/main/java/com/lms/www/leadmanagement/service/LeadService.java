@@ -35,6 +35,8 @@ public class LeadService {
     private final StudentFeeRepository studentFeeRepository;
     private final SecurityService securityService;
     private final MailService mailService;
+    private final LeadAuditLogRepository leadAuditLogRepository;
+    private final CallLogService callLogService;
 
     @Transactional(readOnly = true)
     public Map<String, Object> getLeadStats() {
@@ -123,7 +125,7 @@ public class LeadService {
                 .college(dto.getCollege())
                 .status(LeadStatus.NEW.name())
                 .createdBy(creator)
-                .assignedTo(creator)
+                .assignedTo(null)
                 .build();
         
         return convertToDTO(leadRepository.save(lead));
@@ -145,8 +147,11 @@ public class LeadService {
             throw new InvalidRequestException("Cannot change status of a finalized lead");
         }
 
-        User user = securityService.getCurrentUser();
-        String status = request.getStatus().toUpperCase();
+        String status = LeadStatus.fromString(request.getStatus()).name();
+        if (!currentStatus.equals(status)) {
+            recordAuditLog(lead.getId(), user, "STATUS", currentStatus, status, "STATUS_CHANGE");
+        }
+        
         lead.setStatus(status);
         lead.setUpdatedBy(user);
 
@@ -322,13 +327,21 @@ public class LeadService {
         }
 
         if (userId == null || userId == 0) {
+            String oldVal = lead.getAssignedTo() != null ? lead.getAssignedTo().getName() : "UNASSIGNED";
             lead.setAssignedTo(null);
             lead.setStatus(LeadStatus.NEW.name());
+            recordAuditLog(lead.getId(), requester, "ASSIGNMENT", oldVal, "UNASSIGNED", "ASSIGNMENT_CHANGE");
         } else {
             User target = userRepository.findById(userId).orElseThrow();
             securityService.validateHierarchyAccess(requester, target);
+            String oldVal = lead.getAssignedTo() != null ? lead.getAssignedTo().getName() : "UNASSIGNED";
             lead.setAssignedTo(target);
-            if (LeadStatus.NEW.name().equals(lead.getStatus())) lead.setStatus(LeadStatus.CONTACTED.name());
+            recordAuditLog(lead.getId(), requester, "ASSIGNMENT", oldVal, target.getName(), "ASSIGNMENT_CHANGE");
+            // Reset status to NEW upon assignment unless it's already finalized
+            String currentStatus = lead.getStatus() != null ? lead.getStatus().toUpperCase() : "";
+            if (!List.of("PAID", "SUCCESS", "EMI", "CONVERTED").contains(currentStatus)) {
+                lead.setStatus(LeadStatus.NEW.name());
+            }
         }
         return convertToDTO(leadRepository.save(lead));
     }
@@ -341,7 +354,11 @@ public class LeadService {
         List<Lead> leads = leadRepository.findAllById(leadIds);
         leads.forEach(l -> {
             l.setAssignedTo(target);
-            if (LeadStatus.NEW.name().equals(l.getStatus())) l.setStatus(LeadStatus.CONTACTED.name());
+            // Reset status to NEW upon bulk assignment unless it's already finalized
+            String currentStatus = l.getStatus() != null ? l.getStatus().toUpperCase() : "";
+            if (!List.of("PAID", "SUCCESS", "EMI", "CONVERTED").contains(currentStatus)) {
+                l.setStatus(LeadStatus.NEW.name());
+            }
         });
         return leadRepository.saveAll(leads).stream().map(this::convertToDTO).collect(Collectors.toList());
     }
@@ -394,11 +411,52 @@ public class LeadService {
             securityService.validateAccess(requester, lead.getCreatedBy().getId());
         }
 
-        lead.setName(dto.getName());
-        lead.setEmail(dto.getEmail());
-        lead.setMobile(dto.getMobile());
-        lead.setCollege(dto.getCollege());
+        // Record field-level changes
+        if (dto.getName() != null && !dto.getName().equals(lead.getName())) {
+            recordAuditLog(lead.getId(), requester, "NAME", lead.getName(), dto.getName(), "UPDATE");
+            lead.setName(dto.getName());
+        }
+        if (dto.getEmail() != null && !dto.getEmail().equals(lead.getEmail())) {
+            recordAuditLog(lead.getId(), requester, "EMAIL", lead.getEmail(), dto.getEmail(), "UPDATE");
+            lead.setEmail(dto.getEmail());
+        }
+        if (dto.getMobile() != null && !dto.getMobile().equals(lead.getMobile())) {
+            recordAuditLog(lead.getId(), requester, "MOBILE", lead.getMobile(), dto.getMobile(), "UPDATE");
+            lead.setMobile(dto.getMobile());
+        }
+        if (dto.getCollege() != null && !dto.getCollege().equals(lead.getCollege())) {
+            recordAuditLog(lead.getId(), requester, "COLLEGE", lead.getCollege(), dto.getCollege(), "UPDATE");
+            lead.setCollege(dto.getCollege());
+        }
+
         return convertToDTO(leadRepository.save(lead));
+    }
+
+    private void recordAuditLog(Long leadId, User user, String field, String oldVal, String newVal, String action) {
+        LeadAuditLog log = LeadAuditLog.builder()
+                .leadId(leadId)
+                .changedBy(user)
+                .fieldName(field)
+                .oldValue(oldVal)
+                .newValue(newVal)
+                .action(action)
+                .build();
+        leadAuditLogRepository.save(log);
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.lms.www.leadmanagement.dto.LeadAuditLogDTO> getLeadHistory(Long leadId) {
+        return leadAuditLogRepository.findByLeadIdOrderByTimestampDesc(leadId).stream()
+                .map(l -> com.lms.www.leadmanagement.dto.LeadAuditLogDTO.builder()
+                        .id(l.getId())
+                        .fieldName(l.getFieldName())
+                        .oldValue(l.getOldValue())
+                        .newValue(l.getNewValue())
+                        .action(l.getAction())
+                        .changedByName(l.getChangedBy() != null ? l.getChangedBy().getName() : "SYSTEM")
+                        .timestamp(l.getTimestamp())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -438,10 +496,15 @@ public class LeadService {
         }
 
         java.util.Set<Long> targetIds = securityService.getAllowedUserIds(requester);
+        boolean isUnassigned = false;
 
         if (userId != null) {
-            securityService.validateAccess(requester, userId);
-            targetIds = java.util.Collections.singleton(userId);
+            if (userId == -1L) {
+                isUnassigned = true;
+            } else {
+                securityService.validateAccess(requester, userId);
+                targetIds = java.util.Collections.singleton(userId);
+            }
         } else if (teamId != null) {
             securityService.validateAccess(requester, teamId);
             targetIds = new java.util.HashSet<>(userRepository.findSubordinateIds(teamId));
@@ -452,7 +515,7 @@ public class LeadService {
             targetIds.add(managerId);
         }
 
-        return leadRepository.findHierarchicalLeads(targetIds, start, end, pageable).map(this::convertToDTO);
+        return leadRepository.findHierarchicalLeads(targetIds, start, end, isUnassigned, pageable).map(this::convertToDTO);
     }
 
     @Transactional
@@ -503,6 +566,12 @@ public class LeadService {
             }
         }
 
-        return updateStatus(id, request);
+        LeadDTO updatedLead = updateStatus(id, request);
+        
+        // Record as call log
+        Lead lead = leadRepository.findById(id).orElse(null);
+        callLogService.recordManualCall(securityService.getCurrentUser(), lead, request.getStatus(), request.getNote());
+        
+        return updatedLead;
     }
 }

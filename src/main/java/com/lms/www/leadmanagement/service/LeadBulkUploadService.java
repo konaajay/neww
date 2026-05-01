@@ -39,6 +39,7 @@ public class LeadBulkUploadService {
         int duplicates = 0;
         int failures = 0;
         List<String> errorList = new ArrayList<>();
+        List<User> assignees = new ArrayList<>();
 
         User creator = securityService.getCurrentUser();
         if (assignedToIds != null && !assignedToIds.trim().isEmpty()) {

@@ -61,7 +61,7 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         .requestMatchers(org.springframework.web.cors.CorsUtils::isPreFlightRequest).permitAll()
-                        .requestMatchers("/api/auth/login", "/error").permitAll()
+                        .requestMatchers("/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password", "/error").permitAll()
 
                         // Restrict payment endpoints properly
                         .requestMatchers(HttpMethod.POST, "/api/payments/create").authenticated()
@@ -101,14 +101,11 @@ public class WebSecurityConfig {
 
         var config = new org.springframework.web.cors.CorsConfiguration();
 
-        // ✅ FIX: restrict origins
-        config.setAllowedOrigins(List.of(
-                "http://localhost:3000",
-                "http://localhost:5173",
-                "http://100.85.146.60:3000",
-                "https://salescr.netlify.app",
-                "https://salescrms.netlify.app",
-                "https://hiiiiiiiiiiiiiiiiii.netlify.app",
+        // ✅ FIX: allow patterns for flexible deployment
+        config.setAllowedOriginPatterns(List.of(
+                "http://localhost:[*]",
+                "http://127.0.0.1:[*]",
+                "https://*.netlify.app",
                 "https://yourdomain.com"));
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));

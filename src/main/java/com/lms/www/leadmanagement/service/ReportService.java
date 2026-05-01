@@ -125,7 +125,7 @@ public class ReportService {
         List<Long> userIds = !isGlobalAdmin ? new java.util.ArrayList<>(allowedIds) : null;
 
         LocalDateTime start = filter.getFromDate() != null ? filter.getFromDate().atStartOfDay()
-                : LocalDate.now().minusDays(7).atStartOfDay();
+                : LocalDate.now().minusDays(30).atStartOfDay();
         LocalDateTime end = filter.getToDate() != null ? filter.getToDate().atTime(LocalTime.MAX) : LocalDateTime.now();
 
         // Fetch daily lead counts (Generated)

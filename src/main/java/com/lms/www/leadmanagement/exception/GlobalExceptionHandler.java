@@ -8,6 +8,27 @@ import java.util.HashMap;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(org.springframework.security.authentication.DisabledException.class)
+    public ResponseEntity<Map<String, String>> handleDisabledException(org.springframework.security.authentication.DisabledException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("message", "Your account was inactive. Please contact Admin.");
+        error.put("error", "ACCOUNT_DISABLED");
+        return ResponseEntity.status(401).body(error);
+    }
+
+    @ExceptionHandler(org.springframework.security.authentication.InternalAuthenticationServiceException.class)
+    public ResponseEntity<Map<String, String>> handleInternalAuthException(org.springframework.security.authentication.InternalAuthenticationServiceException ex) {
+        Map<String, String> error = new HashMap<>();
+        if (ex.getMessage().contains("disabled") || ex.getMessage().contains("inactive")) {
+            error.put("message", "Your account was inactive. Please contact Admin.");
+            error.put("error", "ACCOUNT_DISABLED");
+        } else {
+            error.put("message", "Authentication error: " + ex.getMessage());
+            error.put("error", "AUTH_ERROR");
+        }
+        return ResponseEntity.status(401).body(error);
+    }
+
 
     @ExceptionHandler(SecurityViolationException.class)
     public ResponseEntity<Map<String, String>> handleSecurityViolationException(SecurityViolationException ex) {

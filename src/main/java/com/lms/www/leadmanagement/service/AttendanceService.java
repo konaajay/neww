@@ -124,7 +124,8 @@ public class AttendanceService {
                 ? policy.getMaxAccuracyMeters().doubleValue()
                 : maxAccuracyMeters;
 
-        if (request.getAccuracy() != null && request.getAccuracy() > effectiveMaxAccuracy) {
+        double clockInTolerance = (request.getAccuracy() != null && request.getAccuracy() >= 100000.0) ? 1000.0 : 1.0;
+        if (request.getAccuracy() != null && request.getAccuracy() > (effectiveMaxAccuracy * clockInTolerance)) {
             String officeName = office != null ? office.getName() : "Unknown Office";
             throw new RuntimeException("Inaccurate location (" + request.getAccuracy() + "m) for " + officeName
                     + ". Governance Policy allows max " + effectiveMaxAccuracy + "m accuracy.");
@@ -212,9 +213,9 @@ public class AttendanceService {
                 ? policy.getMaxAccuracyMeters().doubleValue()
                 : maxAccuracyMeters;
 
-        // Apply a 50% leniency factor for heartbeats vs initial clock-in to prevent
-        // random drops
-        double toleranceFactor = 1.5;
+        // Apply a 50% leniency factor for heartbeats vs initial clock-in to prevent random drops
+        // Relax accuracy for desktop browsers (common values like 100km)
+        double toleranceFactor = (request.getAccuracy() != null && request.getAccuracy() >= 100000.0) ? 1000.0 : 1.5;
         if (request.getAccuracy() != null && request.getAccuracy() > (effectiveMaxAccuracy * toleranceFactor))
             throw new RuntimeException("Inaccurate location data (Received: " + request.getAccuracy() + "m, Allowed: "
                     + (effectiveMaxAccuracy * toleranceFactor) + "m). Please move to a clearer area.");
@@ -456,7 +457,7 @@ public class AttendanceService {
         }
 
         Optional<AttendanceDaily> daily = attendanceDailyRepository
-                .findByUserIdAndDate(user.getId(), date);
+                .findSingleByUserIdAndDate(user.getId(), date);
 
         if (daily.isPresent()) {
             return convertDailyToDTO(daily.get(), user, date);
@@ -534,7 +535,7 @@ public class AttendanceService {
                 .max(LocalDateTime::compareTo)
                 .orElse(null);
 
-        AttendanceDaily daily = attendanceDailyRepository.findByUserIdAndDate(userId, date)
+        AttendanceDaily daily = attendanceDailyRepository.findSingleByUserIdAndDate(userId, date)
                 .orElse(AttendanceDaily.builder().user(user).date(date).build());
 
         // 1. Core Logic: totalWorked = logout - login
@@ -644,6 +645,7 @@ public class AttendanceService {
         daily.setProductiveMinutes((int) productiveMinutes);
         daily.setIdleMinutes((int) idleMinutes);
         daily.setStatus(status);
+        daily.setIsLate(sessions.stream().anyMatch(AttendanceSession::isLate));
         attendanceDailyRepository.save(daily);
     }
 
@@ -734,7 +736,7 @@ public class AttendanceService {
 
         com.lms.www.leadmanagement.dto.AttendancePreviewResponse preview = calculatePreview(request);
 
-        AttendanceDaily daily = attendanceDailyRepository.findByUserIdAndDate(user.getId(), date)
+        AttendanceDaily daily = attendanceDailyRepository.findSingleByUserIdAndDate(user.getId(), date)
                 .orElse(AttendanceDaily.builder().user(user).date(date).build());
 
         daily.setTotalWorkSeconds(preview.getEffectiveMinutes() * 60L);
@@ -761,16 +763,49 @@ public class AttendanceService {
     @org.springframework.scheduling.annotation.Scheduled(fixedRate = 300000)
     @Transactional
     public void autoPunchOutIdleSessions() {
-        LocalDateTime cutoff = nowInIndia().minusHours(2);
-        List<AttendanceSession> inactiveSessions = attendanceSessionRepository.findInactiveSessions(ACTIVE_STATUSES,
-                cutoff);
+        LocalDateTime now = nowInIndia();
+        LocalDateTime idleCutoff = now.minusHours(2);
+        
+        // 1. Checkout truly idle sessions (no heartbeat)
+        List<AttendanceSession> inactiveSessions = attendanceSessionRepository.findInactiveSessions(ACTIVE_STATUSES, idleCutoff);
         for (AttendanceSession session : inactiveSessions) {
             try {
-                log.info("Auto punch-out triggered for session id {}", session.getId());
+                log.info("Auto punch-out triggered (IDLE) for session id {}", session.getId());
                 session.setAutoCheckout(true);
                 finalizeSession(session);
             } catch (Exception e) {
-                log.error("Failed to auto punch-out session {}", session.getId(), e);
+                log.error("Failed to auto punch-out idle session {}", session.getId(), e);
+            }
+        }
+
+        // 2. Checkout sessions where shift has ended (even if heartbeats are arriving)
+        // Find ALL active sessions and check their shift end times
+        List<AttendanceSession> allActive = attendanceSessionRepository.findAllByStatusIn(ACTIVE_STATUSES);
+        for (AttendanceSession session : allActive) {
+            try {
+                User user = session.getUser();
+                LocalTime shiftEnd = null;
+                
+                if (user.getShift() != null) {
+                    shiftEnd = user.getShift().getEndTime();
+                } else {
+                    AttendancePolicy policy = attendancePolicyRepository.findByOfficeId(session.getOffice().getId()).orElse(null);
+                    if (policy != null) {
+                        shiftEnd = policy.getShiftEndTime();
+                    }
+                }
+                
+                if (shiftEnd == null) shiftEnd = LocalTime.of(18, 30); // Global fallback
+
+                // If now is more than 30 minutes past shift end, auto checkout
+                LocalDateTime shiftEndDateTime = session.getCheckInTime().toLocalDate().atTime(shiftEnd);
+                if (now.isAfter(shiftEndDateTime)) {
+                    log.info("Auto punch-out triggered (SHIFT_OVER) for session id {}", session.getId());
+                    session.setAutoCheckout(true);
+                    finalizeSession(session);
+                }
+            } catch (Exception e) {
+                log.error("Failed to check shift expiry for session {}", session.getId(), e);
             }
         }
     }
@@ -917,8 +952,14 @@ public class AttendanceService {
                     : (s.getCheckInTime() != null ? s.getCheckInTime().toLocalDate() : todayInIndia()));
 
             // Sync note from AttendanceDaily
-            attendanceDailyRepository.findByUserIdAndDate(s.getUser().getId(), dto.getDate())
-                    .ifPresent(daily -> dto.setNote(daily.getNote()));
+            attendanceDailyRepository.findSingleByUserIdAndDate(s.getUser().getId(), dto.getDate())
+                    .ifPresent(daily -> {
+                        System.out.println("[DEBUG-NOTE] Found note for user " + s.getUser().getId() + " on " + dto.getDate() + ": " + daily.getNote());
+                        dto.setNote(daily.getNote());
+                    });
+            if (dto.getNote() == null) {
+                System.out.println("[DEBUG-NOTE] No note found for user " + s.getUser().getId() + " on " + dto.getDate());
+            }
 
             // Sync Idle Time
             dto.setTotalIdleMinutes(s.getUnauthorizedOutsideMinutes() != null ? s.getUnauthorizedOutsideMinutes() : 0);
@@ -956,11 +997,13 @@ public class AttendanceService {
 
     @Transactional
     public void updateDailyNote(Long userId, LocalDate date, String note) {
+        System.out.println("[DEBUG-NOTE] Updating note for user " + userId + " on date " + date + ": " + note);
         User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        AttendanceDaily daily = attendanceDailyRepository.findByUserIdAndDate(userId, date)
-                .orElse(AttendanceDaily.builder().user(user).date(date).build());
+        AttendanceDaily daily = attendanceDailyRepository.findSingleByUserIdAndDate(userId, date)
+                .orElse(AttendanceDaily.builder().user(user).date(date).status("PRESENT").build());
         daily.setNote(note);
         attendanceDailyRepository.save(daily);
+        System.out.println("[DEBUG-NOTE] Note saved successfully in AttendanceDaily id " + daily.getId());
     }
 
     private AttendanceDTO createAbsentDTO(User u, LocalDate date) {

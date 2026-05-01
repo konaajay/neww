@@ -32,12 +32,26 @@ public class PipelineStageController {
     @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<com.lms.www.leadmanagement.dto.ApiResponse<?>> createStage(@RequestBody PipelineStage stage) {
         System.out.println(">>> Request: CREATE PipelineStage - Label: " + stage.getLabel() + ", Value: " + stage.getStatusValue());
+        
         if (stage.getStatusValue() == null || stage.getStatusValue().trim().isEmpty()) {
             return ResponseEntity.badRequest().body(com.lms.www.leadmanagement.dto.ApiResponse.error("Status value is required"));
         }
-        if (pipelineStageRepository.existsByStatusValue(stage.getStatusValue())) {
-            return ResponseEntity.badRequest().body(com.lms.www.leadmanagement.dto.ApiResponse.error("Status value '" + stage.getStatusValue() + "' already exists"));
+
+        // Standardize status value
+        try {
+            String standardizedStatus = com.lms.www.leadmanagement.entity.LeadStatus.fromString(stage.getStatusValue()).name();
+            stage.setStatusValue(standardizedStatus);
+            
+            if (pipelineStageRepository.existsByStatusValue(standardizedStatus)) {
+                return ResponseEntity.badRequest().body(com.lms.www.leadmanagement.dto.ApiResponse.error("Status value '" + standardizedStatus + "' already exists"));
+            }
+        } catch (Exception e) {
+            // If not a standard enum, keep as is but check exists
+            if (pipelineStageRepository.existsByStatusValue(stage.getStatusValue())) {
+                return ResponseEntity.badRequest().body(com.lms.www.leadmanagement.dto.ApiResponse.error("Status value '" + stage.getStatusValue() + "' already exists"));
+            }
         }
+        
         return ResponseEntity.ok(com.lms.www.leadmanagement.dto.ApiResponse.success(pipelineStageRepository.save(stage)));
     }
 
@@ -48,12 +62,16 @@ public class PipelineStageController {
         PipelineStage stage = pipelineStageRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Stage not found"));
         
-        // If status value is changing, check for duplicates
         if (stageDetails.getStatusValue() != null && !stageDetails.getStatusValue().equals(stage.getStatusValue())) {
-            if (pipelineStageRepository.existsByStatusValue(stageDetails.getStatusValue())) {
-                return ResponseEntity.badRequest().body(com.lms.www.leadmanagement.dto.ApiResponse.error("Status value '" + stageDetails.getStatusValue() + "' already exists"));
+            String statusToUse = stageDetails.getStatusValue();
+            try {
+                statusToUse = com.lms.www.leadmanagement.entity.LeadStatus.fromString(statusToUse).name();
+            } catch (Exception e) {}
+
+            if (pipelineStageRepository.existsByStatusValue(statusToUse)) {
+                return ResponseEntity.badRequest().body(com.lms.www.leadmanagement.dto.ApiResponse.error("Status value '" + statusToUse + "' already exists"));
             }
-            stage.setStatusValue(stageDetails.getStatusValue());
+            stage.setStatusValue(statusToUse);
         }
 
         stage.setLabel(stageDetails.getLabel());

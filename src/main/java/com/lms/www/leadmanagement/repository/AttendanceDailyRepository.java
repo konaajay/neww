@@ -13,21 +13,24 @@ import java.util.Optional;
 @Repository
 public interface AttendanceDailyRepository extends JpaRepository<AttendanceDaily, Long> {
 
-    // ✅ Safe single record
+    // ✅ Safe single record - REMOVED joiningDate check to prevent duplicates if joiningDate is null
     @Query("""
                 SELECT a FROM AttendanceDaily a
                 WHERE a.user.id = :userId
                 AND a.date = :date
-                AND a.date >= a.user.joiningDate
+                ORDER BY a.createdAt DESC
             """)
-    Optional<AttendanceDaily> findByUserIdAndDate(Long userId, LocalDate date);
+    List<AttendanceDaily> findByUserIdAndDate(Long userId, LocalDate date);
+
+    default Optional<AttendanceDaily> findSingleByUserIdAndDate(Long userId, LocalDate date) {
+        return findByUserIdAndDate(userId, date).stream().findFirst();
+    }
 
     // ✅ Safe existence check
     @Query("""
                 SELECT COUNT(a) > 0 FROM AttendanceDaily a
                 WHERE a.user.id = :userId
                 AND a.date = :date
-                AND a.date >= a.user.joiningDate
             """)
     boolean existsByUserIdAndDate(Long userId, LocalDate date);
 
@@ -35,7 +38,6 @@ public interface AttendanceDailyRepository extends JpaRepository<AttendanceDaily
     @Query("""
                 SELECT a FROM AttendanceDaily a
                 WHERE a.user.id = :userId
-                AND a.date >= a.user.joiningDate
                 ORDER BY a.date DESC
             """)
     List<AttendanceDaily> findByUserIdOrderByDateDesc(Long userId);
@@ -45,7 +47,6 @@ public interface AttendanceDailyRepository extends JpaRepository<AttendanceDaily
                 SELECT a FROM AttendanceDaily a
                 WHERE a.user.id = :userId
                 AND a.date BETWEEN :start AND :end
-                AND a.date >= a.user.joiningDate
                 ORDER BY a.date DESC
             """)
     List<AttendanceDaily> findValidUserAttendanceBetween(
@@ -58,7 +59,6 @@ public interface AttendanceDailyRepository extends JpaRepository<AttendanceDaily
                 SELECT a FROM AttendanceDaily a
                 WHERE a.user IN :users
                 AND a.date BETWEEN :start AND :end
-                AND a.date >= a.user.joiningDate
             """)
     List<AttendanceDaily> findAllByUserInAndDateBetween(
             List<User> users,
@@ -70,7 +70,6 @@ public interface AttendanceDailyRepository extends JpaRepository<AttendanceDaily
                 SELECT a FROM AttendanceDaily a
                 WHERE a.user IN :users
                 AND a.date = :date
-                AND a.date >= a.user.joiningDate
             """)
     List<AttendanceDaily> findAllByUserInAndDate(
             List<User> users,

@@ -7,6 +7,7 @@ public enum LeadStatus {
     INTERESTED,
     UNDER_REVIEW,
     FOLLOW_UP,
+    CALL_BACK,
     CONVERTED,
     PAID,
     EMI,

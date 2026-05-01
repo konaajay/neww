@@ -10,7 +10,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "attendance_daily")
+@Table(name = "attendance_daily", uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"user_id", "date"})
+})
 @Data
 @Builder
 @NoArgsConstructor
@@ -64,6 +66,9 @@ public class AttendanceDaily {
 
     @Builder.Default
     private Boolean isEarlyExit = false;
+
+    @Builder.Default
+    private Boolean isLate = false;
 
     private String note;
 

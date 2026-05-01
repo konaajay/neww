@@ -97,10 +97,18 @@ public class ManagerController {
     @PreAuthorize("hasAuthority('ASSIGN_TO_TL') or hasAuthority('ASSIGN_TO_ASSOCIATE') or hasAuthority('ADMIN')")
     @PostMapping("/leads/bulk-assign")
     public ResponseEntity<List<LeadDTO>> bulkAssignLeads(@RequestBody Map<String, Object> body) {
-        List<Long> leadIds = ((List<?>) body.get("leadIds")).stream()
+        Object leadIdsObj = body.get("leadIds");
+        Object userIdObj = body.get("userId");
+        if (userIdObj == null) userIdObj = body.get("tlId");
+
+        if (leadIdsObj == null || userIdObj == null) {
+            throw new com.lms.www.leadmanagement.exception.InvalidRequestException("leadIds and targetId are required");
+        }
+
+        List<Long> leadIds = ((List<?>) leadIdsObj).stream()
                 .map(id -> Long.valueOf(id.toString()))
                 .collect(Collectors.toList());
-        Long userId = Long.valueOf(body.get("userId").toString());
+        Long userId = Long.valueOf(userIdObj.toString());
         return ResponseEntity.ok(leadService.bulkAssignLeads(leadIds, userId));
     }
 

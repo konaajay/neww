@@ -169,4 +169,6 @@ public interface AttendanceSessionRepository extends JpaRepository<AttendanceSes
             @org.springframework.data.repository.query.Param("end") LocalDateTime end);
 
     boolean existsByOfficeId(Long officeId);
+
+    List<AttendanceSession> findAllByStatusIn(List<AttendanceStatus> statuses);
 }

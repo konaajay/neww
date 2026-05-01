@@ -28,8 +28,13 @@ public class UserDTO {
     private boolean active;
     private Long shiftId;
     private String shiftName;
+    private String shiftTime;
+
     private Long officeId;
     private String officeName;
+    private Double latitude;
+    private Double longitude;
+
     private java.math.BigDecimal monthlyTarget;
     private java.util.List<UserDTO> subordinates;
     private java.time.LocalDate joiningDate;
@@ -83,8 +88,13 @@ public class UserDTO {
                 .active(user.isActive())
                 .shiftId(user.getShift() != null ? user.getShift().getId() : null)
                 .shiftName(user.getShift() != null ? user.getShift().getName() : null)
+                .shiftTime(user.getShift() != null ? user.getShift().getName() + " (" + user.getShift().getStartTime() + " - " + user.getShift().getEndTime() + ")" : "Not Assigned")
+
                 .officeId(user.getAssignedOffice() != null ? user.getAssignedOffice().getId() : null)
                 .officeName(user.getAssignedOffice() != null ? user.getAssignedOffice().getName() : null)
+                .latitude(user.getAssignedOffice() != null ? user.getAssignedOffice().getLatitude() : null)
+                .longitude(user.getAssignedOffice() != null ? user.getAssignedOffice().getLongitude() : null)
+
                 .monthlyTarget(user.getMonthlyTarget())
                 .joiningDate(user.getJoiningDate())
                 .build();

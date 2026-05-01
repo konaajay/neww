@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -38,6 +39,11 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
     long countByCreatedAtBetweenAndStatusIn(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("statuses") Collection<String> statuses);
     long countByFollowUpDateBetween(LocalDateTime start, LocalDateTime end);
     long countByFollowUpDateBefore(LocalDateTime now);
+    @Modifying
+    @Query("UPDATE Lead l SET l.assignedTo = NULL WHERE l.assignedTo.id = :userId AND UPPER(l.status) NOT IN ('PAID', 'SUCCESS', 'EMI', 'CONVERTED')")
+    void unassignNonFinalizedLeads(@Param("userId") Long userId);
+
+    @Query("SELECT l FROM Lead l WHERE l.assignedTo IS NULL OR l.assignedTo.active = false")
     List<Lead> findByAssignedToIsNull();
 
     List<Lead> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
@@ -78,12 +84,14 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
 
     @EntityGraph(attributePaths = {"assignedTo", "createdBy", "updatedBy"})
     @Query("SELECT l FROM Lead l LEFT JOIN l.assignedTo a LEFT JOIN l.createdBy c " +
-            "WHERE (a.id IN :userIds OR (a IS NULL AND c.id IN :userIds)) " +
+            "WHERE ((:isUnassigned = true AND a IS NULL AND c.id IN :userIds) OR " +
+            "      (:isUnassigned = false AND (a.id IN :userIds OR (a IS NULL AND c.id IN :userIds)))) " +
             "AND (:start IS NULL OR l.createdAt >= :start) " +
             "AND (:end IS NULL OR l.createdAt <= :end)")
     Page<Lead> findHierarchicalLeads(@Param("userIds") Collection<Long> userIds, 
                                     @Param("start") LocalDateTime start, 
                                     @Param("end") LocalDateTime end, 
+                                    @Param("isUnassigned") boolean isUnassigned,
                                     Pageable pageable);
 
     @EntityGraph(attributePaths = {"assignedTo", "createdBy", "updatedBy"})

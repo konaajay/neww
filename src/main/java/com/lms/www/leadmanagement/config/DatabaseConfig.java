@@ -33,17 +33,19 @@ public class DatabaseConfig {
         hikariConfig.setUsername(username);
         hikariConfig.setPassword(password);
         hikariConfig.setDriverClassName(driverClassName);
-        
+
         // Optimal default pool settings
         hikariConfig.setMaximumPoolSize(10);
         hikariConfig.setMinimumIdle(2);
         hikariConfig.setIdleTimeout(30000);
         hikariConfig.setConnectionTimeout(30000);
-        
+
         // Ensure SSL is handled correctly if not in URL
         hikariConfig.addDataSourceProperty("useSSL", "true");
         hikariConfig.addDataSourceProperty("requireSSL", "true");
-        
+
         return new HikariDataSource(hikariConfig);
     }
 }
+
+// ajay

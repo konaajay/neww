@@ -54,4 +54,12 @@ public class TicketService {
         ticket.setStatus(com.lms.www.leadmanagement.entity.TicketStatus.valueOf(status));
         return ticketRepository.save(ticket);
     }
+
+    public List<Ticket> getMyTickets(Long userId) {
+        return ticketRepository.findByUserId(userId);
+    }
+
+    public List<Ticket> getAllTickets() {
+        return ticketRepository.findAll();
+    }
 }

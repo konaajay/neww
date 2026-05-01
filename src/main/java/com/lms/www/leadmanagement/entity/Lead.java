@@ -30,6 +30,7 @@ public class Lead {
     private String mobile;
 
     private String college;
+    private String note;
 
 
     @Builder.Default
