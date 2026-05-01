@@ -132,7 +132,7 @@ const ManagerDashboard = () => {
     return ids;
   }, [filterState.userId, filterState.teamId, teamTree, findInTree]);
 
-  const filteredLeadsList = useMemo(() => {
+  const filteredLeads = useMemo(() => {
     const term = searchTerm.toLowerCase();
     return (leads || []).filter(l => {
       const matchesSearch = !term ||
@@ -390,7 +390,7 @@ const ManagerDashboard = () => {
                 role="MANAGER"
                 filters={filterState}
                 onNavigate={handleTabChange}
-                leads={filteredLeadsList}
+                leads={filteredLeads}
               />
             )}
             <div className="row g-4 animate-fade-in">
@@ -407,7 +407,7 @@ const ManagerDashboard = () => {
                 <Card title="Squad Pipeline Distribution" className="h-100">
                   <div className="py-2" style={{ height: '360px' }}>
                     <React.Suspense fallback={<ChartSkeleton />}>
-                      <LeadStatusPieChart distribution={stats?.statusDistribution} leads={filteredLeadsList} isDarkMode={isDarkMode} />
+                      <LeadStatusPieChart distribution={stats?.statusDistribution} leads={filteredLeads} isDarkMode={isDarkMode} />
                     </React.Suspense>
                   </div>
                 </Card>
@@ -489,7 +489,7 @@ const ManagerDashboard = () => {
                 <Card title="Pipeline Status Map">
                   <div className="py-2" style={{ height: '360px' }}>
                     <React.Suspense fallback={<ChartSkeleton />}>
-                      <LeadStatusPieChart distribution={statusDistribution} leads={filteredLeadsList} isDarkMode={isDarkMode} />
+                      <LeadStatusPieChart distribution={statusDistribution} leads={filteredLeads} isDarkMode={isDarkMode} />
                     </React.Suspense>
                   </div>
                 </Card>
