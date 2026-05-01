@@ -459,10 +459,10 @@ public class DashboardStatsService {
                 completedTodayFuture
             ).get(10, java.util.concurrent.TimeUnit.SECONDS);
 
-            List<Map<String, Object>> leadsT = safeGet(leadTrendFuture, new ArrayList<>());
-            List<Map<String, Object>> convT = safeGet(convertedTrendFuture, new ArrayList<>());
-            List<Map<String, Object>> lostT = safeGet(lostTrendFuture, new ArrayList<>());
-            List<Map<String, Object>> revT = safeGet(revenueTrendFuture, new ArrayList<>());
+            List<Map<String, Object>> leadsT = safeGetFromFuture(leadTrendFuture, new ArrayList<>());
+            List<Map<String, Object>> convT = safeGetFromFuture(convertedTrendFuture, new ArrayList<>());
+            List<Map<String, Object>> lostT = safeGetFromFuture(lostTrendFuture, new ArrayList<>());
+            List<Map<String, Object>> revT = safeGetFromFuture(revenueTrendFuture, new ArrayList<>());
 
         } catch (Exception e) {
             // Quietly handle partial timeouts
@@ -488,10 +488,10 @@ public class DashboardStatsService {
         }
 
         // 8. Aggregate Trend Data
-        List<Map<String, Object>> leadsT = safeGet(leadTrendFuture, new ArrayList<>());
-        List<Map<String, Object>> convT = safeGet(convertedTrendFuture, new ArrayList<>());
-        List<Map<String, Object>> lostT = safeGet(lostTrendFuture, new ArrayList<>());
-        List<Map<String, Object>> revT = safeGet(revenueTrendFuture, new ArrayList<>());
+        List<Map<String, Object>> leadsT = safeGetFromFuture(leadTrendFuture, new ArrayList<>());
+        List<Map<String, Object>> convT = safeGetFromFuture(convertedTrendFuture, new ArrayList<>());
+        List<Map<String, Object>> lostT = safeGetFromFuture(lostTrendFuture, new ArrayList<>());
+        List<Map<String, Object>> revT = safeGetFromFuture(revenueTrendFuture, new ArrayList<>());
 
         Map<String, Map<String, Object>> trendMap = new TreeMap<>(); // Sorted by date
         
@@ -522,32 +522,32 @@ public class DashboardStatsService {
         List<Map<String, Object>> finalTrend = new ArrayList<>(trendMap.values());
 
         // Collect Results safely
-        long[] attStats = safeGet(attendanceStatsFuture, new long[]{0L, 0L, 0L});
+        long[] attStats = safeGetFromFuture(attendanceStatsFuture, new long[]{0L, 0L, 0L});
         long present = attStats[0];
         long halfDay = attStats[1];
         long absent = attStats[2];
-        BigDecimal monthly = safeGet(monthlyRevenueFuture, BigDecimal.ZERO);
-        BigDecimal daily = safeGet(dailyRevenueFuture, BigDecimal.ZERO);
-        BigDecimal pendingPaymentsAmount = safeGet(pendingRevenueFuture, BigDecimal.ZERO);
-        BigDecimal forecastRevenue = safeGet(forecastRevenueFuture, BigDecimal.ZERO);
-        long pendingPayments = safeGet(pendingPaymentsCountFuture, 0L);
-        long todayFollowups = safeGet(todayFollowupsFuture, 0L);
-        long pendingAppointments = safeGet(pendingTasksFuture, 0L);
-        long interestedCount = safeGet(interestedCountFuture, 0L);
-        long totalLostCount = safeGet(totalLostCountFuture, 0L);
-        long totalLeadsCount = safeGet(totalLeadsCountFuture, 0L);
-        long convertedCount = safeGet(convertedCountFuture, 0L);
-        long todayLeads = safeGet(todayLeadsCountFuture, 0L);
-        long activeTickets = safeGet(activeTicketsFuture, 0L);
-        long pendingTickets = safeGet(pendingTicketsFuture, 0L);
-        long resolvedTickets = safeGet(resolvedTicketsFuture, 0L);
-        long closedTickets = safeGet(closedTicketsFuture, 0L);
-        long todayPayments = safeGet(todayPaymentsCountFuture, 0L);
-        long overduePayments = safeGet(overduePaymentsCountFuture, 0L);
-        long pendingLeadsCount = safeGet(pendingLeadsCountFuture, 0L);
-        long pendingPaymentsCount = safeGet(pendingPaymentsCountFuture, 0L);
-        long highPriority = safeGet(highPriorityFollowupsFuture, 0L);
-        long completedTodayCount = safeGet(completedTodayFuture, 0L);
+        BigDecimal monthly = safeGetFromFuture(monthlyRevenueFuture, BigDecimal.ZERO);
+        BigDecimal daily = safeGetFromFuture(dailyRevenueFuture, BigDecimal.ZERO);
+        BigDecimal pendingPaymentsAmount = safeGetFromFuture(pendingRevenueFuture, BigDecimal.ZERO);
+        BigDecimal forecastRevenue = safeGetFromFuture(forecastRevenueFuture, BigDecimal.ZERO);
+        long pendingPayments = safeGetFromFuture(pendingPaymentsCountFuture, 0L);
+        long todayFollowups = safeGetFromFuture(todayFollowupsFuture, 0L);
+        long pendingAppointments = safeGetFromFuture(pendingTasksFuture, 0L);
+        long interestedCount = safeGetFromFuture(interestedCountFuture, 0L);
+        long totalLostCount = safeGetFromFuture(totalLostCountFuture, 0L);
+        long totalLeadsCount = safeGetFromFuture(totalLeadsCountFuture, 0L);
+        long convertedCount = safeGetFromFuture(convertedCountFuture, 0L);
+        long todayLeads = safeGetFromFuture(todayLeadsCountFuture, 0L);
+        long activeTickets = safeGetFromFuture(activeTicketsFuture, 0L);
+        long pendingTickets = safeGetFromFuture(pendingTicketsFuture, 0L);
+        long resolvedTickets = safeGetFromFuture(resolvedTicketsFuture, 0L);
+        long closedTickets = safeGetFromFuture(closedTicketsFuture, 0L);
+        long todayPayments = safeGetFromFuture(todayPaymentsCountFuture, 0L);
+        long overduePayments = safeGetFromFuture(overduePaymentsCountFuture, 0L);
+        long pendingLeadsCount = safeGetFromFuture(pendingLeadsCountFuture, 0L);
+        long pendingPaymentsCount = safeGetFromFuture(pendingPaymentsCountFuture, 0L);
+        long highPriority = safeGetFromFuture(highPriorityFollowupsFuture, 0L);
+        long completedTodayCount = safeGetFromFuture(completedTodayFuture, 0L);
 
         // Monthly Target Logic (Sequential as it's quick)
         BigDecimal monthlyTarget = targetRepository
@@ -632,7 +632,7 @@ public class DashboardStatsService {
         return result;
     }
 
-    private <T> T safeGet(CompletableFuture<T> future, T defaultValue) {
+    private <T> T safeGetFromFuture(CompletableFuture<T> future, T defaultValue) {
         try {
             if (future == null) return defaultValue;
             T result = future.getNow(defaultValue);
