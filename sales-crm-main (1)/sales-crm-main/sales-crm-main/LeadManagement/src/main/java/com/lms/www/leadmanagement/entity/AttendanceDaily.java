@@ -65,6 +65,9 @@ public class AttendanceDaily {
     private Integer idleMinutes = 0;
 
     @Builder.Default
+    private Integer overtimeMinutes = 0;
+
+    @Builder.Default
     private Boolean isEarlyExit = false;
 
     @Builder.Default

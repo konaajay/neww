@@ -48,16 +48,20 @@ public class LeadService {
 
         // High performance aggregation via Projection
         List<DashboardProjection> projections = leadRepository.countByStatusForUsers(targetIds, start, end);
-        
+
         Map<String, Object> stats = new HashMap<>();
         // Dynamic Bucket Discovery
-        List<String> successStatuses = pipelineStageRepository.findByAnalyticBucketIn(List.of("SUCCESS", "CONVERTED", "PAID"))
+        List<String> successStatuses = pipelineStageRepository
+                .findByAnalyticBucketIn(List.of("SUCCESS", "CONVERTED", "PAID"))
                 .stream().map(s -> s.getStatusValue().toUpperCase()).collect(Collectors.toList());
-        if (successStatuses.isEmpty()) successStatuses = List.of("CONVERTED", "PAID", "EMI", "SUCCESS");
+        if (successStatuses.isEmpty())
+            successStatuses = List.of("CONVERTED", "PAID", "EMI", "SUCCESS");
 
-        List<String> lostStatuses = pipelineStageRepository.findByAnalyticBucketIn(List.of("LOST", "NOT_INTERESTED", "REJECTED"))
+        List<String> lostStatuses = pipelineStageRepository
+                .findByAnalyticBucketIn(List.of("LOST", "NOT_INTERESTED", "REJECTED"))
                 .stream().map(s -> s.getStatusValue().toUpperCase()).collect(Collectors.toList());
-        if (lostStatuses.isEmpty()) lostStatuses = List.of("LOST", "NOT_INTERESTED", "REJECTED");
+        if (lostStatuses.isEmpty())
+            lostStatuses = List.of("LOST", "NOT_INTERESTED", "REJECTED");
 
         long total = 0;
         long converted = 0;
@@ -67,15 +71,17 @@ public class LeadService {
             String status = p.getStatus() != null ? p.getStatus().toUpperCase() : "";
             long count = p.getCount();
             total += count;
-            
-            if (successStatuses.contains(status)) converted += count;
-            else if (lostStatuses.contains(status)) lost += count;
+
+            if (successStatuses.contains(status))
+                converted += count;
+            else if (lostStatuses.contains(status))
+                lost += count;
         }
 
         stats.put("total", total);
         stats.put("convertedCount", converted);
         stats.put("lostCount", lost);
-        
+
         // Revenue (Optimized sum)
         stats.put("totalRevenue", paymentRepository.getTotalRevenueIn(targetIds, start, end));
 
@@ -86,7 +92,7 @@ public class LeadService {
     public List<LeadDTO> getMyLeads() {
         User user = securityService.getCurrentUser();
         List<User> context = List.of(user);
-        
+
         return leadRepository.findListByAssignedToInOrCreatedByIn(context, context)
                 .stream()
                 .sorted(Comparator.comparing(Lead::getCreatedAt).reversed())
@@ -106,7 +112,8 @@ public class LeadService {
 
         List<User> targetUsers = userRepository.findAllById(targetIds);
         return leadRepository.findListByAssignedToInOrCreatedByIn(targetUsers, targetUsers).stream()
-                .filter(l -> (start == null || !l.getCreatedAt().isBefore(start)) && (end == null || !l.getCreatedAt().isAfter(end)))
+                .filter(l -> (start == null || !l.getCreatedAt().isBefore(start))
+                        && (end == null || !l.getCreatedAt().isAfter(end)))
                 .sorted(Comparator.comparing(Lead::getCreatedAt).reversed())
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -114,8 +121,10 @@ public class LeadService {
 
     @Transactional
     public LeadDTO createLead(LeadDTO dto) {
-        if (dto.getMobile() == null || dto.getMobile().isEmpty()) throw new InvalidRequestException("Mobile required");
-        if (leadRepository.existsByMobile(dto.getMobile())) throw new InvalidRequestException("Lead already exists");
+        if (dto.getMobile() == null || dto.getMobile().isEmpty())
+            throw new InvalidRequestException("Mobile required");
+        if (leadRepository.existsByMobile(dto.getMobile()))
+            throw new InvalidRequestException("Lead already exists");
 
         User creator = securityService.getCurrentUser();
         Lead lead = Lead.builder()
@@ -127,7 +136,7 @@ public class LeadService {
                 .createdBy(creator)
                 .assignedTo(null)
                 .build();
-        
+
         return convertToDTO(leadRepository.save(lead));
     }
 
@@ -135,7 +144,7 @@ public class LeadService {
     public LeadDTO updateStatus(Long id, StatusUpdateRequest request) {
         Lead lead = leadRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Lead not found"));
         User user = securityService.getCurrentUser();
-        
+
         // Security check
         if (lead.getAssignedTo() != null) {
             securityService.validateAccess(user, lead.getAssignedTo().getId());
@@ -151,7 +160,7 @@ public class LeadService {
         if (!currentStatus.equals(status)) {
             recordAuditLog(lead.getId(), user, "STATUS", currentStatus, status, "STATUS_CHANGE");
         }
-        
+
         lead.setStatus(status);
         lead.setUpdatedBy(user);
 
@@ -172,7 +181,9 @@ public class LeadService {
         LocalDateTime firstDue = null;
         if (request.getNextInstallmentDate() != null && !request.getNextInstallmentDate().isEmpty()) {
             try {
-                firstDue = LocalDateTime.parse(request.getNextInstallmentDate().contains("T") ? request.getNextInstallmentDate() : request.getNextInstallmentDate() + "T10:00:00");
+                firstDue = LocalDateTime
+                        .parse(request.getNextInstallmentDate().contains("T") ? request.getNextInstallmentDate()
+                                : request.getNextInstallmentDate() + "T10:00:00");
             } catch (Exception e) {
                 log.warn("Invalid installment date format: {}", request.getNextInstallmentDate());
             }
@@ -192,15 +203,17 @@ public class LeadService {
             fee.setPaidAmount(fee.getPaidAmount().add(paid));
         }
         fee.setBalanceAmount(total.subtract(fee.getPaidAmount()));
-        
+
         // Handle full installment map if provided
         if (request.getInstallments() != null && !request.getInstallments().isEmpty()) {
             for (StatusUpdateRequest.InstallmentMap inst : request.getInstallments()) {
                 LocalDateTime due = null;
                 try {
-                    due = LocalDateTime.parse(inst.getDueDate().contains("T") ? inst.getDueDate() : inst.getDueDate() + "T10:00:00");
-                } catch (Exception e) {}
-                
+                    due = LocalDateTime.parse(
+                            inst.getDueDate().contains("T") ? inst.getDueDate() : inst.getDueDate() + "T10:00:00");
+                } catch (Exception e) {
+                }
+
                 if (due != null && inst.getAmount() != null) {
                     paymentRepository.save(Payment.builder()
                             .leadId(lead.getId())
@@ -222,7 +235,7 @@ public class LeadService {
         }
 
         studentFeeRepository.save(fee);
-            
+
         // If there's an initial payment, record it
         if (paid.compareTo(BigDecimal.ZERO) > 0) {
             paymentRepository.save(Payment.builder()
@@ -261,7 +274,7 @@ public class LeadService {
     private void triggerPipelineActions(Lead lead, String status, StatusUpdateRequest request) {
         boolean hasExplicitDueDate = request.getDueDate() != null && !request.getDueDate().isEmpty();
         User requester = securityService.getCurrentUser();
-        
+
         pipelineStageRepository.findByStatusValue(status).ifPresent(stage -> {
             if (stage.isCreateTask() || hasExplicitDueDate) {
                 if (stage.isRequireDate() && !hasExplicitDueDate) {
@@ -271,13 +284,15 @@ public class LeadService {
                 LocalDateTime dueDate = LocalDateTime.now().plusDays(stage.getDefaultFollowupDays());
                 if (hasExplicitDueDate) {
                     try {
-                        dueDate = LocalDateTime.parse(request.getDueDate().contains("T") ? request.getDueDate() : request.getDueDate() + "T10:00:00");
+                        dueDate = LocalDateTime.parse(request.getDueDate().contains("T") ? request.getDueDate()
+                                : request.getDueDate() + "T10:00:00");
                     } catch (Exception e) {
                         log.warn("Invalid due date format: {}", request.getDueDate());
                     }
                 }
 
-                if (!leadTaskRepository.existsByLeadIdAndStatusAndDueDate(lead.getId(), LeadTask.TaskStatus.PENDING, dueDate)) {
+                if (!leadTaskRepository.existsByLeadIdAndStatusAndDueDate(lead.getId(), LeadTask.TaskStatus.PENDING,
+                        dueDate)) {
                     leadTaskRepository.save(LeadTask.builder()
                             .lead(lead)
                             .assignedTo(lead.getAssignedTo())
@@ -291,11 +306,14 @@ public class LeadService {
             }
         });
 
-        // Fallback for custom statuses not in pipeline_stage table but having explicit due date
+        // Fallback for custom statuses not in pipeline_stage table but having explicit
+        // due date
         if (hasExplicitDueDate && pipelineStageRepository.findByStatusValue(status).isEmpty()) {
             try {
-                LocalDateTime dueDate = LocalDateTime.parse(request.getDueDate().contains("T") ? request.getDueDate() : request.getDueDate() + "T10:00:00");
-                if (!leadTaskRepository.existsByLeadIdAndStatusAndDueDate(lead.getId(), LeadTask.TaskStatus.PENDING, dueDate)) {
+                LocalDateTime dueDate = LocalDateTime.parse(
+                        request.getDueDate().contains("T") ? request.getDueDate() : request.getDueDate() + "T10:00:00");
+                if (!leadTaskRepository.existsByLeadIdAndStatusAndDueDate(lead.getId(), LeadTask.TaskStatus.PENDING,
+                        dueDate)) {
                     leadTaskRepository.save(LeadTask.builder()
                             .lead(lead)
                             .assignedTo(lead.getAssignedTo())
@@ -306,7 +324,8 @@ public class LeadService {
                             .taskType("FOLLOW_UP")
                             .build());
                 }
-            } catch (Exception e) {}
+            } catch (Exception e) {
+            }
         }
 
         if ("LOST".equalsIgnoreCase(status) || "NOT_INTERESTED".equalsIgnoreCase(status)) {
@@ -382,7 +401,7 @@ public class LeadService {
     public List<LeadDTO> getAllLeadsForManager(Long managerId, Long userId) {
         User requester = securityService.getCurrentUser();
         java.util.Set<Long> targetIds = securityService.getAllowedUserIds(requester);
-        
+
         if (managerId != null) {
             securityService.validateAccess(requester, managerId);
             targetIds = new java.util.HashSet<>(userRepository.findSubordinateIds(managerId));
@@ -483,14 +502,17 @@ public class LeadService {
     }
 
     @Transactional(readOnly = true)
-    public Page<LeadDTO> getAllLeadsFiltered(Long managerId, Long teamId, Long userId, String from, String to, Pageable pageable) {
+    public Page<LeadDTO> getAllLeadsFiltered(Long managerId, Long teamId, Long userId, String from, String to,
+            Pageable pageable) {
         User requester = securityService.getCurrentUser();
-        
+
         java.time.LocalDateTime start = null;
         java.time.LocalDateTime end = null;
         try {
-            if (from != null && !from.isEmpty()) start = java.time.LocalDate.parse(from).atStartOfDay();
-            if (to != null && !to.isEmpty()) end = java.time.LocalDate.parse(to).atTime(java.time.LocalTime.MAX);
+            if (from != null && !from.isEmpty())
+                start = java.time.LocalDate.parse(from).atStartOfDay();
+            if (to != null && !to.isEmpty())
+                end = java.time.LocalDate.parse(to).atTime(java.time.LocalTime.MAX);
         } catch (Exception e) {
             log.warn("Invalid date format in lead filter: from={}, to={}", from, to);
         }
@@ -515,7 +537,8 @@ public class LeadService {
             targetIds.add(managerId);
         }
 
-        return leadRepository.findHierarchicalLeads(targetIds, start, end, isUnassigned, pageable).map(this::convertToDTO);
+        return leadRepository.findHierarchicalLeads(targetIds, start, end, isUnassigned, pageable)
+                .map(this::convertToDTO);
     }
 
     @Transactional
@@ -532,11 +555,12 @@ public class LeadService {
     }
 
     @Transactional
+
     public LeadDTO recordCallOutcome(Long id, Map<String, Object> outcomeData) {
         StatusUpdateRequest request = new StatusUpdateRequest();
         request.setStatus((String) outcomeData.get("status"));
         request.setNote((String) outcomeData.get("note"));
-        
+
         if (outcomeData.containsKey("totalAmount")) {
             request.setTotalAmount(new BigDecimal(outcomeData.get("totalAmount").toString()));
         }
@@ -552,7 +576,7 @@ public class LeadService {
         if (outcomeData.containsKey("dueDate")) {
             request.setDueDate((String) outcomeData.get("dueDate"));
         }
-        
+
         if (outcomeData.containsKey("installments")) {
             List<Map<String, Object>> instList = (List<Map<String, Object>>) outcomeData.get("installments");
             if (instList != null) {
@@ -567,11 +591,11 @@ public class LeadService {
         }
 
         LeadDTO updatedLead = updateStatus(id, request);
-        
+
         // Record as call log
         Lead lead = leadRepository.findById(id).orElse(null);
         callLogService.recordManualCall(securityService.getCurrentUser(), lead, request.getStatus(), request.getNote());
-        
+
         return updatedLead;
     }
 }

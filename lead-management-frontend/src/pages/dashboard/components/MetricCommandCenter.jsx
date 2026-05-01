@@ -90,7 +90,7 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
     <div className="row g-3 mb-4 animate-fade-in-up">
       <div className="col-12 col-md-4 col-xl">
         <MetricCard
-          title="Who's Working"
+          title="ATTENDANCE"
           icon={Users}
           color="primary"
           onClick={() => handleNav('attendance', `/attendance-logs?from=${filters.from}&to=${filters.to}`)}
@@ -107,7 +107,7 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
 
       <div className="col-12 col-md-4 col-xl">
         <MetricCard
-          title="TEAM"
+          title="USERS"
           icon={Users}
           color="info"
           onClick={() => handleNav('users', '/users')}
@@ -125,7 +125,7 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
 
       <div className="col-12 col-md-4 col-xl">
         <MetricCard
-          title="TODAY"
+          title="FOLLOWUPS"
           icon={Clock}
           color="secondary"
           onClick={() => handleNav('tasks', '/tasks', { filter: 'TODAY' })}
@@ -141,7 +141,7 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
 
       <div className="col-12 col-md-4 col-xl">
         <MetricCard
-          title="MISSED"
+          title="PENDING FOLLOWUPS"
           icon={AlertCircle}
           color="danger"
           onClick={() => handleNav('tasks', '/tasks', { filter: 'OVERDUE' })}

@@ -645,6 +645,15 @@ public class AttendanceService {
         daily.setProductiveMinutes((int) productiveMinutes);
         daily.setIdleMinutes((int) idleMinutes);
         daily.setStatus(status);
+        
+        // Calculate Overtime
+        int standardMins = (int) (fullDayThresholdSecs / 60);
+        if (workingMinutes > standardMins) {
+            daily.setOvertimeMinutes((int) (workingMinutes - standardMins));
+        } else {
+            daily.setOvertimeMinutes(0);
+        }
+
         daily.setIsLate(sessions.stream().anyMatch(AttendanceSession::isLate));
         attendanceDailyRepository.save(daily);
     }
@@ -745,6 +754,14 @@ public class AttendanceService {
         daily.setTotalBreakMinutes((int) preview.getBreakMinutes());
         daily.setStatus(preview.getStatus());
         daily.setLateMinutes(preview.isLate() ? 15 : 0);
+        
+        // Calculate Overtime for manual entry
+        int standardMins = 480; // Default
+        if (preview.getEffectiveMinutes() > standardMins) {
+            daily.setOvertimeMinutes((int) (preview.getEffectiveMinutes() - standardMins));
+        } else {
+            daily.setOvertimeMinutes(0);
+        }
 
         attendanceDailyRepository.save(daily);
 
@@ -814,7 +831,7 @@ public class AttendanceService {
     public AttendanceDTO startBreak(Long userId, String type) {
         AttendanceSession session = attendanceSessionRepository
                 .findFirstByUserIdAndStatusInOrderByCheckInTimeDesc(userId, ACTIVE_STATUSES)
-                .orElseThrow(() -> new RuntimeException("No active session to start break."));
+                .orElseThrow(() -> new IllegalArgumentException("No active session. Please Punch In first."));
         session.setStatus(
                 "LONG".equalsIgnoreCase(type) ? AttendanceStatus.ON_LONG_BREAK : AttendanceStatus.ON_SHORT_BREAK);
         session.setOutsideStartTime(nowInIndia());
@@ -825,7 +842,7 @@ public class AttendanceService {
     public AttendanceDTO endBreak(Long userId) {
         AttendanceSession session = attendanceSessionRepository
                 .findFirstByUserIdAndStatusInOrderByCheckInTimeDesc(userId, ACTIVE_STATUSES)
-                .orElseThrow(() -> new RuntimeException("No active session found."));
+                .orElseThrow(() -> new IllegalArgumentException("No active session found."));
         session.setStatus(AttendanceStatus.WORKING);
         session.setOutsideStartTime(null);
         return convertToDTO(attendanceSessionRepository.save(session), session.getCheckInTime().toLocalDate());

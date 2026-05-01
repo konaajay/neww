@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Edit, Trash2, ChevronDown, ChevronRight, BarChart2, Users, Search, Phone, Zap, FileText, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
+import { UserPlus, Edit, Trash2, ChevronDown, ChevronRight, BarChart2, Users, Search, Phone, Zap, FileText, TrendingUp, AlertCircle, CheckCircle, MessageCircle, Power } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 
 const TeamManagement = ({
@@ -95,12 +95,12 @@ const TeamManagement = ({
           <div className="d-flex align-items-center justify-content-end gap-2">
             <div className="d-flex gap-2 me-2 pe-2 border-end border-white border-opacity-10">
               <a href={`tel:${user.mobile}`} className="btn btn-sm btn-link p-0 text-primary opacity-50 hover-opacity-100"><Phone size={13} /></a>
-              <a href={`https://wa.me/${user.mobile}`} target="_blank" rel="noreferrer" className="btn btn-sm btn-link p-0 text-success opacity-50 hover-opacity-100"><Zap size={13} /></a>
+              <a href={`https://wa.me/${user.mobile}`} target="_blank" rel="noreferrer" className="btn btn-sm btn-link p-0 text-success opacity-50 hover-opacity-100"><MessageCircle size={13} /></a>
             </div>
 
             <button onClick={() => handleEditUser(user)} className="btn btn-sm btn-link p-0 text-primary opacity-50 hover-opacity-100 transition-all hover-scale"><Edit size={13} /></button>
             {user.active ? (
-              <button onClick={() => handleDeleteUser(user.id)} className="btn btn-sm btn-link p-0 text-danger opacity-50 hover-opacity-100 ms-1 transition-all hover-scale" title="Deactivate"><Trash2 size={13} /></button>
+              <button onClick={() => handleDeleteUser(user.id)} className="btn btn-sm btn-link p-0 text-danger opacity-50 hover-opacity-100 ms-1 transition-all hover-scale" title="Deactivate"><Power size={13} /></button>
             ) : (
               <button onClick={() => handleUpdateUser(user.id, { ...user, active: true })} className="btn btn-sm btn-link p-0 text-success opacity-50 hover-opacity-100 ms-1 transition-all hover-scale" title="Reactivate"><CheckCircle size={13} /></button>
             )}
