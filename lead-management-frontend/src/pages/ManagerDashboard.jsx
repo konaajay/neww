@@ -473,6 +473,23 @@ const ManagerDashboard = () => {
         )}
         {activeTab === 'payments' && <PaymentHistory role="MANAGER" managerId={filterState.userId ? null : user?.id} userId={filterState.userId || null} teamId={filterState.teamId || null} from={filterState.from} to={filterState.to} hideHeader={true} />}
         {activeTab === 'calls' && <CallLogDashboard userId={filterState.userId} filters={debouncedFilters} hideHeader={true} />}
+        {activeTab === 'attendance' && <AttendanceDashboard filters={filterState} role="MANAGER" />}
+        {activeTab === 'tasks' && (
+          <div className="animate-fade-in">
+            <TaskBoard 
+              leads={leads} 
+              theme={theme} 
+              onUpdateStatus={handleSync} 
+              loadLeads={handleSync}
+              managerId={user?.id}
+              teamId={filterState.teamId}
+              userId={filterState.userId}
+              startDate={filterState.from} 
+              endDate={filterState.to} 
+              initialFilter="ALL"
+            />
+          </div>
+        )}
         {activeTab === 'reports' && (
           <div className="d-flex flex-column gap-4 animate-fade-in">
             <div className="row g-4">
