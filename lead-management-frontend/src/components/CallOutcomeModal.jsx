@@ -8,6 +8,7 @@ import {
 import { toast } from 'react-toastify';
 import associateService from '../services/associateService';
 import adminService from '../services/adminService';
+import api from '../api/api';
 import { useAuth } from '../context/AuthContext';
 
 const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistory }) => {
@@ -105,7 +106,7 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
       if (!lead?.id) return;
       setIsLoadingLogs(true);
       try {
-        const res = await adminService.api.get(`/leads/${lead.id}/history`);
+        const res = await api.get(`/leads/${lead.id}/history`);
         setAuditLogs(res.data || []);
       } catch (err) {
         console.error("Failed to load audit logs", err);
