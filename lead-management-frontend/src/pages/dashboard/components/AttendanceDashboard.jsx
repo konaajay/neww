@@ -46,17 +46,30 @@ const AttendanceDashboard = ({ filters, role }) => {
             // Determine which user to fetch logs for (Associate > TL > Manager)
             const targetUserId = filters?.userId || filters?.teamId || filters?.managerId;
 
+            const formatDate = (dateStr) => {
+                if (!dateStr) return null;
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return dateStr;
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            };
+
             if (targetUserId && (role === 'ADMIN' || role === 'MANAGER' || role === 'TEAM_LEADER')) {
                 const res = await attendanceService.getDailySummaries({
-                    startDate: filters.from,
-                    endDate: filters.to,
+                    startDate: formatDate(filters.from),
+                    endDate: formatDate(filters.to),
                     userId: targetUserId
                 });
                 setLogs(res.data || res || []);
             } else {
-                const res = await attendanceService.getMyLogs();
+                const res = await attendanceService.getMyLogs({
+                    from: formatDate(filters.from),
+                    to: formatDate(filters.to)
+                });
                 setLogs(res.data || res || []);
             }
+
+
+
         } catch (err) {
             console.error("Failed to fetch logs", err);
         }
@@ -204,8 +217,9 @@ const AttendanceDashboard = ({ filters, role }) => {
                         </div>
                         <div>
                             <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest">Attendance Logs</h5>
-                            <p className="text-muted small mb-0 opacity-50 fw-bold">PAST 30 DAYS</p>
+                            <p className="text-muted small mb-0 opacity-50 fw-bold">{filters?.from} TO {filters?.to}</p>
                         </div>
+
                     </div>
                     <div className="d-flex gap-2">
                         <button className="ui-btn ui-btn-outline rounded-pill px-4 btn-sm" onClick={fetchLogs}>UPDATE</button>

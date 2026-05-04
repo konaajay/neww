@@ -30,4 +30,9 @@ public class AttendancePreviewRequest {
     // For Late calculation
     private LocalTime shiftStart;
     private Integer graceMinutes;
+
+    // For Manual Entry/Preview
+    private java.time.LocalDate date;
+    private Integer workMinutes;
+    private Integer breakMinutes;
 }

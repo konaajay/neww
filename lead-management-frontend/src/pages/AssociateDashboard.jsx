@@ -17,6 +17,8 @@ import { useLookupData } from '../features/users/hooks/useLookupData';
 // Modular Services
 import userApi from '../features/users/api/userApi';
 import leadsApi from '../features/leads/api/leadsApi';
+import paymentService from '../services/paymentService';
+import InvoiceModal from './dashboard/components/InvoiceModal';
 
 // UI Components
 import DashboardLayout from '../components/layout/DashboardLayout';
@@ -46,6 +48,7 @@ const AssociateDashboard = () => {
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [isIngestionModalOpen, setIsIngestionModalOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
 
   // 1. STABLE FILTERS (Core fix to prevent API spam)
   const [filters, setFilters] = useState({
@@ -107,6 +110,19 @@ const AssociateDashboard = () => {
       return true;
     } catch (err) {
       return false;
+    }
+  };
+
+  const handleViewInvoice = async (lead) => {
+    try {
+      const res = await paymentService.fetchInvoiceByLead(lead.id);
+      if (res.data) {
+        setSelectedInvoice(res.data);
+      } else {
+        toast.info('No invoice found for this lead');
+      }
+    } catch (err) {
+      toast.error('Could not get invoice');
     }
   };
 
@@ -200,6 +216,7 @@ const AssociateDashboard = () => {
                   leads={filteredLeads}
                   onUpdateLead={(id, data) => updateLead({ id, data })}
                   onRecordCallOutcome={(leadId, data) => recordCallOutcome({ leadId, data })}
+                  onViewInvoice={handleViewInvoice}
                   role="ASSOCIATE"
                   loading={leadsLoading}
                 />
@@ -239,6 +256,7 @@ const AssociateDashboard = () => {
         )}
 
         <LeadModal isOpen={isIngestionModalOpen} onClose={() => setIsIngestionModalOpen(false)} onAddLead={handleAddLead} />
+        <InvoiceModal isOpen={!!selectedInvoice} onClose={() => setSelectedInvoice(null)} invoiceData={selectedInvoice} />
       </div>
     </DashboardLayout>
   );

@@ -32,9 +32,15 @@ public class AttendanceDTO {
     private String shortBreakEndTime;
     private String longBreakStartTime;
     private String longBreakEndTime;
+    private String shiftStartTime;
+    private String shiftEndTime;
     private Integer gracePeriodMinutes;
+
     private Integer outsideCount;
     private Double officeRadius;
+    private Double officeLat;
+    private Double officeLng;
+    private String officeName;
 
     private Integer totalWorkMinutes;
     private String totalWorkHours; // Formatted "5h 30m"

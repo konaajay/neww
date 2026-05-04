@@ -39,7 +39,8 @@ public class AttendanceSession {
     @Enumerated(EnumType.STRING)
     private AttendanceStatus status;
     
-    private boolean isAutoCheckout;
+    @Column(name = "auto_checkout", nullable = false)
+    private boolean isAutoCheckout = false;
 
     // Track last known geodata
     private Double lastLat;
@@ -86,10 +87,14 @@ public class AttendanceSession {
     @Builder.Default
     private Integer breakViolations = 0;
 
-    private boolean isLate;
+    @Column(name = "late", nullable = false)
+    private boolean isLate = false;
     
     @Builder.Default
     private Integer lateMinutes = 0;
+
+    @Column(name = "low_accuracy", nullable = false)
+    private boolean isLowAccuracy = false;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

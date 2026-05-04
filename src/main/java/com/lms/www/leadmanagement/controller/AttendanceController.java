@@ -96,11 +96,14 @@ public class AttendanceController {
     }
 
     @GetMapping("/my-logs")
-    public ResponseEntity<ApiResponse<List<AttendanceDTO>>> getMyLogs() {
+    public ResponseEntity<ApiResponse<List<AttendanceDTO>>> getMyLogs(
+            @RequestParam(value = "from", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from,
+            @RequestParam(value = "to", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate to) {
         Long userId = getCurrentUserId();
         if (userId == null) return ResponseEntity.status(401).build();
-        return ResponseEntity.ok(ApiResponse.success(attendanceService.getMyLogs(userId)));
+        return ResponseEntity.ok(ApiResponse.success(attendanceService.getMyLogs(userId, from, to)));
     }
+
 
     @PostMapping("/preview")
     public ResponseEntity<ApiResponse<com.lms.www.leadmanagement.dto.AttendancePreviewResponse>> preview(@RequestBody com.lms.www.leadmanagement.dto.AttendancePreviewRequest request) {

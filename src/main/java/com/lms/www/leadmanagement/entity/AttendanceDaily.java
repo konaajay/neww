@@ -65,10 +65,10 @@ public class AttendanceDaily {
     private Integer idleMinutes = 0;
 
     @Builder.Default
-    private Boolean isEarlyExit = false;
+    private Boolean earlyExit = false;
 
     @Builder.Default
-    private Boolean isLate = false;
+    private Boolean late = false;
 
     private String note;
 

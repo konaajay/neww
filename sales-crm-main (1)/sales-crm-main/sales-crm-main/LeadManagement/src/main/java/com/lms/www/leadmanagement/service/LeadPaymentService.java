@@ -385,7 +385,9 @@ public class LeadPaymentService {
     @Transactional(readOnly = true)
     public Map<String, Object> getStudentFeeStructure(Long leadId) {
         StudentFee fee = studentFeeRepository.findByLeadId(leadId).orElse(null);
-        List<Payment> payments = paymentRepository.findByLeadId(leadId);
+        List<PaymentDTO> payments = paymentRepository.findByLeadId(leadId).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
         
         Map<String, Object> response = new HashMap<>();
         if (fee != null) {

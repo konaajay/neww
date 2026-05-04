@@ -459,7 +459,7 @@ const AdminDashboard = () => {
           setUser={setEditingUser}
           isOpen={!!editingUser}
           onClose={() => setEditingUser(null)}
-          onSubmit={handleUpdateUser}
+          onSubmit={handleEditUserSubmit}
           roles={roles}
           teamLeaders={users}
         />

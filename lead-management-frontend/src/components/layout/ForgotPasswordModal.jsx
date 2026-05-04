@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import api from '../../api/api';
 
 const ForgotPasswordModal = ({ isOpen, onClose }) => {
-  const [step, setStep] = useState(1); // 1: Email, 2: OTP & New Password
+  const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -55,19 +55,19 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay d-flex align-items-center justify-content-center p-3" style={{ 
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-      backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 10000 
+    <div className="modal-overlay d-flex align-items-center justify-content-center p-3" style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 10000
     }}>
       <div className="premium-card p-0 overflow-hidden shadow-2xl animate-scale-in" style={{ width: '100%', maxWidth: '400px' }}>
-        <div className="p-4 border-bottom border-white border-opacity-5 d-flex align-items-center justify-content-between bg-primary bg-opacity-5">
+        <div className="p-4 border-bottom border-white border-opacity-5 d-flex align-items-center justify-content-between" style={{ backgroundColor: 'rgba(99, 102, 241, 0.03)' }}>
           <div className="d-flex align-items-center gap-3">
             <div className="p-2 bg-primary bg-opacity-10 text-primary rounded-3">
               <Key size={20} />
             </div>
             <div>
-              <h5 className="fw-black text-main mb-0 text-uppercase tracking-widest small">Identity Recovery</h5>
-              <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>SECURE ACCESS RESTORATION</p>
+              <h5 className="fw-black text-main mb-0 text-uppercase tracking-widest small">ACCOUNT Recovery</h5>
+              {/* <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>SECURE ACCESS RESTORATION</p> */}
             </div>
           </div>
           <button onClick={onClose} className="btn btn-link text-main p-1 opacity-50 hover-opacity-100 border-0">
@@ -79,7 +79,7 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
           {step === 1 ? (
             <form onSubmit={handleRequestOtp} className="d-flex flex-column gap-4 py-2">
               <div className="text-center">
-                <div className="mb-3 d-inline-flex p-3 bg-primary bg-opacity-5 rounded-pill border border-primary border-opacity-10 shadow-glow-sm">
+                <div className="mb-3 d-inline-flex p-3 rounded-pill border border-primary border-opacity-10 shadow-glow-sm" style={{ backgroundColor: 'rgba(99, 102, 241, 0.05)' }}>
                   <Mail size={32} className="text-primary" />
                 </div>
                 <h6 className="fw-black text-main mb-2">Forgot Password?</h6>
@@ -94,11 +94,12 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
                   placeholder="name@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
                   required
                 />
               </div>
 
-              <button 
+              <button
                 type="submit"
                 disabled={loading}
                 className="ui-btn ui-btn-primary w-100 py-2.5 rounded-3 d-flex align-items-center justify-content-center gap-2 shadow-glow"
@@ -109,7 +110,11 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
             </form>
           ) : (
             <form onSubmit={handleResetPassword} className="d-flex flex-column gap-3">
-              <div className="p-3 bg-primary bg-opacity-5 rounded-4 border border-primary border-opacity-10 mb-2">
+              {/* Hidden inputs to catch browser autofill project-wide */}
+              <input type="text" name="prevent_autofill_email" style={{ display: 'none' }} tabIndex="-1" />
+              <input type="password" name="prevent_autofill_pass" style={{ display: 'none' }} tabIndex="-1" />
+
+              <div className="p-3 rounded-4 border border-primary border-opacity-10 mb-2" style={{ backgroundColor: 'rgba(99, 102, 241, 0.08)' }}>
                 <p className="text-primary fw-black text-center mb-0" style={{ fontSize: '10px' }}>CODE SENT TO {email}</p>
               </div>
 
@@ -117,11 +122,13 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
                 <label className="form-label text-muted fw-bold text-uppercase" style={{ fontSize: '9px' }}>6-Digit Security Code</label>
                 <input
                   type="text"
+                  name="security-code-otp"
                   maxLength="6"
                   className="form-control bg-surface border-white border-opacity-10 py-2.5 text-center fw-black tracking-widest"
-                  placeholder="0 0 0 0 0 0"
+                  placeholder="· · · · · ·"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
+                  autoComplete="off"
                   required
                 />
               </div>
@@ -130,10 +137,12 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
                 <label className="form-label text-muted fw-bold text-uppercase" style={{ fontSize: '9px' }}>Set New Password</label>
                 <input
                   type="password"
+                  name="new-security-pass"
                   className="form-control bg-surface border-white border-opacity-10 py-2.5 fw-bold"
                   placeholder="Minimum 6 characters"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
+                  autoComplete="new-password"
                   required
                 />
               </div>
@@ -142,16 +151,18 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
                 <label className="form-label text-muted fw-bold text-uppercase" style={{ fontSize: '9px' }}>Confirm New Password</label>
                 <input
                   type="password"
+                  name="confirm-security-pass"
                   className="form-control bg-surface border-white border-opacity-10 py-2.5 fw-bold"
                   placeholder="Repeat new password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
                   required
                 />
               </div>
 
               <div className="d-flex gap-2 pt-2">
-                <button 
+                <button
                   type="button"
                   onClick={() => setStep(1)}
                   className="btn btn-link text-muted fw-bold text-decoration-none small border-0"
@@ -159,13 +170,13 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
                 >
                   BACK
                 </button>
-                <button 
+                <button
                   type="submit"
                   disabled={loading}
                   className="ui-btn ui-btn-primary flex-grow-1 py-2.5 rounded-3 d-flex align-items-center justify-content-center gap-2 shadow-glow"
                 >
                   {loading ? <Loader2 size={18} className="animate-spin" /> : <ShieldCheck size={18} />}
-                  <span className="fw-black tracking-widest text-uppercase" style={{ fontSize: '11px' }}>RESET PASSCODE</span>
+                  <span className="fw-black tracking-widest text-uppercase" style={{ fontSize: '11px' }}>RESET PASSWORD</span>
                 </button>
               </div>
             </form>

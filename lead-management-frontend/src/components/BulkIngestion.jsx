@@ -13,7 +13,7 @@ const BulkIngestion = ({ onSuccess, assignees = [] }) => {
     const { user: currentUser } = useAuth();
     const { isDarkMode } = useTheme();
     const isAssociate = currentUser?.role === 'ASSOCIATE';
-    
+
     const [file, setFile] = useState(null);
     const [assignedToIds, setAssignedToIds] = useState([]);
     const [uploading, setUploading] = useState(false);
@@ -41,15 +41,18 @@ const BulkIngestion = ({ onSuccess, assignees = [] }) => {
         try {
             const idsString = assignedToIds.join(',');
             const response = await managerService.bulkUploadLeads(file, idsString || null);
-            setUploadResult(response.data);
             
-            if (response.data.successCount > 0) {
+            // Fix: safeRequest already returns res.data
+            setUploadResult(response);
+
+            if (response && response.successCount > 0) {
                 onSuccess?.();
             }
         } catch (err) {
-            const errorMsg = err.response?.data?.message || err.response?.data?.error || 'Ingestion Failure: System logic error during propagation';
+            console.error('Bulk Upload Error Context:', err);
+            const errorMsg = err.response?.data?.message || err.message || 'System logic error during propagation';
             setApiError(errorMsg);
-            toast.error('Upload Failed');
+            toast.error('Upload Process Failed');
         } finally {
             setUploading(false);
         }
@@ -102,7 +105,7 @@ const BulkIngestion = ({ onSuccess, assignees = [] }) => {
                 </div>
 
                 <div className="text-center">
-                    <button 
+                    <button
                         className={`ui-btn px-5 py-3 rounded-pill fw-black text-uppercase tracking-widest shadow-lg ${isDarkMode ? 'ui-btn-primary' : 'btn-dark'}`}
                         onClick={handleReset}
                     >
@@ -126,9 +129,11 @@ const BulkIngestion = ({ onSuccess, assignees = [] }) => {
                 </div>
             )}
 
-            <div className="row g-3">
+            <div className={`row g-3 ${isAssociate ? 'justify-content-center' : ''}`}>
+
                 {/* LEFT: UPLOAD CONTROL */}
-                <div className="col-lg-6">
+                <div className={isAssociate ? "col-12" : "col-lg-6"}>
+
                     <div className={`p-3 p-md-4 rounded-5 border h-100 d-flex flex-column transition-all duration-300 ${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-5' : 'bg-light border-dark border-opacity-10'}`}>
                         <div className="d-flex align-items-center gap-3 mb-4">
                             <div className="p-3 bg-primary bg-opacity-10 text-primary rounded-4">
@@ -140,11 +145,10 @@ const BulkIngestion = ({ onSuccess, assignees = [] }) => {
                             </div>
                         </div>
 
-                        <div 
-                            className={`flex-grow-1 border-2 border-dashed rounded-5 d-flex flex-column align-items-center justify-content-center p-5 transition-all duration-300 ${
-                                file ? 'border-success bg-success bg-opacity-10' : 
+                        <div
+                            className={`flex-grow-1 border-2 border-dashed rounded-5 d-flex flex-column align-items-center justify-content-center p-5 transition-all duration-300 ${file ? 'border-success bg-success bg-opacity-10' :
                                 isDarkMode ? 'border-white border-opacity-10 bg-black bg-opacity-20 hover:border-primary' : 'border-dark border-opacity-10 bg-white hover:border-primary'
-                            }`}
+                                }`}
                             style={{ cursor: file ? 'default' : 'pointer', minHeight: '160px' }}
                             onDragEnter={() => setDragActive(true)}
                             onDragLeave={() => setDragActive(false)}
@@ -155,14 +159,14 @@ const BulkIngestion = ({ onSuccess, assignees = [] }) => {
                             }}
                             onClick={() => !file && document.getElementById('manifest-input').click()}
                         >
-                            <input 
-                                type="file" 
-                                id="manifest-input" 
-                                className="d-none" 
-                                accept=".csv" 
-                                onChange={handleFileChange} 
+                            <input
+                                type="file"
+                                id="manifest-input"
+                                className="d-none"
+                                accept=".csv"
+                                onChange={handleFileChange}
                             />
-                            
+
                             {!file ? (
                                 <div className="text-center group">
                                     <div className="p-3 bg-primary bg-opacity-10 rounded-circle mb-3 d-inline-block transition-transform group-hover:scale-110 shadow-glow border border-primary border-opacity-20">
@@ -176,16 +180,16 @@ const BulkIngestion = ({ onSuccess, assignees = [] }) => {
                                     <div className="p-4 bg-success bg-opacity-10 text-success rounded-circle mb-4 d-inline-block shadow-glow">
                                         <CheckCircle2 size={48} strokeWidth={1} />
                                     </div>
-                                    <h6 className={`fw-black mb-1 text-truncate px-3 mx-auto ${isDarkMode ? 'text-white' : 'text-dark'}`} style={{maxWidth: '240px'}}>{file.name}</h6>
-                                    <p className="text-success small fw-black text-uppercase tracking-widest opacity-75" style={{fontSize: '9px'}}>{(file.size / 1024).toFixed(1)} KB DATA STREAM READY</p>
-                                    <button type="button" className="btn btn-link btn-sm text-danger mt-4 text-decoration-none fw-black text-uppercase tracking-widest p-0 transition-opacity hover:opacity-100 opacity-60" style={{fontSize: '9px'}} onClick={(e) => { e.stopPropagation(); setFile(null); setApiError(null); }}>Discard Ingest</button>
+                                    <h6 className={`fw-black mb-1 text-truncate px-3 mx-auto ${isDarkMode ? 'text-white' : 'text-dark'}`} style={{ maxWidth: '240px' }}>{file.name}</h6>
+                                    <p className="text-success small fw-black text-uppercase tracking-widest opacity-75" style={{ fontSize: '9px' }}>{(file.size / 1024).toFixed(1)} KB DATA STREAM READY</p>
+                                    <button type="button" className="btn btn-link btn-sm text-danger mt-4 text-decoration-none fw-black text-uppercase tracking-widest p-0 transition-opacity hover:opacity-100 opacity-60" style={{ fontSize: '9px' }} onClick={(e) => { e.stopPropagation(); setFile(null); setApiError(null); }}>Discard Ingest</button>
                                 </div>
                             )}
                         </div>
-                        
+
                         <div className="mt-2">
-                             <button type="button" className={`btn btn-link text-info text-decoration-none btn-sm fw-black text-uppercase tracking-widest p-0 transition-all hover:scale-105 ${isDarkMode ? 'opacity-80' : 'opacity-100'}`} onClick={downloadTemplate} style={{fontSize: '9px'}}>
-                                 <Download size={14} className="me-2" /> Retrieve Configuration Template
+                            <button type="button" className={`btn btn-link text-info text-decoration-none btn-sm fw-black text-uppercase tracking-widest p-0 transition-all hover:scale-105 ${isDarkMode ? 'opacity-80' : 'opacity-100'}`} onClick={downloadTemplate} style={{ fontSize: '9px' }}>
+                                <Download size={14} className="me-2" /> CSV STRUCTURE Template
                             </button>
                         </div>
                     </div>
@@ -208,8 +212,8 @@ const BulkIngestion = ({ onSuccess, assignees = [] }) => {
                             <div className="flex-grow-1">
                                 <div className="d-flex align-items-center justify-content-between mb-3">
                                     <label className="text-muted small fw-bold text-uppercase tracking-widest opacity-75 mb-0">Choose Recipients</label>
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
                                         className="btn btn-link p-0 text-primary small fw-black text-decoration-none"
                                         onClick={() => {
                                             if (assignedToIds.length === assignees.length) setAssignedToIds([]);
@@ -222,7 +226,7 @@ const BulkIngestion = ({ onSuccess, assignees = [] }) => {
 
                                 <div className="mb-3">
                                     <div className="position-relative">
-                                        <input 
+                                        <input
                                             type="text"
                                             className={`form-control border-0 rounded-4 py-2 px-4 small ${isDarkMode ? 'bg-black bg-opacity-20 text-white' : 'bg-white border'}`}
                                             placeholder="Search people..."
@@ -241,20 +245,19 @@ const BulkIngestion = ({ onSuccess, assignees = [] }) => {
                                         </div>
                                     ) : assignees.filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase())).map(user => (
                                         <div key={user.id} className="col-12">
-                                            <div 
-                                                className={`p-2 px-3 rounded-4 border transition-all cursor-pointer group d-flex align-items-center gap-3 ${
-                                                    assignedToIds.includes(user.id) ? 
-                                                    'border-primary bg-primary bg-opacity-10 shadow-glow-sm' : 
+                                            <div
+                                                className={`p-2 px-3 rounded-4 border transition-all cursor-pointer group d-flex align-items-center gap-3 ${assignedToIds.includes(user.id) ?
+                                                    'border-primary bg-primary bg-opacity-10 shadow-glow-sm' :
                                                     isDarkMode ? 'border-white border-opacity-5 bg-white bg-opacity-5 hover:bg-opacity-10' : 'border-dark border-opacity-5 bg-white hover:bg-light'
-                                                }`}
+                                                    }`}
                                                 onClick={() => setAssignedToIds(prev => prev.includes(user.id) ? prev.filter(i => i !== user.id) : [...prev, user.id])}
                                             >
                                                 <div className={`p-2 rounded-circle transition-all ${assignedToIds.includes(user.id) ? 'bg-primary text-white' : 'bg-primary bg-opacity-10 text-primary'}`}>
                                                     <User size={12} />
                                                 </div>
                                                 <div className="flex-grow-1 min-w-0">
-                                                    <p className={`small mb-0 fw-black text-truncate ${isDarkMode ? 'text-white' : 'text-dark'}`} style={{fontSize: '11px'}}>{user.name}</p>
-                                                    <p className="text-muted fw-bold opacity-40 mb-0" style={{fontSize: '8px'}}>{user.role?.replace('ROLE_', '').replace('_', ' ')}</p>
+                                                    <p className={`small mb-0 fw-black text-truncate ${isDarkMode ? 'text-white' : 'text-dark'}`} style={{ fontSize: '11px' }}>{user.name}</p>
+                                                    <p className="text-muted fw-bold opacity-40 mb-0" style={{ fontSize: '8px' }}>{user.role?.replace('ROLE_', '').replace('_', ' ')}</p>
                                                 </div>
                                                 {assignedToIds.includes(user.id) && (
                                                     <CheckCircle2 size={16} className="text-primary animate-zoom-in" />
@@ -277,13 +280,12 @@ const BulkIngestion = ({ onSuccess, assignees = [] }) => {
             </div>
 
             <div className="mt-3 d-flex justify-content-center">
-                <button 
-                    type="submit" 
-                    className={`ui-btn px-5 rounded-pill fw-black text-uppercase tracking-widest shadow-glow py-3 border-0 transition-all hover:scale-105 active:scale-95 d-flex align-items-center justify-content-center gap-3 ${
-                        uploading || !file ? 'opacity-50 grayscale' : ''
-                    } ${isDarkMode ? 'ui-btn-primary' : 'btn-dark'}`} 
+                <button
+                    type="submit"
+                    className={`ui-btn px-5 rounded-pill fw-black text-uppercase tracking-widest shadow-glow py-3 border-0 transition-all hover:scale-105 active:scale-95 d-flex align-items-center justify-content-center gap-3 ${uploading || !file ? 'opacity-50 grayscale' : ''
+                        } ${isDarkMode ? 'ui-btn-primary' : 'btn-dark'}`}
                     disabled={uploading || !file}
-                    style={{fontSize: '11px', minWidth: '280px'}}
+                    style={{ fontSize: '11px', minWidth: '280px' }}
                 >
                     {uploading ? (
                         <>

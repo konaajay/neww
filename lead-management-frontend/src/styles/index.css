@@ -215,7 +215,7 @@ img {
   min-height: var(--header-height) !important;
   background-color: var(--nav-bg) !important;
   border-bottom: 1px solid var(--border-color) !important;
-  z-index: 1010 !important;
+  z-index: 2000 !important;
   backdrop-filter: var(--glass-blur) !important;
   display: flex !important;
   flex-direction: row !important;

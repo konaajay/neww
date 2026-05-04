@@ -33,6 +33,9 @@ public class MailService {
             helper.setSubject(subject);
             helper.setText(body, true); // true for HTML
             
+            System.out.println(">>> SUBJECT: " + subject);
+            System.out.println(">>> BODY LENGTH: " + body.length() + " chars");
+            
             System.out.println(">>> CONNECTING TO SMTP SERVER FOR: " + to);
             mailSender.send(message);
             System.out.println(">>> SUCCESSFULLY SENT EMAIL TO: " + to);
@@ -41,6 +44,7 @@ public class MailService {
             System.err.println(">>> ERROR: FAILED TO SEND EMAIL TO: " + to);
             System.err.println(">>> REASON: " + e.getMessage());
             log.error("Failed to send email to {}", to, e);
+            throw new RuntimeException("Email delivery failed: " + e.getMessage());
         }
     }
 
@@ -72,6 +76,23 @@ public class MailService {
             "<p>Please ensure you change your password upon initial authentication for security purposes.</p>" +
             "<br/><p>Best regards,<br/>NEXUS Intelligence Cluster</p>",
             name, to, password
+        );
+        sendEmail(to, subject, body);
+    }
+
+    public void sendOtp(String to, String otp, String name) {
+        String subject = "Verification Required: Your NEXUS CRM Security Code";
+        String body = String.format(
+            "<h3>Security Protocol Verification</h3>" +
+            "<p>Hello %s,</p>" +
+            "<p>You have requested a security passcode update for your account on NEXUS CRM.</p>" +
+            "<div style='background:#f8fafc;padding:30px;text-align:center;border:1px solid #e2e8f0;border-radius:12px;margin:20px 0;'>" +
+            "   <p style='margin-bottom:10px;color:#64748b;font-weight:bold;text-transform:uppercase;font-size:11px;letter-spacing:1px;'>Your Security Code</p>" +
+            "   <h1 style='margin:0;color:#6366f1;font-size:36px;letter-spacing:8px;font-family:monospace;'>%s</h1>" +
+            "</div>" +
+            "<p>This code is valid for <strong>15 minutes</strong>. If you did not request this code, please secure your account immediately.</p>" +
+            "<br/><p>Regards,<br/>NEXUS Intelligence Cluster</p>",
+            name, otp
         );
         sendEmail(to, subject, body);
     }

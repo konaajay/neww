@@ -15,8 +15,10 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 
+@Slf4j
 @Service
 public class LeadBulkUploadService {
 
@@ -56,10 +58,10 @@ public class LeadBulkUploadService {
         }
         int assigneeIndex = 0;
 
+        int rowNum = 0;
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
             String line;
             boolean firstLine = true;
-            int rowNum = 0;
 
             while ((line = reader.readLine()) != null) {
                 rowNum++;
@@ -109,7 +111,7 @@ public class LeadBulkUploadService {
                     mobile = mobile.replaceAll("[^0-9]", "");
                     if (mobile.length() < 10) {
                         failures++;
-                        errorList.add("Row " + rowNum + ": Invalid mobile number format");
+                        errorList.add("Row " + rowNum + " [" + name + "]: Mobile must be at least 10 digits (" + mobile + ")");
                         continue;
                     }
 
@@ -137,24 +139,34 @@ public class LeadBulkUploadService {
                         continue;
                     }
 
-                    Lead lead = Lead.builder()
-                            .name(name)
-                            .email(email.isEmpty() ? null : email)
-                            .mobile(mobile)
-                            .college(college.isEmpty() ? null : college)
-
-                            .status("WORKING")
-                            .createdBy(creator)
-                            .assignedTo(finalAssignee)
-                            .build();
-                    leadRepository.save(Objects.requireNonNull(lead));
-                    success++;
+                    try {
+                        Lead lead = Lead.builder()
+                                .name(name)
+                                .email(email == null || email.isEmpty() ? null : email)
+                                .mobile(mobile)
+                                .college(college == null || college.isEmpty() ? null : college)
+                                .status("WORKING")
+                                .createdBy(creator)
+                                .assignedTo(finalAssignee)
+                                .build();
+                        leadRepository.save(lead);
+                        success++;
+                    } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+                        failures++;
+                        errorList.add("Row " + rowNum + ": Mobile or Email conflict (DB level)");
+                        log.warn("Row {} save failed: {}", rowNum, ex.getMessage());
+                    } catch (Exception ex) {
+                        failures++;
+                        errorList.add("Row " + rowNum + ": Internal error during save");
+                        log.error("Row {} save error: {}", rowNum, ex.getMessage());
+                    }
                 } else {
                     failures++;
                     errorList.add("Row " + rowNum + ": Insufficient columns (Expected Name, Email, Mobile)");
                 }
             }
         } catch (Exception e) {
+            log.error("CRITICAL: Bulk upload failed at row {}: {}", rowNum, e.getMessage(), e);
             throw new RuntimeException("CSV Ingestion Interrupted: " + e.getMessage());
         }
 

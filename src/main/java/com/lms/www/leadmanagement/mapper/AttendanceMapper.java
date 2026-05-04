@@ -23,18 +23,23 @@ public class AttendanceMapper {
         int trackingInterval = (policy != null && policy.getTrackingIntervalSec() != null)
                 ? policy.getTrackingIntervalSec()
                 : 300;
-        String sBreakStart = (policy != null && policy.getShortBreakStartTime() != null)
-                ? policy.getShortBreakStartTime().toString()
-                : "17:00";
-        String sBreakEnd = (policy != null && policy.getShortBreakEndTime() != null)
-                ? policy.getShortBreakEndTime().toString()
-                : "17:10";
-        String lBreakStart = (policy != null && policy.getLongBreakStartTime() != null)
-                ? policy.getLongBreakStartTime().toString()
-                : "13:00";
-        String lBreakEnd = (policy != null && policy.getLongBreakEndTime() != null)
-                ? policy.getLongBreakEndTime().toString()
-                : "14:00";
+        String sBreakStart = (s.getUser().getShift() != null && s.getUser().getShift().getShortBreakStartTime() != null)
+                ? s.getUser().getShift().getShortBreakStartTime().toString()
+                : (policy != null && policy.getShortBreakStartTime() != null ? policy.getShortBreakStartTime().toString() : "17:00");
+        String sBreakEnd = (s.getUser().getShift() != null && s.getUser().getShift().getShortBreakEndTime() != null)
+                ? s.getUser().getShift().getShortBreakEndTime().toString()
+                : (policy != null && policy.getShortBreakEndTime() != null ? policy.getShortBreakEndTime().toString() : "17:10");
+        String lBreakStart = (s.getUser().getShift() != null && s.getUser().getShift().getLongBreakStartTime() != null)
+                ? s.getUser().getShift().getLongBreakStartTime().toString()
+                : (policy != null && policy.getLongBreakStartTime() != null ? policy.getLongBreakStartTime().toString() : "13:00");
+        String lBreakEnd = (s.getUser().getShift() != null && s.getUser().getShift().getLongBreakEndTime() != null)
+                ? s.getUser().getShift().getLongBreakEndTime().toString()
+                : (policy != null && policy.getLongBreakEndTime() != null ? policy.getLongBreakEndTime().toString() : "14:00");
+
+        String shiftStart = (s.getUser().getShift() != null) ? s.getUser().getShift().getStartTime().toString()
+                : (policy != null && policy.getShiftStartTime() != null ? policy.getShiftStartTime().toString() : "00:00");
+        String shiftEnd = (s.getUser().getShift() != null) ? s.getUser().getShift().getEndTime().toString()
+                : (policy != null && policy.getShiftEndTime() != null ? policy.getShiftEndTime().toString() : "23:59");
         int gracePeriod = (policy != null && policy.getGracePeriodMinutes() != null) ? policy.getGracePeriodMinutes()
                 : 2;
         double radius = (office != null && office.getRadius() != null) ? office.getRadius() : 200.0;
@@ -57,9 +62,15 @@ public class AttendanceMapper {
                 .shortBreakEndTime(sBreakEnd)
                 .longBreakStartTime(lBreakStart)
                 .longBreakEndTime(lBreakEnd)
+                .shiftStartTime(shiftStart)
+                .shiftEndTime(shiftEnd)
                 .gracePeriodMinutes(gracePeriod)
+
                 .outsideCount(s.getOutsideCount() != null ? s.getOutsideCount() : 0)
                 .officeRadius(radius)
+                .officeLat(office != null ? office.getLatitude() : null)
+                .officeLng(office != null ? office.getLongitude() : null)
+                .officeName(office != null ? office.getName() : null)
                 .totalWorkMinutes(dayWorkMinutes)
                 .totalWorkHours(dayWorkHours)
                 .totalBreakMinutes(s.getTotalBreakMinutes())

@@ -148,12 +148,17 @@ public class CallLogService {
     }
 
     public List<CallRecord> getMyLogs(Long userId, LocalDate from, LocalDate to) {
+        List<CallRecord> logs;
         if (from != null) {
             LocalDateTime start = from.atStartOfDay();
             LocalDateTime end = (to != null ? to : from).atTime(23, 59, 59);
-            return callRecordRepository.findByUserIdAndStartTimeBetweenOrderByStartTimeDesc(userId, start, end);
+            logs = callRecordRepository.findByUserIdAndStartTimeBetweenOrderByStartTimeDesc(userId, start, end);
+        } else {
+            logs = callRecordRepository.findByUserIdOrderByStartTimeDesc(userId);
         }
-        return callRecordRepository.findByUserIdOrderByStartTimeDesc(userId);
+        // Initialize lazy proxies
+        logs.forEach(this::initializeRecord);
+        return logs;
     }
 
     public Map<String, Object> getStats(Long userId, LocalDate from, LocalDate to) {
@@ -250,6 +255,7 @@ public class CallLogService {
 
     // --- Administrative Reporting ---
 
+    @Transactional(readOnly = true)
     public List<CallRecord> getAllLogsAdmin(LocalDate from, LocalDate to, Long targetUserId, Long requesterId) {
         User requester = userRepository.findById(requesterId)
                 .orElseThrow(() -> new RuntimeException("Requester not found"));
@@ -265,11 +271,25 @@ public class CallLogService {
         LocalDateTime start = (from != null) ? from.atStartOfDay() : LocalDateTime.now().minusYears(1);
         LocalDateTime end = (from != null) ? (to != null ? to : from).atTime(23, 59, 59) : LocalDateTime.now();
 
+        List<CallRecord> logs;
         if (isGlobalAdmin) {
-            return callRecordRepository.findByStartTimeBetweenOrderByStartTimeDesc(start, end);
+            logs = callRecordRepository.findByStartTimeBetweenOrderByStartTimeDesc(start, end);
         } else {
-            return callRecordRepository.findByUserIdInAndStartTimeBetweenOrderByStartTimeDesc(new java.util.ArrayList<>(allowedUserIds),
+            logs = callRecordRepository.findByUserIdInAndStartTimeBetweenOrderByStartTimeDesc(new java.util.ArrayList<>(allowedUserIds),
                     start, end);
+        }
+
+        // Initialize lazy proxies to avoid serialization errors
+        logs.forEach(this::initializeRecord);
+        return logs;
+    }
+
+    private void initializeRecord(CallRecord record) {
+        if (record.getUser() != null) {
+            record.getUser().getName(); // Trigger proxy initialization
+        }
+        if (record.getLead() != null) {
+            record.getLead().getName(); // Trigger proxy initialization
         }
     }
 

@@ -62,10 +62,11 @@ public class AttendancePolicyService {
 
     @Transactional
     public void deleteOffice(Long id) {
-        if (attendanceSessionRepository.existsByOfficeId(id)) {
-            throw new IllegalStateException("Cannot delete office with active or historical attendance logs.");
+        if (attendanceSessionRepository.existsByOfficeId(id)
+                || attendancePolicyRepository.findByOfficeId(id).isPresent()
+                || !attendanceShiftRepository.findByOfficeId(id).isEmpty()) {
+            throw new IllegalStateException("Cannot delete office. It is currently linked to sessions, policies, or shifts.");
         }
-        attendancePolicyRepository.deleteByOfficeId(id);
         officeLocationRepository.deleteById(id);
     }
 
@@ -123,10 +124,13 @@ public class AttendancePolicyService {
 
     @Transactional
     public AttendanceShift createShift(AttendanceShift shift) {
+        // Allow multiple shifts per office, but prevent duplicate names in the same office
         if (shift.getOffice() != null) {
-            attendanceShiftRepository.findByOfficeId(shift.getOffice().getId()).ifPresent(existing -> {
-                shift.setId(existing.getId());
-            });
+            boolean duplicate = attendanceShiftRepository.findByOfficeId(shift.getOffice().getId())
+                    .stream().anyMatch(s -> s.getName().equalsIgnoreCase(shift.getName()));
+            if (duplicate) {
+                throw new IllegalStateException("A shift with the name '" + shift.getName() + "' already exists for this office.");
+            }
         }
         return attendanceShiftRepository.save(shift);
     }
@@ -141,6 +145,10 @@ public class AttendancePolicyService {
         shift.setGraceMinutes(updatedShift.getGraceMinutes());
         shift.setMinHalfDayMinutes(updatedShift.getMinHalfDayMinutes());
         shift.setMinFullDayMinutes(updatedShift.getMinFullDayMinutes());
+        shift.setShortBreakStartTime(updatedShift.getShortBreakStartTime());
+        shift.setShortBreakEndTime(updatedShift.getShortBreakEndTime());
+        shift.setLongBreakStartTime(updatedShift.getLongBreakStartTime());
+        shift.setLongBreakEndTime(updatedShift.getLongBreakEndTime());
         shift.setOffice(updatedShift.getOffice());
         return attendanceShiftRepository.save(shift);
     }

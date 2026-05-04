@@ -269,6 +269,9 @@ public class LeadService {
                 .createdAt(LocalDateTime.now())
                 .build();
         leadNoteRepository.save(note);
+        
+        // Also record in audit log for "Full History"
+        recordAuditLog(lead.getId(), creator, "NOTE", "NEW", content, "NOTE_ADDED");
     }
 
     private void triggerPipelineActions(Lead lead, String status, StatusUpdateRequest request) {
@@ -594,7 +597,11 @@ public class LeadService {
 
         // Record as call log
         Lead lead = leadRepository.findById(id).orElse(null);
-        callLogService.recordManualCall(securityService.getCurrentUser(), lead, request.getStatus(), request.getNote());
+        User requester = securityService.getCurrentUser();
+        callLogService.recordManualCall(requester, lead, request.getStatus(), request.getNote());
+        
+        // Also record in audit log for "Full History"
+        recordAuditLog(id, requester, "CALL", "OUTCOME", request.getStatus() + ": " + request.getNote(), "CALL_RECORDED");
 
         return updatedLead;
     }

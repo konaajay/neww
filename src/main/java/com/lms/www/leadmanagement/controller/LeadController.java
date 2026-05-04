@@ -55,8 +55,9 @@ public class LeadController {
     }
 
     @PostMapping("/bulk-upload")
-    @PreAuthorize("hasAnyAuthority('BULK_UPLOAD', 'ROLE_ADMIN', 'ROLE_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('BULK_UPLOAD', 'ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEADER', 'ROLE_ASSOCIATE', 'ADMIN', 'MANAGER', 'TEAM_LEADER', 'ASSOCIATE')")
     public ResponseEntity<BulkUploadResponseDTO> bulkUploadLeads(@RequestParam("file") MultipartFile file) {
+
         return ResponseEntity.ok(bulkUploadService.uploadLeads(file, null));
     }
 

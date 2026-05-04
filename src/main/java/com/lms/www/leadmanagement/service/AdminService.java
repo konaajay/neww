@@ -65,24 +65,50 @@ public class AdminService {
 
     @Transactional
     public UserDTO updateUser(Long id, UserDTO dto) {
+        log.info("Updating user {} with data: {}", id, dto);
         User requester = securityService.getCurrentUser();
         securityService.validateAccess(requester, id);
 
         User user = userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        
         user.setName(dto.getName());
         user.setEmail(dto.getEmail());
         user.setMobile(dto.getMobile());
+        user.setJoiningDate(dto.getJoiningDate());
+        user.setMonthlyTarget(dto.getMonthlyTarget());
+        
         if (dto.getRole() != null) {
             user.setRole(roleRepository.findByName(dto.getRole()).orElseThrow());
         }
+        
+        // Handle Supervisor/Reports To
+        if (dto.getSupervisorId() != null) {
+            user.setSupervisor(userRepository.findById(dto.getSupervisorId()).orElse(null));
+        } else {
+            user.setSupervisor(null);
+        }
+
+        // Handle Shift
         if (dto.getShiftId() != null) {
-            attendanceShiftRepository.findById(dto.getShiftId()).ifPresent(user::setShift);
+            user.setShift(attendanceShiftRepository.findById(dto.getShiftId()).orElse(null));
+        } else {
+            user.setShift(null);
         }
+
+        // Handle Office - Using explicit null check to allow clearing office
         if (dto.getOfficeId() != null) {
-            officeLocationRepository.findById(dto.getOfficeId()).ifPresent(user::setAssignedOffice);
+            user.setAssignedOffice(officeLocationRepository.findById(dto.getOfficeId()).orElse(null));
+        } else {
+            user.setAssignedOffice(null);
         }
+
         user.setActive(dto.isActive());
-        return UserDTO.fromEntity(userRepository.save(user));
+        
+        User savedUser = userRepository.save(user);
+        log.info("User {} updated successfully. Assigned Office: {}", id, 
+            savedUser.getAssignedOffice() != null ? savedUser.getAssignedOffice().getName() : "None");
+            
+        return UserDTO.fromEntity(savedUser);
     }
 
     @Transactional

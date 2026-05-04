@@ -147,6 +147,7 @@ public class CallLogService {
         return filename.substring(filename.lastIndexOf(".") + 1);
     }
 
+    @Transactional(readOnly = true)
     public List<CallRecord> getMyLogs(Long userId, LocalDate from, LocalDate to) {
         if (from != null) {
             LocalDateTime start = from.atStartOfDay();
@@ -250,6 +251,7 @@ public class CallLogService {
 
     // --- Administrative Reporting ---
 
+    @Transactional(readOnly = true)
     public List<CallRecord> getAllLogsAdmin(LocalDate from, LocalDate to, Long targetUserId, Long requesterId) {
         User requester = userRepository.findById(requesterId)
                 .orElseThrow(() -> new RuntimeException("Requester not found"));

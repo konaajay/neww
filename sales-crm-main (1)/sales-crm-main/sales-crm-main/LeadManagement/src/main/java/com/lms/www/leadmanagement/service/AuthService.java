@@ -34,6 +34,9 @@ public class AuthService {
         @Autowired
         private UserSessionService userSessionService;
 
+        @Autowired
+        private MailService mailService;
+
         public AuthResponse authenticateUser(LoginRequest loginRequest, HttpServletRequest request) {
                 Authentication authentication = authenticationManager.authenticate(
                                 new UsernamePasswordAuthenticationToken(loginRequest.getEmail(),
@@ -91,6 +94,11 @@ public class AuthService {
                         user.setResetOtpExpiry(LocalDateTime.now().plusMinutes(15));
                         userRepository.save(user);
                         System.out.println("[AUTH] OTP generated and saved for " + email + ": " + otp);
+                        
+                        // Send the OTP via email
+                        System.out.println("[AUTH] PREPARING TO CALL MAIL SERVICE FOR: " + email);
+                        mailService.sendOtp(email, otp, user.getName());
+                        System.out.println("[AUTH] MAIL SERVICE CALL COMPLETED FOR: " + email);
                 } else if (user != null && !user.isActive()) {
                         System.err.println("[AUTH] Forgot password failed: Account inactive for " + email);
                         throw new RuntimeException("Your account is inactive. Please contact Admin.");

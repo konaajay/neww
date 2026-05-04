@@ -31,8 +31,14 @@ public class AttendanceShift {
     private int minHalfDayMinutes; // e.g., 240 (4 hours)
     
     private int minFullDayMinutes; // e.g., 480 (8 hours)
+    
+    private LocalTime shortBreakStartTime;
+    private LocalTime shortBreakEndTime;
+    private LocalTime longBreakStartTime;
+    private LocalTime longBreakEndTime;
 
     @OneToOne
     @JoinColumn(name = "office_id")
+
     private OfficeLocation office; // Optional: Link shift to a specific office
 }

@@ -24,8 +24,13 @@ const ShiftManagement = ({ offices = [] }) => {
         graceMinutes: 15,
         minHalfDayMinutes: 240,
         minFullDayMinutes: 480,
+        shortBreakStartTime: '17:00',
+        shortBreakEndTime: '17:10',
+        longBreakStartTime: '13:00',
+        longBreakEndTime: '14:00',
         officeId: ''
     });
+
 
     useEffect(() => {
         fetchShifts();
@@ -66,8 +71,13 @@ const ShiftManagement = ({ offices = [] }) => {
                 graceMinutes: 15,
                 minHalfDayMinutes: 240,
                 minFullDayMinutes: 480,
+                shortBreakStartTime: '17:00',
+                shortBreakEndTime: '17:10',
+                longBreakStartTime: '13:00',
+                longBreakEndTime: '14:00',
                 officeId: ''
             });
+
             fetchShifts();
         } catch (err) {
             toast.error("Failed to initialize shift cycle");
@@ -127,14 +137,7 @@ const ShiftManagement = ({ offices = [] }) => {
                             onChange={e => setShiftData({...shiftData, minHalfDayMinutes: e.target.value})}
                         />
                     </div>
-                    <div className="col-md-2">
-                        <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block ps-2" style={{ fontSize: '9px' }}>Break (Min)</label>
-                        <input 
-                            type="number"
-                            className="ui-input py-3 px-4 rounded-4 fw-bold w-100 text-center"
-                            placeholder="0"
-                        />
-                    </div>
+
 
                     <div className="col-md-6">
                         <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block ps-2" style={{ fontSize: '9px' }}>Operational Branch (Office)</label>
@@ -161,9 +164,10 @@ const ShiftManagement = ({ offices = [] }) => {
 
                     <div className="col-md-6 mt-4">
                         <div className={`p-4 rounded-4 border ${isDarkMode ? 'border-white border-opacity-5 bg-white bg-opacity-5' : 'border-light bg-light bg-opacity-50'}`}>
+                            <span className="text-muted small fw-black text-uppercase tracking-widest mb-3 d-block" style={{ fontSize: '9px' }}>Operational Window</span>
                             <div className="row g-3">
                                 <div className="col-6">
-                                    <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block" style={{ fontSize: '8px' }}>Inauguration</label>
+                                    <label className="text-muted mb-1" style={{ fontSize: '8px' }}>INAUGURATION</label>
                                     <input 
                                         type="time" 
                                         className="ui-input w-100 py-3 px-4 rounded-3 fw-bold text-center"
@@ -172,7 +176,7 @@ const ShiftManagement = ({ offices = [] }) => {
                                     />
                                 </div>
                                 <div className="col-6">
-                                    <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block" style={{ fontSize: '8px' }}>Termination</label>
+                                    <label className="text-muted mb-1" style={{ fontSize: '8px' }}>TERMINATION</label>
                                     <input 
                                         type="time" 
                                         className="ui-input w-100 py-3 px-4 rounded-3 fw-bold text-center"
@@ -183,6 +187,65 @@ const ShiftManagement = ({ offices = [] }) => {
                             </div>
                         </div>
                     </div>
+
+                    <div className="col-12 mt-4">
+                        <h6 className="text-primary fw-black text-uppercase tracking-widest mb-4" style={{ fontSize: '11px' }}>Shift-Specific Break Windows</h6>
+                        <div className="row g-4">
+                            <div className="col-md-6">
+                                <div className={`p-4 rounded-4 border ${isDarkMode ? 'border-white border-opacity-5 bg-white bg-opacity-5' : 'border-light bg-light bg-opacity-50'}`}>
+                                    <span className="text-muted small fw-black text-uppercase tracking-widest mb-3 d-block" style={{ fontSize: '9px' }}>Short Break</span>
+                                    <div className="d-flex gap-3 align-items-center">
+                                        <div className="flex-fill">
+                                            <label className="text-muted mb-1" style={{ fontSize: '8px' }}>START</label>
+                                            <input 
+                                                type="time" 
+                                                className="ui-input w-100 py-2 px-3 rounded-3 fw-bold text-center"
+                                                value={shiftData.shortBreakStartTime}
+                                                onChange={e => setShiftData({...shiftData, shortBreakStartTime: e.target.value})}
+                                            />
+                                        </div>
+                                        <div className="text-muted opacity-30 mt-3">→</div>
+                                        <div className="flex-fill">
+                                            <label className="text-muted mb-1" style={{ fontSize: '8px' }}>END</label>
+                                            <input 
+                                                type="time" 
+                                                className="ui-input w-100 py-2 px-3 rounded-3 fw-bold text-center"
+                                                value={shiftData.shortBreakEndTime}
+                                                onChange={e => setShiftData({...shiftData, shortBreakEndTime: e.target.value})}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="col-md-6">
+                                <div className={`p-4 rounded-4 border ${isDarkMode ? 'border-white border-opacity-5 bg-white bg-opacity-5' : 'border-light bg-light bg-opacity-50'}`}>
+                                    <span className="text-muted small fw-black text-uppercase tracking-widest mb-3 d-block" style={{ fontSize: '9px' }}>Long Break / Lunch</span>
+                                    <div className="d-flex gap-3 align-items-center">
+                                        <div className="flex-fill">
+                                            <label className="text-muted mb-1" style={{ fontSize: '8px' }}>START</label>
+                                            <input 
+                                                type="time" 
+                                                className="ui-input w-100 py-2 px-3 rounded-3 fw-bold text-center"
+                                                value={shiftData.longBreakStartTime}
+                                                onChange={e => setShiftData({...shiftData, longBreakStartTime: e.target.value})}
+                                            />
+                                        </div>
+                                        <div className="text-muted opacity-30 mt-3">→</div>
+                                        <div className="flex-fill">
+                                            <label className="text-muted mb-1" style={{ fontSize: '8px' }}>END</label>
+                                            <input 
+                                                type="time" 
+                                                className="ui-input w-100 py-2 px-3 rounded-3 fw-bold text-center"
+                                                value={shiftData.longBreakEndTime}
+                                                onChange={e => setShiftData({...shiftData, longBreakEndTime: e.target.value})}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
 
                     <div className="col-md-6 d-flex align-items-end justify-content-end mb-2">
                         <button type="submit" className="ui-btn ui-btn-primary px-5 py-3 rounded-4 shadow-glow fw-black text-uppercase tracking-widest d-flex align-items-center gap-2">
@@ -221,9 +284,17 @@ const ShiftManagement = ({ offices = [] }) => {
                             </div>
 
                             <div className="d-flex justify-content-between align-items-center mb-4 px-2">
-                                <div className="d-flex align-items-center gap-2">
-                                    <div className="p-1.5 bg-info bg-opacity-10 text-info rounded-2" style={{ fontSize: '10px', fontWeight: '900' }}>
+                                <div className="d-flex flex-column gap-2">
+                                    <div className="p-1.5 bg-info bg-opacity-10 text-info rounded-2 d-inline-block" style={{ fontSize: '9px', fontWeight: '900' }}>
                                         {shift.graceMinutes}M GRACE
+                                    </div>
+                                    <div className="d-flex gap-2">
+                                        <span className="badge bg-warning bg-opacity-10 text-warning border-0 px-2 py-1" style={{ fontSize: '8px' }}>
+                                            SB: {shift.shortBreakStartTime?.substring(0, 5)} - {shift.shortBreakEndTime?.substring(0, 5)}
+                                        </span>
+                                        <span className="badge bg-warning bg-opacity-10 text-warning border-0 px-2 py-1" style={{ fontSize: '8px' }}>
+                                            LB: {shift.longBreakStartTime?.substring(0, 5)} - {shift.longBreakEndTime?.substring(0, 5)}
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="d-flex gap-2">
@@ -235,6 +306,7 @@ const ShiftManagement = ({ offices = [] }) => {
                                     </button>
                                 </div>
                             </div>
+
                         </div>
                     </div>
                 ))}

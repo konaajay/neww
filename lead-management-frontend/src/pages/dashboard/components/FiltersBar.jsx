@@ -276,6 +276,7 @@ const FiltersBar = ({
       <style>{`
         .filter-select-wrapper { background: ${isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'}; border: 1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}; border-radius: 50px; padding: 4px 16px; }
         .filter-select { background: transparent; border: 0; color: var(--text-main); font-weight: 800; font-size: 9px; text-transform: uppercase; outline: none; min-width: 80px; }
+        .filter-select option { background: ${isDarkMode ? '#0f172a' : '#ffffff'}; color: ${isDarkMode ? '#ffffff' : '#000000'}; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
         /* Ensure picker covers input but remains invisible */

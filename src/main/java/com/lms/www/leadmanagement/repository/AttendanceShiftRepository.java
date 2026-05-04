@@ -11,5 +11,5 @@ public interface AttendanceShiftRepository extends JpaRepository<AttendanceShift
     
     Optional<AttendanceShift> findByName(String name);
     
-    Optional<AttendanceShift> findByOfficeId(Long officeId);
+    java.util.List<AttendanceShift> findByOfficeId(Long officeId);
 }

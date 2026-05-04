@@ -20,17 +20,20 @@ public interface CallRecordRepository extends JpaRepository<CallRecord, Long> {
            "FROM CallRecord c WHERE c.startTime BETWEEN :start AND :end AND c.endTime IS NOT NULL GROUP BY c.user.id, c.user.name")
     List<com.lms.www.leadmanagement.dto.DailyUserReportDTO> getDailyUserReports(@Param("start") java.time.LocalDateTime start, @Param("end") java.time.LocalDateTime end);
 
-    @EntityGraph(attributePaths = {"lead"})
-    List<CallRecord> findByUserIdOrderByStartTimeDesc(Long userId);
+    @Query("SELECT c FROM CallRecord c LEFT JOIN FETCH c.lead l LEFT JOIN FETCH l.assignedTo LEFT JOIN FETCH c.user u WHERE c.user.id = :userId ORDER BY c.startTime DESC")
+    List<CallRecord> findByUserIdOrderByStartTimeDesc(@Param("userId") Long userId);
 
-    @EntityGraph(attributePaths = {"lead"})
-    List<CallRecord> findByUserIdInOrderByStartTimeDesc(List<Long> userIds);
+    @Query("SELECT c FROM CallRecord c LEFT JOIN FETCH c.lead l LEFT JOIN FETCH l.assignedTo LEFT JOIN FETCH c.user u WHERE c.user.id IN :userIds ORDER BY c.startTime DESC")
+    List<CallRecord> findByUserIdInOrderByStartTimeDesc(@Param("userIds") List<Long> userIds);
 
-    @EntityGraph(attributePaths = {"lead"})
-    List<CallRecord> findByUserIdAndStartTimeBetweenOrderByStartTimeDesc(Long userId, java.time.LocalDateTime start, java.time.LocalDateTime end);
+    @Query("SELECT c FROM CallRecord c LEFT JOIN FETCH c.lead l LEFT JOIN FETCH l.assignedTo LEFT JOIN FETCH c.user u WHERE c.user.id = :userId AND c.startTime BETWEEN :start AND :end ORDER BY c.startTime DESC")
+    List<CallRecord> findByUserIdAndStartTimeBetweenOrderByStartTimeDesc(@Param("userId") Long userId, @Param("start") java.time.LocalDateTime start, @Param("end") java.time.LocalDateTime end);
 
-    @EntityGraph(attributePaths = {"lead"})
-    List<CallRecord> findByStartTimeBetweenOrderByStartTimeDesc(java.time.LocalDateTime start, java.time.LocalDateTime end);
+    @Query("SELECT c FROM CallRecord c LEFT JOIN FETCH c.lead l LEFT JOIN FETCH l.assignedTo LEFT JOIN FETCH c.user u WHERE c.startTime BETWEEN :start AND :end ORDER BY c.startTime DESC")
+    List<CallRecord> findByStartTimeBetweenOrderByStartTimeDesc(@Param("start") java.time.LocalDateTime start, @Param("end") java.time.LocalDateTime end);
+
+    @Query("SELECT c FROM CallRecord c LEFT JOIN FETCH c.lead l LEFT JOIN FETCH l.assignedTo LEFT JOIN FETCH c.user u WHERE c.user.id IN :userIds AND c.startTime BETWEEN :start AND :end ORDER BY c.startTime DESC")
+    List<CallRecord> findByUserIdInAndStartTimeBetweenOrderByStartTimeDesc(@Param("userIds") List<Long> userIds, @Param("start") java.time.LocalDateTime start, @Param("end") java.time.LocalDateTime end);
 
     @Query("SELECT new map(" +
            "COUNT(c) as totalCalls, " +
@@ -122,6 +125,6 @@ public interface CallRecordRepository extends JpaRepository<CallRecord, Long> {
            "FROM CallRecord c WHERE c.user.id IN :userIds AND c.startTime BETWEEN :start AND :end")
     Map<String, Object> getStatsForUsersByDate(@Param("userIds") List<Long> userIds, @Param("start") java.time.LocalDateTime start, @Param("end") java.time.LocalDateTime end);
 
-    @EntityGraph(attributePaths = {"lead"})
+    @EntityGraph(attributePaths = {"lead", "user", "lead.assignedTo"})
     List<CallRecord> findByUserIdInAndStartTimeBetweenOrderByStartTimeDesc(List<Long> userIds, java.time.LocalDateTime start, java.time.LocalDateTime end);
 }

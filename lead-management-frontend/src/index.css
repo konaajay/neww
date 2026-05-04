@@ -40,6 +40,26 @@
   --glass-blur: blur(12px);
 }
 
+select option {
+  background-color: #0f172a;
+  color: #f9fafb;
+}
+
+[data-bs-theme="dark"] select option {
+  background-color: #0f172a;
+  color: #f9fafb;
+}
+
+[data-bs-theme="dark"] select {
+  color-scheme: dark;
+}
+
+/* Force dark dropdowns project-wide */
+[data-bs-theme="dark"] select option {
+    background-color: #030712 !important;
+    color: #ffffff !important;
+}
+
 [data-bs-theme="light"] {
   --bg-body: #ffffff;
   --bg-card: #ffffff;
@@ -178,7 +198,8 @@ img {
   position: relative;
   overflow-x: hidden;
   overflow-y: auto !important;
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Only transition width/margin to prevent vertical jumping */
+  transition: padding 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @media (min-width: 992px) {
@@ -198,11 +219,9 @@ img {
   min-height: 64px !important;
   background-color: var(--nav-bg) !important;
   border-bottom: 1px solid var(--border-color) !important;
-  z-index: 1010 !important;
+  z-index: 1000 !important;
   backdrop-filter: var(--glass-blur) !important;
   display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: nowrap !important;
   align-items: center !important;
   justify-content: space-between !important;
   padding: 0 1.5rem !important;
@@ -409,9 +428,9 @@ select option {
   width: var(--sidebar-width);
   background: var(--sidebar-bg);
   border-right: 1px solid var(--border-color);
-  z-index: 1050;
+  z-index: 2000; /* Above navbar */
   transform: translateX(-100%);
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), width 0.35s ease, position 0s;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s ease;
   backdrop-filter: var(--glass-blur);
 }
 

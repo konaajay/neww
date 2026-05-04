@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useTheme } from '../../context/ThemeContext';
 import { X, Key, ShieldCheck, Mail, ArrowRight, Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
@@ -6,6 +8,7 @@ import authService from '../../services/authService';
 
 const ChangePasswordModal = ({ isOpen, onClose }) => {
   const { user } = useAuth();
+  const { isDarkMode } = useTheme();
   const [step, setStep] = useState(1); // 1: Send OTP, 2: Reset with OTP
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -17,7 +20,7 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
     try {
       setLoading(true);
       await authService.forgotPassword(user.email);
-      toast.success('Identity verification code sent to your mail');
+      toast.success('Security code sent successfully');
       setStep(2);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to generate security code');
@@ -47,17 +50,26 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
   };
 
   if (!isOpen) return null;
-
-  return (
-    <div className="modal-overlay d-flex align-items-center justify-content-center p-3" style={{ 
+  
+  return createPortal(
+    <div className="modal-overlay d-flex justify-content-center align-items-start p-3" style={{ 
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-      backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(12px)', zIndex: 10000 
+      backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(12px)', zIndex: 10000,
+      overflowY: 'auto'
     }}>
-      <div className="premium-card p-0 overflow-hidden shadow-2xl animate-scale-in border-0" style={{ width: '100%', maxWidth: '420px', borderRadius: '24px', background: '#ffffff' }}>
+      <div className="premium-card p-0 overflow-hidden shadow-2xl animate-zoom-in border-0" 
+        style={{ 
+          width: '100%', 
+          maxWidth: '420px', 
+          borderRadius: '24px', 
+          background: isDarkMode ? '#111827' : '#ffffff',
+          marginTop: '10vh',
+          marginBottom: '10vh'
+        }}>
         {/* Header - Clean & High Contrast */}
         <div className="p-4 d-flex align-items-center justify-content-between" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)' }}>
           <div className="d-flex align-items-center gap-3">
-            <div className="p-2 bg-white bg-opacity-20 rounded-xl text-white shadow-sm">
+            <div className={`p-2 ${isDarkMode ? 'bg-surface' : 'bg-white bg-opacity-20'} rounded-xl text-white shadow-sm`}>
               <ShieldCheck size={20} />
             </div>
             <div>
@@ -70,15 +82,15 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        <div className="p-4 bg-white">
+        <div className={`p-4 ${isDarkMode ? 'bg-surface bg-opacity-40' : 'bg-white'}`}>
           {step === 1 ? (
             <div className="text-center py-4">
               <div className="mb-4 d-inline-flex p-4 bg-primary bg-opacity-5 rounded-pill border border-primary border-opacity-10 shadow-sm">
-                <div className="p-3 bg-white rounded-pill shadow-sm border border-light">
+                <div className={`p-3 ${isDarkMode ? 'bg-surface' : 'bg-white'} rounded-pill shadow-sm border ${isDarkMode ? 'border-white border-opacity-10' : 'border-light'}`}>
                   <Mail size={40} className="text-primary" />
                 </div>
               </div>
-              <h6 className="fw-black text-dark mb-2 text-uppercase tracking-wider" style={{ fontSize: '14px' }}>Request OTP</h6>
+              <h6 className="fw-black text-main mb-2 text-uppercase tracking-wider" style={{ fontSize: '14px' }}>Request OTP</h6>
               <p className="text-muted small mb-5 px-3 leading-relaxed">A 6-digit security code will be sent to your email to authorize this change.</p>
               
               <button 
@@ -93,7 +105,7 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
             </div>
           ) : (
             <form onSubmit={handleResetPassword} className="d-flex flex-column gap-4 py-2">
-              <div className="p-3 bg-light rounded-4 border border-success border-opacity-20 mb-2 text-center">
+              <div className={`p-3 ${isDarkMode ? 'bg-surface bg-opacity-40' : 'bg-light'} rounded-4 border border-success border-opacity-20 mb-2 text-center`}>
                 <p className="text-success fw-black mb-0 text-uppercase tracking-wider" style={{ fontSize: '10px' }}>Secure Code Dispatched • Verify Below</p>
               </div>
 
@@ -102,8 +114,8 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
                 <input
                   type="text"
                   maxLength="6"
-                  className="form-control bg-light border-0 py-3 text-center fw-black tracking-widest rounded-4"
-                  style={{ fontSize: '20px', letterSpacing: '8px', color: '#1f2937' }}
+                  className={`form-control ${isDarkMode ? 'bg-surface text-main' : 'bg-light text-dark'} border-0 py-3 text-center fw-black tracking-widest rounded-4`}
+                  style={{ fontSize: '20px', letterSpacing: '8px', color: 'inherit' }}
                   placeholder="000000"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
@@ -117,8 +129,8 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
                   <Key size={16} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-primary" />
                   <input
                     type="password"
-                    className="form-control bg-light border-0 py-3 ps-5 fw-bold rounded-4"
-                    style={{ color: '#1f2937' }}
+                    className={`form-control ${isDarkMode ? 'bg-surface text-main' : 'bg-light text-dark'} border-0 py-3 ps-5 fw-bold rounded-4`}
+                    style={{ color: 'inherit' }}
                     placeholder="••••••••"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
@@ -133,8 +145,8 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
                   <Key size={16} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-primary" />
                   <input
                     type="password"
-                    className="form-control bg-light border-0 py-3 ps-5 fw-bold rounded-4"
-                    style={{ color: '#1f2937' }}
+                    className={`form-control ${isDarkMode ? 'bg-surface text-main' : 'bg-light text-dark'} border-0 py-3 ps-5 fw-bold rounded-4`}
+                    style={{ color: 'inherit' }}
                     placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -166,7 +178,8 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

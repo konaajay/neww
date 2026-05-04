@@ -39,8 +39,8 @@ const StudentFeePage = () => {
         associateService.getFeeStructure(id),
         associateService.fetchLeadById(id)
       ]);
-      setData(feeRes.data);
-      setLead(leadRes.data);
+      setData(feeRes?.data || { fee: null, payments: [] });
+      setLead(leadRes?.data);
     } catch (err) {
       console.error("Failed to fetch data", err);
     } finally {
@@ -73,7 +73,7 @@ const StudentFeePage = () => {
     return '/associate';
   };
 
-  const paidPercent = data.fee?.totalAmount > 0 
+  const paidPercent = (data?.fee?.totalAmount > 0 && data?.fee?.paidAmount !== undefined)
     ? Math.min(100, (data.fee.paidAmount / data.fee.totalAmount) * 100) 
     : 0;
 
@@ -167,7 +167,7 @@ const StudentFeePage = () => {
                         <span className="text-muted fw-black small text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Package Total</span>
                         <div className="p-2 bg-light rounded-circle"><IndianRupee size={12} className="text-primary" /></div>
                      </div>
-                     <h3 className="fw-black text-dark mb-0">₹{data.fee.totalAmount?.toLocaleString()}</h3>
+                     <h3 className="fw-black text-dark mb-0">₹{data.fee?.totalAmount?.toLocaleString() || '0'}</h3>
                   </div>
 
                   <div className="p-4 rounded-4 border border-light bg-white hover-scale transition-smooth shadow-sm">
@@ -175,7 +175,7 @@ const StudentFeePage = () => {
                         <span className="text-muted fw-black small text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Settled Capital</span>
                         <div className="p-2 bg-success bg-opacity-10 rounded-circle"><CheckCircle2 size={12} className="text-success" /></div>
                      </div>
-                     <h3 className="fw-black text-success mb-0">₹{data.fee.paidAmount?.toLocaleString()}</h3>
+                     <h3 className="fw-black text-success mb-0">₹{data.fee?.paidAmount?.toLocaleString() || '0'}</h3>
                   </div>
 
                   <div className="p-4 rounded-4 border border-light bg-white hover-scale transition-smooth shadow-sm">
@@ -183,7 +183,7 @@ const StudentFeePage = () => {
                         <span className="text-muted fw-black small text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Outstanding Balance</span>
                          <div className="p-2 bg-light rounded-circle"><Clock size={12} className="text-dark" /></div>
                      </div>
-                     <h3 className="fw-black text-dark mb-0">₹{data.fee.balanceAmount?.toLocaleString()}</h3>
+                     <h3 className="fw-black text-dark mb-0">₹{data.fee?.balanceAmount?.toLocaleString() || '0'}</h3>
                   </div>
                </div>
 
@@ -277,7 +277,7 @@ const StudentFeePage = () => {
                       <div>
                          <p className="mb-1 text-dark fw-black small text-uppercase tracking-widest" style={{ fontSize: '10px' }}>Upcoming Collection Protocol</p>
                          <p className="mb-0 text-muted" style={{ fontSize: '12px', lineHeight: '1.6' }}>
-                           The next installment is dynamically scheduled for <strong>{data.fee.nextDueDate ? new Date(data.fee.nextDueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : 'NOT SCHEDULED'}</strong>. 
+                           The next installment is dynamically scheduled for <strong>{data.fee?.nextDueDate ? new Date(data.fee.nextDueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : 'NOT SCHEDULED'}</strong>. 
                            System-generated follow-up tasks have been propagated to assigned associaties.
                          </p>
                       </div>

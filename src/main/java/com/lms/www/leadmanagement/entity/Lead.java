@@ -1,6 +1,8 @@
 package com.lms.www.leadmanagement.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -39,15 +41,19 @@ public class Lead {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_to")
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler", "password", "subordinates", "managedAssociates", "directPermissions" })
     private User assignedTo;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler", "password", "subordinates", "managedAssociates", "directPermissions" })
     private User createdBy;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "updated_by")
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler", "password", "subordinates", "managedAssociates", "directPermissions" })
     private User updatedBy;
+
 
     private Boolean followUpRequired;
     private LocalDateTime followUpDate;

@@ -231,6 +231,7 @@ public class ManagerService {
     }
 
     public UserDTO updateUser(Long id, UserDTO userDTO) {
+        System.out.println("Updating user " + id + " with data: " + userDTO);
         if (id == null) throw new IllegalArgumentException("User ID cannot be null");
         User curUser = securityService.getCurrentUser();
         securityService.validateAccess(curUser, id);
@@ -239,6 +240,8 @@ public class ManagerService {
         
         if (userDTO.getName() != null) user.setName(userDTO.getName());
         if (userDTO.getMobile() != null) user.setMobile(userDTO.getMobile());
+        if (userDTO.getJoiningDate() != null) user.setJoiningDate(userDTO.getJoiningDate());
+        if (userDTO.getMonthlyTarget() != null) user.setMonthlyTarget(userDTO.getMonthlyTarget());
         
         if (userDTO.getRole() != null) {
             Role role = roleRepository.findByName(userDTO.getRole())
@@ -246,25 +249,25 @@ public class ManagerService {
             user.setRole(role);
         }
 
+        // Handle Supervisor
         if (userDTO.getSupervisorId() != null) {
             Long editSupId = userDTO.getSupervisorId();
             securityService.validateAccess(curUser, editSupId);
             User supervisor = userRepository.findById(editSupId)
                     .orElseThrow(() -> new RuntimeException("Supervisor not found: " + editSupId));
             user.setSupervisor(supervisor);
-        } else if (userDTO.getSupervisorId() == null && user.getRole() != null && "ASSOCIATE".equals(user.getRole().getName())) {
-            // Optional: Handle explicitly unassigning?
-            // user.setSupervisor(null); 
+        } else {
+            user.setSupervisor(null);
         }
 
-        if (userDTO.getShiftId() != null) {
-            Long sId = userDTO.getShiftId();
-            attendanceShiftRepository.findById(sId).ifPresent(user::setShift);
-        }
+        // Handle Shift
+        user.setShift(userDTO.getShiftId() != null ? attendanceShiftRepository.findById(userDTO.getShiftId()).orElse(null) : null);
         
+        // Handle Office - Using explicit null check
         if (userDTO.getOfficeId() != null) {
-            Long oId = userDTO.getOfficeId();
-            officeLocationRepository.findById(oId).ifPresent(user::setAssignedOffice);
+            user.setAssignedOffice(officeLocationRepository.findById(userDTO.getOfficeId()).orElse(null));
+        } else {
+            user.setAssignedOffice(null);
         }
         
         if (userDTO.getPermissions() != null) {
@@ -293,7 +296,10 @@ public class ManagerService {
             }
         }
 
-        return UserDTO.fromEntity(userRepository.save(user));
+        User savedUser = userRepository.save(user);
+        System.out.println("User " + id + " updated successfully. Assigned Office: " + 
+            (savedUser.getAssignedOffice() != null ? savedUser.getAssignedOffice().getName() : "None"));
+        return UserDTO.fromEntity(savedUser);
     }
 
     public void deleteUser(Long id) {

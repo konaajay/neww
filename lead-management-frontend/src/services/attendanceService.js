@@ -7,7 +7,8 @@ const attendanceService = {
   startBreak: (type = 'SHORT') => safeRequest(api.post(`/attendance/break/start?type=${type}`)),
   endBreak: () => safeRequest(api.post('/attendance/break/end')),
   getStatus: () => safeRequest(api.get('/attendance/status')),
-  getMyLogs: () => safeRequest(api.get('/attendance/my-logs')),
+  getMyLogs: (params) => safeRequest(api.get('/attendance/my-logs', { params })),
+
   
   // Admin/Manager operations
   getOffices: () => safeRequest(api.get('/admin/attendance/offices')),

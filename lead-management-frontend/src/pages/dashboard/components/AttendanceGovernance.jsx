@@ -247,7 +247,7 @@ const AttendanceGovernance = ({ offices = [] }) => {
                         </h6>
                         <div className="row g-4">
                             <div className="col-md-4">
-                                <div className={`p-4 rounded-4 border ${isDarkMode ? 'border-white border-opacity-5 bg-white bg-opacity-5' : 'border-light bg-light bg-opacity-50'}`}>
+                                <div className="p-4 rounded-4 border border-white border-opacity-5" style={{ background: 'rgba(255,255,255,0.03)' }}>
                                     <div className="row g-3">
                                         <div className="col-6 text-center">
                                             <label className="text-muted small fw-black mb-1 d-block" style={{ fontSize: '8px' }}>START</label>
@@ -282,7 +282,7 @@ const AttendanceGovernance = ({ offices = [] }) => {
                         </h6>
                         <div className="row g-4">
                             <div className="col-md-6">
-                                <div className={`p-4 rounded-4 border ${isDarkMode ? 'border-white border-opacity-5 bg-white bg-opacity-5' : 'border-light bg-light bg-opacity-50'}`}>
+                                <div className="p-4 rounded-4 border border-white border-opacity-5" style={{ background: 'rgba(255,255,255,0.03)' }}>
                                     <span className="text-muted small fw-black text-uppercase mb-3 d-block" style={{ fontSize: '9px' }}>Short Break</span>
                                     <div className="d-flex gap-3 align-items-center">
                                         <input type="time" className="ui-input flex-fill py-2 rounded-3 fw-bold text-center" value={govData.shortBreakStartTime || ''} onChange={e => setGovData({...govData, shortBreakStartTime: e.target.value})} />
@@ -292,7 +292,7 @@ const AttendanceGovernance = ({ offices = [] }) => {
                                 </div>
                             </div>
                             <div className="col-md-6">
-                                <div className={`p-4 rounded-4 border ${isDarkMode ? 'border-white border-opacity-5 bg-white bg-opacity-5' : 'border-light bg-light bg-opacity-50'}`}>
+                                <div className="p-4 rounded-4 border border-white border-opacity-5" style={{ background: 'rgba(255,255,255,0.03)' }}>
                                     <span className="text-muted small fw-black text-uppercase mb-3 d-block" style={{ fontSize: '9px' }}>Long Break / Lunch</span>
                                     <div className="d-flex gap-3 align-items-center">
                                         <input type="time" className="ui-input flex-fill py-2 rounded-3 fw-bold text-center" value={govData.longBreakStartTime || ''} onChange={e => setGovData({...govData, longBreakStartTime: e.target.value})} />
@@ -327,7 +327,7 @@ const AttendanceGovernance = ({ offices = [] }) => {
 
                     {/* Section 4: Summary & Submission */}
                     <div className="col-12 mt-5">
-                        <div className={`p-4 rounded-4 d-flex flex-wrap gap-4 align-items-center justify-content-between ${isDarkMode ? 'bg-primary bg-opacity-5' : 'bg-light'}`}>
+                        <div className="p-4 rounded-4 d-flex flex-wrap gap-4 align-items-center justify-content-between" style={{ background: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.1)' }}>
                             <div className="d-flex gap-5">
                                 <div>
                                     <span className="text-muted small fw-black text-uppercase d-block mb-1" style={{ fontSize: '8px' }}>Total Shift</span>

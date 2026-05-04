@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { LogIn, LogOut, Coffee, Timer, MapPin, CheckCircle2, Clock, ChevronUp, ChevronDown } from 'lucide-react';
 import { toast } from 'react-toastify';
 import attendanceService from '../../services/attendanceService';
+import { useTheme } from '../../context/ThemeContext';
 
 const SidebarAttendance = ({ isCollapsed }) => {
+    const { isDarkMode } = useTheme();
     const [status, setStatus] = useState(null);
     const [loading, setLoading] = useState(true);
     const [lastSync, setLastSync] = useState(null);
@@ -11,12 +13,12 @@ const SidebarAttendance = ({ isCollapsed }) => {
     const heartbeatRef = useRef(null);
     const timerRef = useRef(null);
     const [isExpanded, setIsExpanded] = useState(true);
+    const [distanceToOffice, setDistanceToOffice] = useState(null);
 
     const isPunchedIn = !!(status?.checkInTime);
     const isOnBreak = status?.status === 'ON_SHORT_BREAK' || status?.status === 'ON_LONG_BREAK';
 
     const parseStatus = (res) => {
-        // safeRequest returns res.data (axios wrapper stripped), so body = { success, data: DTO }
         const payload = res?.data ?? res;
         return payload;
     };
@@ -34,15 +36,12 @@ const SidebarAttendance = ({ isCollapsed }) => {
         }
     }, []);
 
-    // Poll status every 30 seconds
     useEffect(() => {
         fetchStatus();
         const interval = setInterval(fetchStatus, 30000);
         return () => clearInterval(interval);
     }, [fetchStatus]);
 
-    // ── Real-time local timer ──────────────────────────────────────────────
-    // Counts seconds elapsed since checkInTime, pauses during breaks.
     useEffect(() => {
         if (timerRef.current) clearInterval(timerRef.current);
 
@@ -58,12 +57,9 @@ const SidebarAttendance = ({ isCollapsed }) => {
             const lastSeen = status.lastSeenTime ? new Date(status.lastSeenTime) : checkIn;
             const now = new Date();
 
-            // 1. Start with total work seconds confirmed by backend
             let totalSecs = (status.totalWorkMinutes || 0) * 60 + (status.totalWorkSeconds % 60 || 0);
 
-            // 2. Add the "running" segment from lastSeen to now, but only if not on break
             if (now > lastSeen && !isOnBreak) {
-                // Helper to calculate overlap with a time window
                 const getOverlap = (targetStart, targetEnd) => {
                     if (!targetStart || !targetEnd) return 0;
                     const [h1, m1] = targetStart.split(':').map(Number);
@@ -77,15 +73,16 @@ const SidebarAttendance = ({ isCollapsed }) => {
                     return Math.max(0, Math.floor((overlapEnd - overlapStart) / 1000));
                 };
 
-                const shiftStart = status.shiftStartTime || "09:30";
-                const shiftEnd = status.shiftEndTime || "18:30";
+                const shiftStart = status.shiftStartTime || "00:00";
+                const shiftEnd = status.shiftEndTime || "23:59";
                 const billableOverlapSecs = getOverlap(shiftStart, shiftEnd);
+                const rawSegmentSecs = Math.max(0, Math.floor((now.getTime() - lastSeen.getTime()) / 1000));
+                
+                const autoBreakSecs = getOverlap(status.shortBreakStartTime, status.shortBreakEndTime) + 
+                                     getOverlap(status.longBreakStartTime, status.longBreakEndTime);
 
-                // Deduct automatic breaks in this segment
-                const autoBreakSecs = getOverlap(status.shortBreakStartTime, status.shortBreakEndTime) +
-                                    getOverlap(status.longBreakStartTime, status.longBreakEndTime);
-
-                totalSecs += Math.max(0, billableOverlapSecs - autoBreakSecs);
+                const billableSegment = (status.shiftStartTime ? billableOverlapSecs : rawSegmentSecs);
+                totalSecs += Math.max(0, billableSegment - autoBreakSecs);
             }
 
             totalSecs = Math.max(0, totalSecs);
@@ -96,12 +93,11 @@ const SidebarAttendance = ({ isCollapsed }) => {
             setElapsed({ h, m, s });
         };
 
-        tick(); // run immediately
+        tick();
         timerRef.current = setInterval(tick, 1000);
         return () => clearInterval(timerRef.current);
     }, [isPunchedIn, status?.checkInTime, status?.totalBreakMinutes]);
 
-    // ── Background heartbeat ───────────────────────────────────────────────
     useEffect(() => {
         if (!isPunchedIn) {
             if (heartbeatRef.current) clearInterval(heartbeatRef.current);
@@ -134,13 +130,44 @@ const SidebarAttendance = ({ isCollapsed }) => {
         return () => clearInterval(heartbeatRef.current);
     }, [isPunchedIn, fetchStatus]);
 
-    // ── Handlers ──────────────────────────────────────────────────────────
+    const calculateDistance = (lat1, lon1, lat2, lon2) => {
+        const R = 6371000;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+
+    useEffect(() => {
+        if (isPunchedIn || !status?.officeLat) {
+            setDistanceToOffice(null);
+            return;
+        }
+
+        const checkDistance = () => {
+            if (!navigator.geolocation) return;
+            navigator.geolocation.getCurrentPosition((pos) => {
+                const dist = calculateDistance(
+                    pos.coords.latitude, 
+                    pos.coords.longitude, 
+                    status.officeLat, 
+                    status.officeLng
+                );
+                setDistanceToOffice(dist);
+            }, null, { enableHighAccuracy: false, timeout: 5000 });
+        };
+
+        checkDistance();
+        const interval = setInterval(checkDistance, 10000);
+        return () => clearInterval(interval);
+    }, [isPunchedIn, status?.officeLat, status?.officeLng]);
+
     const handleClockIn = () => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 async (position) => {
-                    console.log("Latitude:", position.coords.latitude);
-                    console.log("Longitude:", position.coords.longitude);
                     try {
                         const res = await attendanceService.clockIn({
                             lat: position.coords.latitude,
@@ -156,18 +183,15 @@ const SidebarAttendance = ({ isCollapsed }) => {
                     }
                 },
                 (err) => {
-                    console.error("Location Error:", err);
                     let msg = "Location access required.";
                     if (err.code === 1) msg = "Location Access Blocked! Please click the LOCK icon 🔒 in your browser address bar and set Location to 'Allow', then refresh the page.";
                     if (err.code === 2) msg = "Position unavailable. Please ensure your laptop's 'Location Services' are turned ON in Windows Settings.";
                     if (err.code === 3) msg = "Location request timed out. Please check your internet and try again.";
-                    
                     toast.error(msg, { duration: 6000 });
                 },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         } else {
-            alert("Geolocation is not supported");
             toast.error('Location access required for clock-in');
         }
     };
@@ -201,12 +225,11 @@ const SidebarAttendance = ({ isCollapsed }) => {
         }
     };
 
-    // ── Helpers ────────────────────────────────────────────────────────────
     const getStatusLabel = () => {
         if (!isPunchedIn) return 'OFF DUTY';
         switch (status?.status) {
             case 'WORKING': return 'WORKING';
-            case 'ON_SHORT_BREAK': return 'BREAK';
+            case 'ON_SHORT_BREAK':
             case 'ON_LONG_BREAK': return 'BREAK';
             case 'OUTSIDE_UNAUTHORIZED': return 'OUTSIDE';
             default: return status?.status || 'ACTIVE';
@@ -236,7 +259,6 @@ const SidebarAttendance = ({ isCollapsed }) => {
 
     if (loading && !status) return null;
 
-    // ── Collapsed view ─────────────────────────────────────────────────────
     if (isCollapsed) {
         return (
             <div className="px-2 py-3 border-top border-white border-opacity-5 d-flex flex-column align-items-center gap-2">
@@ -255,11 +277,9 @@ const SidebarAttendance = ({ isCollapsed }) => {
 
     return (
         <div className="mx-3 mb-4 p-3 rounded-4 border animate-fade-in shadow-sm">
-            {/* Header */}
             <div 
                 className="d-flex align-items-center justify-content-between mb-3 cursor-pointer" 
                 onClick={() => setIsExpanded(!isExpanded)}
-                style={{ cursor: 'pointer' }}
             >
                 <div className="d-flex align-items-center gap-2">
                     <div className={`p-1 rounded-pill bg-${color} bg-opacity-10 text-${color}`}>
@@ -280,102 +300,110 @@ const SidebarAttendance = ({ isCollapsed }) => {
 
             {isExpanded && (
                 <>
-
-
-            {!isPunchedIn ? (
-                <button
-                    id="punchIn"
-                    onClick={handleClockIn}
-                    className="ui-btn ui-btn-primary w-100 py-2 rounded-3 shadow-glow fw-black text-uppercase tracking-widest d-flex align-items-center justify-content-center gap-2"
-                    style={{ fontSize: '10px' }}
-                >
-                    <LogIn size={14} /> Punch In
-                </button>
-            ) : (
-                <div className="d-flex flex-column gap-2">
-                    {/* Live timer + location box */}
-                    <div className="p-3 border rounded-4 position-relative overflow-hidden mb-2 shadow-sm" style={{ backgroundColor: 'var(--bs-light)' }}>
-                    <div className="position-absolute top-0 end-0 p-3 opacity-10" style={{ transform: 'translate(10%,-10%)' }}>
-                        <MapPin size={24} />
-                    </div>
-                        <div className="d-flex flex-column position-relative" style={{ zIndex: 1 }}>
-                            {status?.lastLat && (
-                                <span className="fw-black text-main mb-2 d-block" style={{ fontSize: '10px', letterSpacing: '0.05em' }}>
-                                    {Number(status.lastLat).toFixed(4)}, {Number(status.lastLng).toFixed(4)}
-                                </span>
+                    {!isPunchedIn ? (
+                        <div className="d-flex flex-column gap-2">
+                            <button
+                                id="punchIn"
+                                onClick={handleClockIn}
+                                className="ui-btn ui-btn-primary w-100 py-2 rounded-3 shadow-glow fw-black text-uppercase tracking-widest d-flex align-items-center justify-content-center gap-2"
+                                style={{ fontSize: '10px' }}
+                            >
+                                <LogIn size={14} /> Punch In
+                            </button>
+                            {distanceToOffice !== null && (
+                                <div className="d-flex align-items-center justify-content-center gap-2 py-1 bg-surface bg-opacity-30 rounded-3 border border-white border-opacity-5">
+                                    <MapPin size={10} className={distanceToOffice > (status?.officeRadius || 100) ? 'text-danger' : 'text-success'} />
+                                    <span className="fw-bold" style={{ fontSize: '9px', color: isDarkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)' }}>
+                                        {distanceToOffice > 1000 
+                                            ? `${(distanceToOffice / 1000).toFixed(2)} km from office` 
+                                            : `${Math.round(distanceToOffice)} meters from office`
+                                        }
+                                    </span>
+                                </div>
                             )}
-
-                            {/* Real-time running clock */}
-                            <div className="d-flex align-items-center gap-2 mb-1">
-                                <Clock size={13} className="text-body" />
-                                <span className="fw-black text-body" style={{ fontSize: '20px', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em' }}>
-                                    {pad(elapsed.h)}:{pad(elapsed.m)}:{pad(elapsed.s)}
-                                </span>
+                        </div>
+                    ) : (
+                        <div className="d-flex flex-column gap-2">
+                            <div className="p-3 border rounded-4 position-relative overflow-hidden mb-2 shadow-sm" 
+                                 style={{ 
+                                    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.03)' : 'var(--bs-light)',
+                                    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'var(--bs-border-color)'
+                                 }}>
+                                <div className="position-absolute top-0 end-0 p-3 opacity-10" style={{ transform: 'translate(10%,-10%)', color: isDarkMode ? 'white' : 'black' }}>
+                                    <MapPin size={24} />
+                                </div>
+                                <div className="d-flex flex-column position-relative" style={{ zIndex: 1 }}>
+                                    {status?.lastLat && (
+                                        <span className="fw-black text-main mb-2 d-block" style={{ fontSize: '10px', letterSpacing: '0.05em' }}>
+                                            {Number(status.lastLat).toFixed(4)}, {Number(status.lastLng).toFixed(4)}
+                                        </span>
+                                    )}
+                                    <div className="d-flex align-items-center gap-2 mb-1">
+                                        <Clock size={13} className={isDarkMode ? 'text-primary' : 'text-body'} />
+                                        <span className={isDarkMode ? 'fw-black text-white' : 'fw-black text-body'} style={{ fontSize: '20px', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em' }}>
+                                            {pad(elapsed.h)}:{pad(elapsed.m)}:{pad(elapsed.s)}
+                                        </span>
+                                    </div>
+                                    <div className="d-flex align-items-center gap-3">
+                                        <span className="fw-bold text-muted" style={{ fontSize: '10px' }}>
+                                            Work: {status?.totalWorkHours || '0h 0m'}
+                                        </span>
+                                        <span className="fw-bold text-muted d-flex align-items-center gap-1" style={{ fontSize: '10px' }}>
+                                            <Coffee size={10} />
+                                            Break: {status?.totalBreakHours || '0h 0m'}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* Backend-confirmed work hours */}
-                            <div className="d-flex align-items-center gap-3">
-                                <span className="fw-bold text-muted" style={{ fontSize: '10px' }}>
-                                    Work: {status?.totalWorkHours || '0h 0m'}
-                                </span>
-                                <span className="fw-bold text-muted d-flex align-items-center gap-1" style={{ fontSize: '10px' }}>
-                                    <Coffee size={10} />
-                                    Break: {status?.totalIdleHours || '0h 0m'}
-                                </span>
+                            <div className="d-flex align-items-center gap-2 px-1 mb-2">
+                                <CheckCircle2 size={9} className="text-muted" />
+                                <span className="text-muted fw-bold" style={{ fontSize: '9px' }}>Synced: {formatSyncTime()}</span>
+                            </div>
+
+                            <div className="row g-2">
+                                <div className="col-6">
+                                    <button
+                                        onClick={() => handleBreak('SHORT')}
+                                        disabled={status?.status === 'ON_LONG_BREAK'}
+                                        className={`w-100 py-2 rounded-3 fw-black d-flex align-items-center justify-content-center gap-1 transition-all border ${
+                                            status?.status === 'ON_SHORT_BREAK'
+                                                ? 'bg-warning text-dark border-warning shadow-glow'
+                                                : 'bg-transparent text-warning border-warning border-opacity-50'
+                                        }`}
+                                        style={{ fontSize: '10px' }}
+                                    >
+                                        <Coffee size={11} />
+                                        {status?.status === 'ON_SHORT_BREAK' ? 'Resume' : '↺ Short'}
+                                    </button>
+                                </div>
+                                <div className="col-6">
+                                    <button
+                                        onClick={() => handleBreak('LONG')}
+                                        disabled={status?.status === 'ON_SHORT_BREAK'}
+                                        className={`w-100 py-2 rounded-3 fw-black d-flex align-items-center justify-content-center gap-1 transition-all border ${
+                                            status?.status === 'ON_LONG_BREAK'
+                                                ? 'bg-warning text-dark border-warning shadow-glow'
+                                                : 'bg-transparent text-warning border-warning border-opacity-50'
+                                        }`}
+                                        style={{ fontSize: '10px' }}
+                                    >
+                                        <LogOut size={11} style={{ transform: 'rotate(90deg)' }} />
+                                        {status?.status === 'ON_LONG_BREAK' ? 'Resume' : '↺ Long'}
+                                    </button>
+                                </div>
+                                <div className="col-12">
+                                    <button
+                                        onClick={handleClockOut}
+                                        className="w-100 py-2 rounded-3 bg-transparent text-danger border border-danger border-opacity-50 fw-black d-flex align-items-center justify-content-center gap-2 transition-all"
+                                        style={{ fontSize: '11px' }}
+                                    >
+                                        <LogOut size={13} /> PUNCH OUT
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-
-                    {/* Sync indicator */}
-                    <div className="d-flex align-items-center gap-2 px-1 mb-2">
-                        <CheckCircle2 size={9} className="text-muted" />
-                        <span className="text-muted fw-bold" style={{ fontSize: '9px' }}>Synced: {formatSyncTime()}</span>
-                    </div>
-
-                    {/* Break buttons */}
-                    <div className="row g-2">
-                        <div className="col-6">
-                            <button
-                                onClick={() => handleBreak('SHORT')}
-                                disabled={status?.status === 'ON_LONG_BREAK'}
-                                className={`w-100 py-2 rounded-3 fw-black d-flex align-items-center justify-content-center gap-1 transition-all border ${
-                                    status?.status === 'ON_SHORT_BREAK'
-                                        ? 'bg-warning text-dark border-warning shadow-glow'
-                                        : 'bg-transparent text-warning border-warning border-opacity-50'
-                                }`}
-                                style={{ fontSize: '10px' }}
-                            >
-                                <Coffee size={11} />
-                                {status?.status === 'ON_SHORT_BREAK' ? 'Resume' : '↺ Short'}
-                            </button>
-                        </div>
-                        <div className="col-6">
-                            <button
-                                onClick={() => handleBreak('LONG')}
-                                disabled={status?.status === 'ON_SHORT_BREAK'}
-                                className={`w-100 py-2 rounded-3 fw-black d-flex align-items-center justify-content-center gap-1 transition-all border ${
-                                    status?.status === 'ON_LONG_BREAK'
-                                        ? 'bg-warning text-dark border-warning shadow-glow'
-                                        : 'bg-transparent text-warning border-warning border-opacity-50'
-                                }`}
-                                style={{ fontSize: '10px' }}
-                            >
-                                <LogOut size={11} style={{ transform: 'rotate(90deg)' }} />
-                                {status?.status === 'ON_LONG_BREAK' ? 'Resume' : '↺ Long'}
-                            </button>
-                        </div>
-                        <div className="col-12">
-                            <button
-                                onClick={handleClockOut}
-                                className="w-100 py-2 rounded-3 bg-transparent text-danger border border-danger border-opacity-50 fw-black d-flex align-items-center justify-content-center gap-2 transition-all"
-                                style={{ fontSize: '11px' }}
-                            >
-                                <LogOut size={13} /> PUNCH OUT
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+                    )}
                 </>
             )}
         </div>

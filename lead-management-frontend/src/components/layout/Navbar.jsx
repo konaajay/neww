@@ -103,12 +103,15 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras }) => {
 
           {/* Profile Dropdown Menu */}
           {isProfileOpen && (
-            <div className="position-absolute top-100 end-0 mt-3 p-0 rounded-4 shadow-2xl animate-scale-in" style={{ 
+            <div className="position-absolute top-100 end-0 mt-3 p-0 rounded-4 shadow-2xl animate-zoom-in" style={{ 
               width: '320px', 
+              maxHeight: 'calc(100vh - 100px)',
+              overflowY: 'auto',
               background: isDarkMode ? '#111827' : '#ffffff', 
               border: '1px solid rgba(0,0,0,0.05)',
-              zIndex: 1000,
-              overflow: 'hidden'
+              zIndex: 2010,
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none'
             }}>
               <div className="p-4 border-bottom border-light" style={{ background: 'linear-gradient(to bottom right, rgba(79, 70, 229, 0.05), rgba(59, 130, 246, 0.05))' }}>
                 <div className="d-flex align-items-center gap-3">
@@ -131,21 +134,21 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras }) => {
 
               <div className="p-3">
                 {/* Information Cluster */}
-                <div className="bg-light bg-opacity-50 rounded-4 p-3 mb-3 border border-light">
+                <div className={`${isDarkMode ? 'bg-surface bg-opacity-40' : 'bg-light bg-opacity-50'} rounded-4 p-3 mb-3 border ${isDarkMode ? 'border-white border-opacity-10' : 'border-light'}`}>
                   {/* Workspace */}
                   <div className="d-flex align-items-start gap-3 mb-4">
-                    <div className="p-2 bg-white rounded-3 shadow-sm border border-light">
+                    <div className={`p-2 ${isDarkMode ? 'bg-surface' : 'bg-white'} rounded-3 shadow-sm border ${isDarkMode ? 'border-white border-opacity-10' : 'border-light'}`}>
                       <Building2 size={14} className="text-primary" />
                     </div>
                     <div>
                       <p className="text-muted fw-bold text-uppercase mb-1" style={{ fontSize: '8px', letterSpacing: '0.5px' }}>Workspace / Office</p>
-                      <p className="text-dark fw-black mb-0" style={{ fontSize: '11px' }}>{user?.officeName || 'Remote / Not Assigned'}</p>
+                      <p className="text-main fw-black mb-0" style={{ fontSize: '11px' }}>{user?.officeName || 'Remote / Not Assigned'}</p>
                     </div>
                   </div>
 
                   {/* Mobile - Editable */}
                   <div className="d-flex align-items-start gap-3 mb-4">
-                    <div className="p-2 bg-white rounded-3 shadow-sm border border-light">
+                    <div className={`p-2 ${isDarkMode ? 'bg-surface' : 'bg-white'} rounded-3 shadow-sm border ${isDarkMode ? 'border-white border-opacity-10' : 'border-light'}`}>
                       <Phone size={14} className="text-primary" />
                     </div>
                     <div className="flex-grow-1">
@@ -166,7 +169,7 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras }) => {
                         </div>
                       ) : (
                         <div className="d-flex align-items-center justify-content-between">
-                          <p className="text-dark fw-black mb-0" style={{ fontSize: '11px' }}>{user?.mobile || 'No Contact Set'}</p>
+                          <p className="text-main fw-black mb-0" style={{ fontSize: '11px' }}>{user?.mobile || 'No Contact Set'}</p>
                           <button onClick={() => setIsEditingMobile(true)} className="btn btn-link p-0 text-primary border-0 opacity-40 hover-opacity-100 transition-all">
                             <Edit2 size={10} />
                           </button>
@@ -177,23 +180,23 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras }) => {
 
                   {/* Operating Shift */}
                   <div className="d-flex align-items-start gap-3 mb-4">
-                    <div className="p-2 bg-white rounded-3 shadow-sm border border-light">
+                    <div className={`p-2 ${isDarkMode ? 'bg-surface' : 'bg-white'} rounded-3 shadow-sm border ${isDarkMode ? 'border-white border-opacity-10' : 'border-light'}`}>
                       <Clock size={14} className="text-primary" />
                     </div>
                     <div>
                       <p className="text-muted fw-bold text-uppercase mb-1" style={{ fontSize: '8px', letterSpacing: '0.5px' }}>Operating Shift</p>
-                      <p className="text-dark fw-black mb-0" style={{ fontSize: '11px' }}>{user?.shiftTime || 'General Timing'}</p>
+                      <p className="text-main fw-black mb-0" style={{ fontSize: '11px' }}>{user?.shiftTime || 'General Timing'}</p>
                     </div>
                   </div>
 
                   {/* GPS Coordinates */}
                   <div className="d-flex align-items-start gap-3">
-                    <div className="p-2 bg-white rounded-3 shadow-sm border border-light">
+                    <div className={`p-2 ${isDarkMode ? 'bg-surface' : 'bg-white'} rounded-3 shadow-sm border ${isDarkMode ? 'border-white border-opacity-10' : 'border-light'}`}>
                       <span className="text-primary fw-black" style={{ fontSize: '9px' }}>GPS</span>
                     </div>
                     <div>
                       <p className="text-muted fw-bold text-uppercase mb-1" style={{ fontSize: '8px', letterSpacing: '0.5px' }}>Geo Coordinates</p>
-                      <p className="text-dark fw-black mb-0" style={{ fontSize: '10px' }}>
+                      <p className="text-main fw-black mb-0" style={{ fontSize: '10px' }}>
                         {user?.latitude && user?.longitude ? `${user.latitude.toFixed(4)}, ${user.longitude.toFixed(4)}` : 'Location Not Synced'}
                       </p>
                     </div>
@@ -206,7 +209,7 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras }) => {
                     className="btn btn-link text-primary d-flex align-items-center gap-3 p-3 rounded-4 border-0 text-decoration-none hover-bg-primary hover-bg-opacity-5 transition-all"
                   >
                     <Key size={14} className="opacity-70" />
-                    <span className="fw-black text-uppercase tracking-widest" style={{ fontSize: '10px' }}>Access Credentials</span>
+                    <span className="fw-black text-uppercase tracking-widest" style={{ fontSize: '10px' }}>Change Password</span>
                   </button>
                   
                   <button 
@@ -215,7 +218,7 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras }) => {
                     style={{ background: '#ef4444', color: '#ffffff', fontWeight: '900', letterSpacing: '1px' }}
                   >
                     <LogOut size={16} />
-                    <span className="text-uppercase" style={{ fontSize: '11px' }}>Terminate Session</span>
+                    <span className="text-uppercase" style={{ fontSize: '11px' }}>Sign Out</span>
                   </button>
                 </div>
               </div>

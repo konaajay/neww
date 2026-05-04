@@ -20,6 +20,8 @@ import java.util.Collection;
 @Repository
 public interface AttendanceSessionRepository extends JpaRepository<AttendanceSession, Long> {
 
+    List<AttendanceSession> findAllByUserIdAndStatusIn(Long userId, List<AttendanceStatus> statuses);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints(@QueryHint(name = "jakarta.persistence.lock.timeout", value = "3000"))
     @Query("""

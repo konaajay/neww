@@ -86,20 +86,17 @@ public class AttendanceController {
         if (attendanceOpt.isPresent()) {
             return ResponseEntity.ok(ApiResponse.success(attendanceOpt.get()));
         } else {
-            return ResponseEntity.ok(ApiResponse.success(Map.of(
-                "status", "NOT_STARTED",
-                "totalWorkMinutes", 0,
-                "totalBreakMinutes", 0,
-                "totalWorkHours", "0h 0m"
-            )));
+            return ResponseEntity.ok(ApiResponse.success(attendanceService.getPrePunchStatus(userId)));
         }
     }
 
     @GetMapping("/my-logs")
-    public ResponseEntity<ApiResponse<List<AttendanceDTO>>> getMyLogs() {
+    public ResponseEntity<ApiResponse<List<AttendanceDTO>>> getMyLogs(
+            @RequestParam(value = "from", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from,
+            @RequestParam(value = "to", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate to) {
         Long userId = getCurrentUserId();
         if (userId == null) return ResponseEntity.status(401).build();
-        return ResponseEntity.ok(ApiResponse.success(attendanceService.getMyLogs(userId)));
+        return ResponseEntity.ok(ApiResponse.success(attendanceService.getMyLogs(userId, from, to)));
     }
 
     @PostMapping("/preview")

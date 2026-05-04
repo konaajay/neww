@@ -35,6 +35,9 @@ public class AttendanceDTO {
     private Integer gracePeriodMinutes;
     private Integer outsideCount;
     private Double officeRadius;
+    private Double officeLat;
+    private Double officeLng;
+    private String officeName;
 
     private Integer totalWorkMinutes;
     private String totalWorkHours; // Formatted "5h 30m"

@@ -3,6 +3,7 @@ package com.lms.www.leadmanagement.mapper;
 import com.lms.www.leadmanagement.dto.AttendanceDTO;
 import com.lms.www.leadmanagement.dto.AttendancePolicyDTO;
 import com.lms.www.leadmanagement.dto.OfficeLocationDTO;
+import com.lms.www.leadmanagement.entity.AttendanceDaily;
 import com.lms.www.leadmanagement.entity.AttendanceSession;
 import com.lms.www.leadmanagement.entity.AttendancePolicy;
 import com.lms.www.leadmanagement.entity.OfficeLocation;
@@ -60,6 +61,9 @@ public class AttendanceMapper {
                 .gracePeriodMinutes(gracePeriod)
                 .outsideCount(s.getOutsideCount() != null ? s.getOutsideCount() : 0)
                 .officeRadius(radius)
+                .officeLat(office != null ? office.getLatitude() : null)
+                .officeLng(office != null ? office.getLongitude() : null)
+                .officeName(office != null ? office.getName() : null)
                 .totalWorkMinutes(dayWorkMinutes)
                 .totalWorkHours(dayWorkHours)
                 .totalBreakMinutes(s.getTotalBreakMinutes())
@@ -117,6 +121,29 @@ public class AttendanceMapper {
                 .maxAccuracyMeters(p.getMaxAccuracyMeters())
                 .minimumWorkMinutes(p.getMinimumWorkMinutes())
                 .maxIdleMinutes(p.getMaxIdleMinutes())
+                .build();
+    }
+
+    public AttendanceDTO toDTO(AttendanceDaily d) {
+        if (d == null) return null;
+        int mins = d.getTotalWorkMinutes() != null ? d.getTotalWorkMinutes() : 0;
+        String hours = String.format("%dh %dm", mins / 60, mins % 60);
+        return AttendanceDTO.builder()
+                .id(d.getId())
+                .userId(d.getUser().getId())
+                .userName(d.getUser().getName())
+                .date(d.getDate())
+                .status(d.getStatus())
+                .totalWorkMinutes(mins)
+                .totalWorkHours(hours)
+                .totalBreakMinutes(d.getTotalBreakMinutes())
+                .productiveMinutes(d.getProductiveMinutes())
+                .lateMinutes(d.getLateMinutes())
+                .totalIdleMinutes(d.getIdleMinutes())
+                .late(d.getLate() != null ? d.getLate() : false)
+                .note(d.getNote())
+                .loginTime(d.getLoginTime())
+                .logoutTime(d.getLogoutTime())
                 .build();
     }
 }
