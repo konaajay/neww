@@ -785,17 +785,17 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                         <div className="d-flex align-items-center gap-2 text-muted small">
                           <Calendar size={12} /> {formatDate(lead.createdAt)}
                         </div>
-                      </div>
                     </div>
-
+                  </div>
+                  </div>
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </div>
-    );
+    </div>
+  );
 
   return ReactDOM.createPortal(modalContent, document.body);
 };
