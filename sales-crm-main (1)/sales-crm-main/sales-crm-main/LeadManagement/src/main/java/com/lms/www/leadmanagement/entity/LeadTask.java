@@ -1,5 +1,6 @@
 package com.lms.www.leadmanagement.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,14 +20,17 @@ public class LeadTask {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lead_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "notes", "calls", "assignedTo", "createdBy", "updatedBy"})
     private Lead lead;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_to_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "subordinates", "managedAssociates", "directPermissions", "manager", "supervisor"})
     private User assignedTo;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "subordinates", "managedAssociates", "directPermissions", "manager", "supervisor"})
     private User createdBy;
 
     private String title;

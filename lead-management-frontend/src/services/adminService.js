@@ -49,7 +49,7 @@ const adminService = {
   updateAttendanceNote: (userId, date, note) => safeRequest(api.post('/admin/attendance/daily-note', { userId, date, note })),
 
   // Pipeline Configuration
-  fetchPipelineStages: () => safeRequest(api.get('/admin/pipeline-stages')),
+  fetchPipelineStages: () => safeRequest(api.get('/lookup/pipeline-stages')),
   createPipelineStage: (data) => safeRequest(api.post('/admin/pipeline-stages', data)),
   updatePipelineStage: (id, data) => safeRequest(api.put(`/admin/pipeline-stages/${id}`, data)),
   deletePipelineStage: (id) => safeRequest(api.delete(`/admin/pipeline-stages/${id}`)),

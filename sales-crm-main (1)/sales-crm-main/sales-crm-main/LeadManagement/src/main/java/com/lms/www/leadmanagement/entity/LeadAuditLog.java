@@ -1,5 +1,6 @@
 package com.lms.www.leadmanagement.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -21,6 +22,7 @@ public class LeadAuditLog {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "changed_by_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "subordinates", "managedAssociates", "directPermissions", "manager", "supervisor"})
     private User changedBy;
 
     @Column(name = "field_name")
