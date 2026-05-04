@@ -261,9 +261,9 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
   };
 
   const modalContent = (
-    <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', zIndex: 10500, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }} onClick={onClose}>
-      <div className="modal-dialog modal-xl modal-dialog-centered" style={{ maxWidth: '1000px' }} onClick={e => e.stopPropagation()}>
-        <div className={`modal-content border-0 rounded-4 shadow-2xl overflow-hidden`} style={{ backgroundColor: '#ffffff', color: '#1e293b', maxHeight: '90vh' }}>
+    <div className="modal show d-block p-0" tabIndex="-1" style={{ backgroundColor: '#f8fafc', zIndex: 10500, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
+      <div className="modal-dialog modal-fullscreen m-0 border-0 h-100">
+        <div className={`modal-content border-0 rounded-0 h-100`} style={{ backgroundColor: '#f8fafc', color: '#1e293b', display: 'flex', flexDirection: 'column' }}>
 
           {/* Top Header - Simple & Clean */}
           <div className="px-4 py-3 border-bottom d-flex align-items-center justify-content-between bg-white sticky-top" style={{ zIndex: 10, borderColor: '#f1f5f9' }}>
@@ -297,7 +297,6 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                 <X size={16} className="text-muted" />
               </button>
             </div>
-          </div>
           </div>
 
           {/* Main Layout Grid */}
@@ -789,17 +788,14 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                       </div>
                     </div>
 
-                  </div>
                 </div>
-
               </div>
             </div>
-          </div>
 
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
 
   return ReactDOM.createPortal(modalContent, document.body);
 };
