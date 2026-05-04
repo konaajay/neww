@@ -206,11 +206,14 @@ const LeadTable = ({
               </tr>
             ) : (
               currentItems.map((lead, idx) => (
-                <tr key={lead.id} className="border-bottom border-white border-opacity-5 hover-bg-light">
+                <tr 
+                  key={lead.id} 
+                  className="border-bottom border-white border-opacity-5 hover-bg-light cursor-pointer"
+                  onClick={() => setSelectedOutcomeLead(lead)}
+                >
                   <td className="ps-4 py-4">
                     <span 
-                      className="fw-black text-primary cursor-pointer hover-underline" 
-                      onClick={() => setSelectedHistoryLead(lead)}
+                      className="fw-black text-primary hover-underline" 
                       style={{ fontSize: '13px' }}
                     >
                       {lead.name}
@@ -227,7 +230,7 @@ const LeadTable = ({
                     </div>
                   </td>
                   {role !== 'ASSOCIATE' && (
-                    <td>
+                    <td onClick={(e) => e.stopPropagation()}>
                       <select
                         className={`form-select bg-surface bg-opacity-20 border-0 ${!lead.assignedToId ? 'text-danger fw-black' : 'text-main'} py-1 px-2 fw-black text-uppercase`}
                         style={{ width: '130px', fontSize: '10px', borderRadius: '8px' }}
@@ -239,7 +242,7 @@ const LeadTable = ({
                       </select>
                     </td>
                   )}
-                  <td>
+                  <td onClick={(e) => e.stopPropagation()}>
                     {['CONVERTED', 'PAID', 'SUCCESS', 'EMI'].includes(lead.status?.toUpperCase()) ? (
                       <div 
                         className={`bg-surface bg-opacity-20 py-1 px-2 fw-black text-uppercase text-center ${getStatusColorClass(lead.status)}`}
@@ -259,7 +262,7 @@ const LeadTable = ({
                     )}
                   </td>
                   <td className="pe-4">
-                    <div className="d-flex align-items-center justify-content-end gap-1">
+                    <div className="d-flex align-items-center justify-content-end gap-1" onClick={(e) => e.stopPropagation()}>
                       {showActions && (
                         <>
                           <button className="p-2 border-0 bg-transparent text-info hover-scale" onClick={() => setSelectedHistoryLead(lead)}>
@@ -301,6 +304,11 @@ const LeadTable = ({
         onClose={() => setSelectedOutcomeLead(null)} 
         lead={selectedOutcomeLead} 
         theme={isDarkMode ? 'dark' : 'light'} 
+        onShowHistory={() => {
+          const leadToHistory = selectedOutcomeLead;
+          setSelectedOutcomeLead(null);
+          setSelectedHistoryLead(leadToHistory);
+        }}
         onSubmit={async (data) => {
           if (onRecordCallOutcome) await onRecordCallOutcome(selectedOutcomeLead.id, data);
           else if (onUpdateStatus) await onUpdateStatus(selectedOutcomeLead.id, data.status, data);

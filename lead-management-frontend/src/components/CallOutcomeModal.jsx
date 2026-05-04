@@ -10,7 +10,7 @@ import associateService from '../services/associateService';
 import adminService from '../services/adminService';
 import { useAuth } from '../context/AuthContext';
 
-const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme }) => {
+const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistory }) => {
   const { clearCall } = useAuth();
   const [outcome, setOutcome] = useState('CONTACTED');
   const [note, setNote] = useState('');
@@ -284,6 +284,16 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme }) => {
             </div>
 
             <div className="d-flex align-items-center gap-4">
+              <button
+                className={`btn btn-sm d-flex align-items-center gap-2 rounded-pill px-3 py-1 fw-bold text-uppercase tracking-wider transition-all ${isDarkMode ? 'btn-outline-info' : 'btn-info text-white'}`}
+                style={{ fontSize: '10px', border: '1px solid rgba(0, 180, 216, 0.3)' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onShowHistory();
+                }}
+              >
+                <Clock size={12} /> Lead History
+              </button>
               <div className="text-end d-none d-md-block">
                 <span className="fw-black small text-primary text-uppercase tracking-widest d-block ls-2">Interaction Portal</span>
                 <span className="text-muted small fw-bold opacity-50">Operational Intelligence Module</span>
