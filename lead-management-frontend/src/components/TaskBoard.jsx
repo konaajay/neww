@@ -275,7 +275,7 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
                       </span>
                     </td>
                     <td className="pe-4 text-end">
-                      {task.status === 'PENDING' && (
+                      {task.status !== 'COMPLETED' && (
                         <button className="btn btn-sm btn-outline-primary rounded-pill py-1 px-3" style={{ fontSize: '10px' }} onClick={(e) => { e.stopPropagation(); handleUpdateTaskStatus(task.id, 'COMPLETED'); }}>Complete</button>
                       )}
                     </td>
