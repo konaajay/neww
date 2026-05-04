@@ -25,7 +25,7 @@ public class AttendanceSession {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "subordinates", "managedAssociates", "directPermissions"})
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "subordinates", "managedAssociates", "directPermissions", "manager", "supervisor"})
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
