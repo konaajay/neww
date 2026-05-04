@@ -1,12 +1,6 @@
-<<<<<<< HEAD
 target/
 node_modules/
 .env
-=======
-## Lead Management Backend Git Ignore
-.env
-target/*
-!target/*.jar
 .idea/
 *.iml
 .settings/
@@ -15,4 +9,4 @@ target/*
 .factorypath
 bin/
 logs/
->>>>>>> a43fd720be4cdbf99767cc6066a3bec98bcf0971
+dist/
