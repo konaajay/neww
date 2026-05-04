@@ -27,6 +27,8 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme }) => {
   const [isDurationLoading, setIsDurationLoading] = useState(false);
   const [pipelineStages, setPipelineStages] = useState([]);
   const [allStatuses, setAllStatuses] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
 
   // New Payment / Installment State integration
   const [totalAmount, setTotalAmount] = useState('499');
@@ -98,8 +100,25 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme }) => {
         console.error("Failed to load stages", err);
       }
     };
-    if (isOpen) fetchStages();
-  }, [isOpen]);
+
+    const fetchAuditLogs = async () => {
+      if (!lead?.id) return;
+      setIsLoadingLogs(true);
+      try {
+        const res = await adminService.api.get(`/leads/${lead.id}/history`);
+        setAuditLogs(res.data || []);
+      } catch (err) {
+        console.error("Failed to load audit logs", err);
+      } finally {
+        setIsLoadingLogs(false);
+      }
+    };
+
+    if (isOpen) {
+      fetchStages();
+      fetchAuditLogs();
+    }
+  }, [isOpen, lead?.id]);
 
   if (!isOpen || !lead) return null;
 
@@ -707,52 +726,74 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme }) => {
                     {/* Add Note button removed as per request */}
                   </div>
 
-                  {/* Timeline Logic */}
                   <div className="position-relative ps-4 py-2 h-100 overflow-auto" style={{ maxHeight: '500px' }}>
                     {/* Vertical Timeline Bar */}
                     <div className="position-absolute bg-primary bg-opacity-25" style={{ width: '2px', top: '10px', bottom: '0', left: '11px' }}></div>
-
-                    {/* Historical Notes Loop */}
-                    {(lead.notes || []).length > 0 ? (
-                      [...lead.notes].sort((a, b) => {
-                        const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
-                        const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+                    
+                    {/* Merged Timeline Logic */}
+                    {(() => {
+                      const notes = (lead.notes || []).map(n => ({ ...n, type: 'NOTE' }));
+                      const logs = auditLogs.map(l => ({ ...l, type: 'LOG' }));
+                      const merged = [...notes, ...logs].sort((a, b) => {
+                        const dateA = new Date(a.createdAt || a.timestamp || 0);
+                        const dateB = new Date(b.createdAt || b.timestamp || 0);
                         return dateB - dateA;
-                      }).map((note, index) => (
-                        <div key={note.id || index} className="position-relative mb-4 animate-fade-in">
+                      });
+
+                      if (merged.length === 0) {
+                        return lead.note ? (
+                          <div className="position-relative mb-4">
+                            <div className="position-absolute bg-primary rounded-circle shadow-sm" style={{ width: '10px', height: '10px', left: '-31px', top: '6px' }}></div>
+                            <div className={`p-3 rounded-3 shadow-sm border ${isDarkMode ? 'bg-dark border-secondary border-opacity-25' : 'bg-light border-light'}`}>
+                              <h6 className="small fw-bold text-primary text-uppercase mb-2 d-flex align-items-center gap-2">
+                                <MessageSquare size={12} /> INTERNAL NOTE
+                              </h6>
+                              <p className={`mb-2 fw-medium ${isDarkMode ? 'text-white' : 'text-dark'}`}>{lead.note}</p>
+                              <div className="d-flex align-items-center gap-3 text-muted small">
+                                <span className="d-flex align-items-center gap-1"><User size={12} /> {lead.updatedByName || 'System'}</span>
+                                <span className="d-flex align-items-center gap-1"><Calendar size={12} /> {formatDate(lead.updatedAt || lead.createdAt)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ) : null;
+                      }
+
+                      return merged.map((item, index) => (
+                        <div key={item.id || index} className="position-relative mb-4 animate-fade-in">
                           <div className={`position-absolute rounded-circle shadow-sm ${index === 0 ? 'bg-primary' : 'bg-secondary bg-opacity-50'}`}
                             style={{ width: '10px', height: '10px', left: '-31px', top: '6px' }}></div>
-                          <div className={`p-3 rounded-3 shadow-sm border ${isDarkMode ? 'bg-dark border-secondary border-opacity-25' : 'bg-light border-light'}`}
-                            style={{ backgroundColor: index === 0 ? (isDarkMode ? '#1a2233' : '#f0f4ff') : (isDarkMode ? '#1a1a1a' : '#ffffff') }}>
-                            <h6 className={`small fw-bold ${index === 0 ? 'text-primary' : 'text-muted'} text-uppercase mb-2 d-flex align-items-center gap-2`}>
-                              <MessageSquare size={12} /> {note.status} NOTE
-                            </h6>
-                            <p className={`mb-2 fw-medium ${isDarkMode ? 'text-white' : 'text-dark'}`}>{note.content}</p>
-                            <div className="d-flex align-items-center gap-3 text-muted small">
-                              <span className="d-flex align-items-center gap-1"><User size={12} /> {note.createdByName || 'System'}</span>
-                              <span className="d-flex align-items-center gap-1"><Calendar size={12} /> {formatDate(note.createdAt)}</span>
+                          
+                          {item.type === 'NOTE' ? (
+                            <div className={`p-3 rounded-3 shadow-sm border ${isDarkMode ? 'bg-dark border-secondary border-opacity-25' : 'bg-light border-light'}`}
+                              style={{ backgroundColor: index === 0 ? (isDarkMode ? '#1a2233' : '#f0f4ff') : (isDarkMode ? '#1a1a1a' : '#ffffff') }}>
+                              <h6 className={`small fw-bold ${index === 0 ? 'text-primary' : 'text-muted'} text-uppercase mb-2 d-flex align-items-center gap-2`}>
+                                <MessageSquare size={12} /> {item.status} NOTE
+                              </h6>
+                              <p className={`mb-2 fw-medium ${isDarkMode ? 'text-white' : 'text-dark'}`}>{item.content}</p>
+                              <div className="d-flex align-items-center gap-3 text-muted small">
+                                <span className="d-flex align-items-center gap-1"><User size={12} /> {item.createdByName || 'System'}</span>
+                                <span className="d-flex align-items-center gap-1"><Calendar size={12} /> {formatDate(item.createdAt)}</span>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      /* Fallback for single note if no history yet */
-                      lead.note && (
-                        <div className="position-relative mb-4">
-                          <div className="position-absolute bg-primary rounded-circle shadow-sm" style={{ width: '10px', height: '10px', left: '-31px', top: '6px' }}></div>
-                          <div className={`p-3 rounded-3 shadow-sm border ${isDarkMode ? 'bg-dark border-secondary border-opacity-25' : 'bg-light border-light'}`}>
-                            <h6 className="small fw-bold text-primary text-uppercase mb-2 d-flex align-items-center gap-2">
-                              <MessageSquare size={12} /> INTERNAL NOTE
-                            </h6>
-                            <p className={`mb-2 fw-medium ${isDarkMode ? 'text-white' : 'text-dark'}`}>{lead.note}</p>
-                            <div className="d-flex align-items-center gap-3 text-muted small">
-                              <span className="d-flex align-items-center gap-1"><User size={12} /> {lead.updatedByName || 'System'}</span>
-                              <span className="d-flex align-items-center gap-1"><Calendar size={12} /> {formatDate(lead.updatedAt || lead.createdAt)}</span>
+                          ) : (
+                            <div className={`p-3 rounded-3 shadow-sm border ${isDarkMode ? 'bg-dark border-secondary border-opacity-25' : 'bg-light border-light'}`}>
+                              <h6 className={`small fw-bold text-info text-uppercase mb-2 d-flex align-items-center gap-2`}>
+                                <Activity size={12} /> {item.fieldName || 'SYSTEM'} CHANGE
+                              </h6>
+                              <div className="d-flex align-items-center gap-2 mb-2">
+                                <span className="text-muted small fw-bold opacity-50">{item.oldValue || 'None'}</span>
+                                <Clock size={10} className="text-muted" />
+                                <span className="text-primary small fw-black">{item.newValue}</span>
+                              </div>
+                              <div className="d-flex align-items-center gap-3 text-muted small">
+                                <span className="d-flex align-items-center gap-1"><User size={12} /> {item.changedByName || 'System'}</span>
+                                <span className="d-flex align-items-center gap-1"><Calendar size={12} /> {formatDate(item.timestamp)}</span>
+                              </div>
                             </div>
-                          </div>
+                          )}
                         </div>
-                      )
-                    )}
+                      ));
+                    })()}
 
                     {/* Origination Log */}
                     <div className="position-relative">
