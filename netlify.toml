@@ -1,6 +1,6 @@
 [build]
-  command = "cd lead-management-frontend && npm install && npm run build"
-  publish = "lead-management-frontend/dist"
+  command = "npm install && npm run build"
+  publish = "dist"
 
 [[redirects]]
   from = "/*"
