@@ -39,7 +39,7 @@ public class LeadPaymentService {
         Lead lead = leadRepository.findById(leadId)
                 .orElseThrow(() -> new ResourceNotFoundException("Lead not found"));
 
-        lead.setStatus(LeadStatus.CONVERTED.name());
+        lead.setStatus(LeadStatus.CONVERTED);
         leadRepository.save(lead);
 
         log.info(">>> Lead {} manually marked as PAID/CONVERTED", lead.getEmail());
@@ -213,7 +213,7 @@ public class LeadPaymentService {
         Lead lead = leadRepository.findById(payment.getLeadId())
                 .orElseThrow(() -> new ResourceNotFoundException("Lead linked to payment not found"));
 
-        lead.setStatus(LeadStatus.CONVERTED.name());
+        lead.setStatus(LeadStatus.CONVERTED);
         lead.setFollowUpRequired(false);
         leadRepository.save(lead);
 

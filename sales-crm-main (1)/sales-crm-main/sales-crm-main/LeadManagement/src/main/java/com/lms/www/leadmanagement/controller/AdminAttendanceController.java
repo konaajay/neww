@@ -32,11 +32,12 @@ public class AdminAttendanceController {
 
     @GetMapping("/summaries")
     public ResponseEntity<ApiResponse<List<AttendanceDTO>>> getSummaries(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) Long userId) {
-        Long requesterId = securityService.getCurrentUser().getId();
-        return ResponseEntity.ok(ApiResponse.success(attendanceService.getDailySummaries(startDate, endDate, userId, requesterId)));
+            @RequestParam(required = false) Long managerId,
+            @RequestParam(required = false) Long teamId,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(ApiResponse.success(attendanceService.getDailySummaries(managerId, teamId, userId, from, to)));
     }
 
     // Office/Branch Management

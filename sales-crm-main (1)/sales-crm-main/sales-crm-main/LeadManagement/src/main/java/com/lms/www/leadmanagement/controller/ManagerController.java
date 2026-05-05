@@ -173,7 +173,8 @@ public class ManagerController {
         LocalDate toDate = (end != null) ? end.toLocalDate() : LocalDate.now();
         
         java.util.Collection<User> allowedUsers = statsService.determineAllowedUsers(requester, userId, teamId);
-        return ResponseEntity.ok(statsService.getStats(allowedUsers, fromDate, toDate, false, requester, userId, teamId));
+        java.util.List<Long> allowedIds = allowedUsers.stream().map(User::getId).collect(Collectors.toList());
+        return ResponseEntity.ok(statsService.getStats(allowedIds, fromDate, toDate, false, requester, userId, teamId));
     }
 
     @PreAuthorize("hasAuthority('VIEW_REPORTS')")

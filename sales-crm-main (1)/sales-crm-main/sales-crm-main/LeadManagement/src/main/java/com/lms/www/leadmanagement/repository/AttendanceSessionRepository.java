@@ -19,7 +19,7 @@ import java.util.Collection;
 
 @Repository
 public interface AttendanceSessionRepository extends JpaRepository<AttendanceSession, Long> {
-    
+
     List<AttendanceSession> findAllByUserIdAndStatusIn(Long userId, List<AttendanceStatus> statuses);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -43,9 +43,8 @@ public interface AttendanceSessionRepository extends JpaRepository<AttendanceSes
     @Query("""
                 SELECT s FROM AttendanceSession s
                 WHERE s.user.id = :userId
-                AND (s.user.joiningDate IS NULL OR s.user.joiningDate <= :endOfDay)
-                AND (s.checkInTime <= :endOfDay
-                AND (s.checkOutTime IS NULL OR s.checkOutTime >= :startOfDay))
+                AND s.checkInTime < :endOfDay
+                AND (s.checkOutTime IS NULL OR s.checkOutTime > :startOfDay)
             """)
     List<AttendanceSession> findSessionsForDate(
             Long userId,
@@ -101,7 +100,7 @@ public interface AttendanceSessionRepository extends JpaRepository<AttendanceSes
     @Query("""
                 SELECT s FROM AttendanceSession s
                 WHERE s.status IN :statuses
-                AND (s.lastLocationTime IS NULL OR s.lastLocationTime < :cutoffTime)
+                AND (s.lastSeenTime IS NULL OR s.lastSeenTime < :cutoffTime)
                 AND (s.user.joiningDate IS NULL OR s.checkInTime >= s.user.joiningDate)
             """)
     List<AttendanceSession> findInactiveSessions(
@@ -173,10 +172,4 @@ public interface AttendanceSessionRepository extends JpaRepository<AttendanceSes
     boolean existsByOfficeId(Long officeId);
 
     List<AttendanceSession> findAllByStatusIn(List<AttendanceStatus> statuses);
-
-    @Query("SELECT s FROM AttendanceSession s WHERE s.user.id = :userId AND s.checkInTime BETWEEN :start AND :end")
-    List<AttendanceSession> findByUserIdAndCheckInTimeBetween(Long userId, LocalDateTime start, LocalDateTime end);
-
-    @Query("SELECT s FROM AttendanceSession s WHERE s.user.id = :userId AND CAST(s.checkInTime AS date) = :date")
-    List<AttendanceSession> findByUserIdAndDate(Long userId, java.time.LocalDate date);
 }

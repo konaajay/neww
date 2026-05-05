@@ -1,113 +1,95 @@
 package com.lms.www.leadmanagement.controller;
 
-import com.lms.www.leadmanagement.dto.ApiResponse;
-import com.lms.www.leadmanagement.dto.AttendanceDTO;
-import com.lms.www.leadmanagement.dto.LocationRequestDTO;
+import com.lms.www.leadmanagement.dto.*;
+import com.lms.www.leadmanagement.entity.User;
 import com.lms.www.leadmanagement.security.UserDetailsImpl;
 import com.lms.www.leadmanagement.service.AttendanceService;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.lms.www.leadmanagement.service.UserService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/attendance")
+@RequiredArgsConstructor
 public class AttendanceController {
 
-    @Autowired
-    private AttendanceService attendanceService;
-
-    private Long getCurrentUserId() {
-        var auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
-            System.err.println(">>> ATTENDANCE ERROR: Not authenticated");
-            return null; // Let the caller handle or return 401
-        }
-        Object principal = auth.getPrincipal();
-        if (!(principal instanceof UserDetailsImpl)) {
-            System.err.println(">>> ATTENDANCE ERROR: Principal is not UserDetailsImpl: " + (principal != null ? principal.getClass().getName() : "null"));
-            return null;
-        }
-        return ((UserDetailsImpl) principal).getId();
-    }
+    private final AttendanceService attendanceService;
+    private final UserService userService;
 
     @PostMapping("/clock-in")
-    public ResponseEntity<ApiResponse<AttendanceDTO>> clockIn(@Valid @RequestBody LocationRequestDTO request, HttpServletRequest httpRequest) {
-        Long userId = getCurrentUserId();
-        if (userId == null) return ResponseEntity.status(401).body(ApiResponse.error("AUTHENTICATION_REQUIRED: Please login again"));
-        request.setUserId(userId);
-        String ua = httpRequest.getHeader("User-Agent");
-        String ip = httpRequest.getRemoteAddr();
-        return ResponseEntity.ok(ApiResponse.success(attendanceService.clockIn(request, ua, ip)));
+    public ResponseEntity<AttendanceDTO> clockIn(
+            @RequestBody LocationRequestDTO request,
+            @AuthenticationPrincipal UserDetailsImpl principal,
+            HttpServletRequest httpServletRequest) {
+        request.setUserId(principal.getId());
+        return ResponseEntity.ok(attendanceService.clockIn(request, 
+            httpServletRequest.getHeader("User-Agent"), 
+            httpServletRequest.getRemoteAddr()));
     }
 
     @PostMapping("/track")
-    public ResponseEntity<ApiResponse<AttendanceDTO>> trackLocation(@Valid @RequestBody LocationRequestDTO request, HttpServletRequest httpRequest) {
-        Long userId = getCurrentUserId();
-        if (userId == null) return ResponseEntity.status(401).body(ApiResponse.error("AUTHENTICATION_REQUIRED: Session expired"));
-        request.setUserId(userId);
-        String ua = httpRequest.getHeader("User-Agent");
-        String ip = httpRequest.getRemoteAddr();
-        return ResponseEntity.ok(ApiResponse.success(attendanceService.trackLocation(request, ua, ip)));
+    public ResponseEntity<AttendanceDTO> trackLocation(
+            @RequestBody LocationRequestDTO request,
+            @AuthenticationPrincipal UserDetailsImpl principal,
+            HttpServletRequest httpServletRequest) {
+        request.setUserId(principal.getId());
+        return ResponseEntity.ok(attendanceService.trackLocation(request,
+            httpServletRequest.getHeader("User-Agent"),
+            httpServletRequest.getRemoteAddr()));
     }
 
-    @PutMapping("/clock-out")
-    public ResponseEntity<ApiResponse<AttendanceDTO>> clockOut() {
-        Long userId = getCurrentUserId();
-        if (userId == null) return ResponseEntity.status(401).build();
-        return ResponseEntity.ok(ApiResponse.success(attendanceService.clockOut(userId)));
+    @RequestMapping(value = "/clock-out", method = {RequestMethod.POST, RequestMethod.PUT})
+    public ResponseEntity<AttendanceDTO> clockOut(@AuthenticationPrincipal UserDetailsImpl principal) {
+        return ResponseEntity.ok(attendanceService.clockOut(principal.getId()));
     }
 
     @PostMapping("/break/start")
-    public ResponseEntity<ApiResponse<AttendanceDTO>> startBreak(@RequestParam(defaultValue = "SHORT") String type) {
-        Long userId = getCurrentUserId();
-        if (userId == null) return ResponseEntity.status(401).build();
-        return ResponseEntity.ok(ApiResponse.success(attendanceService.startBreak(userId, type)));
+    public ResponseEntity<AttendanceDTO> startBreak(
+            @AuthenticationPrincipal UserDetailsImpl principal,
+            @RequestParam(defaultValue = "LUNCH") String type) {
+        return ResponseEntity.ok(attendanceService.startBreak(principal.getId(), type));
     }
 
     @PostMapping("/break/end")
-    public ResponseEntity<ApiResponse<AttendanceDTO>> endBreak() {
-        Long userId = getCurrentUserId();
-        if (userId == null) return ResponseEntity.status(401).build();
-        return ResponseEntity.ok(ApiResponse.success(attendanceService.endBreak(userId)));
+    public ResponseEntity<AttendanceDTO> endBreak(@AuthenticationPrincipal UserDetailsImpl principal) {
+        return ResponseEntity.ok(attendanceService.endBreak(principal.getId()));
     }
 
     @GetMapping("/status")
-    public ResponseEntity<ApiResponse<?>> getStatus() {
-        Long userId = getCurrentUserId();
-        if (userId == null) return ResponseEntity.status(401).build();
-        Optional<AttendanceDTO> attendanceOpt = attendanceService.getCurrentStatus(userId);
-        if (attendanceOpt.isPresent()) {
-            return ResponseEntity.ok(ApiResponse.success(attendanceOpt.get()));
-        } else {
-            return ResponseEntity.ok(ApiResponse.success(attendanceService.getPrePunchStatus(userId)));
-        }
+    public ResponseEntity<AttendanceDTO> getStatus(@AuthenticationPrincipal UserDetailsImpl principal) {
+        return attendanceService.getCurrentStatus(principal.getId())
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.ok(AttendanceDTO.builder()
+                        .userId(principal.getId())
+                        .status("NOT_STARTED")
+                        .build()));
+    }
+
+    @GetMapping("/logs")
+    public ResponseEntity<List<AttendanceDTO>> getLogs(
+            @AuthenticationPrincipal UserDetailsImpl principal,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) Long teamId,
+            @RequestParam(required = false) Long managerId) {
+        
+        User requester = userService.findById(principal.getId());
+        return ResponseEntity.ok(attendanceService.getLogs(start, end, userId, teamId, managerId, requester));
     }
 
     @GetMapping("/my-logs")
-    public ResponseEntity<ApiResponse<List<AttendanceDTO>>> getMyLogs(
-            @RequestParam(value = "from", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from,
-            @RequestParam(value = "to", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate to) {
-        Long userId = getCurrentUserId();
-        if (userId == null) return ResponseEntity.status(401).build();
-        return ResponseEntity.ok(ApiResponse.success(attendanceService.getMyLogs(userId, from, to)));
-    }
-
-    @PostMapping("/preview")
-    public ResponseEntity<ApiResponse<com.lms.www.leadmanagement.dto.AttendancePreviewResponse>> preview(@RequestBody com.lms.www.leadmanagement.dto.AttendancePreviewRequest request) {
-        return ResponseEntity.ok(ApiResponse.success(attendanceService.calculatePreview(request)));
-    }
-
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
-    @PostMapping("/manual")
-    public ResponseEntity<ApiResponse<String>> saveManual(@RequestBody com.lms.www.leadmanagement.dto.AttendancePreviewRequest request) {
-        attendanceService.saveManualEntry(request);
-        return ResponseEntity.ok(ApiResponse.success("Attendance entry synchronized successfully"));
+    public ResponseEntity<List<AttendanceDTO>> getMyLogs(
+            @AuthenticationPrincipal UserDetailsImpl principal,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(attendanceService.getMyLogs(principal.getId(), from, to));
     }
 }

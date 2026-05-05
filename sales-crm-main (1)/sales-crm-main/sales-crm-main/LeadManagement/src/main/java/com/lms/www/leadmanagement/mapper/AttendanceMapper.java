@@ -3,7 +3,6 @@ package com.lms.www.leadmanagement.mapper;
 import com.lms.www.leadmanagement.dto.AttendanceDTO;
 import com.lms.www.leadmanagement.dto.AttendancePolicyDTO;
 import com.lms.www.leadmanagement.dto.OfficeLocationDTO;
-import com.lms.www.leadmanagement.entity.AttendanceDaily;
 import com.lms.www.leadmanagement.entity.AttendanceSession;
 import com.lms.www.leadmanagement.entity.AttendancePolicy;
 import com.lms.www.leadmanagement.entity.OfficeLocation;
@@ -20,25 +19,34 @@ public class AttendanceMapper {
 
         OfficeLocation office = s.getOffice();
 
-        // Default values if policy or office is missing
         int trackingInterval = (policy != null && policy.getTrackingIntervalSec() != null)
                 ? policy.getTrackingIntervalSec()
                 : 300;
-        String sBreakStart = (policy != null && policy.getShortBreakStartTime() != null)
-                ? policy.getShortBreakStartTime().toString()
-                : "17:00";
-        String sBreakEnd = (policy != null && policy.getShortBreakEndTime() != null)
-                ? policy.getShortBreakEndTime().toString()
-                : "17:10";
-        String lBreakStart = (policy != null && policy.getLongBreakStartTime() != null)
-                ? policy.getLongBreakStartTime().toString()
-                : "13:00";
-        String lBreakEnd = (policy != null && policy.getLongBreakEndTime() != null)
-                ? policy.getLongBreakEndTime().toString()
-                : "14:00";
+        
+        String sBreakStart = (s.getUser().getShift() != null && s.getUser().getShift().getShortBreakStartTime() != null)
+                ? s.getUser().getShift().getShortBreakStartTime().toString()
+                : (policy != null && policy.getShortBreakStartTime() != null ? policy.getShortBreakStartTime().toString() : "17:00");
+        String sBreakEnd = (s.getUser().getShift() != null && s.getUser().getShift().getShortBreakEndTime() != null)
+                ? s.getUser().getShift().getShortBreakEndTime().toString()
+                : (policy != null && policy.getShortBreakEndTime() != null ? policy.getShortBreakEndTime().toString() : "17:10");
+        String lBreakStart = (s.getUser().getShift() != null && s.getUser().getShift().getLongBreakStartTime() != null)
+                ? s.getUser().getShift().getLongBreakStartTime().toString()
+                : (policy != null && policy.getLongBreakStartTime() != null ? policy.getLongBreakStartTime().toString() : "13:00");
+        String lBreakEnd = (s.getUser().getShift() != null && s.getUser().getShift().getLongBreakEndTime() != null)
+                ? s.getUser().getShift().getLongBreakEndTime().toString()
+                : (policy != null && policy.getLongBreakEndTime() != null ? policy.getLongBreakEndTime().toString() : "14:00");
+
+        String shiftStart = (s.getUser().getShift() != null) ? s.getUser().getShift().getStartTime().toString()
+                : (policy != null && policy.getShiftStartTime() != null ? policy.getShiftStartTime().toString() : "00:00");
+        String shiftEnd = (s.getUser().getShift() != null) ? s.getUser().getShift().getEndTime().toString()
+                : (policy != null && policy.getShiftEndTime() != null ? policy.getShiftEndTime().toString() : "23:59");
         int gracePeriod = (policy != null && policy.getGracePeriodMinutes() != null) ? policy.getGracePeriodMinutes()
                 : 2;
         double radius = (office != null && office.getRadius() != null) ? office.getRadius() : 200.0;
+
+        long workSecs = s.getTotalWorkSeconds() != null ? s.getTotalWorkSeconds() : 0L;
+        long breakSecs = s.getTotalBreakSeconds() != null ? s.getTotalBreakSeconds() : 0L;
+        long outsideSecs = s.getTotalOutsideSeconds() != null ? s.getTotalOutsideSeconds() : 0L;
 
         return AttendanceDTO.builder()
                 .id(s.getId())
@@ -51,46 +59,39 @@ public class AttendanceMapper {
                 .isAutoCheckout(s.isAutoCheckout())
                 .lastLat(s.getLastLat())
                 .lastLng(s.getLastLng())
-                .lastLocationTime(s.getLastLocationTime())
                 .lastSeenTime(s.getLastSeenTime())
                 .trackingIntervalSec(trackingInterval)
                 .shortBreakStartTime(sBreakStart)
                 .shortBreakEndTime(sBreakEnd)
                 .longBreakStartTime(lBreakStart)
                 .longBreakEndTime(lBreakEnd)
+                .shiftStartTime(shiftStart)
+                .shiftEndTime(shiftEnd)
                 .gracePeriodMinutes(gracePeriod)
-                .outsideCount(s.getOutsideCount() != null ? s.getOutsideCount() : 0)
                 .officeRadius(radius)
                 .officeLat(office != null ? office.getLatitude() : null)
                 .officeLng(office != null ? office.getLongitude() : null)
                 .officeName(office != null ? office.getName() : null)
-                .totalWorkMinutes(dayWorkMinutes)
-                .totalWorkHours(dayWorkHours)
-                .totalBreakMinutes(s.getTotalBreakMinutes())
-                .totalBreakHours(String.format("%dh %dm",
-                        (s.getTotalBreakMinutes() != null ? s.getTotalBreakMinutes() : 0) / 60,
-                        (s.getTotalBreakMinutes() != null ? s.getTotalBreakMinutes() : 0) % 60))
-                .totalIdleMinutes(s.getUnauthorizedOutsideMinutes() != null ? s.getUnauthorizedOutsideMinutes() : 0)
-                .totalIdleHours(String.format("%dh %dm",
-                        (s.getUnauthorizedOutsideMinutes() != null ? s.getUnauthorizedOutsideMinutes() : 0) / 60,
-                        (s.getUnauthorizedOutsideMinutes() != null ? s.getUnauthorizedOutsideMinutes() : 0) % 60))
+                .totalWorkMinutes((int)(workSecs / 60))
+                .totalWorkHours(String.format("%dh %dm", workSecs / 3600, (workSecs % 3600) / 60))
+                .totalBreakMinutes((int)(breakSecs / 60))
+                .totalBreakHours(String.format("%dh %dm", breakSecs / 3600, (breakSecs % 3600) / 60))
+                .totalIdleMinutes((int)(outsideSecs / 60))
+                .totalIdleHours(String.format("%dh %dm", outsideSecs / 3600, (outsideSecs % 3600) / 60))
                 .lateMinutes(s.getLateMinutes() != null ? s.getLateMinutes() : 0)
-                .productiveMinutes(s.getTotalWorkMinutes())
-                .shortBreakMinutes(s.getShortBreakSeconds() != null ? (int)(s.getShortBreakSeconds()/60) : 0)
-                .longBreakMinutes(s.getLongBreakSeconds() != null ? (int)(s.getLongBreakSeconds()/60) : 0)
+                .productiveMinutes((int)(workSecs / 60))
                 .late(s.isLate())
                 .loginTime(s.getCheckInTime())
                 .logoutTime(s.getCheckOutTime())
-                .breakStartTime(s.getBreakStartTime())
                 .build();
     }
 
     public AttendanceDTO toDTO(AttendanceSession s) {
         if (s == null)
             return null;
-        int mins = s.getTotalWorkMinutes() != null ? s.getTotalWorkMinutes() : 0;
+        int mins = (int)((s.getTotalWorkSeconds() != null ? s.getTotalWorkSeconds() : 0L) / 60);
         String hours = String.format("%dh %dm", mins / 60, mins % 60);
-        return toDTO(s, null, mins, hours, s.getCheckInTime().toLocalDate());
+        return toDTO(s, null, mins, hours, s.getCheckInTime() != null ? s.getCheckInTime().toLocalDate() : LocalDate.now());
     }
 
     public OfficeLocationDTO toDTO(OfficeLocation o) {
@@ -121,29 +122,6 @@ public class AttendanceMapper {
                 .maxAccuracyMeters(p.getMaxAccuracyMeters())
                 .minimumWorkMinutes(p.getMinimumWorkMinutes())
                 .maxIdleMinutes(p.getMaxIdleMinutes())
-                .build();
-    }
-
-    public AttendanceDTO toDTO(AttendanceDaily d) {
-        if (d == null) return null;
-        int mins = d.getTotalWorkMinutes() != null ? d.getTotalWorkMinutes() : 0;
-        String hours = String.format("%dh %dm", mins / 60, mins % 60);
-        return AttendanceDTO.builder()
-                .id(d.getId())
-                .userId(d.getUser().getId())
-                .userName(d.getUser().getName())
-                .date(d.getDate())
-                .status(d.getStatus())
-                .totalWorkMinutes(mins)
-                .totalWorkHours(hours)
-                .totalBreakMinutes(d.getTotalBreakMinutes())
-                .productiveMinutes(d.getProductiveMinutes())
-                .lateMinutes(d.getLateMinutes())
-                .totalIdleMinutes(d.getIdleMinutes())
-                .late(d.getLate() != null ? d.getLate() : false)
-                .note(d.getNote())
-                .loginTime(d.getLoginTime())
-                .logoutTime(d.getLogoutTime())
                 .build();
     }
 }

@@ -29,7 +29,7 @@ public class CallRecord {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler", "password", "subordinates", "managedAssociates",
-            "directPermissions", "manager", "supervisor" })
+            "directPermissions", "manager", "supervisor", "shift", "assignedOffice", "directReports" })
     private User user;
 
     private String phoneNumber;

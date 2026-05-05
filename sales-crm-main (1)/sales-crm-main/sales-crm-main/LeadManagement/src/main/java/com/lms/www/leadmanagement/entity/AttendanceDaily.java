@@ -33,46 +33,12 @@ public class AttendanceDaily {
     private Integer totalWorkMinutes = 0;
     
     @Builder.Default
-    private Integer totalBreakMinutes = 0;
-
-    @Builder.Default
-    private Long totalWorkSeconds = 0L;
-
-    @Builder.Default
-    private Long totalBreakSeconds = 0L;
-
-    @Builder.Default
-    private Long unauthorizedOutsideSeconds = 0L;
-
-    @Builder.Default
-    private Integer outsideCount = 0;
-    
-    @Builder.Default
     private String status = "ABSENT";
 
     private LocalDateTime loginTime;
     private LocalDateTime logoutTime;
 
-    @Builder.Default
-    private Integer shortBreakMinutes = 0;
-    @Builder.Default
-    private Integer longBreakMinutes = 0;
-    @Builder.Default
-    private Integer productiveMinutes = 0;
-    @Builder.Default
-    private Integer lateMinutes = 0;
-    @Builder.Default
-    private Integer idleMinutes = 0;
-
-    @Builder.Default
-    private Integer overtimeMinutes = 0;
-
-    @Builder.Default
-    private Boolean earlyExit = false;
-
-    @Builder.Default
-    private Boolean late = false;
-
+    @Column(columnDefinition = "TEXT")
     private String note;
 
     private LocalDateTime createdAt;

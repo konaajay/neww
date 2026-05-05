@@ -49,4 +49,3 @@ public class AttendancePolicy {
     @Builder.Default
     private java.time.LocalTime shiftEndTime = java.time.LocalTime.of(18, 30);
 }
-

@@ -145,7 +145,7 @@ public class LeadBulkUploadService {
                                 .email(email == null || email.isEmpty() ? null : email)
                                 .mobile(mobile)
                                 .college(college == null || college.isEmpty() ? null : college)
-                                .status("WORKING")
+                                .status(com.lms.www.leadmanagement.entity.LeadStatus.WORKING)
                                 .createdBy(creator)
                                 .assignedTo(finalAssignee)
                                 .build();

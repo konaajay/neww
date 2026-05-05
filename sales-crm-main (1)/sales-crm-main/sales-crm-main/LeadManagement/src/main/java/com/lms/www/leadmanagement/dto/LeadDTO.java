@@ -49,7 +49,7 @@ public class LeadDTO {
                 .mobile(lead.getMobile())
                 .college(lead.getCollege())
 
-                .status(lead.getStatus() != null ? lead.getStatus() : "NEW")
+                .status(lead.getStatus() != null ? lead.getStatus().name() : "NEW")
                 .assignedToId(lead.getAssignedTo() != null ? lead.getAssignedTo().getId() : null)
                 .assignedToName(lead.getAssignedTo() != null ? lead.getAssignedTo().getName() : null)
                 .followUpRequired(lead.getFollowUpRequired())

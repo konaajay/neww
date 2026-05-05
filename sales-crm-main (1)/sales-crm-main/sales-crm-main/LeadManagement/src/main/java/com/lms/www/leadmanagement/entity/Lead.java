@@ -34,8 +34,9 @@ public class Lead {
 
 
     @Builder.Default
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private String status = "NEW";
+    private LeadStatus status = LeadStatus.NEW;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_to")
@@ -65,7 +66,7 @@ public class Lead {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
         if (status == null) {
-            status = "NEW";
+            status = LeadStatus.NEW;
         }
     }
 

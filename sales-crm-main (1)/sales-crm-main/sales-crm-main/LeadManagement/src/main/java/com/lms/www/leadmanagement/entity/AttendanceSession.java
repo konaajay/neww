@@ -11,8 +11,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "attendance_sessions", indexes = {
     @Index(name = "idx_user_status", columnList = "user_id, status"),
-    @Index(name = "idx_user_checkin", columnList = "user_id, check_in_time"),
-    @Index(name = "idx_status_location", columnList = "status, last_location_time")
+    @Index(name = "idx_user_checkin", columnList = "user_id, check_in_time")
 })
 @Data
 @Builder
@@ -42,28 +41,12 @@ public class AttendanceSession {
     @Column(name = "auto_checkout", nullable = false)
     private boolean isAutoCheckout = false;
 
-    // Track last known geodata
+    // Core tracking fields
     private Double lastLat;
     private Double lastLng;
-    private Double lastAccuracy;
-    private LocalDateTime lastLocationTime;
     private LocalDateTime lastSeenTime;
 
-    // Fraud prevention and session safety
-    private String deviceId;
-    private String userAgent;
-    private String ipHash;
-    private String lastRequestId;
-    
-    private LocalDateTime outsideStartTime;
-    private LocalDateTime breakStartTime;
-    
-    @Builder.Default
-    private Integer totalWorkMinutes = 0;
-
-    @Builder.Default
-    private Integer totalBreakMinutes = 0;
-
+    // Time Accumulators (in seconds)
     @Builder.Default
     private Long totalWorkSeconds = 0L;
 
@@ -71,30 +54,14 @@ public class AttendanceSession {
     private Long totalBreakSeconds = 0L;
 
     @Builder.Default
-    private Long shortBreakSeconds = 0L;
-    @Builder.Default
-    private Long longBreakSeconds = 0L;
+    private Long totalOutsideSeconds = 0L;
 
-    @Builder.Default
-    private Long unauthorizedOutsideSeconds = 0L;
-
-    @Builder.Default
-    private Integer outsideCount = 0;
-    
-    @Builder.Default
-    private Integer unauthorizedOutsideMinutes = 0;
-    
-    @Builder.Default
-    private Integer breakViolations = 0;
-
+    // Late Details
     @Column(name = "late", nullable = false)
     private boolean isLate = false;
     
     @Builder.Default
     private Integer lateMinutes = 0;
-
-    @Column(name = "low_accuracy", nullable = false)
-    private boolean isLowAccuracy = false;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

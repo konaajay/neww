@@ -20,16 +20,16 @@ public interface CallRecordRepository extends JpaRepository<CallRecord, Long> {
            "FROM CallRecord c WHERE c.startTime BETWEEN :start AND :end AND c.endTime IS NOT NULL GROUP BY c.user.id, c.user.name")
     List<com.lms.www.leadmanagement.dto.DailyUserReportDTO> getDailyUserReports(@Param("start") java.time.LocalDateTime start, @Param("end") java.time.LocalDateTime end);
 
-    @EntityGraph(attributePaths = {"lead", "user"})
+    @EntityGraph(attributePaths = {"lead", "user", "user.role"})
     List<CallRecord> findByUserIdOrderByStartTimeDesc(Long userId);
 
-    @EntityGraph(attributePaths = {"lead", "user"})
+    @EntityGraph(attributePaths = {"lead", "user", "user.role"})
     List<CallRecord> findByUserIdInOrderByStartTimeDesc(List<Long> userIds);
 
-    @EntityGraph(attributePaths = {"lead", "user"})
+    @EntityGraph(attributePaths = {"lead", "user", "user.role"})
     List<CallRecord> findByUserIdAndStartTimeBetweenOrderByStartTimeDesc(Long userId, java.time.LocalDateTime start, java.time.LocalDateTime end);
 
-    @EntityGraph(attributePaths = {"lead", "user"})
+    @EntityGraph(attributePaths = {"lead", "user", "user.role"})
     List<CallRecord> findByStartTimeBetweenOrderByStartTimeDesc(java.time.LocalDateTime start, java.time.LocalDateTime end);
 
     @Query("SELECT new map(" +
@@ -122,6 +122,6 @@ public interface CallRecordRepository extends JpaRepository<CallRecord, Long> {
            "FROM CallRecord c WHERE c.user.id IN :userIds AND c.startTime BETWEEN :start AND :end")
     Map<String, Object> getStatsForUsersByDate(@Param("userIds") List<Long> userIds, @Param("start") java.time.LocalDateTime start, @Param("end") java.time.LocalDateTime end);
 
-    @EntityGraph(attributePaths = {"lead", "user"})
+    @EntityGraph(attributePaths = {"lead", "user", "user.role"})
     List<CallRecord> findByUserIdInAndStartTimeBetweenOrderByStartTimeDesc(List<Long> userIds, java.time.LocalDateTime start, java.time.LocalDateTime end);
 }

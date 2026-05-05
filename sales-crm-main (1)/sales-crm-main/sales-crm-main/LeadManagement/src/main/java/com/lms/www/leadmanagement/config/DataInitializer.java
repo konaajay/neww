@@ -94,6 +94,23 @@ public class DataInitializer implements CommandLineRunner {
                     .build();
             userRepository.save(admin);
             System.out.println("Default ADMIN initialized securely from environment.");
+        } else {
+            // Ensure existing admin has correct scope and status
+            userRepository.findByEmail(adminEmail).ifPresent(admin -> {
+                boolean changed = false;
+                if (admin.getReportScope() != ReportScope.ALL) {
+                    admin.setReportScope(ReportScope.ALL);
+                    changed = true;
+                }
+                if (!admin.isActive()) {
+                    admin.setActive(true);
+                    changed = true;
+                }
+                if (changed) {
+                    userRepository.save(admin);
+                    System.out.println("Existing ADMIN updated with correct ReportScope and status.");
+                }
+            });
         }
 
         // 4. Optimized Cleanup

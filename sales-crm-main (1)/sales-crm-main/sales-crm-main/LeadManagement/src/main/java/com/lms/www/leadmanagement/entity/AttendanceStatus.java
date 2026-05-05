@@ -2,11 +2,10 @@ package com.lms.www.leadmanagement.entity;
 
 public enum AttendanceStatus {
     WORKING,
-    ON_SHORT_BREAK,
-    ON_LONG_BREAK,
-    AUTO_BREAK,
-    PUNCHED_OUT,
-    ABSENT,
-    NOT_STARTED,
-    OUTSIDE_UNAUTHORIZED
+    ON_BREAK,      // Manual break
+    AUTO_BREAK,    // System auto break
+    OUTSIDE,       // Outside office radius
+    PUNCHED_OUT,   // Logged out
+    ABSENT,        // Not logged in for the day
+    NOT_STARTED    // Future date
 }

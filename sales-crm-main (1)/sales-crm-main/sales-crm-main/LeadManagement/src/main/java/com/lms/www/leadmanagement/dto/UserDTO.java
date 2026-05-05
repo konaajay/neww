@@ -111,20 +111,8 @@ public class UserDTO {
             dto.setPermissions(new java.util.ArrayList<>());
         }
 
-        java.util.List<User> allSubs = new java.util.ArrayList<>();
-        if (includeSubordinates) {
-            if (user.getSubordinates() != null)
-                allSubs.addAll(user.getSubordinates());
-            if (user.getManagedAssociates() != null) {
-                for (User assoc : user.getManagedAssociates()) {
-                    if (!allSubs.contains(assoc))
-                        allSubs.add(assoc);
-                }
-            }
-        }
-
-        if (includeSubordinates && !allSubs.isEmpty()) {
-            dto.setSubordinates(allSubs.stream()
+        if (includeSubordinates && user.getDirectReports() != null && !user.getDirectReports().isEmpty()) {
+            dto.setSubordinates(user.getDirectReports().stream()
                     .map(u -> fromEntity(u, true))
                     .collect(java.util.stream.Collectors.toList()));
         } else {

@@ -263,7 +263,35 @@ public class AdminService {
     }
 
     public Map<String, Object> getDashboardStats(LocalDateTime start, LocalDateTime end, User requester, Long userId) {
-        return dashboardStatsService.getStats(start, end, requester, userId, null, null);
+        java.util.Set<Long> userIds = securityService.getScopedUserIds(requester, null);
+        if (userId != null) {
+            securityService.validateAccess(requester, userId);
+            userIds = java.util.Collections.singleton(userId);
+        }
+        
+        DashboardStatsDTO stats = dashboardStatsService.getStats(
+            userIds, 
+            start.toLocalDate(), 
+            end.toLocalDate(), 
+            securityService.isAdmin(requester), 
+            requester, 
+            userId, 
+            null
+        );
+        
+        // Manual conversion to Map for backward compatibility with Controller
+        Map<String, Object> map = new HashMap<>();
+        map.put("presentCount", stats.getPresentCount());
+        map.put("absentCount", stats.getAbsentCount());
+        map.put("halfDayCount", stats.getHalfDayCount());
+        map.put("dailyRevenue", stats.getDailyRevenue());
+        map.put("monthlyRevenue", stats.getMonthlyRevenue());
+        map.put("targetAchievement", stats.getTargetAchievement());
+        map.put("totalLeads", stats.getTotalLeads());
+        map.put("convertedCount", stats.getConvertedCount());
+        map.put("statusDistribution", stats.getStatusDistribution());
+        map.put("dailyTrend", stats.getDailyTrend());
+        return map;
     }
 
     public List<Map<String, Object>> getMemberPerformanceFiltered(LocalDateTime start, LocalDateTime end, User requester, Long userId, Long tlId, Long managerId) {

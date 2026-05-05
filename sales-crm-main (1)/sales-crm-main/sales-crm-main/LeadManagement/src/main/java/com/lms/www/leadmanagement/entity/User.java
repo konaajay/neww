@@ -49,23 +49,20 @@ public class User {
     private User supervisor;
 
     @Builder.Default
-    @OneToMany(mappedBy = "manager", fetch = FetchType.LAZY)
-    @JsonIgnore
-    private java.util.List<User> subordinates = new java.util.ArrayList<>();
-
-    @Builder.Default
     @OneToMany(mappedBy = "supervisor", fetch = FetchType.LAZY)
     @JsonIgnore
-    private java.util.List<User> managedAssociates = new java.util.ArrayList<>();
+    private java.util.List<User> directReports = new java.util.ArrayList<>();
+
+
 
     @Enumerated(EnumType.STRING)
     private ReportScope reportScope;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shift_id")
     private AttendanceShift shift;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "office_id")
     private OfficeLocation assignedOffice;
 

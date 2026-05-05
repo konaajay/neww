@@ -132,7 +132,7 @@ public class LeadService {
                 .email(dto.getEmail())
                 .mobile(dto.getMobile())
                 .college(dto.getCollege())
-                .status(LeadStatus.NEW.name())
+                .status(LeadStatus.NEW)
                 .createdBy(creator)
                 .assignedTo(null)
                 .build();
@@ -151,25 +151,25 @@ public class LeadService {
         } else if (lead.getCreatedBy() != null) {
             securityService.validateAccess(user, lead.getCreatedBy().getId());
         }
-        String currentStatus = lead.getStatus() != null ? lead.getStatus().toUpperCase() : "";
-        if (List.of("PAID", "SUCCESS", "EMI", "CONVERTED").contains(currentStatus)) {
+        LeadStatus currentStatus = lead.getStatus() != null ? lead.getStatus() : LeadStatus.NEW;
+        if (List.of(LeadStatus.PAID, LeadStatus.SUCCESS, LeadStatus.EMI, LeadStatus.CONVERTED).contains(currentStatus)) {
             throw new InvalidRequestException("Cannot change status of a finalized lead");
         }
 
-        String status = LeadStatus.fromString(request.getStatus()).name();
+        LeadStatus status = LeadStatus.fromString(request.getStatus());
         if (!currentStatus.equals(status)) {
-            recordAuditLog(lead.getId(), user, "STATUS", currentStatus, status, "STATUS_CHANGE");
+            recordAuditLog(lead.getId(), user, "STATUS", currentStatus.name(), status.name(), "STATUS_CHANGE");
         }
 
         lead.setStatus(status);
         lead.setUpdatedBy(user);
 
-        if ("CONVERTED".equalsIgnoreCase(status)) {
+        if (LeadStatus.CONVERTED.equals(status)) {
             initializeStudentFee(lead, request);
         }
 
-        saveNote(lead, user, request.getNote(), status);
-        triggerPipelineActions(lead, status, request);
+        saveNote(lead, user, request.getNote(), status.name());
+        triggerPipelineActions(lead, status.name(), request);
 
         return convertToDTO(leadRepository.save(lead));
     }
@@ -351,7 +351,7 @@ public class LeadService {
         if (userId == null || userId == 0) {
             String oldVal = lead.getAssignedTo() != null ? lead.getAssignedTo().getName() : "UNASSIGNED";
             lead.setAssignedTo(null);
-            lead.setStatus(LeadStatus.NEW.name());
+            lead.setStatus(LeadStatus.NEW);
             recordAuditLog(lead.getId(), requester, "ASSIGNMENT", oldVal, "UNASSIGNED", "ASSIGNMENT_CHANGE");
         } else {
             User target = userRepository.findById(userId).orElseThrow();
@@ -360,9 +360,9 @@ public class LeadService {
             lead.setAssignedTo(target);
             recordAuditLog(lead.getId(), requester, "ASSIGNMENT", oldVal, target.getName(), "ASSIGNMENT_CHANGE");
             // Reset status to NEW upon assignment unless it's already finalized
-            String currentStatus = lead.getStatus() != null ? lead.getStatus().toUpperCase() : "";
-            if (!List.of("PAID", "SUCCESS", "EMI", "CONVERTED").contains(currentStatus)) {
-                lead.setStatus(LeadStatus.NEW.name());
+            LeadStatus currentStatus = lead.getStatus() != null ? lead.getStatus() : LeadStatus.NEW;
+            if (!List.of(LeadStatus.PAID, LeadStatus.SUCCESS, LeadStatus.EMI, LeadStatus.CONVERTED).contains(currentStatus)) {
+                lead.setStatus(LeadStatus.NEW);
             }
         }
         return convertToDTO(leadRepository.save(lead));
@@ -377,9 +377,9 @@ public class LeadService {
         leads.forEach(l -> {
             l.setAssignedTo(target);
             // Reset status to NEW upon bulk assignment unless it's already finalized
-            String currentStatus = l.getStatus() != null ? l.getStatus().toUpperCase() : "";
-            if (!List.of("PAID", "SUCCESS", "EMI", "CONVERTED").contains(currentStatus)) {
-                l.setStatus(LeadStatus.NEW.name());
+            LeadStatus currentStatus = l.getStatus() != null ? l.getStatus() : LeadStatus.NEW;
+            if (!List.of(LeadStatus.PAID, LeadStatus.SUCCESS, LeadStatus.EMI, LeadStatus.CONVERTED).contains(currentStatus)) {
+                l.setStatus(LeadStatus.NEW);
             }
         });
         return leadRepository.saveAll(leads).stream().map(this::convertToDTO).collect(Collectors.toList());
@@ -484,7 +484,7 @@ public class LeadService {
     @Transactional
     public LeadDTO rejectLead(Long id, Map<String, Object> data) {
         Lead lead = leadRepository.findById(id).orElseThrow();
-        lead.setStatus(LeadStatus.REJECTED.name());
+        lead.setStatus(LeadStatus.REJECTED);
         return convertToDTO(leadRepository.save(lead));
     }
 
@@ -500,7 +500,7 @@ public class LeadService {
     public LeadDTO updateNote(Long id, String note) {
         Lead lead = leadRepository.findById(id).orElseThrow();
         User user = securityService.getCurrentUser();
-        saveNote(lead, user, note, lead.getStatus());
+        saveNote(lead, user, note, lead.getStatus() != null ? lead.getStatus().name() : "NEW");
         return convertToDTO(lead);
     }
 
@@ -522,20 +522,21 @@ public class LeadService {
 
         java.util.Set<Long> targetIds = securityService.getAllowedUserIds(requester);
         boolean isUnassigned = false;
+        boolean isAdmin = securityService.isAdmin(requester);
 
         if (userId != null) {
             if (userId == -1L) {
                 isUnassigned = true;
             } else {
-                securityService.validateAccess(requester, userId);
+                if (!isAdmin) securityService.validateAccess(requester, userId);
                 targetIds = java.util.Collections.singleton(userId);
             }
         } else if (teamId != null) {
-            securityService.validateAccess(requester, teamId);
+            if (!isAdmin) securityService.validateAccess(requester, teamId);
             targetIds = new java.util.HashSet<>(userRepository.findSubordinateIds(teamId));
             targetIds.add(teamId);
         } else if (managerId != null) {
-            securityService.validateAccess(requester, managerId);
+            if (!isAdmin) securityService.validateAccess(requester, managerId);
             targetIds = new java.util.HashSet<>(userRepository.findSubordinateIds(managerId));
             targetIds.add(managerId);
         }

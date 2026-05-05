@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
@@ -30,6 +29,20 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final SecurityService securityService;
     private final MailService mailService;
+
+    public UserService(UserRepository userRepository, RoleRepository roleRepository,
+                       AttendanceShiftRepository attendanceShiftRepository,
+                       OfficeLocationRepository officeLocationRepository,
+                       PasswordEncoder passwordEncoder, SecurityService securityService,
+                       MailService mailService) {
+        this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.attendanceShiftRepository = attendanceShiftRepository;
+        this.officeLocationRepository = officeLocationRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.securityService = securityService;
+        this.mailService = mailService;
+    }
 
     @Transactional(readOnly = true)
     public User findById(Long id) {
@@ -103,17 +116,43 @@ public class UserService {
     }
 
     private void assignHierarchy(User user, UserDTO dto) {
-        if (dto.getSupervisorId() != null && dto.getSupervisorId() != 0) {
-            securityService.validateAccess(securityService.getCurrentUser(), dto.getSupervisorId());
-            User supervisor = findById(dto.getSupervisorId());
-            user.setSupervisor(supervisor);
-            
-            // Auto-link Manager
-            if (supervisor.getSupervisor() != null && "TEAM_LEADER".equals(supervisor.getRole().getName())) {
-                user.setManager(supervisor.getSupervisor());
-            } else if ("MANAGER".equals(supervisor.getRole().getName())) {
-                user.setManager(supervisor);
+        if (dto.getSupervisorId() == null || dto.getSupervisorId() <= 0) return;
+
+        securityService.validateAccess(
+            securityService.getCurrentUser(),
+            dto.getSupervisorId()
+        );
+
+        User parent = userRepository.findById(dto.getSupervisorId())
+                .orElseThrow(() -> new RuntimeException("Parent not found"));
+
+        // Renamed to avoid any potential duplicate local variable conflicts
+        String targetUserRole = user.getRole().getName().toUpperCase().replace("ROLE_", "");
+        String supervisorRole = parent.getRole().getName().toUpperCase().replace("ROLE_", "");
+
+        // MANAGER → reports to ADMIN
+        if ("MANAGER".equals(targetUserRole)) {
+            if (!"ADMIN".equals(supervisorRole)) {
+                throw new RuntimeException("Manager must report to an Admin");
             }
+            user.setSupervisor(parent);
+            user.setManager(null);
+        }
+        // TEAM LEADER → reports to MANAGER
+        else if ("TEAM_LEADER".equals(targetUserRole) || "TL".equals(targetUserRole)) {
+            if (!"MANAGER".equals(supervisorRole)) {
+                throw new RuntimeException("Team Leader must report to a Manager");
+            }
+            user.setManager(parent);
+            user.setSupervisor(parent);
+        }
+        // ASSOCIATE / BDA → reports to TL
+        else {
+            if (!"TEAM_LEADER".equals(supervisorRole) && !"TL".equals(supervisorRole)) {
+                throw new RuntimeException("Associate must have a Team Leader as supervisor");
+            }
+            user.setSupervisor(parent);
+            user.setManager(parent.getManager());
         }
     }
 }
