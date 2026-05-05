@@ -257,7 +257,7 @@ const TeamLeaderDashboard = () => {
               />
             )}
 
-            {myDashboardSubTab === 'revenue' && <PaymentHistory role="TEAM_LEADER" userId={user?.id} from={filters.from} to={filters.to} hideHeader={true} />}
+            {myDashboardSubTab === 'revenue' && <PaymentHistory role="TEAM_LEADER" userId={filters.userId || user?.id} from={filters.from} to={filters.to} hideHeader={true} />}
             {myDashboardSubTab === 'calls' && <CallLogDashboard userId={user?.id} hideHeader={true} filters={debouncedFilters} />}
             {myDashboardSubTab === 'attendance' && <AttendanceDashboard filters={filters} role="ASSOCIATE" currentUserId={user?.id} hideHeader={true} />}
             {myDashboardSubTab === 'reports' && <CallLogDashboard userId={user?.id} filters={debouncedFilters} hideHeader={true} />}
@@ -292,7 +292,7 @@ const TeamLeaderDashboard = () => {
           </div>
         )}
 
-        {activeTab === 'attendance' && <AttendanceDashboard filters={filters} role="TEAM_LEADER" />}
+        {activeTab === 'attendance' && <AttendanceDashboard filters={debouncedFilters} role="TEAM_LEADER" />}
 
         {activeTab === 'leads' && (
           <div className="d-flex flex-column gap-3">
@@ -362,7 +362,7 @@ const TeamLeaderDashboard = () => {
             initialFilter={taskFilter}
           />
         )}
-        {activeTab === 'payments' && <PaymentHistory role="TEAM_LEADER" userId={user?.id} from={filters.from} to={filters.to} hideHeader={true} />}
+        {activeTab === 'payments' && <PaymentHistory role="TEAM_LEADER" teamId={filters.userId ? null : user?.id} userId={filters.userId || null} from={filters.from} to={filters.to} hideHeader={true} />}
         {activeTab === 'calls' && <CallLogDashboard userId={user?.id} filters={debouncedFilters} hideHeader={true} />}
         {activeTab === 'reports' && (
           <div className="d-flex flex-column gap-4 animate-fade-in">

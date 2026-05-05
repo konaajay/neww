@@ -45,9 +45,9 @@ export const useLookupData = (role) => {
   const { data: subordinates, isLoading: loadingSubordinates } = useQuery({
     queryKey: ['subordinates', role],
     queryFn: () => userApi.fetchSubordinates(role),
-    select: (data) => data || [],
+    select: (data) => Array.isArray(data) ? data : (data?.data || []),
     staleTime: 5 * 60 * 1000,
-    enabled: role === 'TEAM_LEADER'
+    enabled: role === 'TEAM_LEADER' || role === 'MANAGER'
   });
 
   // 6. Role Registry
@@ -77,18 +77,24 @@ export const useLookupData = (role) => {
   
   // 8. Office Registry
   const { data: offices, isLoading: loadingOffices } = useQuery({
-    queryKey: ['offices'],
+    queryKey: ['offices', role],
     queryFn: () => adminService.fetchOffices(),
-    select: (res) => res.data?.data || res.data || [],
-    staleTime: 60 * 60 * 1000
+    select: (res) => {
+      const data = res?.data || res;
+      return Array.isArray(data) ? data : (data?.data || []);
+    },
+    staleTime: 5 * 60 * 1000
   });
 
   // 9. Shift Registry
   const { data: shifts, isLoading: loadingShifts } = useQuery({
-    queryKey: ['shifts'],
+    queryKey: ['shifts', role],
     queryFn: () => adminService.fetchAttendanceShifts(),
-    select: (res) => res.data?.data || res.data || [],
-    staleTime: 60 * 60 * 1000
+    select: (res) => {
+      const data = res?.data || res;
+      return Array.isArray(data) ? data : (data?.data || []);
+    },
+    staleTime: 5 * 60 * 1000
   });
 
   return {

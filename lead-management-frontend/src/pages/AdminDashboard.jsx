@@ -86,7 +86,9 @@ const AdminDashboard = () => {
   const {
     leads,
     loading: leadsLoading,
+    refetch: refreshLeads,
     updateLead,
+    updateStatus,
     assignLead,
     bulkAssignLeads,
     deleteLead,
@@ -98,14 +100,19 @@ const AdminDashboard = () => {
   const [bulkAssignTlId, setBulkAssignTlId] = useState('');
 
   const {
-    users, roles, permissions: availablePermissions, teamTree, offices, shifts
+    users, roles, permissions: availablePermissions, teamLeaders, teamTree, offices, shifts, pipelineStages, loading: lookupLoading
   } = useLookupData('ADMIN');
 
   // 3. HANDLERS
   const handleSync = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     queryClient.invalidateQueries({ queryKey: ['leads'] });
-    queryClient.invalidateQueries({ queryKey: ['lookup'] });
+    queryClient.invalidateQueries({ queryKey: ['users'] });
+    queryClient.invalidateQueries({ queryKey: ['offices'] });
+    queryClient.invalidateQueries({ queryKey: ['shifts'] });
+    queryClient.invalidateQueries({ queryKey: ['teamTree'] });
+    queryClient.invalidateQueries({ queryKey: ['roles'] });
+    queryClient.invalidateQueries({ queryKey: ['permissions'] });
   }, [queryClient]);
 
   const handleTabChange = (tab, extra = {}) => {
@@ -270,10 +277,12 @@ const AdminDashboard = () => {
                   <LeadTable
                     leads={leads.filter(l => l.assignedToId === user?.id)}
                     onUpdateLead={(id, data) => updateLead({ id, data })}
+                    onUpdateStatus={updateStatus}
                     onViewInvoice={handleViewInvoice}
                     loading={leadsLoading}
                     teamLeaders={users.some(u => u.id === user?.id) ? users : [user, ...users]}
                     role="ADMIN"
+                    pipelineStages={pipelineStages}
                   />
                 </div>
               </div>
@@ -357,6 +366,7 @@ const AdminDashboard = () => {
                 <LeadTable
                   leads={filteredLeads}
                   onUpdateLead={(id, data) => updateLead({ id, data })}
+                  onUpdateStatus={updateStatus}
                   handleAssignLead={(leadId, targetId) => assignLead({ leadId, targetId: targetId || 0 })}
                   onViewInvoice={handleViewInvoice}
                   loading={leadsLoading}
@@ -367,6 +377,7 @@ const AdminDashboard = () => {
                   bulkAssignTlId={bulkAssignTlId}
                   setBulkAssignTlId={setBulkAssignTlId}
                   handleBulkAssign={(targetId) => bulkAssignLeads({ leadIds: selectedLeadIds, targetId })}
+                  pipelineStages={pipelineStages}
                 />
               </div>
             </div>
@@ -430,7 +441,7 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {activeTab === 'attendance' && <AttendanceDashboard filters={filters} role="ADMIN" />}
+        {activeTab === 'attendance' && <AttendanceDashboard filters={debouncedFilters} role="ADMIN" />}
 
         {activeTab === 'payments' && (
           <div className="animate-fade-in">
@@ -453,7 +464,7 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        <LeadModal isOpen={isIngestionModalOpen} onClose={() => setIsIngestionModalOpen(false)} onAddLead={handleAddLead} associates={users} />
+        <LeadModal isOpen={isIngestionModalOpen} onClose={() => setIsIngestionModalOpen(false)} onAddLead={handleAddLead} onSuccess={handleSync} associates={users.filter(u => u.role !== 'ADMIN')} />
         <UserEditModal
           user={editingUser}
           setUser={setEditingUser}

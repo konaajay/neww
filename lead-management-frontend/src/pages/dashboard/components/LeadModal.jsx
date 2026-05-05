@@ -110,7 +110,12 @@ const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) =
                     <div className="mx-auto" style={{ maxWidth: '800px' }}>
                         <LeadForm
                             onSubmit={async (data) => {
-                                const success = await onAddLead(data);
+                                // AUTO-ASSIGN TO SELF: Default assignedToId to current user if not specified
+                                const finalData = { 
+                                    ...data, 
+                                    assignedToId: data.assignedToId || user?.id 
+                                };
+                                const success = await onAddLead(finalData);
                                 if (success) handleClose();
                                 return success;
                             }}

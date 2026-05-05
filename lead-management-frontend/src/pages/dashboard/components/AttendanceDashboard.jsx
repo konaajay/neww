@@ -41,35 +41,41 @@ const AttendanceDashboard = ({ filters, role }) => {
         }
     }, []);
 
+    const formatDate = (dateStr) => {
+        if (!dateStr) return null;
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
     const fetchLogs = useCallback(async () => {
         try {
-            // Determine which user to fetch logs for (Associate > TL > Manager)
-            const targetUserId = filters?.userId || filters?.teamId || filters?.managerId;
-
-            const formatDate = (dateStr) => {
-                if (!dateStr) return null;
-                const d = new Date(dateStr);
-                if (isNaN(d.getTime())) return dateStr;
-                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-            };
-
-            if (targetUserId && (role === 'ADMIN' || role === 'MANAGER' || role === 'TEAM_LEADER')) {
-                const res = await attendanceService.getDailySummaries({
-                    startDate: formatDate(filters.from),
-                    endDate: formatDate(filters.to),
-                    userId: targetUserId
-                });
-                setLogs(res.data || res || []);
+            const isAdminOrManagerOrTL = role === 'ADMIN' || role === 'MANAGER' || role === 'TEAM_LEADER';
+            
+            if (isAdminOrManagerOrTL) {
+                const params = {
+                    from: filters.from,
+                    to: filters.to,
+                    userId: filters.userId ? Number(filters.userId) : 0,
+                    teamId: filters.teamId ? Number(filters.teamId) : 0,
+                    managerId: filters.managerId ? Number(filters.managerId) : 0
+                };
+                console.log(">>> [ATTENDANCE FETCH] ADMIN/MGR/TL PARAMS:", params);
+                const res = await attendanceService.getDailySummaries(params);
+                const data = res.data || res || [];
+                console.log(">>> [ATTENDANCE FETCH] RECEIVED DATA SIZE:", data.length);
+                if (data.length > 0) {
+                    console.log(">>> [ATTENDANCE DEBUG] FIRST LOG ENTRY:", JSON.stringify(data[0], null, 2));
+                }
+                setLogs(data);
             } else {
                 const res = await attendanceService.getMyLogs({
                     from: formatDate(filters.from),
                     to: formatDate(filters.to)
                 });
-                setLogs(res.data || res || []);
+                const data = res.data || res || [];
+                setLogs(data);
             }
-
-
-
         } catch (err) {
             console.error("Failed to fetch logs", err);
         }
@@ -161,11 +167,15 @@ const AttendanceDashboard = ({ filters, role }) => {
 
     const getStatusColor = (s) => {
         switch (s) {
-            case 'WORKING': return 'success';
-            case 'ON_SHORT_BREAK':
-            case 'ON_LONG_BREAK': return 'warning';
-            case 'PUNCHED_OUT': return 'secondary';
-            case 'OUTSIDE_UNAUTHORIZED': return 'danger';
+            case 'WORKING':
+            case 'PRESENT': return 'success';
+            case 'ON_BREAK':
+            case 'AUTO_BREAK':
+            case 'LATE': return 'warning';
+            case 'PUNCHED_OUT':
+            case 'SECONDARY': return 'secondary';
+            case 'OUTSIDE':
+            case 'ABSENT': return 'danger';
             default: return 'primary';
         }
     };
@@ -231,7 +241,7 @@ const AttendanceDashboard = ({ filters, role }) => {
                         <thead>
                             <tr className="border-bottom border-white border-opacity-5">
                                 <th className="ps-5 py-4 text-muted small fw-black text-uppercase tracking-widest" style={{ fontSize: '9px' }}>DATE</th>
-                                {(role === 'ADMIN' || role === 'MANAGER') && (
+                                {(role === 'ADMIN' || role === 'MANAGER' || role === 'TEAM_LEADER') && (
                                     <th className="py-4 text-muted small fw-black text-uppercase tracking-widest" style={{ fontSize: '9px' }}>EMPLOYEE</th>
                                 )}
                                 <th className="py-4 text-muted small fw-black text-uppercase tracking-widest" style={{ fontSize: '9px' }}>STATUS</th>
@@ -253,7 +263,7 @@ const AttendanceDashboard = ({ filters, role }) => {
                                             <span className="fw-black small">{new Date(log.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                                         </div>
                                     </td>
-                                    {(role === 'ADMIN' || role === 'MANAGER') && (
+                                    {(role === 'ADMIN' || role === 'MANAGER' || role === 'TEAM_LEADER') && (
                                         <td className="py-4">
                                             <div className="d-flex align-items-center gap-2">
                                                 <div className="p-1 bg-primary bg-opacity-10 text-primary rounded-circle">
@@ -269,10 +279,35 @@ const AttendanceDashboard = ({ filters, role }) => {
                                         </span>
                                     </td>
                                     <td className="py-4 text-muted small fw-bold">
-                                        {log.checkInTime ? new Date(log.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '---'}
+                                        {(() => {
+                                            const timeStr = log.checkInTime || log.loginTime;
+                                            if (!timeStr) return '---';
+                                            
+                                            let d;
+                                            if (Array.isArray(timeStr)) {
+                                                // Handle Jackson [YYYY, MM, DD, HH, mm, ss]
+                                                d = new Date(timeStr[0], timeStr[1] - 1, timeStr[2], timeStr[3], timeStr[4], timeStr[5] || 0);
+                                            } else {
+                                                d = new Date(typeof timeStr === 'string' ? timeStr.replace(' ', 'T') : timeStr);
+                                            }
+                                            
+                                            return isNaN(d.getTime()) ? '---' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                        })()}
                                     </td>
                                     <td className="py-4 text-muted small fw-bold">
-                                        {log.checkOutTime ? new Date(log.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '---'}
+                                        {(() => {
+                                            const timeStr = log.checkOutTime || log.logoutTime;
+                                            if (!timeStr) return '---';
+                                            
+                                            let d;
+                                            if (Array.isArray(timeStr)) {
+                                                d = new Date(timeStr[0], timeStr[1] - 1, timeStr[2], timeStr[3], timeStr[4], timeStr[5] || 0);
+                                            } else {
+                                                d = new Date(typeof timeStr === 'string' ? timeStr.replace(' ', 'T') : timeStr);
+                                            }
+                                            
+                                            return isNaN(d.getTime()) ? '---' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                        })()}
                                     </td>
                                     <td className="py-4">
                                         <span className="fw-black text-main small">{log.totalWorkMinutes || 0}m</span>

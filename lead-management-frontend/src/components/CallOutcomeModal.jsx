@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import {
   ArrowLeft, Mail, Phone, BookOpen, MessageSquare,
   CheckCircle, Plus, Calendar, AlertCircle, ShieldCheck, User, Zap, IndianRupee, Copy, MessageCircle,
-  Clock, X, Activity
+  Clock, X, Activity, FileText, CreditCard
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import associateService from '../services/associateService';
@@ -30,6 +30,9 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
   const [allStatuses, setAllStatuses] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  const [activeTab, setActiveTab] = useState('TIMELINE'); // TIMELINE, FEE, INVOICE
+  const [feeStructure, setFeeStructure] = useState(null);
+  const [isLoadingFee, setIsLoadingFee] = useState(false);
 
   // New Payment / Installment State integration
   const [totalAmount, setTotalAmount] = useState('499');
@@ -118,8 +121,22 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
     if (isOpen) {
       fetchStages();
       fetchAuditLogs();
+      fetchFeeStructure();
     }
   }, [isOpen, lead?.id]);
+
+  const fetchFeeStructure = async () => {
+    if (!lead?.id) return;
+    setIsLoadingFee(true);
+    try {
+      const res = await api.get(`/api/payments/lead/${lead.id}/full-structure`);
+      setFeeStructure(res.data);
+    } catch (err) {
+      console.error("Failed to load fee structure", err);
+    } finally {
+      setIsLoadingFee(false);
+    }
+  };
 
   if (!isOpen || !lead) return null;
 
@@ -345,9 +362,12 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
 
                   <div className="row g-2 mb-2">
                     <div className="col-6">
-                      <button type="button" className="btn btn-outline-success btn-sm w-100 fw-bold rounded-3 py-2" onClick={() => setShowAddNote(true)}>
+                      <a 
+                        href={`tel:${lead.mobile?.replace(/\s/g, '')}`} 
+                        className="btn btn-outline-success btn-sm w-100 fw-bold rounded-3 py-2" 
+                      >
                         Call
-                      </button>
+                      </a>
                     </div>
                     <div className="col-6">
                       <a href={`mailto:${lead.email}`} className="btn btn-outline-primary btn-sm w-100 fw-bold rounded-3 py-2">
@@ -698,12 +718,32 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                   </div>
                 )}
 
-                {/* Audit & Activity Timeline Card */}
-                <div className={`card shadow-sm border-0 rounded-4 overflow-hidden p-4 flex-grow-1 ${isDarkMode ? 'bg-secondary bg-opacity-10' : 'bg-white'}`}>
-                  <div className="d-flex justify-content-between align-items-center mb-4">
-                    <h6 className={`fw-bold mb-0 ${isDarkMode ? 'text-white' : 'text-dark'}`}>Audit & Activity Timeline</h6>
-                    {/* Add Note button removed as per request */}
+                {/* Right Column Content with Tabs */}
+                <div className="flex-grow-1 d-flex flex-column gap-3">
+                  {/* Tab Selector */}
+                  <div className="d-flex align-items-center gap-2 p-1 bg-light rounded-pill border" style={{ width: 'fit-content' }}>
+                    {[
+                      { id: 'TIMELINE', label: 'TIMELINE', icon: <Activity size={12} /> },
+                      { id: 'FEE_STRUCTURE', label: 'FEE STRUCTURE', icon: <CreditCard size={12} /> },
+                      { id: 'INVOICE', label: 'INVOICE', icon: <FileText size={12} /> }
+                    ].map(tab => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`btn btn-sm rounded-pill px-3 py-1 d-flex align-items-center gap-2 transition-all border-0 shadow-none ${activeTab === tab.id ? 'bg-primary text-white shadow-sm' : 'text-muted'}`}
+                        style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '0.5px' }}
+                      >
+                        {tab.icon}
+                        {tab.label}
+                      </button>
+                    ))}
                   </div>
+
+                  {activeTab === 'TIMELINE' && (
+                    <div className={`card shadow-sm border-0 rounded-4 overflow-hidden p-4 flex-grow-1 animate-fade-in ${isDarkMode ? 'bg-secondary bg-opacity-10' : 'bg-white'}`}>
+                      <div className="d-flex justify-content-between align-items-center mb-4">
+                        <h6 className={`fw-bold mb-0 ${isDarkMode ? 'text-white' : 'text-dark'}`}>Audit & Activity Timeline</h6>
+                      </div>
 
                   <div className="position-relative ps-4 py-2 h-100 overflow-auto" style={{ maxHeight: '500px' }}>
                     {/* Vertical Timeline Bar */}
@@ -785,17 +825,128 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                         <div className="d-flex align-items-center gap-2 text-muted small">
                           <Calendar size={12} /> {formatDate(lead.createdAt)}
                         </div>
+                      </div>
                     </div>
                   </div>
-                  </div>
                 </div>
-              </div>
+              )}
+
+              {activeTab === 'FEE_STRUCTURE' && (
+                <div className={`card shadow-sm border-0 rounded-4 p-4 animate-fade-in ${isDarkMode ? 'bg-secondary bg-opacity-10' : 'bg-white'}`}>
+                  <h6 className="fw-bold mb-4 text-dark">Student Fee Structure</h6>
+                  {isLoadingFee ? (
+                    <div className="text-center py-5"><div className="spinner-border spinner-border-sm text-primary"></div></div>
+                  ) : !feeStructure?.fee ? (
+                    <div className="text-center py-5 text-muted small">No fee structure defined for this lead.</div>
+                  ) : (
+                    <div className="d-flex flex-column gap-4">
+                      {/* Fee Summary Cards */}
+                      <div className="row g-3">
+                        <div className="col-4">
+                          <div className="p-3 rounded-4 bg-primary bg-opacity-10 border border-primary border-opacity-10">
+                            <p className="text-primary fw-bold text-uppercase mb-1" style={{ fontSize: '8px', letterSpacing: '1px' }}>Total Package</p>
+                            <h5 className="fw-black mb-0 text-dark">{feeStructure.fee.totalAmount}</h5>
+                          </div>
+                        </div>
+                        <div className="col-4">
+                          <div className="p-3 rounded-4 bg-success bg-opacity-10 border border-success border-opacity-10">
+                            <p className="text-success fw-bold text-uppercase mb-1" style={{ fontSize: '8px', letterSpacing: '1px' }}>Total Paid</p>
+                            <h5 className="fw-black mb-0 text-dark">{feeStructure.fee.paidAmount}</h5>
+                          </div>
+                        </div>
+                        <div className="col-4">
+                          <div className="p-3 rounded-4 bg-danger bg-opacity-10 border border-danger border-opacity-10">
+                            <p className="text-danger fw-bold text-uppercase mb-1" style={{ fontSize: '8px', letterSpacing: '1px' }}>Balance Due</p>
+                            <h5 className="fw-black mb-0 text-dark">{feeStructure.fee.balanceAmount}</h5>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Installment Roadmap */}
+                      <div className="mt-2">
+                        <h6 className="small fw-black text-muted text-uppercase tracking-widest mb-3" style={{ fontSize: '10px' }}>Installment Roadmap</h6>
+                        <div className="table-responsive">
+                          <table className="table table-sm table-borderless align-middle mb-0">
+                            <thead>
+                              <tr className="border-bottom border-light">
+                                <th className="text-muted small fw-bold pb-2">#</th>
+                                <th className="text-muted small fw-bold pb-2">AMOUNT</th>
+                                <th className="text-muted small fw-bold pb-2">DUE DATE</th>
+                                <th className="text-muted small fw-bold pb-2 text-end">STATUS</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {feeStructure.installments?.map((p, idx) => (
+                                <tr key={idx} className="border-bottom border-light border-opacity-50">
+                                  <td className="fw-bold small text-muted">{idx + 1}</td>
+                                  <td className="fw-black small text-dark">{p.amount}</td>
+                                  <td className="text-muted">{p.dueDate ? formatDate(p.dueDate).split(',')[0] : 'UPFRONT'}</td>
+                                  <td className="text-end pe-0">
+                                    <span className={`badge rounded-pill ${p.status === 'PAID' || p.status === 'SUCCESS' ? 'bg-success bg-opacity-10 text-success' : 'bg-warning bg-opacity-10 text-warning'}`} style={{ fontSize: '9px' }}>
+                                      {p.status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'INVOICE' && (
+                <div className={`card shadow-sm border-0 rounded-4 p-4 animate-fade-in ${isDarkMode ? 'bg-secondary bg-opacity-10' : 'bg-white'}`}>
+                  <div className="d-flex justify-content-between align-items-center mb-4">
+                    <h6 className="fw-bold mb-0 text-dark">Official Receipt Details</h6>
+                    <button className="btn btn-sm btn-primary rounded-pill px-3 fw-bold" style={{ fontSize: '10px' }} onClick={() => window.open(`/api/payments/lead/${lead.id}/invoice`, '_blank')}>
+                       <Zap size={12} className="me-1" /> GENERATE PDF
+                    </button>
+                  </div>
+                  
+                  {!feeStructure?.fee ? (
+                    <div className="text-center py-5 text-muted small">No payment data available for invoicing.</div>
+                  ) : (
+                    <div className="p-4 rounded-4 bg-light border d-flex flex-column gap-3 shadow-inner">
+                       <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-10 pb-2">
+                          <span className="text-muted small fw-bold">STUDENT NAME</span>
+                          <span className="fw-black small text-dark">{lead.name.toUpperCase()}</span>
+                       </div>
+                       <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-10 pb-2">
+                          <span className="text-muted small fw-bold">REFERENCE ID</span>
+                          <span className="fw-black small text-primary">L-{lead.id}</span>
+                       </div>
+                       <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-10 pb-2">
+                          <span className="text-muted small fw-bold">TOTAL PACKAGE</span>
+                          <span className="fw-black small text-dark">{feeStructure.fee.totalAmount}</span>
+                       </div>
+                       <div className="d-flex justify-content-between border-bottom border-secondary border-opacity-10 pb-2">
+                          <span className="text-muted small fw-bold">AMOUNT RECEIVED</span>
+                          <span className="fw-black small text-success">{feeStructure.fee.paidAmount}</span>
+                       </div>
+                       <div className="d-flex justify-content-between pt-2">
+                          <span className="text-dark fw-black small">BALANCE OUTSTANDING</span>
+                          <span className="fw-black text-danger fs-6">{feeStructure.fee.balanceAmount}</span>
+                       </div>
+                       
+                       <div className="mt-3 p-3 bg-white rounded-3 border border-primary border-opacity-10 text-center shadow-sm">
+                          <p className="text-muted mb-1 fw-bold text-uppercase" style={{ fontSize: '8px', letterSpacing: '1px' }}>Next Installment Window</p>
+                          <h6 className="fw-black text-primary mb-0">{feeStructure.fee.nextDueDate ? formatDate(feeStructure.fee.nextDueDate).split(',')[0] : 'SETTLED'}</h6>
+                       </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
     </div>
-  );
+  </div>
+</div>
+);
 
   return ReactDOM.createPortal(modalContent, document.body);
 };

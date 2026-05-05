@@ -119,10 +119,10 @@ const LeadStatusUpdatePage = () => {
         status: selectedStatus,
         note,
         paymentType,
-        totalAmount,
-        paidAmount: paymentType === 'EMI' ? initialAmount : totalAmount,
+        totalAmount: totalAmount || "0",
+        paidAmount: paymentType === 'EMI' ? (initialAmount || "0") : (totalAmount || "0"),
         paymentMethod,
-        installments: paymentType === 'EMI' ? installments : [],
+        installments: paymentType === 'EMI' ? installments.map(i => ({ ...i, amount: i.amount || "0" })) : [],
         dueDate: followUpDate
       });
 

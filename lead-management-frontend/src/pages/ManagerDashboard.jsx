@@ -83,12 +83,12 @@ const ManagerDashboard = () => {
 
   const {
     leads, loading: leadsLoading, refetch: refreshLeads,
-    updateLead, assignLead, deleteLead, recordCallOutcome,
+    updateLead, updateStatus, assignLead, deleteLead, recordCallOutcome,
     selectedLeadIds, toggleSelection, bulkAssignLeads
   } = useLeads(debouncedFilters, 'MANAGER');
 
   const {
-    teamLeaders, roles, permissions, teamTree, loading: lookupLoading
+    teamLeaders, subordinates, roles, permissions, teamTree, pipelineStages, loading: lookupLoading
   } = useLookupData('MANAGER');
 
   // 3. Handlers
@@ -332,13 +332,15 @@ const ManagerDashboard = () => {
                   <LeadTable
                     leads={leads.filter(l => l.assignedToId === user?.id || (!l.assignedToId && l.createdById === user?.id))}
                     onUpdateLead={(id, data) => updateLead({ id, data })}
+                    onUpdateStatus={updateStatus}
                     onRecordCallOutcome={handleRecordCallOutcome}
                     onSendPaymentLink={handleSendPaymentLink}
                     onViewInvoice={handleViewInvoice}
-                    teamLeaders={teamLeaders.some(u => u.id === user?.id) ? teamLeaders : [user, ...teamLeaders]}
+                    teamLeaders={subordinates}
                     role="MANAGER"
                     loadLeads={refreshLeads}
                     loading={leadsLoading}
+                    pipelineStages={pipelineStages}
                   />
                 </div>
               </div>
@@ -459,13 +461,15 @@ const ManagerDashboard = () => {
                 <LeadTable
                   leads={filteredLeads}
                   onUpdateLead={(id, data) => updateLead({ id, data })}
+                  onUpdateStatus={updateStatus}
                   handleAssignLead={(leadId, targetId) => assignLead({ leadId, targetId: targetId || 0 })}
                   onRecordCallOutcome={(leadId, data) => recordCallOutcome({ leadId, data })}
                   onViewInvoice={handleViewInvoice}
                   onEdit={(lead) => navigate(`/leads/${lead.id}/edit`)}
                   loading={leadsLoading}
-                  teamLeaders={teamLeaders}
+                  teamLeaders={subordinates}
                   role="MANAGER"
+                  pipelineStages={pipelineStages}
                 />
               </div>
             </div>
@@ -473,7 +477,7 @@ const ManagerDashboard = () => {
         )}
         {activeTab === 'payments' && <PaymentHistory role="MANAGER" managerId={filterState.userId ? null : user?.id} userId={filterState.userId || null} teamId={filterState.teamId || null} from={filterState.from} to={filterState.to} hideHeader={true} />}
         {activeTab === 'calls' && <CallLogDashboard userId={filterState.userId} filters={debouncedFilters} hideHeader={true} />}
-        {activeTab === 'attendance' && <AttendanceDashboard filters={filterState} role="MANAGER" />}
+        {activeTab === 'attendance' && <AttendanceDashboard filters={debouncedFilters} role="MANAGER" />}
         {activeTab === 'tasks' && (
           <div className="animate-fade-in">
             <TaskBoard 

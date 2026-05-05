@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { 
   History, Edit, FileText, Wallet, Zap, ChevronLeft, ChevronRight, 
   Search, Filter, ArrowUpRight, Clock, CheckCircle2, AlertCircle,
-  MoreVertical, ChevronDown
+  MoreVertical, ChevronDown, IndianRupee
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import LeadEditModal from './LeadEditModal';
@@ -111,9 +111,16 @@ const LeadTable = ({
   onUpdateStatus, 
   onEdit,
   onViewInvoice,
+  handleAssignLead,
   role = 'ADMIN',
   loading = false,
-  teamLeaders = []
+  teamLeaders = [],
+  selectedLeadIds = [],
+  toggleSelection,
+  bulkAssignTlId,
+  setBulkAssignTlId,
+  handleBulkAssign,
+  pipelineStages: propsPipelineStages = []
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedEditLead, setSelectedEditLead] = useState(null);
@@ -122,17 +129,23 @@ const LeadTable = ({
   const { isDarkMode } = useTheme();
   const navigate = useNavigate();
 
+  const uniqueTeamLeaders = useMemo(() => {
+    const map = new Map();
+    (teamLeaders || []).forEach(tl => {
+      if (tl && tl.id) map.set(tl.id, tl);
+    });
+    return Array.from(map.values());
+  }, [teamLeaders]);
+
   const itemsPerPage = 10;
 
-  const pipelineStages = [
+  const pipelineStages = (propsPipelineStages && propsPipelineStages.length > 0) ? propsPipelineStages : [
     { label: 'New', statusValue: 'NEW', color: 'primary', isRoot: true },
     { label: 'Contacted', statusValue: 'CONTACTED', color: 'info' },
-    { label: 'FollowUp', statusValue: 'FOLLOWUP', color: 'warning' },
-    { label: 'Converted', statusValue: 'CONVERTED', color: 'success' },
+    { label: 'FollowUp', statusValue: 'FOLLOW_UP', color: 'warning' },
     { label: 'Interested', statusValue: 'INTERESTED', color: 'primary' },
     { label: 'Lost', statusValue: 'LOST', color: 'danger' },
-    { label: 'FollowUp2', statusValue: 'FOLLOWUP2', color: 'warning' },
-    { label: 'SwitchOff', statusValue: 'SWITCHOFF', color: 'secondary' },
+    { label: 'Converted', statusValue: 'CONVERTED', color: 'success' },
   ];
 
   const getStatusColorClass = (status) => {
@@ -145,25 +158,19 @@ const LeadTable = ({
     return 'text-main';
   };
 
-  const handleStatusChange = async (lead, newStatus) => {
-    try {
-      if (onUpdateStatus) {
-        await onUpdateStatus(lead.id, newStatus);
-      } else if (onUpdateLead) {
-        await onUpdateLead(lead.id, { status: newStatus });
-      }
-    } catch (err) {
-      console.error('Failed to update status', err);
-    }
+  const handleStatusChange = (lead, newStatus) => {
+    // SECURITY/WORKFLOW PROTOCOL: Use dedicated status update page 
+    // to handle complex requirements like task scheduling and payment maps.
+    navigate(`/leads/${lead.id}/status-update?newStatus=${newStatus}`);
   };
 
-  const handleAssignLead = async (leadId, newUserId, users) => {
-    const user = users.find(u => u.id === parseInt(newUserId));
-    if (!user) return;
-    
+  const handleAssignLeadInternal = async (leadId, newUserId) => {
     try {
-      if (onUpdateLead) {
-        await onUpdateLead(leadId, { assignedToId: user.id });
+      const targetId = newUserId ? parseInt(newUserId) : 0;
+      if (typeof handleAssignLead === 'function') {
+        await handleAssignLead(leadId, targetId);
+      } else if (onUpdateLead) {
+        await onUpdateLead(leadId, { assignedToId: targetId || null });
       }
     } catch (err) {
       console.error('Failed to assign lead', err);
@@ -179,11 +186,63 @@ const LeadTable = ({
 
   return (
     <div className="lead-table-container">
+      {selectedLeadIds.length > 0 && role === 'ADMIN' && (
+        <div className="p-3 mb-3 bg-primary bg-opacity-10 border border-primary border-opacity-20 rounded-4 d-flex align-items-center justify-content-between animate-fade-in">
+          <div className="d-flex align-items-center gap-3">
+            <span className="fw-black text-primary small text-uppercase tracking-widest">{selectedLeadIds.length} assets selected for redistribution</span>
+          </div>
+          <div className="d-flex align-items-center gap-2">
+            <select 
+              className="form-select form-select-sm bg-surface border-white border-opacity-10 text-main fw-black text-uppercase"
+              style={{ width: '200px', fontSize: '10px' }}
+              value={bulkAssignTlId}
+              onChange={(e) => setBulkAssignTlId(e.target.value)}
+            >
+              <option value="">Select Target Manager...</option>
+              <option value="0" className="text-danger">UNASSIGN ALL</option>
+              {uniqueTeamLeaders.filter(u => u.role !== 'ADMIN').map(u => (
+                <option key={u.id} value={u.id}>{u.name.toUpperCase()}</option>
+              ))}
+            </select>
+            <button 
+              className="btn btn-primary btn-sm px-4 rounded-pill fw-black text-uppercase tracking-widest shadow-glow"
+              style={{ fontSize: '10px' }}
+              onClick={() => handleBulkAssign(bulkAssignTlId)}
+              disabled={!bulkAssignTlId}
+            >
+              Redistribute
+            </button>
+          </div>
+        </div>
+      )}
       <div className="overflow-auto custom-scroll">
         <table className="table table-hover mb-0 align-middle">
           <thead className="bg-surface bg-opacity-10 border-bottom border-white border-opacity-5">
             <tr>
-              <th className="ps-4 py-3 text-muted fw-black small text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Name</th>
+              <th className="ps-4 py-3 text-muted fw-black small text-uppercase tracking-widest" style={{ width: '50px', fontSize: '9px' }}>S/N</th>
+              {role !== 'ASSOCIATE' && (
+                <th className="py-3" style={{ width: '40px' }}>
+                  <input 
+                    type="checkbox" 
+                    className="form-check-input bg-surface border-white border-opacity-10"
+                    checked={currentItems.length > 0 && currentItems.filter(l => !l.assignedToId).length > 0 && currentItems.filter(l => !l.assignedToId).every(l => selectedLeadIds.includes(l.id))}
+                    onChange={() => {
+                      const allUnassignedInPage = currentItems.filter(l => !l.assignedToId).map(l => l.id);
+                      if (allUnassignedInPage.length === 0) return;
+                      
+                      const allSelected = allUnassignedInPage.every(id => selectedLeadIds.includes(id));
+                      allUnassignedInPage.forEach(id => {
+                        if (allSelected) {
+                          if (selectedLeadIds.includes(id)) toggleSelection(id);
+                        } else {
+                          if (!selectedLeadIds.includes(id)) toggleSelection(id);
+                        }
+                      });
+                    }}
+                  />
+                </th>
+              )}
+              <th className="py-3 text-muted fw-black small text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Name</th>
               <th className="py-3 text-muted fw-black small text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Email</th>
               <th className="py-3 text-muted fw-black small text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Phone</th>
               <th className="py-3 text-muted fw-black small text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Source</th>
@@ -195,14 +254,14 @@ const LeadTable = ({
           <tbody className="border-0">
             {loading ? (
               <tr>
-                <td colSpan={7} className="text-center py-5">
+                <td colSpan={role === 'ASSOCIATE' ? 8 : 9} className="text-center py-5">
                   <div className="spinner-border text-primary spinner-border-sm me-2"></div>
                   <span className="text-muted fw-bold text-uppercase tracking-widest small">Synchronizing Registry...</span>
                 </td>
               </tr>
             ) : currentItems.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-5 text-muted fw-bold text-uppercase tracking-widest small opacity-50">Zero records discovered</td>
+                <td colSpan={role === 'ASSOCIATE' ? 8 : 9} className="text-center py-5 text-muted fw-bold text-uppercase tracking-widest small opacity-50">Zero records discovered</td>
               </tr>
             ) : (
               currentItems.map((lead, idx) => (
@@ -211,7 +270,22 @@ const LeadTable = ({
                   className="border-bottom border-white border-opacity-5 hover-bg-light cursor-pointer"
                   onClick={() => setSelectedOutcomeLead(lead)}
                 >
-                  <td className="ps-4 py-4">
+                  <td className="ps-4 py-4 text-muted fw-black small" style={{ fontSize: '10px' }}>
+                    {(currentPage - 1) * itemsPerPage + idx + 1}
+                  </td>
+                  {role !== 'ASSOCIATE' && (
+                    <td className="py-4" onClick={(e) => e.stopPropagation()}>
+                      {!lead.assignedToId && (
+                        <input 
+                          type="checkbox" 
+                          className="form-check-input bg-surface border-white border-opacity-10"
+                          checked={selectedLeadIds.includes(lead.id)}
+                          onChange={() => toggleSelection(lead.id)}
+                        />
+                      )}
+                    </td>
+                  )}
+                  <td className="py-4">
                     <span 
                       className="fw-black text-primary hover-underline" 
                       style={{ fontSize: '13px' }}
@@ -234,11 +308,15 @@ const LeadTable = ({
                       <select
                         className={`form-select bg-surface bg-opacity-20 border-0 ${!lead.assignedToId ? 'text-danger fw-black' : 'text-main'} py-1 px-2 fw-black text-uppercase`}
                         style={{ width: '130px', fontSize: '10px', borderRadius: '8px' }}
-                        onChange={(e) => handleAssignLead(lead.id, e.target.value, teamLeaders)}
+                        onChange={(e) => handleAssignLeadInternal(lead.id, e.target.value)}
                         value={lead.assignedToId || ''}
                       >
                         <option value="" className="text-danger">UNASSIGNED</option>
-                        {teamLeaders.filter(u => u.active || u.id === lead.assignedToId).map(u => <option key={u.id} value={u.id}>{u.name.toUpperCase()}</option>)}
+                        {uniqueTeamLeaders.filter(u => (u.active || u.id === lead.assignedToId) && u.role !== 'ADMIN').map(u => (
+                          <option key={u.id} value={u.id}>
+                            {u.name.toUpperCase()} {u.id === lead.assignedToId ? '✓' : ''}
+                          </option>
+                        ))}
                       </select>
                     </td>
                   )}
@@ -265,10 +343,11 @@ const LeadTable = ({
                     <div className="d-flex align-items-center justify-content-end gap-1" onClick={(e) => e.stopPropagation()}>
                       {showActions && (
                         <>
-                          <button className="p-2 border-0 bg-transparent text-info hover-scale" onClick={() => setSelectedHistoryLead(lead)}>
+                          <button className="p-2 border-0 bg-transparent text-info hover-scale" onClick={() => setSelectedHistoryLead(lead)} title="Lead Audit History">
                             <History size={16} />
                           </button>
-                          <button className="p-2 border-0 bg-transparent text-warning hover-scale" onClick={() => onEdit ? onEdit(lead) : setSelectedEditLead(lead)}>
+
+                          <button className="p-2 border-0 bg-transparent text-warning hover-scale" onClick={() => onEdit ? onEdit(lead) : setSelectedEditLead(lead)} title="Edit Lead Registry">
                             <Edit size={16} />
                           </button>
                         </>
@@ -282,21 +361,19 @@ const LeadTable = ({
         </table>
       </div>
 
-      {totalPages > 1 && (
-        <div className="px-4 py-3 bg-surface bg-opacity-10 border-top border-white border-opacity-5 d-flex align-items-center justify-content-between">
-          <small className="text-muted fw-bold opacity-50 text-uppercase tracking-widest" style={{ fontSize: '8px' }}>
-            Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, leads.length)} of {leads.length} leads
-          </small>
-          <div className="d-flex gap-2">
-            <button className="ui-btn ui-btn-secondary btn-sm px-3 py-1 rounded-pill" onClick={() => setCurrentPage(prev => prev - 1)} disabled={currentPage === 1}>
-              <ChevronLeft size={14} />
-            </button>
-            <button className="ui-btn ui-btn-secondary btn-sm px-3 py-1 rounded-pill" onClick={() => setCurrentPage(prev => prev + 1)} disabled={currentPage === totalPages}>
-              <ChevronRight size={14} />
-            </button>
-          </div>
+      <div className="px-4 py-3 bg-surface bg-opacity-10 border-top border-white border-opacity-5 d-flex align-items-center justify-content-between">
+        <small className="text-muted fw-bold opacity-50 text-uppercase tracking-widest" style={{ fontSize: '8px' }}>
+          Showing {leads.length > 0 ? indexOfFirstItem + 1 : 0} to {Math.min(indexOfLastItem, leads.length)} of {leads.length} leads
+        </small>
+        <div className="d-flex gap-2">
+          <button className="ui-btn ui-btn-secondary btn-sm px-3 py-1 rounded-pill" onClick={() => setCurrentPage(prev => prev - 1)} disabled={currentPage === 1 || loading}>
+            <ChevronLeft size={14} />
+          </button>
+          <button className="ui-btn ui-btn-secondary btn-sm px-3 py-1 rounded-pill" onClick={() => setCurrentPage(prev => prev + 1)} disabled={currentPage >= totalPages || loading}>
+            <ChevronRight size={14} />
+          </button>
         </div>
-      )}
+      </div>
 
       <LeadEditModal isOpen={!!selectedEditLead} onClose={() => setSelectedEditLead(null)} lead={selectedEditLead} onUpdate={onUpdateLead} role={role} />
       <CallOutcomeModal 

@@ -12,7 +12,7 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
 
     if (normalizedRole === 'ADMIN') {
       return [
-        { id: 'overview', label: 'MY HOME', icon: LayoutDashboard },
+        // { id: 'overview', label: 'MY HOME', icon: LayoutDashboard },
         { id: 'team-dashboard', label: 'Team Dashboard', icon: LayoutDashboard },
         { id: 'users', label: 'USERS', icon: Users },
         { id: 'hierarchy', label: 'Hierarchy', icon: Layers },

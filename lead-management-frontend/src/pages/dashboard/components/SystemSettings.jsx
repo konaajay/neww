@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   ShieldCheck, 
   Settings, 
@@ -22,6 +23,7 @@ import AttendanceGovernance from './AttendanceGovernance';
 
 const SystemSettings = () => {
     const { isDarkMode } = useTheme();
+    const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState('offices');
     const [loading, setLoading] = useState(false);
     const [offices, setOffices] = useState([]);
@@ -79,6 +81,7 @@ const SystemSettings = () => {
             
             setOfficeData({ name: '', latitude: '', longitude: '', radius: '100' });
             setEditingOfficeId(null);
+            queryClient.invalidateQueries({ queryKey: ['offices'] });
             fetchOffices();
         } catch (err) {
             toast.error(editingOfficeId ? "Failed to update branch" : "Failed to initialize branch");
@@ -207,6 +210,7 @@ const SystemSettings = () => {
                                             <button className="ui-btn-icon bg-danger bg-opacity-10 text-danger border-0 p-2 rounded-circle hover-scale" onClick={async () => {
                                                 if (window.confirm("Purge hub?")) {
                                                     await adminService.deleteOffice(office.id);
+                                                    queryClient.invalidateQueries({ queryKey: ['offices'] });
                                                     fetchOffices();
                                                 }
                                             }}>

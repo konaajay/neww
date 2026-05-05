@@ -46,6 +46,15 @@ export const useLeads = (filters, role) => {
     }
   });
 
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status, note }) => leadsApi.updateStatus(id, status, note),
+    onSuccess: () => {
+      toast.success('Status protocol updated');
+      invalidateLeads();
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    }
+  });
+
   const assignLeadMutation = useMutation({
     mutationFn: ({ leadId, targetId }) => leadsApi.assignLead(role, leadId, targetId),
     onSuccess: () => {
@@ -98,6 +107,7 @@ export const useLeads = (filters, role) => {
     toggleSelection,
     // Operations
     updateLead: updateLeadMutation.mutateAsync,
+    updateStatus: (id, status, note = '') => updateStatusMutation.mutateAsync({ id, status, note }),
     assignLead: assignLeadMutation.mutateAsync,
     bulkAssignLeads: bulkAssignMutation.mutateAsync,
     deleteLead: deleteLeadMutation.mutateAsync,

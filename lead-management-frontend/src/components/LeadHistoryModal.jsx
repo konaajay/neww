@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { Clock, User, ArrowRight, Activity, X, FileText, PhoneCall, Zap, Wallet } from 'lucide-react';
+import { Clock, User, ArrowRight, Activity, X, FileText, PhoneCall, Zap, Wallet, IndianRupee } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../api/api';
 import { useTheme } from '../context/ThemeContext';
@@ -166,16 +166,40 @@ const LeadHistoryModal = ({ isOpen, onClose, lead, onEdit, onRecordCallOutcome, 
         </div>
 
         {/* Footer */}
-        <div className="p-3 border-top bg-white d-flex gap-3" style={{ borderColor: borderColor }}>
+        <div className="p-3 border-top bg-white d-flex gap-2" style={{ borderColor: borderColor }}>
           <button 
-            className="btn btn-light w-50 rounded-3 py-2 fw-bold text-muted" 
+            className="btn btn-light rounded-3 py-2 fw-bold text-muted flex-grow-1" 
             style={{ fontSize: '11px' }} 
             onClick={onClose}
           >
             DISMISS
           </button>
+          {isFinalized && (
+            <>
+              <button 
+                className="btn btn-success rounded-3 py-2 fw-bold text-white d-flex align-items-center justify-content-center gap-2 px-3" 
+                style={{ fontSize: '11px' }} 
+                onClick={() => {
+                  onClose();
+                  if (navigate) navigate(`/leads/${lead.id}/fee-structure`);
+                }}
+              >
+                <IndianRupee size={14} /> FEE
+              </button>
+              <button 
+                className="btn btn-primary rounded-3 py-2 fw-bold text-white d-flex align-items-center justify-content-center gap-2 px-3" 
+                style={{ fontSize: '11px' }} 
+                onClick={() => {
+                  onClose();
+                  if (navigate) navigate(`/invoice/${lead.id}`);
+                }}
+              >
+                <FileText size={14} /> INVOICE
+              </button>
+            </>
+          )}
           <button 
-            className="btn btn-primary w-50 rounded-3 py-2 fw-bold" 
+            className="btn btn-warning rounded-3 py-2 fw-bold text-dark flex-grow-1" 
             style={{ fontSize: '11px' }} 
             onClick={() => {
               onClose();

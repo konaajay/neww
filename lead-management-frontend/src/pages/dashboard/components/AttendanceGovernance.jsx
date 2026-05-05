@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   ShieldCheck, 
   MapPin, 
@@ -19,6 +20,7 @@ import { useTheme } from '../../../context/ThemeContext';
 
 const AttendanceGovernance = ({ offices = [] }) => {
     const { isDarkMode } = useTheme();
+    const queryClient = useQueryClient();
     const [policies, setPolicies] = useState([]);
     const [loading, setLoading] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -130,6 +132,9 @@ const AttendanceGovernance = ({ offices = [] }) => {
                 });
                 toast.success("Governance protocol synchronized");
             }
+            
+            queryClient.invalidateQueries({ queryKey: ['shifts'] });
+            queryClient.invalidateQueries({ queryKey: ['offices'] });
 
             setEditingId(null);
             setEditingShiftId(null);
@@ -204,6 +209,7 @@ const AttendanceGovernance = ({ offices = [] }) => {
         try {
             await adminService.deletePolicy(id);
             toast.success("Protocol purged");
+            queryClient.invalidateQueries({ queryKey: ['shifts'] });
             fetchData();
         } catch (err) {
             toast.error("Failed to purge protocol");

@@ -32,6 +32,14 @@ const LeadForm = ({ onSubmit, title = "Add New Lead", initialData = {} }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate phone number: Must be exactly 10 digits
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(formData.mobile)) {
+      alert("Phone number must be exactly 10 numeric digits.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const success = await onSubmit(formData);
@@ -81,15 +89,21 @@ const LeadForm = ({ onSubmit, title = "Add New Lead", initialData = {} }) => {
             <div className="form-floating group">
               <input
                 name="mobile"
-                className={`form-control ${isDarkMode ? 'bg-card border-white border-opacity-10 text-main' : 'bg-white border-dark border-opacity-10 text-dark'} py-3 px-3 shadow-none rounded-4 focus:border-primary transition-all custom-input`}
+                className={`form-control ${isDarkMode ? 'bg-card border-white border-opacity-10 text-main' : 'bg-white border-dark border-opacity-10 text-dark'} py-3 px-3 shadow-none rounded-4 focus:border-primary transition-all custom-input ${initialData?.id ? 'opacity-50' : ''}`}
                 placeholder="Phone Number"
                 value={formData.mobile || ''}
                 onChange={handleChange}
                 autoComplete="off"
                 required
-                style={{ fontSize: '14px', height: '60px', fontWeight: '600' }}
+                readOnly={!!initialData?.id}
+                minLength="10"
+                maxLength="10"
+                pattern="\d{10}"
+                style={{ fontSize: '14px', height: '60px', fontWeight: '600', cursor: initialData?.id ? 'not-allowed' : 'text' }}
               />
-              <label className={`${isDarkMode ? 'text-muted' : 'text-slate-500'} fw-bold small text-uppercase tracking-widest opacity-50 ps-3`} style={{ fontSize: '10px', transform: 'scale(0.85) translateY(-0.5rem) translateX(0.15rem)' }}>Phone</label>
+              <label className={`${isDarkMode ? 'text-muted' : 'text-slate-500'} fw-bold small text-uppercase tracking-widest opacity-50 ps-3`} style={{ fontSize: '10px', transform: 'scale(0.85) translateY(-0.5rem) translateX(0.15rem)' }}>
+                {initialData?.id ? 'Phone (Locked)' : 'Phone (10 Digits)'}
+              </label>
             </div>
           </div>
           <div className="col-12">

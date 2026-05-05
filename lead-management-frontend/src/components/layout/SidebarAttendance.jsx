@@ -16,7 +16,7 @@ const SidebarAttendance = ({ isCollapsed }) => {
     const [distanceToOffice, setDistanceToOffice] = useState(null);
 
     const isPunchedIn = !!(status?.checkInTime);
-    const isOnBreak = status?.status === 'ON_SHORT_BREAK' || status?.status === 'ON_LONG_BREAK';
+    const isOnBreak = status?.status === 'ON_BREAK' || status?.status === 'AUTO_BREAK';
 
     const parseStatus = (res) => {
         const payload = res?.data ?? res;
@@ -229,9 +229,9 @@ const SidebarAttendance = ({ isCollapsed }) => {
         if (!isPunchedIn) return 'OFF DUTY';
         switch (status?.status) {
             case 'WORKING': return 'WORKING';
-            case 'ON_SHORT_BREAK':
-            case 'ON_LONG_BREAK': return 'BREAK';
-            case 'OUTSIDE_UNAUTHORIZED': return 'OUTSIDE';
+            case 'ON_BREAK':
+            case 'AUTO_BREAK': return 'BREAK';
+            case 'OUTSIDE': return 'OUTSIDE';
             default: return status?.status || 'ACTIVE';
         }
     };
@@ -240,9 +240,9 @@ const SidebarAttendance = ({ isCollapsed }) => {
         if (!isPunchedIn) return 'secondary';
         switch (status?.status) {
             case 'WORKING': return 'dark';
-            case 'ON_SHORT_BREAK':
-            case 'ON_LONG_BREAK': return 'warning';
-            case 'OUTSIDE_UNAUTHORIZED': return 'danger';
+            case 'ON_BREAK':
+            case 'AUTO_BREAK': return 'warning';
+            case 'OUTSIDE': return 'danger';
             default: return 'secondary';
         }
     };

@@ -16,7 +16,7 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
   const [reschedulingTask, setReschedulingTask] = useState(null);
   const { activeCall, startCall: logActiveCall } = useAuth();
   const [isStartingCall, setIsStartingCall] = useState(false);
-  
+
   // React to initialFilter changes from parent
   React.useEffect(() => {
     if (initialFilter) {
@@ -35,12 +35,12 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
     teamId: teamId
   }), [startDate, endDate, userId, managerId, teamId]);
 
-  const { 
-    tasks: cloudTasks, 
-    loading, 
-    refresh: loadTasks, 
-    updateStatus, 
-    createTask 
+  const {
+    tasks: cloudTasks,
+    loading,
+    refresh: loadTasks,
+    updateStatus,
+    createTask
   } = useTasks(filters);
 
   // 2. HANDLERS
@@ -56,7 +56,7 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
         leadId: lead.id,
         phoneNumber: lead.mobile
       });
-      
+
       const sessionData = {
         callId: res.id, // Assuming safeRequest returns data directly
         leadId: lead.id,
@@ -64,7 +64,7 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
         phoneNumber: lead.mobile,
         startTime: res.startTime
       };
-      
+
       logActiveCall(sessionData);
       toast.success('Interaction sequence initiated');
       setSelectedLead({ lead });
@@ -287,12 +287,12 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
         </div>
       </div>
 
-      {/* Modals */}
+
       <CallOutcomeModal isOpen={!!selectedLead} onClose={() => setSelectedLead(null)} lead={selectedLead?.lead || selectedLead} theme={theme} onSubmit={handleLogInteraction} />
-      <ManualTaskModal 
-        show={showTaskModal} 
-        onClose={() => setShowTaskModal(false)} 
-        onTaskCreated={() => { setShowTaskModal(false); loadTasks(); }} 
+      <ManualTaskModal
+        show={showTaskModal}
+        onClose={() => setShowTaskModal(false)}
+        onTaskCreated={() => { setShowTaskModal(false); loadTasks(); }}
         leads={leads}
       />
 

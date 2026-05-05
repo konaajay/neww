@@ -37,16 +37,25 @@ const FiltersBar = ({
 
   const isRole = useCallback((userRole, targetRole) => {
     if (!userRole) return false;
-    const cleanRole = userRole.replace('ROLE_', '').toUpperCase();
-    const target = targetRole.toUpperCase();
+    const cleanRole = userRole.replace('ROLE_', '').toUpperCase().replace(/\s/g, '').replace('_', '');
+    const target = targetRole.toUpperCase().replace(/\s/g, '').replace('_', '');
     
-    if (target === 'TEAM_LEADER') {
-      return cleanRole === 'TEAM_LEADER' || cleanRole === 'TL' || cleanRole === 'TEAM_LEAD' || cleanRole === 'TEAMLEAD' || cleanRole === 'TEAMLEADER';
+    // Comprehensive role mapping
+    const tlRoles = ['TEAMLEADER', 'TEAMLEAD', 'TL'];
+    const mgrRoles = ['MANAGER', 'MGR'];
+    const assocRoles = ['ASSOCIATE', 'USER', 'AGENT'];
+
+    if (target === 'TEAMLEADER') {
+      return tlRoles.some(r => cleanRole.includes(r));
     }
     if (target === 'MANAGER') {
-      return cleanRole === 'MANAGER' || cleanRole === 'MGR';
+      return mgrRoles.some(r => cleanRole.includes(r));
     }
-    return cleanRole === target;
+    if (target === 'ASSOCIATE') {
+      return assocRoles.some(r => cleanRole.includes(r));
+    }
+    
+    return cleanRole === target || cleanRole.includes(target);
   }, []);
 
   const getAllByRole = useCallback((nodes, targetRole) => {
@@ -71,24 +80,33 @@ const FiltersBar = ({
 
   const tls = useMemo(() => {
     if (role === 'MANAGER') {
-      return (teamLeaders || []).filter(u => (isRole(u.role, 'TEAM_LEADER') || isRole(u.role, 'MANAGER')) && u.active !== false);
+      return (teamLeaders || []).filter(u => isRole(u.role, 'TEAM_LEADER') && u.active !== false);
     }
-    if (role === 'ADMIN' && filters.managerId) {
-      const mgr = findInTree(teamTree, filters.managerId);
-      return mgr?.subordinates?.filter(u => isRole(u.role, 'TEAM_LEADER') && u.active !== false) || [];
+    if (role === 'ADMIN') {
+      if (filters.managerId) {
+        const mgr = findInTree(teamTree, filters.managerId);
+        return mgr?.subordinates?.filter(u => isRole(u.role, 'TEAM_LEADER') && u.active !== false) || [];
+      }
+      // If no manager selected, show ALL team leaders from the tree
+      return getAllByRole(teamTree, 'TEAM_LEADER');
     }
     return [];
-  }, [role, teamLeaders, teamTree, filters.managerId, findInTree, isRole]);
+  }, [role, teamLeaders, teamTree, filters.managerId, findInTree, isRole, getAllByRole]);
 
   const associates = useMemo(() => {
     if (role === 'TEAM_LEADER') return (subordinates || []).filter(u => u.active !== false);
-    if ((role === 'ADMIN' || role === 'MANAGER') && filters.teamId) {
-      // For Admin/Manager, look inside the selected TL's subordinates
-      const tl = findInTree(teamTree || teamLeaders, filters.teamId);
-      return tl?.subordinates?.filter(u => isRole(u.role, 'ASSOCIATE') && u.active !== false) || [];
+    if (role === 'ADMIN' || role === 'MANAGER') {
+      if (filters.teamId) {
+        const tl = findInTree(teamTree || teamLeaders, filters.teamId);
+        return tl?.subordinates?.filter(u => isRole(u.role, 'ASSOCIATE') && u.active !== false) || [];
+      }
+      if (role === 'ADMIN' && !filters.managerId) {
+        // If Admin and no TL/Manager selected, show ALL associates
+        return getAllByRole(teamTree, 'ASSOCIATE');
+      }
     }
     return [];
-  }, [role, subordinates, teamTree, teamLeaders, filters.teamId, findInTree, isRole]);
+  }, [role, subordinates, teamTree, teamLeaders, filters.teamId, filters.managerId, findInTree, isRole, getAllByRole]);
 
   // 3. HANDLERS
   const handleFilterChange = (key, value) => {
@@ -111,7 +129,7 @@ const FiltersBar = ({
       to: new Date().toISOString().split('T')[0],
       userId: null,
       managerId: null,
-      teamId: (role === 'MANAGER' || role === 'TEAM_LEADER') ? currentUserId : null
+      teamId: null
     });
   };
 
@@ -151,20 +169,18 @@ const FiltersBar = ({
                       value={filters.teamId || ""}
                       onChange={(e) => handleTLChange(e.target.value || null)}
                       style={{ minWidth: '120px' }}
-                      disabled={!filters.managerId}
                     >
                       <option value="">TEAM LEADER</option>
                       {tls?.map(u => <option key={u.id} value={u.id}>{u.name.toUpperCase()}</option>)}
                     </select>
                   </div>
-
+ 
                   <div className="filter-select-wrapper">
                     <select
                       className="filter-select"
                       value={filters.userId || ""}
                       onChange={(e) => handleFilterChange('userId', e.target.value || null)}
                       style={{ minWidth: '120px' }}
-                      disabled={!filters.teamId}
                     >
                       <option value="">ASSOCIATE</option>
                       {associates?.map(u => <option key={u.id} value={u.id}>{u.name.toUpperCase()}</option>)}
@@ -195,6 +211,30 @@ const FiltersBar = ({
                     >
                       <option value="">ASSOCIATE</option>
                       {associates?.map(u => <option key={u.id} value={u.id}>{u.name.toUpperCase()}</option>)}
+                    </select>
+                  </div>
+                </>
+              ) : role === 'TEAM_LEADER' || role === 'TL' ? (
+                <>
+                  <div className="filter-select-wrapper">
+                    <select
+                      className="filter-select"
+                      value={filters.teamId || ""}
+                      disabled
+                      style={{ minWidth: '120px', opacity: 0.8 }}
+                    >
+                      <option value={currentUserId}>{(findInTree(teamTree, currentUserId)?.name || "TEAM LEADER").toUpperCase()}</option>
+                    </select>
+                  </div>
+                  <div className="filter-select-wrapper">
+                    <select
+                      className="filter-select"
+                      value={filters.userId || ""}
+                      onChange={(e) => handleFilterChange('userId', e.target.value || null)}
+                      style={{ minWidth: '120px' }}
+                    >
+                      <option value="">ALL ASSOCIATES</option>
+                      {associates?.map(a => <option key={a.id} value={a.id}>{a.name.toUpperCase()}</option>)}
                     </select>
                   </div>
                 </>

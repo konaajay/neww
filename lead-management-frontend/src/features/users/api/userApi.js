@@ -20,7 +20,7 @@ const userApi = {
   
   fetchSubordinates: (role) => {
     if (role === 'TEAM_LEADER') return safeRequest(api.get('/tl/subordinates'));
-    if (role === 'MANAGER') return safeRequest(api.get('/manager/subordinates'));
+    if (role === 'MANAGER') return safeRequest(api.get('/manager/team-leaders'));
     return safeRequest(api.get('/admin/users')); 
   },
   
