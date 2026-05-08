@@ -94,7 +94,13 @@ const FiltersBar = ({
   }, [role, teamLeaders, teamTree, filters.managerId, findInTree, isRole, getAllByRole]);
 
   const associates = useMemo(() => {
-    if (role === 'TEAM_LEADER') return (subordinates || []).filter(u => u.active !== false);
+    if (role === 'TEAM_LEADER' || role === 'TL') {
+      return (subordinates || []).filter(u => 
+        isRole(u.role, 'ASSOCIATE') && 
+        u.active !== false && 
+        u.id !== currentUserId
+      );
+    }
     if (role === 'ADMIN' || role === 'MANAGER') {
       if (filters.teamId) {
         const tl = findInTree(teamTree || teamLeaders, filters.teamId);
@@ -124,9 +130,20 @@ const FiltersBar = ({
   };
 
   const handleReset = () => {
+    const d = new Date();
+    const firstDay = new Date(d.getFullYear(), d.getMonth(), 1);
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    
+    const formatDate = (date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
     onChange({
-      from: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
-      to: new Date().toISOString().split('T')[0],
+      from: formatDate(firstDay),
+      to: formatDate(lastDay),
       userId: null,
       managerId: null,
       teamId: null
@@ -139,7 +156,7 @@ const FiltersBar = ({
 
   return (
     <div className={`premium-card p-4 animate-fade-in ${isDarkMode ? 'bg-surface bg-opacity-40 backdrop-blur' : 'bg-white shadow-sm'} rounded-4 mb-3`}>
-      <div className="d-flex align-items-center justify-content-between gap-3 overflow-x-auto no-scrollbar">
+      <div className="d-flex align-items-center justify-content-between gap-2 overflow-auto no-scrollbar" style={{ whiteSpace: 'nowrap' }}>
         {/* Left Section: Title + Hierarchy Dropdowns */}
         <div className="d-flex align-items-center gap-3">
           <div className="d-flex align-items-center gap-2 pe-3 border-end border-white border-opacity-10">
@@ -156,7 +173,7 @@ const FiltersBar = ({
                       className="filter-select"
                       value={filters.managerId || ""}
                       onChange={(e) => handleFilterChange('managerId', e.target.value || null)}
-                      style={{ minWidth: '120px' }}
+                      style={{ minWidth: '100px' }}
                     >
                       <option value="">MANAGER</option>
                       {managers?.map(u => <option key={u.id} value={u.id}>{u.name.toUpperCase()}</option>)}
@@ -168,7 +185,7 @@ const FiltersBar = ({
                       className="filter-select"
                       value={filters.teamId || ""}
                       onChange={(e) => handleTLChange(e.target.value || null)}
-                      style={{ minWidth: '120px' }}
+                      style={{ minWidth: '100px' }}
                     >
                       <option value="">TEAM LEADER</option>
                       {tls?.map(u => <option key={u.id} value={u.id}>{u.name.toUpperCase()}</option>)}
@@ -180,7 +197,7 @@ const FiltersBar = ({
                       className="filter-select"
                       value={filters.userId || ""}
                       onChange={(e) => handleFilterChange('userId', e.target.value || null)}
-                      style={{ minWidth: '120px' }}
+                      style={{ minWidth: '100px' }}
                     >
                       <option value="">ASSOCIATE</option>
                       {associates?.map(u => <option key={u.id} value={u.id}>{u.name.toUpperCase()}</option>)}
@@ -194,7 +211,7 @@ const FiltersBar = ({
                       className="filter-select"
                       value={filters.teamId || ""}
                       onChange={(e) => handleTLChange(e.target.value || null)}
-                      style={{ minWidth: '120px' }}
+                      style={{ minWidth: '100px' }}
                     >
                       <option value="">TEAM LEADER</option>
                       {tls?.map(u => <option key={u.id} value={u.id}>{u.name.toUpperCase()}</option>)}
@@ -206,7 +223,7 @@ const FiltersBar = ({
                       className="filter-select"
                       value={filters.userId || ""}
                       onChange={(e) => handleFilterChange('userId', e.target.value || null)}
-                      style={{ minWidth: '120px' }}
+                      style={{ minWidth: '100px' }}
                       disabled={!filters.teamId}
                     >
                       <option value="">ASSOCIATE</option>
@@ -231,7 +248,7 @@ const FiltersBar = ({
                       className="filter-select"
                       value={filters.userId || ""}
                       onChange={(e) => handleFilterChange('userId', e.target.value || null)}
-                      style={{ minWidth: '120px' }}
+                      style={{ minWidth: '100px' }}
                     >
                       <option value="">ALL ASSOCIATES</option>
                       {associates?.map(a => <option key={a.id} value={a.id}>{a.name.toUpperCase()}</option>)}
@@ -264,10 +281,10 @@ const FiltersBar = ({
             >
               <CalendarDays size={12} className="text-primary" />
               <div className="position-relative">
-                <input
+               <input
                   type="date"
                   className="bg-transparent border-0 text-main fw-bold cursor-pointer"
-                  style={{ fontSize: '10px', outline: 'none', width: '100px', background: 'transparent', color: 'inherit' }}
+                  style={{ fontSize: '9px', outline: 'none', width: '85px', background: 'transparent', color: 'inherit' }}
                   value={filters.from || ""}
                   onClick={(e) => { e.stopPropagation(); if (e.target.showPicker) e.target.showPicker(); }}
                   onChange={(e) => handleFilterChange('from', e.target.value)}
@@ -286,7 +303,7 @@ const FiltersBar = ({
                 <input
                   type="date"
                   className="bg-transparent border-0 text-main fw-bold cursor-pointer"
-                  style={{ fontSize: '10px', outline: 'none', width: '100px', background: 'transparent', color: 'inherit' }}
+                  style={{ fontSize: '9px', outline: 'none', width: '85px', background: 'transparent', color: 'inherit' }}
                   value={filters.to || ""}
                   onClick={(e) => { e.stopPropagation(); if (e.target.showPicker) e.target.showPicker(); }}
                   onChange={(e) => handleFilterChange('to', e.target.value)}

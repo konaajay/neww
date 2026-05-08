@@ -3,7 +3,14 @@ import { ChevronDown, ChevronRight, BarChart2, Users, User, Shield, Briefcase } 
 
 const TeamTreeItem = ({ item, level = 0, onFocus, currentFocusId }) => {
   const [expanded, setExpanded] = useState(level < 2); // Show first two levels by default
-  const hasSub = item.subordinates && item.subordinates.length > 0;
+  
+  // Deduplicate subordinates by ID to prevent backend Cartesian join issues from causing duplicate rows
+  const uniqueSubordinates = React.useMemo(() => {
+    if (!item.subordinates) return [];
+    return Array.from(new Map(item.subordinates.map(sub => [sub.id, sub])).values());
+  }, [item.subordinates]);
+
+  const hasSub = uniqueSubordinates.length > 0;
   const isFocused = currentFocusId === item.id;
 
   const getRoleIcon = (role) => {
@@ -72,7 +79,7 @@ const TeamTreeItem = ({ item, level = 0, onFocus, currentFocusId }) => {
 
       {expanded && hasSub && (
         <div className="team-tree-children animate-fade-in">
-          {item.subordinates.map(sub => (
+          {uniqueSubordinates.map(sub => (
             <TeamTreeItem 
               key={sub.id} 
               item={sub} 
@@ -88,6 +95,49 @@ const TeamTreeItem = ({ item, level = 0, onFocus, currentFocusId }) => {
 };
 
 const TeamTree = ({ data, onFocus, currentFocusId, onAddUser }) => {
+  // Helper to clean the tree by removing nodes that appear as subordinates of other nodes
+  // This handles the case where a manager has an associate as a direct subordinate 
+  // but they also report to a team leader who is under that manager.
+  const processedData = React.useMemo(() => {
+    if (!data || !Array.isArray(data)) return [];
+
+    // First, deep clone to avoid mutating original data
+    const clone = JSON.parse(JSON.stringify(data));
+
+    const getDescendantIds = (node, idSet) => {
+      if (!node.subordinates) return;
+      node.subordinates.forEach(sub => {
+        idSet.add(sub.id);
+        getDescendantIds(sub, idSet);
+      });
+    };
+
+    const cleanNode = (node) => {
+      if (!node.subordinates || node.subordinates.length === 0) return node;
+
+      // Collect all IDs that are descendants of any of this node's children
+      const indirectDescendantIds = new Set();
+      node.subordinates.forEach(child => {
+        getDescendantIds(child, indirectDescendantIds);
+      });
+
+      // Filter direct subordinates to remove those that are already deeper in the tree
+      node.subordinates = node.subordinates.filter(sub => !indirectDescendantIds.has(sub.id));
+
+      // Recursively clean the remaining subordinates
+      node.subordinates.forEach(cleanNode);
+      return node;
+    };
+
+    // Process roots
+    // Also deduplicate roots by ID
+    const rootMap = new Map();
+    clone.forEach(root => rootMap.set(root.id, root));
+    const uniqueRoots = Array.from(rootMap.values());
+
+    return uniqueRoots.map(cleanNode);
+  }, [data]);
+
   return (
     <div className="premium-card overflow-hidden h-100">
       <div className="card-header bg-transparent p-4 border-0 border-bottom border-white border-opacity-5">
@@ -107,9 +157,9 @@ const TeamTree = ({ data, onFocus, currentFocusId, onAddUser }) => {
       </div>
       
       <div className="card-body p-3 overflow-auto custom-scrollbar" style={{ maxHeight: '600px' }}>
-        {data && Array.isArray(data) ? (
+        {processedData.length > 0 ? (
           <div className="d-flex flex-column">
-            {data.map(root => (
+            {processedData.map(root => (
               <TeamTreeItem 
                 key={root.id}
                 item={root} 
@@ -120,8 +170,14 @@ const TeamTree = ({ data, onFocus, currentFocusId, onAddUser }) => {
           </div>
         ) : (
           <div className="text-center py-5 d-flex flex-column align-items-center">
-            <div className="spinner-border spinner-border-sm text-primary mb-3"></div>
-            <p className="text-muted small fw-bold text-uppercase" style={{ fontSize: '10px' }}>Mapping Structure...</p>
+            {data ? (
+               <p className="text-muted small fw-bold text-uppercase" style={{ fontSize: '10px' }}>No hierarchy data available</p>
+            ) : (
+              <>
+                <div className="spinner-border spinner-border-sm text-primary mb-3"></div>
+                <p className="text-muted small fw-bold text-uppercase" style={{ fontSize: '10px' }}>Mapping Structure...</p>
+              </>
+            )}
           </div>
         )}
         

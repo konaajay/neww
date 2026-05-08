@@ -15,7 +15,7 @@ const BulkIngestion = ({ onSuccess, assignees = [] }) => {
     const isAssociate = currentUser?.role === 'ASSOCIATE';
 
     const [file, setFile] = useState(null);
-    const [assignedToIds, setAssignedToIds] = useState([]);
+    const [assignedToIds, setAssignedToIds] = useState(isAssociate && currentUser?.id ? [currentUser.id] : []);
     const [uploading, setUploading] = useState(false);
     const [dragActive, setDragActive] = useState(false);
     const [uploadResult, setUploadResult] = useState(null);
@@ -72,7 +72,7 @@ const BulkIngestion = ({ onSuccess, assignees = [] }) => {
     const handleReset = () => {
         setFile(null);
         setUploadResult(null);
-        setAssignedToIds([]);
+        setAssignedToIds(isAssociate && currentUser?.id ? [currentUser.id] : []);
         setApiError(null);
     };
 
@@ -250,7 +250,10 @@ const BulkIngestion = ({ onSuccess, assignees = [] }) => {
                                                     'border-primary bg-primary bg-opacity-10 shadow-glow-sm' :
                                                     isDarkMode ? 'border-white border-opacity-5 bg-white bg-opacity-5 hover:bg-opacity-10' : 'border-dark border-opacity-5 bg-white hover:bg-light'
                                                     }`}
-                                                onClick={() => setAssignedToIds(prev => prev.includes(user.id) ? prev.filter(i => i !== user.id) : [...prev, user.id])}
+                                                onClick={() => {
+                                                    if (isAssociate) return; // Lock for associates
+                                                    setAssignedToIds(prev => prev.includes(user.id) ? prev.filter(i => i !== user.id) : [...prev, user.id]);
+                                                }}
                                             >
                                                 <div className={`p-2 rounded-circle transition-all ${assignedToIds.includes(user.id) ? 'bg-primary text-white' : 'bg-primary bg-opacity-10 text-primary'}`}>
                                                     <User size={12} />

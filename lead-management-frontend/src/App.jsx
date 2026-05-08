@@ -25,13 +25,16 @@ import AssociateDashboard from './pages/AssociateDashboard';
 import StudentFeePage from './pages/StudentFeePage';
 import LeadStatusUpdatePage from './pages/LeadStatusUpdatePage';
 import InvoicePage from './pages/InvoicePage';
+import CourseManagementPage from './pages/CourseManagementPage';
+import PaymentInstructionPage from './pages/PaymentInstructionPage';
+import PaymentStatusPage from './pages/PaymentStatusPage';
+import NotificationManager from './components/NotificationManager';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
 
   if (loading) return null;
   if (!user) {
-    console.log('[ProtectedRoute] No user found, redirecting to login');
     return <Navigate to="/login" replace />;
   }
   
@@ -49,7 +52,6 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     });
     
     if (!hasAccess) {
-      console.warn(`[ProtectedRoute] Access denied. User Role: "${userRole}", Allowed: [${allowedRoles.join(', ')}]`);
       return <Navigate to="/login" replace />;
     }
   }
@@ -79,6 +81,8 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/payment-instruction/:orderId" element={<PaymentInstructionPage />} />
+            <Route path="/payment-status/:orderId" element={<PaymentStatusPage />} />
             <Route path="/pay/:sessionId" element={<PaymentPortal />} />
             
             <Route 
@@ -157,6 +161,7 @@ function App() {
             />
           </Routes>
         </Router>
+        <NotificationManager />
         <ToastContainer 
           position="top-right"
           autoClose={3000}

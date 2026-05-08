@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { UserPlus } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-
+import api from '../api/api';
+ 
 const LeadForm = ({ onSubmit, title = "Add New Lead", initialData = {} }) => {
   const { isDarkMode } = useTheme();
   const [formData, setFormData] = useState({
@@ -9,7 +10,9 @@ const LeadForm = ({ onSubmit, title = "Add New Lead", initialData = {} }) => {
     email: initialData.email || '',
     mobile: initialData.mobile || '',
     college: initialData.college || '',
+    courseId: initialData.course?.id || '',
   });
+ 
 
   // Effect to sync with initialData if it changes
   React.useEffect(() => {
@@ -19,7 +22,7 @@ const LeadForm = ({ onSubmit, title = "Add New Lead", initialData = {} }) => {
         email: initialData.email || '',
         mobile: initialData.mobile || '',
         college: initialData.college || '',
-
+        courseId: initialData.course?.id || '',
       });
     }
   }, [initialData]);
@@ -44,7 +47,7 @@ const LeadForm = ({ onSubmit, title = "Add New Lead", initialData = {} }) => {
     try {
       const success = await onSubmit(formData);
       if (success) {
-        setFormData({ name: '', email: '', mobile: '', college: '' });
+        setFormData({ name: '', email: '', mobile: '', college: '', courseId: '' });
       }
     } finally {
       setIsSubmitting(false);
@@ -120,7 +123,7 @@ const LeadForm = ({ onSubmit, title = "Add New Lead", initialData = {} }) => {
               <label className={`${isDarkMode ? 'text-muted' : 'text-slate-500'} fw-bold small text-uppercase tracking-widest opacity-50 ps-3`} style={{ fontSize: '10px', transform: 'scale(0.85) translateY(-0.5rem) translateX(0.15rem)' }}>College</label>
             </div>
           </div>
-          <div className="col-12">
+          <div className="col-12 col-md-6">
             <div className="form-floating group">
               <input
                 name="email"

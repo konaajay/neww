@@ -19,8 +19,6 @@ const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) =
 
     useEffect(() => {
         if (isOpen) {
-            console.log(">>> [TERMINAL] Initializing Ingestion for Role:", user?.role);
-            console.log(">>> [TERMINAL] Current Mode State:", mode);
             setMode(null); // Force choice hub on every open
         } else {
             setMode(null);
@@ -110,10 +108,10 @@ const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) =
                     <div className="mx-auto" style={{ maxWidth: '800px' }}>
                         <LeadForm
                             onSubmit={async (data) => {
-                                // AUTO-ASSIGN TO SELF: Default assignedToId to current user if not specified
+                                // AUTO-ASSIGN TO SELF: Force assignedToId to current user if they are an Associate
                                 const finalData = { 
                                     ...data, 
-                                    assignedToId: data.assignedToId || user?.id 
+                                    assignedToId: user?.role === 'ASSOCIATE' ? user?.id : (data.assignedToId || null)
                                 };
                                 const success = await onAddLead(finalData);
                                 if (success) handleClose();
@@ -200,7 +198,7 @@ const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) =
                 position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
                 backgroundColor: isDarkMode ? '#020617' : 'rgba(248, 250, 252, 0.95)',
                 backgroundImage: isDarkMode ? 'radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.05) 0%, transparent 100%)' : 'none',
-                zIndex: 9999999,
+                zIndex: 1500,
                 opacity: 1
             }}
             onClick={(e) => {
@@ -212,7 +210,7 @@ const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) =
                 style={{
                     maxWidth: !mode ? '600px' : '650px',
                     pointerEvents: 'all',
-                    zIndex: 10000000
+                    zIndex: 1600
                 }}
                 onClick={e => e.stopPropagation()}
             >

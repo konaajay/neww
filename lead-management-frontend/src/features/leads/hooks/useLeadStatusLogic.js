@@ -4,11 +4,19 @@ export const useLeadStatusLogic = (initialTotal = '', initialPaid = 0) => {
   const [totalAmount, setTotalAmount] = useState(initialTotal);
   const [totalPaidSoFar, setTotalPaidSoFar] = useState(initialPaid);
   const [initialAmount, setInitialAmount] = useState('');
+  const [discount, setDiscount] = useState(0);
   const [installments, setInstallments] = useState([]);
   const [paymentType, setPaymentType] = useState('FULL');
 
+  const discountedTotal = useMemo(() => {
+    return Number(totalAmount || 0) - Number(discount || 0);
+  }, [totalAmount, discount]);
+
   const addInstallment = useCallback(() => {
-    setInstallments(prev => [...prev, { amount: '', dueDate: '' }]);
+    setInstallments(prev => {
+      if (prev.length >= 5) return prev;
+      return [...prev, { amount: '', dueDate: '' }];
+    });
     setPaymentType('EMI');
   }, []);
 
@@ -33,16 +41,23 @@ export const useLeadStatusLogic = (initialTotal = '', initialPaid = 0) => {
   }, [initialAmount, installments]);
 
   const balanceRemaining = useMemo(() => {
-    return Number(totalAmount || 0) - sumOfParts;
-  }, [totalAmount, sumOfParts]);
+    if (paymentType === 'FULL') {
+      return Number(discountedTotal) - Number(initialAmount || 0);
+    }
+    return Number(discountedTotal || 0) - sumOfParts;
+  }, [paymentType, discountedTotal, initialAmount, sumOfParts]);
 
   const isMatch = useMemo(() => {
-    if (paymentType === 'FULL') return true;
-    return Math.abs(balanceRemaining) < 1;
-  }, [paymentType, balanceRemaining]);
+    if (paymentType === 'FULL') {
+      return Number(initialAmount || 0) === Number(discountedTotal || 0);
+    }
+    return Math.abs(balanceRemaining) < 0.01;
+  }, [paymentType, initialAmount, discountedTotal, balanceRemaining]);
 
   return {
     totalAmount, setTotalAmount,
+    discount, setDiscount,
+    discountedTotal,
     totalPaidSoFar, setTotalPaidSoFar,
     initialAmount, setInitialAmount,
     installments, setInstallments,

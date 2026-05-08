@@ -99,27 +99,41 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
         const due = new Date(t.dueDate);
         const now = new Date();
         const diffMs = due - now;
+        const diffMins = Math.floor(diffMs / (1000 * 60));
         const diffHours = diffMs / (1000 * 60 * 60);
         const diffDays = diffMs / (1000 * 60 * 60 * 24);
+        const exactTime = due.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-        if (diffHours < 0) {
+        if (diffMs < 0) {
           priority = 'High';
           priorityColor = 'danger';
-          timeString = Math.abs(diffHours) < 24 ? `Due ${Math.abs(Math.round(diffHours))}h ago` : `Due ${Math.abs(Math.round(diffDays))}d ago`;
-        } else if (diffDays <= 1) {
+          const absMins = Math.abs(diffMins);
+          if (absMins < 60) {
+            timeString = `Due ${absMins}m ago (${exactTime})`;
+          } else {
+            timeString = Math.abs(diffHours) < 24 
+              ? `Due ${Math.abs(Math.round(diffHours))}h ago (${exactTime})` 
+              : `Due ${Math.abs(Math.round(diffDays))}d ago (${due.toLocaleDateString()})`;
+          }
+        } else if (diffMins < 60) {
           priority = 'Medium';
           priorityColor = 'warning';
-          timeString = `Due in ${Math.round(diffHours)}h`;
+          timeString = `Due in ${Math.round(diffMins)}m (${exactTime})`;
+        } else if (diffHours < 24) {
+          priority = 'Medium';
+          priorityColor = 'warning';
+          timeString = `Due in ${Math.round(diffHours)}h (${exactTime})`;
         } else {
           priority = 'Low';
           priorityColor = 'success';
-          timeString = `Due in ${Math.round(diffDays)}d`;
+          timeString = `Due in ${Math.round(diffDays)}d (${due.toLocaleDateString()})`;
         }
       }
 
       return {
         ...t,
         name: t.lead?.name || 'System Task',
+        title: t.title || (t.lead?.status === 'CONVERTED' ? 'EMI CALL-UP' : 'Follow-up'),
         priority,
         priorityColor,
         timeString,
@@ -177,27 +191,19 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
     }
   };
 
-  // 3. DERIVED DATA
-
-
   return (
     <div className="d-flex flex-column gap-3 animate-fade-in pb-5">
       {/* Analytics Summary */}
       <div className="row g-3 mb-2">
         {[
-          { label: "Pending (Today)", icon: Calendar, color: "primary", value: filteredTasks.filter(t => t.status !== 'COMPLETED' && isToday(t.dueDate)).length },
-          { label: "Overdue Tasks", icon: AlertCircle, color: "danger", value: filteredTasks.filter(t => t.isOverdue && t.status !== 'COMPLETED').length },
-          { label: "Completed Today", icon: CheckSquare, color: "success", value: filteredTasks.filter(t => t.status?.toUpperCase() === 'COMPLETED' && isToday(t.updatedAt)).length }
+          { label: "Pending (Today)", color: "primary", value: processedTasks.filter(t => t.status !== 'COMPLETED' && isToday(t.dueDate) && !t.isOverdue).length },
+          { label: "Overdue Tasks", color: "danger", value: processedTasks.filter(t => t.isOverdue && t.status !== 'COMPLETED').length },
+          { label: "Completed Today", color: "success", value: processedTasks.filter(t => t.status?.toUpperCase() === 'COMPLETED' && isToday(t.updatedAt)).length }
         ].map((stat, i) => (
           <div key={i} className="col-12 col-md-4">
-            <div className="premium-card p-4 shadow-lg border-0 d-flex align-items-center gap-4" style={{ background: 'rgba(255, 255, 255, 0.03)', borderRadius: '24px' }}>
-              <div className={`p-3 bg-${stat.color} bg-opacity-10 rounded-4 text-${stat.color} border border-${stat.color} border-opacity-20 shadow-glow-sm`}>
-                <stat.icon size={22} />
-              </div>
-              <div>
-                <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>{stat.label}</div>
-                <h2 className="fw-black text-main mb-0 tabular-nums">{stat.value}</h2>
-              </div>
+            <div className="premium-card p-4 shadow-lg border-0 d-flex flex-column gap-1" style={{ background: 'rgba(255, 255, 255, 0.03)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <h2 className="fw-black text-dark mb-0 tabular-nums" style={{ fontSize: '38px', lineHeight: 1 }}>{stat.value}</h2>
+              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '10px' }}>{stat.label}</div>
             </div>
           </div>
         ))}
@@ -210,7 +216,7 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
             <span className="input-group-text border-0 bg-transparent ps-3"><Search size={16} className="text-muted" /></span>
             <input
               type="text"
-              className="form-control border-0 bg-transparent text-main py-2.5 fw-bold"
+              className="form-control border-0 bg-transparent text-dark py-2.5 fw-bold"
               placeholder="Search tasks..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -234,8 +240,10 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
           <table className="table ui-table mb-0 align-middle">
             <thead className="bg-surface bg-opacity-30">
               <tr className="border-bottom border-white border-opacity-5">
-                <th className="ps-4 text-muted small fw-black tracking-widest text-uppercase" style={{ fontSize: '9px', width: '60px' }}>S/NO</th>
+                <th className="text-muted small fw-black tracking-widest text-uppercase" style={{ fontSize: '9px', width: '60px' }}>S/NO</th>
                 <th className="text-muted small fw-black tracking-widest text-uppercase" style={{ fontSize: '9px' }}>NAME</th>
+                <th className="text-muted small fw-black tracking-widest text-uppercase" style={{ fontSize: '9px' }}>LEAD STATUS</th>
+                <th className="text-muted small fw-black tracking-widest text-uppercase" style={{ fontSize: '9px' }}>TASK</th>
                 <th className="text-center text-muted small fw-black tracking-widest text-uppercase" style={{ fontSize: '9px', width: '60px' }}>CALL</th>
                 <th className="text-muted small fw-black tracking-widest text-uppercase" style={{ fontSize: '9px' }}>DUE DATE</th>
                 <th className="text-muted small fw-black tracking-widest text-uppercase" style={{ fontSize: '9px' }}>CREATED BY</th>
@@ -245,9 +253,9 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="6" className="text-center py-5"><RefreshCw size={24} className="text-primary animate-spin mb-2" /></td></tr>
+                <tr><td colSpan="9" className="text-center py-5"><RefreshCw size={24} className="text-primary animate-spin mb-2" /></td></tr>
               ) : filteredTasks.length === 0 ? (
-                <tr><td colSpan="6" className="text-center py-5 opacity-50"><CheckSquare size={32} className="mb-2" /></td></tr>
+                <tr><td colSpan="9" className="text-center py-5 opacity-50"><CheckSquare size={32} className="mb-2" /></td></tr>
               ) : (
                 filteredTasks.map((task, idx) => (
                   <tr key={task.id} className="border-bottom border-light hover-bg-light-subtle cursor-pointer" onClick={() => setSelectedLead(task)}>
@@ -257,6 +265,14 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
                         <span className="fw-bold text-main small">{task.name}</span>
                         <span className="text-muted extra-small opacity-50">{task.lead?.email || 'SYSTEM'}</span>
                       </div>
+                    </td>
+                    <td>
+                      <span className={`badge bg-${task.lead?.status === 'CONVERTED' ? 'success' : 'primary'} bg-opacity-5 text-dark border border-${task.lead?.status === 'CONVERTED' ? 'success' : 'primary'} border-opacity-10 fw-black text-uppercase`} style={{ fontSize: '8px', letterSpacing: '0.5px' }}>
+                        {task.lead?.status?.toUpperCase() === 'CONVERTED' ? 'EMI' : (task.lead?.status || 'N/A')}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="text-dark fw-bold small">{task.title || 'Follow-up'}</span>
                     </td>
                     <td className="text-center">
                       <button className="p-1 border-0 bg-transparent text-success" onClick={(e) => { e.stopPropagation(); handleStartCall(task.lead); }}>

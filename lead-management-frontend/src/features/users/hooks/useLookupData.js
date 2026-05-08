@@ -80,8 +80,11 @@ export const useLookupData = (role) => {
     queryKey: ['offices', role],
     queryFn: () => adminService.fetchOffices(),
     select: (res) => {
+      console.log('LookupData: Offices raw response:', res);
       const data = res?.data || res;
-      return Array.isArray(data) ? data : (data?.data || []);
+      const result = Array.isArray(data) ? data : (data?.data || []);
+      console.log('LookupData: Offices processed result:', result);
+      return result;
     },
     staleTime: 5 * 60 * 1000
   });
@@ -91,8 +94,11 @@ export const useLookupData = (role) => {
     queryKey: ['shifts', role],
     queryFn: () => adminService.fetchAttendanceShifts(),
     select: (res) => {
+      console.log('LookupData: Shifts raw response:', res);
       const data = res?.data || res;
-      return Array.isArray(data) ? data : (data?.data || []);
+      const result = Array.isArray(data) ? data : (data?.data || []);
+      console.log('LookupData: Shifts processed result:', result);
+      return result;
     },
     staleTime: 5 * 60 * 1000
   });

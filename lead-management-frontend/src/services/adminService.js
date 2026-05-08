@@ -71,7 +71,10 @@ const adminService = {
 
   // Auth/Security
   generateResetOtp: (userId) => safeRequest(api.post(`/admin/users/${userId}/reset-password-otp`)),
-  verifyResetOtp: (userId, otp, newPassword) => safeRequest(api.post(`/admin/users/${userId}/verify-reset-otp`, { otp, newPassword }))
+  verifyResetOtp: (userId, otp, newPassword) => safeRequest(api.post(`/admin/users/${userId}/verify-reset-otp`, { otp, newPassword })),
+  
+  // Course Management
+  fetchCourses: () => safeRequest(api.get('/leads/program-protocols'))
 };
 
 export default adminService;

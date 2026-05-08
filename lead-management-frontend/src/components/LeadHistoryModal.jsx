@@ -150,12 +150,14 @@ const LeadHistoryModal = ({ isOpen, onClose, lead, onEdit, onRecordCallOutcome, 
                       </span>
                     </div>
 
-                    <div className="p-2 rounded-2 bg-light border border-light d-flex align-items-center gap-3">
-                        <div className="flex-grow-1 min-w-0">
-                          <p className="text-muted mb-0 fw-bold text-uppercase" style={{ fontSize: '7px' }}>{log.fieldName || 'Update'}</p>
-                          <p className="text-dark mb-0 text-truncate fw-medium" style={{ fontSize: '12px' }}>
-                             {log.oldValue || '—'} <ArrowRight size={10} className="mx-1 text-muted" /> <span className="text-primary fw-bold">{log.newValue}</span>
-                          </p>
+                    <div className="p-3 rounded-2 bg-light border border-light">
+                        <div className="min-w-0">
+                          <p className="text-muted mb-1 fw-bold text-uppercase" style={{ fontSize: '7px', letterSpacing: '0.5px' }}>{log.fieldName || 'Update'}</p>
+                          <div className="text-dark fw-medium" style={{ fontSize: '12px', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
+                             <span className="text-muted">{log.oldValue || '—'}</span> 
+                             <ArrowRight size={10} className="mx-2 text-muted" /> 
+                             <span className="text-primary fw-bold">{log.newValue}</span>
+                          </div>
                         </div>
                     </div>
                   </div>

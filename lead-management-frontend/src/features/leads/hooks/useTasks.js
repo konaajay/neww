@@ -29,6 +29,7 @@ export const useTasks = (filters = {}) => {
     mutationFn: ({ taskId, status }) => taskService.updateTaskStatus(taskId, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
     onError: () => toast.error('Failed to update task status')
   });

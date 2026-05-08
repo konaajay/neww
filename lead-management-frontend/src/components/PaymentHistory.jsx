@@ -214,36 +214,21 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
       {/* Financial Analytics Workspace */}
       <div className="row g-3 mb-4 animate-fade-in">
         <div className="col-12 col-md-4">
-          <div className="premium-card p-4 border-0 shadow-lg h-100 d-flex align-items-center gap-4 group hover-active-card overflow-hidden">
-             <div className="p-3 bg-success bg-opacity-10 rounded-4 text-success border border-success border-opacity-20 shadow-glow-sm">
-                <CheckCircle size={22} />
-             </div>
-             <div>
-                <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Collected</div>
-                <h3 className="fw-black text-main mb-0">₹{paymentStats.totalRevenue.toLocaleString()}</h3>
-             </div>
+          <div className="premium-card p-4 border-0 shadow-lg h-100 d-flex flex-column gap-1 overflow-hidden" style={{ borderRadius: '24px', background: 'rgba(255, 255, 255, 0.03)' }}>
+              <h3 className="fw-black text-success mb-0" style={{ fontSize: '38px', lineHeight: 1 }}>₹{paymentStats.totalRevenue.toLocaleString()}</h3>
+              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '10px' }}>Collected</div>
           </div>
         </div>
         <div className="col-12 col-md-4">
-          <div className="premium-card p-4 border-0 shadow-lg h-100 d-flex align-items-center gap-4 group hover-active-card overflow-hidden">
-             <div className="p-3 bg-warning bg-opacity-10 rounded-4 text-warning border border-warning border-opacity-20 shadow-glow-sm">
-                <Clock size={22} />
-             </div>
-             <div>
-                <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Pending</div>
-                <h3 className="fw-black text-main mb-0">₹{paymentStats.pendingRevenue.toLocaleString()}</h3>
-             </div>
+          <div className="premium-card p-4 border-0 shadow-lg h-100 d-flex flex-column gap-1 overflow-hidden" style={{ borderRadius: '24px', background: 'rgba(255, 255, 255, 0.03)' }}>
+              <h3 className="fw-black text-dark mb-0" style={{ fontSize: '38px', lineHeight: 1 }}>₹{paymentStats.pendingRevenue.toLocaleString()}</h3>
+              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '10px' }}>Pending</div>
           </div>
         </div>
         <div className="col-12 col-md-4">
-          <div className="premium-card p-4 border-0 shadow-lg h-100 d-flex align-items-center gap-4 group hover-active-card overflow-hidden">
-             <div className="p-3 bg-danger bg-opacity-10 rounded-4 text-danger border border-danger border-opacity-20 shadow-glow-sm">
-                <AlertCircle size={22} />
-             </div>
-             <div>
-                <div className="text-muted small fw-black text-uppercase tracking-widest opacity-50 mb-1" style={{ fontSize: '9px' }}>Overdue</div>
-                <h3 className="fw-black text-main mb-0">{paymentStats.overdueCount}</h3>
-             </div>
+          <div className="premium-card p-4 border-0 shadow-lg h-100 d-flex flex-column gap-1 overflow-hidden" style={{ borderRadius: '24px', background: 'rgba(255, 255, 255, 0.03)' }}>
+              <h3 className="fw-black text-danger mb-0" style={{ fontSize: '38px', lineHeight: 1 }}>{paymentStats.overdueCount}</h3>
+              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '10px' }}>Overdue</div>
           </div>
         </div>
       </div>
@@ -312,9 +297,9 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
                 const targetDate = new Date(payment.dueDate || payment.createdAt);
                 const isOverdueByDate = isPending && targetDate < now;
                 
-                const dueDate = payment.dueDate
-                  ? new Date(payment.dueDate).toLocaleDateString('en-CA')
-                  : new Date(payment.createdAt).toLocaleDateString('en-CA');
+                const dueDateObj = payment.dueDate ? new Date(payment.dueDate) : new Date(payment.createdAt);
+                const dueDate = dueDateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+                const dueTime = dueDateObj.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
                 return (
                   <tr key={payment.id || `pay-${index}`} className="border-bottom border-white border-opacity-5 transition-all">
@@ -328,7 +313,10 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
                       <span className="fw-black text-main">₹{payment.amount.toLocaleString()}</span>
                     </td>
                     <td className="py-4">
-                      <span className={`fw-black small ${isOverdue || isOverdueByDate ? 'text-danger' : 'text-muted opacity-75'}`}>{dueDate}</span>
+                      <div className="d-flex flex-column">
+                        <span className={`fw-black small ${isOverdue || isOverdueByDate ? 'text-danger' : 'text-dark'}`}>{dueDate}</span>
+                        <span className="text-muted fw-bold" style={{ fontSize: '9px' }}>{dueTime}</span>
+                      </div>
                     </td>
                     <td className="py-4">
                        {isPaid && (

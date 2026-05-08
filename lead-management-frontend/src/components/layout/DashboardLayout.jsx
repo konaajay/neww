@@ -4,8 +4,9 @@ import { useTheme } from '../../context/ThemeContext';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import CallOutcomeModal from '../CallOutcomeModal';
+import WfhRequestModal from './WfhRequestModal';
 
-const DashboardLayout = ({ children, activeTab, onTabChange, role, navbarExtras }) => {
+const DashboardLayout = ({ children, activeTab, onTabChange, role, navbarExtras, hideNavbar = false }) => {
   const { user, logout, clearCall } = useAuth();
   const { isDarkMode } = useTheme();
   const [endingCallLead, setEndingCallLead] = useState(null);
@@ -32,12 +33,14 @@ const DashboardLayout = ({ children, activeTab, onTabChange, role, navbarExtras 
       />
 
       <div className={`main-content ${isCollapsed ? 'sidebar-closed' : ''}`}>
-        <Navbar 
-          userEmail={user?.email} 
-          onLogout={logout} 
-          onToggleSidebar={toggleSidebar}
-          navbarExtras={navbarExtras}
-        />
+        {!hideNavbar && (
+          <Navbar 
+            userEmail={user?.email} 
+            onLogout={logout} 
+            onToggleSidebar={toggleSidebar}
+            navbarExtras={navbarExtras}
+          />
+        )}
 
         <main className="layout-body animate-fade-in">
           <div className="container-fluid">
@@ -46,7 +49,7 @@ const DashboardLayout = ({ children, activeTab, onTabChange, role, navbarExtras 
         </main>
       </div>
 
-
+      <WfhRequestModal />
     </div>
   );
 };

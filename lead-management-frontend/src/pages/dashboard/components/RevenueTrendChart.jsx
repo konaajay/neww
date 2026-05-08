@@ -4,21 +4,50 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   AreaChart, Area 
 } from 'recharts';
-import { BarChart3 } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 
-const RevenueTrendChart = ({ data }) => {
+const RevenueTrendChart = ({ data, filters }) => {
   const { isDarkMode } = useTheme();
 
-  if (!data || data.length === 0) {
+  const paddedData = React.useMemo(() => {
+    if (!filters?.from || !filters?.to) return data || [];
+
+    const start = new Date(filters.from);
+    const end = new Date(filters.to);
+    const range = [];
+    let current = new Date(start);
+
+    while (current <= end) {
+      const dateStr = current.toISOString().split('T')[0];
+      const existing = data?.find(d => {
+        if (!d.date) return false;
+        const dStr = Array.isArray(d.date) 
+          ? `${d.date[0]}-${String(d.date[1]).padStart(2, '0')}-${String(d.date[2]).padStart(2, '0')}`
+          : d.date.split('T')[0];
+        return dStr === dateStr;
+      });
+
+      range.push(existing || {
+        date: dateStr,
+        leadsCount: 0,
+        revenue: 0,
+        convertedCount: 0,
+        lostCount: 0
+      });
+      current.setDate(current.getDate() + 1);
+    }
+    return range;
+  }, [data, filters?.from, filters?.to]);
+
+  if (!paddedData || paddedData.length === 0) {
     return (
       <div className="d-flex flex-column align-items-center justify-content-center h-100 py-5 opacity-50">
-        <BarChart3 size={48} className="mb-2" />
+        <TrendingUp size={48} className="mb-2" />
         <p className="small fw-black text-uppercase tracking-widest">No Signal Detected</p>
       </div>
     );
   }
 
-  // Senior dev tip: Use a custom tooltip that won't break the layout
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -51,18 +80,26 @@ const RevenueTrendChart = ({ data }) => {
     <div className="w-100 h-100 d-flex flex-column">
       <div className="flex-grow-1" style={{ minHeight: '320px' }}>
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <AreaChart data={paddedData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2}/>
+                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
                 <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
               </linearGradient>
-              <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+              <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
                 <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
               </linearGradient>
+              <linearGradient id="colorConverted" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#fbbf24" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#fbbf24" stopOpacity={0}/>
+              </linearGradient>
+              <linearGradient id="colorLost" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+              </linearGradient>
             </defs>
-            
+
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} />
             
             <XAxis 
@@ -74,7 +111,6 @@ const RevenueTrendChart = ({ data }) => {
               tickFormatter={(d) => new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
             />
             
-            {/* Left Axis: Units (Leads/Lost) */}
             <YAxis 
               yAxisId="left"
               axisLine={false} 
@@ -83,70 +119,65 @@ const RevenueTrendChart = ({ data }) => {
               tick={{ fontSize: 10, fill: 'var(--text-muted)', fontWeight: 600 }}
             />
             
-            {/* Right Axis: Revenue (INR) */}
             <YAxis 
               yAxisId="right"
               orientation="right"
               axisLine={false} 
               tickLine={false} 
-              domain={[0, Math.max(20000, ...data.map(d => d.revenue || 0)) * 1.2]}
-              ticks={[0, 1000, 2000, 3000, 5000, 10000, 20000]}
+              domain={[0, Math.max(20000, ...paddedData.map(d => d.revenue || 0)) * 1.2]}
               tick={{ fontSize: 10, fill: 'var(--text-muted)', fontWeight: 600 }}
               tickFormatter={(v) => v >= 1000 ? `${v/1000}k` : v}
             />
 
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--border-color)', strokeWidth: 1 }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 2 }} />
             
             <Area 
               yAxisId="left"
-              name="Leads Pipeline"
-              type="monotone" 
+              type="monotone"
+              name="Leads"
               dataKey="leadsCount" 
               stroke="#6366f1" 
+              fillOpacity={1} 
+              fill="url(#colorLeads)" 
               strokeWidth={3}
-              fill="url(#colorLeads)"
-              dot={{ r: 2, fill: '#6366f1', strokeWidth: 0 }}
-              activeDot={{ r: 5, strokeWidth: 0 }}
             />
 
-            <Area
+            <Area 
+              yAxisId="right"
+              type="monotone"
+              name="Revenue"
+              dataKey="revenue" 
+              stroke="#10b981" 
+              fillOpacity={1} 
+              fill="url(#colorRevenue)" 
+              strokeWidth={3}
+            />
+
+            <Area 
               yAxisId="left"
               type="monotone"
               dataKey={(d) => d.convertedCount || d.convertedLeads || 0}
               name="Converted"
               stroke="#fbbf24"
-              fillOpacity={0.15}
-              fill="#fbbf24"
+              fillOpacity={1} 
+              fill="url(#colorConverted)" 
               strokeWidth={3}
             />
-
-            <Area
-              yAxisId="right"
-              type="monotone"
-              dataKey="revenue"
-              name="Revenue"
-              stroke="#10b981"
-              fillOpacity={0.1}
-              fill="url(#colorRev)"
-              strokeWidth={3}
-            />
-
-            <Area
+            
+            <Area 
               yAxisId="left"
               type="monotone"
               dataKey={(d) => d.lostCount || d.lostLeads || 0}
               name="Lost"
               stroke="#ef4444"
-              fillOpacity={0.05}
-              fill="#ef4444"
-              strokeDasharray="5 5"
-              strokeWidth={2}
+              fillOpacity={1} 
+              fill="url(#colorLost)" 
+              strokeWidth={3}
             />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Legend Refinement */}
       <div className="d-flex justify-content-center flex-wrap gap-4 mt-3 py-2 border-top border-white border-opacity-5">
         <div className="d-flex align-items-center gap-2">
           <div className="rounded-circle" style={{ width: 8, height: 8, background: '#6366f1' }}></div>

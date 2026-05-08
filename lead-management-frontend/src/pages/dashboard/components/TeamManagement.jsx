@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Edit, Trash2, ChevronDown, ChevronRight, BarChart2, Users, Search, Phone, Zap, FileText, TrendingUp, AlertCircle, CheckCircle, MessageCircle, Power } from 'lucide-react';
+import { UserPlus, Edit, Trash2, ChevronDown, ChevronRight, BarChart2, Users, Search, Phone, Zap, FileText, TrendingUp, AlertCircle, CheckCircle, MessageCircle, Power, Target } from 'lucide-react';
+import TargetHistoryModal from './TargetHistoryModal';
 import { useTheme } from '../../../context/ThemeContext';
+import { History } from 'lucide-react';
 
 const TeamManagement = ({
   teamLeaders,
@@ -15,7 +17,8 @@ const TeamManagement = ({
   setSelectedPerfUserId,
   setActiveTab,
   defaultShowForm = false,
-  canAdd = false
+  canAdd = false,
+  handleSync
 }) => {
   const { isDarkMode } = useTheme();
   const [activeSubTab, setActiveSubTab] = useState(defaultShowForm ? 'onboarding' : 'active');
@@ -32,6 +35,9 @@ const TeamManagement = ({
   });
   const [userStatusFilter, setUserStatusFilter] = useState(true); // true = Active, false = Inactive
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedHistoryUser, setSelectedHistoryUser] = useState(null);
+
+
 
   const filteredUsers = teamLeaders.filter(u => {
     const matchesSearch = u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -89,6 +95,26 @@ const TeamManagement = ({
 
         <td className="">
           <span className="text-muted small fw-bold opacity-75 font-monospace">{user.joiningDate || '---'}</span>
+        </td>
+
+        <td className="">
+          <div className="d-flex align-items-center gap-2">
+            <span className="text-main fw-black font-monospace" style={{ fontSize: '11px' }}>
+              {user.monthlyTarget ? `₹${user.monthlyTarget.toLocaleString()}` : '---'}
+            </span>
+            <Target
+              size={12}
+              className="text-primary cursor-pointer opacity-30 hover-opacity-100 transition-all"
+              onClick={() => setActiveTab('strategy')}
+              title="Manage Strategic Targets"
+            />
+            <History
+              size={12}
+              className="text-info cursor-pointer opacity-30 hover-opacity-100 transition-all"
+              onClick={() => setSelectedHistoryUser(user)}
+              title="Performance History"
+            />
+          </div>
         </td>
 
         <td className="pe-4 text-end">
@@ -155,15 +181,15 @@ const TeamManagement = ({
         <div className="d-flex align-items-center gap-3">
           {activeSubTab === 'active' && (
             <div className="d-flex gap-2 p-1 bg-surface bg-opacity-20 rounded-3 border border-white border-opacity-5 me-2">
-              <button 
-                className={`btn btn-sm px-3 rounded-2 fw-black text-uppercase ${userStatusFilter ? 'btn-primary shadow-glow' : 'text-muted opacity-50'}`} 
+              <button
+                className={`btn btn-sm px-3 rounded-2 fw-black text-uppercase ${userStatusFilter ? 'btn-primary shadow-glow' : 'text-muted opacity-50'}`}
                 style={{ fontSize: '10px' }}
                 onClick={() => setUserStatusFilter(true)}
               >
                 Active
               </button>
-              <button 
-                className={`btn btn-sm px-3 rounded-2 fw-black text-uppercase ${!userStatusFilter ? 'btn-danger shadow-glow' : 'text-muted opacity-50'}`} 
+              <button
+                className={`btn btn-sm px-3 rounded-2 fw-black text-uppercase ${!userStatusFilter ? 'btn-danger shadow-glow' : 'text-muted opacity-50'}`}
                 style={{ fontSize: '10px' }}
                 onClick={() => setUserStatusFilter(false)}
               >
@@ -178,9 +204,9 @@ const TeamManagement = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="form-control bg-surface border-white border-opacity-10 py-2.5 ps-5 rounded-pill transition-all"
-              style={{ 
-                fontSize: '11px', 
-                width: '100%', 
+              style={{
+                fontSize: '11px',
+                width: '100%',
                 background: 'rgba(255,255,255,0.02)',
                 boxShadow: 'inset 0 1px 1px rgba(0,0,0,0.2)'
               }}
@@ -206,19 +232,19 @@ const TeamManagement = ({
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Email ID</label>
                     <input type="email" className="ui-input py-3 w-100 fw-bold font-monospace" placeholder="rahul@example.com" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required />
                   </div>
-                  <div className="col-md-4">
+                  <div className="col-12 col-md-6 col-lg-4">
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Phone Number</label>
-                    <input className="ui-input py-3 w-100 fw-bold" placeholder="+91 00000 00000" value={formData.mobile} onChange={e => setFormData({ ...formData, mobile: e.target.value })} required />
+                    <input type="tel" className="ui-input py-3 w-100 fw-bold" placeholder="910000000000" value={formData.mobile} onChange={e => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, '') })} required />
                   </div>
-                  <div className="col-md-4">
+                  <div className="col-12 col-md-6 col-lg-4">
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Password</label>
                     <input type="password" className="ui-input py-3 w-100 fw-bold" placeholder="••••••••" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} required />
                   </div>
-                  <div className="col-md-4">
+                  <div className="col-12 col-md-6 col-lg-4">
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Joining Date</label>
                     <input type="date" className="ui-input py-3 w-100 fw-bold" value={formData.joiningDate} onChange={e => setFormData({ ...formData, joiningDate: e.target.value })} required />
                   </div>
-                  <div className="col-md-4">
+                  <div className="col-12 col-md-6 col-lg-4">
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Access Role</label>
                     <select className="ui-input py-3 w-100 fw-black text-uppercase tracking-widest cursor-pointer" value={formData.role}
                       onChange={e => {
@@ -228,7 +254,7 @@ const TeamManagement = ({
                           const adminLead = teamLeaders.find(u => u.role === 'ADMIN');
                           if (adminLead) defaultSupId = adminLead.id;
                         } else {
-                          defaultSupId = ''; 
+                          defaultSupId = '';
                         }
                         setFormData({ ...formData, role: newRole, supervisorId: defaultSupId });
                       }} required>
@@ -238,7 +264,7 @@ const TeamManagement = ({
                   </div>
 
                   {(formData.role === 'ASSOCIATE' || formData.role === 'TEAM_LEADER' || formData.role === 'MANAGER') && (
-                    <div className="col-md-4">
+                    <div className="col-12 col-md-6 col-lg-4">
                       <label className="form-label small fw-black text-uppercase text-primary mb-2 tracking-widest" style={{ fontSize: '10px' }}>Hierarchy Mapping (Superior ID)</label>
                       <select className="ui-input py-3 w-100 border-primary border-opacity-30 fw-black text-uppercase tracking-widest cursor-pointer" value={formData.supervisorId} onChange={e => setFormData({ ...formData, supervisorId: e.target.value })} required>
                         <option value="" className="text-dark">Select Direct Reporting Lead...</option>
@@ -252,8 +278,8 @@ const TeamManagement = ({
                       </select>
                     </div>
                   )}
-                  
-                  <div className="col-md-4">
+
+                  <div className="col-12 col-md-6 col-lg-4">
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Office Location</label>
                     <select className="ui-input py-3 w-100 fw-black text-uppercase tracking-widest cursor-pointer" value={formData.officeId} onChange={e => setFormData({ ...formData, officeId: e.target.value })} required>
                       <option value="" className="text-dark">Select Office...</option>
@@ -261,7 +287,7 @@ const TeamManagement = ({
                     </select>
                   </div>
 
-                  <div className="col-md-4">
+                  <div className="col-12 col-md-6 col-lg-4">
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Shift Timing</label>
                     <select className="ui-input py-3 w-100 fw-black text-uppercase tracking-widest cursor-pointer" value={formData.shiftId} onChange={e => setFormData({ ...formData, shiftId: e.target.value })} required>
                       <option value="" className="text-dark">Select Shift...</option>
@@ -290,6 +316,7 @@ const TeamManagement = ({
                   <th style={{ fontSize: '10px' }}>EMAIL</th>
                   <th style={{ fontSize: '10px' }}>ROLE</th>
                   <th style={{ fontSize: '10px' }}>DOJ</th>
+                  <th style={{ fontSize: '10px' }}>TARGET</th>
                   <th className="pe-4 text-end" style={{ fontSize: '10px' }}>ACTIONS</th>
                 </tr>
               </thead>
@@ -311,6 +338,17 @@ const TeamManagement = ({
           </div>
         </div>
       )}
+
+
+      <TargetHistoryModal
+        isOpen={!!selectedHistoryUser}
+        onClose={() => setSelectedHistoryUser(null)}
+        user={selectedHistoryUser}
+        onEdit={() => {
+          setActiveTab('strategy');
+          setSelectedHistoryUser(null);
+        }}
+      />
     </div>
   );
 };

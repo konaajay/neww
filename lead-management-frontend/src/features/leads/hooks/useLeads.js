@@ -60,6 +60,11 @@ export const useLeads = (filters, role) => {
     onSuccess: () => {
       toast.success('Asset reassigned');
       invalidateLeads();
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+    onError: (error) => {
+      const message = error.response?.data?.message || error.message;
+      toast.error(message);
     }
   });
 
@@ -69,6 +74,10 @@ export const useLeads = (filters, role) => {
       toast.success('Bulk redistribution complete');
       setSelectedLeadIds([]);
       invalidateLeads();
+    },
+    onError: (error) => {
+      const message = error.response?.data?.message || error.message;
+      toast.error(message);
     }
   });
 
@@ -77,6 +86,7 @@ export const useLeads = (filters, role) => {
     onSuccess: () => {
       toast.success('Lead purged from registry');
       invalidateLeads();
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     }
   });
 

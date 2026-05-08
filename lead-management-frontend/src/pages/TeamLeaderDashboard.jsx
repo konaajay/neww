@@ -23,6 +23,8 @@ import LeadTable from '../components/LeadTable';
 import TaskBoard from '../components/TaskBoard';
 import PaymentHistory from '../components/PaymentHistory';
 import CallLogDashboard from './dashboard/components/CallLogDashboard';
+import TeamManagement from './dashboard/components/TeamManagement';
+import TargetDistributionHub from './dashboard/components/TargetDistributionHub';
 import LeadModal from './dashboard/components/LeadModal';
 import InvoiceModal from './dashboard/components/InvoiceModal';
 import MetricCommandCenter from './dashboard/components/MetricCommandCenter';
@@ -41,14 +43,13 @@ const TeamLeaderDashboard = () => {
   const theme = isDarkMode ? 'dark' : 'light';
 
   // UI State
-  const [activeTab, setActiveTab] = useState(() => {
-    return localStorage.getItem('tl_activeTab') || 'overview';
-  });
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('tl_active_tab') || 'my-stats');
   const [myDashboardSubTab, setMyDashboardSubTab] = useState('dashboard');
   const [taskFilter, setTaskFilter] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [isIngestionModalOpen, setIsIngestionModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [bulkAssignTlId, setBulkAssignTlId] = useState('');
 
   // 1. STABLE FILTERS (Core fix to prevent API spam)
   const [filters, setFilters] = useState({
@@ -77,12 +78,16 @@ const TeamLeaderDashboard = () => {
     leads, 
     loading: leadsLoading,
     updateLead,
+    updateStatus,
     assignLead,
-    recordCallOutcome
+    recordCallOutcome,
+    selectedLeadIds,
+    toggleSelection,
+    bulkAssignLeads
   } = useLeads(debouncedFilters, 'TEAM_LEADER');
 
   const {
-    subordinates
+    subordinates, roles, offices, shifts
   } = useLookupData('TEAM_LEADER');
 
   // 3. HANDLERS
@@ -97,7 +102,7 @@ const TeamLeaderDashboard = () => {
       return;
     }
     setActiveTab(tab);
-    localStorage.setItem('tl_activeTab', tab);
+    localStorage.setItem('tl_active_tab', tab);
     
     if (tab === 'tasks' && extra.filter) {
       setTaskFilter(extra.filter);
@@ -109,6 +114,8 @@ const TeamLeaderDashboard = () => {
       setFilters(prev => ({ ...prev, userId: user?.id, teamId: null }));
     } else if (tab === 'overview') {
       setFilters(prev => ({ ...prev, userId: null, teamId: user?.id }));
+    } else if (tab === 'users') {
+      setFilters(prev => ({ ...prev, userId: null, teamId: user?.id }));
     }
   };
 
@@ -119,6 +126,8 @@ const TeamLeaderDashboard = () => {
       handleSync();
       return true;
     } catch (err) {
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to initialize lead';
+      toast.error(errorMessage);
       return false;
     }
   };
@@ -172,6 +181,7 @@ const TeamLeaderDashboard = () => {
             onSync={handleSync}
             role="TEAM_LEADER"
             currentUserId={user?.id}
+            hideUserFilter={activeTab === 'my-stats'}
           />
         )}
 
@@ -204,10 +214,11 @@ const TeamLeaderDashboard = () => {
                 {dashboardLoading ? <StatSkeleton /> : (
                   <MetricCommandCenter
                     stats={statsWithPerf}
-                    role="TEAM_LEADER"
+                    role={filters.userId ? 'ASSOCIATE' : 'TEAM_LEADER'}
                     filters={debouncedFilters}
                     onNavigate={handleTabChange}
                     leads={leads}
+                    hideUsers={true}
                   />
                 )}
               </>
@@ -267,7 +278,7 @@ const TeamLeaderDashboard = () => {
         {activeTab === 'overview' && (
           <div className="d-flex flex-column gap-4 animate-fade-in">
             {dashboardLoading ? <StatSkeleton /> : (
-              <MetricCommandCenter stats={stats} role="TEAM_LEADER" filters={debouncedFilters} onNavigate={handleTabChange} leads={leads} />
+              <MetricCommandCenter stats={stats} role={filters.userId ? 'ASSOCIATE' : 'TEAM_LEADER'} filters={debouncedFilters} onNavigate={handleTabChange} leads={leads} />
             )}
             <div className="row g-4 animate-fade-in">
               <div className="col-12 col-xl-8">
@@ -304,14 +315,16 @@ const TeamLeaderDashboard = () => {
                 { label: 'Lost', value: (stats.statusDistribution?.LOST || 0), color: 'danger', icon: '❌' }
               ].map((card, i) => (
                 <div key={i} className="col-6 col-md-3">
-                  <div className="premium-card p-3 border border-white border-opacity-10 shadow-sm d-flex align-items-center gap-3" style={{ borderRadius: '20px', background: 'rgba(255,255,255,0.02)' }}>
-                    <div className={`p-2 rounded-3 bg-${card.color} bg-opacity-10 text-${card.color}`}>
-                      <span style={{ fontSize: '18px' }}>{card.icon}</span>
-                    </div>
-                    <div>
-                      <h4 className="mb-0 fw-black text-main">{card.value}</h4>
-                      <small className="text-muted fw-bold text-uppercase tracking-widest" style={{ fontSize: '8px' }}>{card.label}</small>
-                    </div>
+                  <div className="premium-card p-3 border border-white border-opacity-10 shadow-sm d-flex flex-column gap-1" 
+                    style={{ 
+                      borderRadius: '20px', 
+                      background: isDarkMode 
+                        ? `linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(${card.color === 'warning' ? '255,193,7' : card.color === 'info' ? '13,202,240' : card.color === 'success' ? '25,135,84' : '220,53,69'}, 0.08) 100%)`
+                        : 'rgba(255,255,255,0.8)',
+                      backdropFilter: 'blur(10px)'
+                    }}>
+                    <h4 className="mb-0 fw-black text-main" style={{ fontSize: '26px', lineHeight: 1 }}>{card.value}</h4>
+                    <small className="text-muted fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '8px' }}>{card.label}</small>
                   </div>
                 </div>
               ))}
@@ -335,16 +348,23 @@ const TeamLeaderDashboard = () => {
                 </div>
               </div>
               <div className="card-body p-0">
-                <LeadTable
-                  leads={filteredLeads}
-                  onUpdateLead={(id, data) => updateLead({ id, data })}
-                  handleAssignLead={(leadId, assocId) => assignLead({ leadId, targetId: assocId })}
-                  onRecordCallOutcome={(leadId, data) => recordCallOutcome({ leadId, data })}
-                  onViewInvoice={handleViewInvoice}
-                  teamLeaders={membersList}
-                  role="TEAM_LEADER"
-                  loading={leadsLoading}
-                />
+                  <LeadTable
+                    leads={filteredLeads}
+                    onUpdateLead={(id, data) => updateLead({ id, data })}
+                    onUpdateStatus={(id, status, note, extra) => updateStatus(id, status, note, extra)}
+                    handleAssignLead={(leadId, assocId) => assignLead({ leadId, targetId: assocId })}
+                    onRecordCallOutcome={(leadId, data) => recordCallOutcome({ leadId, data })}
+                    onViewInvoice={handleViewInvoice}
+                    teamLeaders={membersList}
+                    role="TEAM_LEADER"
+                    loading={leadsLoading}
+                    selectedLeadIds={selectedLeadIds}
+                    toggleSelection={toggleSelection}
+                    bulkAssignTlId={bulkAssignTlId}
+                    setBulkAssignTlId={setBulkAssignTlId}
+                    handleBulkAssign={(targetId) => bulkAssignLeads({ leadIds: selectedLeadIds, targetId })}
+                    currentUserId={user?.id}
+                  />
               </div>
             </div>
           </div>
@@ -387,6 +407,30 @@ const TeamLeaderDashboard = () => {
               </div>
             </div>
           </div>
+        )}
+        
+        {activeTab === 'strategy' && (
+          <TargetDistributionHub 
+            subordinates={subordinates} 
+            onSync={handleSync} 
+          />
+        )}
+        
+        {activeTab === 'users' && (
+          <TeamManagement
+            teamLeaders={subordinates}
+            roles={roles}
+            offices={offices}
+            shifts={shifts}
+            permissions={[]}
+            handleCreateUser={() => {}}
+            handleDeleteUser={() => {}}
+            handleUpdateUser={() => {}}
+            handleEditUser={() => {}}
+            handleAssignSupervisor={() => {}}
+            handleSync={handleSync}
+            canAdd={false}
+          />
         )}
         
         <LeadModal isOpen={isIngestionModalOpen} onClose={() => setIsIngestionModalOpen(false)} onAddLead={handleAddLead} associates={membersList} />

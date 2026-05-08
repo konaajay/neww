@@ -1,12 +1,29 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import wfhService from '../../services/wfhService';
 import {
   LayoutDashboard, Users, UserPlus, Layers, Target, TrendingUp, Settings,
-  LogOut, Phone as PhoneIcon, Upload, IndianRupee, FileText, Menu, X, ShieldHalf, LifeBuoy
+  LogOut, Phone as PhoneIcon, Upload, IndianRupee, FileText, Menu, X, ShieldHalf, LifeBuoy, BookOpen
 } from 'lucide-react';
 import SidebarAttendance from './SidebarAttendance';
 
 
 const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, onToggle }) => {
+  const normalizedRole = (role || '').toUpperCase();
+  const isSuperior = ['ADMIN', 'MANAGER', 'MGR', 'TEAM_LEADER', 'TL', 'TEAMLEAD'].some(r => normalizedRole.includes(r));
+
+  const { data: wfhNotify } = useQuery({
+    queryKey: ['wfh-pending-count'],
+    queryFn: async () => {
+      const res = await wfhService.getPendingCount();
+      return res.data;
+    },
+    enabled: isSuperior,
+    refetchInterval: 30000 // Refresh every 30 seconds
+  });
+
+  const pendingCount = wfhNotify?.count || 0;
+
   const getNavItems = () => {
     const normalizedRole = (role || '').toUpperCase();
 
@@ -14,6 +31,7 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
       return [
         // { id: 'overview', label: 'MY HOME', icon: LayoutDashboard },
         { id: 'team-dashboard', label: 'Team Dashboard', icon: LayoutDashboard },
+        // { id: 'strategy', label: 'Revenue Strategy', icon: TrendingUp },
         { id: 'users', label: 'USERS', icon: Users },
         { id: 'hierarchy', label: 'Hierarchy', icon: Layers },
         { id: 'attendance', label: 'Attendance logs', icon: FileText },
@@ -21,6 +39,7 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
         { id: 'tasks', label: 'Team Task ', icon: Layers },
         { id: 'payments', label: 'Revenue Stats', icon: IndianRupee },
         { id: 'calls', label: 'Team Calllogs', icon: PhoneIcon },
+        { id: 'courses', label: 'Courses', icon: BookOpen },
         { id: 'settings', label: 'Global Settings', icon: Settings },
       ];
     }
@@ -29,11 +48,14 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
       return [
         { id: 'my-stats', label: 'My HOME', icon: ShieldHalf },
         { id: 'overview', label: 'Team Dashboard', icon: LayoutDashboard },
+        { id: 'strategy', label: 'Strategic Hub', icon: TrendingUp },
+        { id: 'users', label: 'Personnel', icon: Users },
         { id: 'attendance', label: 'Attendance', icon: FileText },
         { id: 'leads', label: 'Team Leads', icon: Target },
         { id: 'payments', label: 'Team Revenue', icon: IndianRupee },
         { id: 'calls', label: 'Team Calllogs', icon: PhoneIcon },
         { id: 'tasks', label: 'Team Task ', icon: Layers },
+        { id: 'courses', label: 'Courses', icon: BookOpen },
         { id: 'reports', label: 'Team Reports', icon: TrendingUp },
       ];
     }
@@ -42,11 +64,14 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
       return [
         { id: 'my-stats', label: 'My HOME', icon: ShieldHalf },
         { id: 'overview', label: 'Team Dashboard', icon: LayoutDashboard },
+        { id: 'strategy', label: 'Strategic Hub', icon: TrendingUp },
+        { id: 'users', label: 'My Squad', icon: Users },
         { id: 'attendance', label: 'Attendance', icon: FileText },
         { id: 'leads', label: 'Team Leads', icon: Target },
         { id: 'tasks', label: 'Team Task ', icon: Layers },
         { id: 'payments', label: 'Team Revenues', icon: IndianRupee },
         { id: 'calls', label: 'Team Call Logs', icon: PhoneIcon },
+        // { id: 'courses', label: 'Courses', icon: BookOpen },
         { id: 'reports', label: 'Team Reports', icon: TrendingUp },
       ];
     }
@@ -122,11 +147,27 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
                   <button
                     key={item.id}
                     onClick={() => { onTabChange(item.id); onClose(); }}
-                    className={`nav-link-premium border-0 ${isActive ? 'active' : ''}`}
+                    className={`nav-link-premium border-0 ${isActive ? 'active' : ''} position-relative`}
                     title={isCollapsed ? item.label : ''}
                   >
                     <Icon size={18} className={isActive ? 'text-white' : 'text-muted'} />
                     {(!isCollapsed || isOpen) && <span>{item.label}</span>}
+                    
+                    {item.id === 'attendance' && pendingCount > 0 && (
+                      <span 
+                        className="position-absolute translate-middle badge rounded-pill bg-danger shadow-sm border border-white border-opacity-10" 
+                        style={{ 
+                          top: '12px', 
+                          right: isCollapsed ? '8px' : '15px', 
+                          fontSize: '8px', 
+                          padding: '3px 5px',
+                          zIndex: 2,
+                          animation: 'pulse-red 2s infinite'
+                        }}
+                      >
+                        {pendingCount}
+                      </span>
+                    )}
                   </button>
                 );
               })}

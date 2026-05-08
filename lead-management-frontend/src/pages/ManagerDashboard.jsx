@@ -26,6 +26,7 @@ import TaskBoard from '../components/TaskBoard';
 import PaymentHistory from '../components/PaymentHistory';
 import TeamTree from './dashboard/components/TeamTree';
 import TeamManagement from './dashboard/components/TeamManagement';
+import TargetDistributionHub from './dashboard/components/TargetDistributionHub';
 import UserEditModal from './dashboard/components/UserEditModal';
 import CallLogDashboard from './dashboard/components/CallLogDashboard';
 import CallAnalyticsGrid from './dashboard/components/CallAnalyticsGrid';
@@ -34,8 +35,10 @@ import LeadModal from './dashboard/components/LeadModal';
 import FiltersBar from './dashboard/components/FiltersBar';
 import MetricCommandCenter from './dashboard/components/MetricCommandCenter';
 import ManagerProfile from './dashboard/components/ManagerProfile';
+import TodayTaskList from './dashboard/components/TodayTaskList';
 import LeadEditPage from './dashboard/components/LeadEditPage';
 import AttendanceDashboard from './dashboard/components/AttendanceDashboard';
+import CourseManagementPage from './CourseManagementPage';
 import { StatSkeleton, ChartSkeleton } from './dashboard/components/DashboardSkeletons';
 
 const RevenueTrendChart = React.lazy(() => import('./dashboard/components/RevenueTrendChart'));
@@ -46,9 +49,7 @@ const ManagerDashboard = () => {
   const { isDarkMode } = useTheme();
   const theme = isDarkMode ? 'dark' : 'light';
 
-  const [activeTab, setActiveTab] = useState(() => {
-    return localStorage.getItem('mgr_activeTab') || 'overview';
-  });
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('manager_active_tab') || 'my-stats');
   const [myDashboardSubTab, setMyDashboardSubTab] = useState('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterUnassigned, setFilterUnassigned] = useState(false);
@@ -61,12 +62,23 @@ const ManagerDashboard = () => {
   const [bulkAssignTlId, setBulkAssignTlId] = useState('');
 
   // 1. Stable Filters
-  const [filterState, setFilterState] = useState({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
-    to: new Date().toISOString().split('T')[0],
-    userId: null,
-    teamId: null,
-    managerId: user?.id
+  const [filterState, setFilterState] = useState(() => {
+    const d = new Date();
+    const f = new Date(d.getFullYear(), d.getMonth(), 1);
+    const l = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    const fmt = (date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+    return {
+      from: fmt(f),
+      to: fmt(l),
+      userId: null,
+      teamId: null,
+      managerId: user?.id
+    };
   });
 
   const stableFilters = useMemo(() => ({
@@ -77,7 +89,7 @@ const ManagerDashboard = () => {
   const debouncedFilters = useDebounce(stableFilters, 400);
 
   // 2. Data Hooks
-  const { 
+  const {
     data: dashboardData, isLoading: dashboardLoading, refetch: refreshDashboard
   } = useDashboardData(debouncedFilters);
 
@@ -88,7 +100,7 @@ const ManagerDashboard = () => {
   } = useLeads(debouncedFilters, 'MANAGER');
 
   const {
-    teamLeaders, subordinates, roles, permissions, teamTree, pipelineStages, loading: lookupLoading
+    teamLeaders, subordinates, roles, offices, shifts, permissions, teamTree, pipelineStages, loading: lookupLoading
   } = useLookupData('MANAGER');
 
   // 3. Handlers
@@ -116,7 +128,7 @@ const ManagerDashboard = () => {
     if (!primaryFilterId) return null;
     const targetId = parseInt(primaryFilterId);
     let ids = [targetId];
-    
+
     if (filterState.teamId && !filterState.userId && teamTree) {
       const tl = findInTree(Array.isArray(teamTree) ? teamTree : [teamTree], targetId);
       if (tl && tl.subordinates) {
@@ -177,7 +189,7 @@ const ManagerDashboard = () => {
       return;
     }
     setActiveTab(tab);
-    localStorage.setItem('mgr_activeTab', tab);
+    localStorage.setItem('manager_active_tab', tab);
     if (tab === 'tasks') setTaskFilter(extra.filter || 'ALL');
     if (tab === 'my-stats') {
       setFilterState(prev => ({ ...prev, userId: user?.id, teamId: null, managerId: user?.id }));
@@ -241,6 +253,8 @@ const ManagerDashboard = () => {
       handleSync();
       return true;
     } catch (err) {
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to initialize lead';
+      toast.error(errorMessage);
       return false;
     }
   };
@@ -279,12 +293,12 @@ const ManagerDashboard = () => {
             <div className="d-flex gap-2 p-1 bg-surface bg-opacity-10 rounded-pill border border-white border-opacity-5 overflow-auto custom-scroll flex-nowrap mb-2 shadow-sm">
               {[
                 { id: 'dashboard', label: 'Home', icon: '📊' },
+                { id: 'attendance', label: 'Attendance', icon: '📅' },
                 { id: 'leads', label: 'Individual Leads', icon: '👥' },
                 { id: 'tasks', label: 'Pending Tasks', icon: '📋' },
                 { id: 'revenue', label: 'Revenue Trans.', icon: '💰' },
                 { id: 'calls', label: 'Telephony Logs', icon: '📞' },
                 { id: 'reports', label: 'Performance', icon: '📈' },
-                { id: 'attendance', label: 'Attendance', icon: '📅' },
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -307,6 +321,7 @@ const ManagerDashboard = () => {
                     filters={personalFilters}
                     onNavigate={handleTabChange}
                     leads={leads}
+                    hideUsers={true}
                   />
                 )}
               </>
@@ -346,14 +361,14 @@ const ManagerDashboard = () => {
               </div>
             )}
             {myDashboardSubTab === 'tasks' && (
-              <TaskBoard 
-                leads={leads.filter(l => l.assignedToId === user?.id)} 
-                theme={theme} 
-                onUpdateStatus={refreshLeads} 
-                fetchLeads={refreshLeads} 
-                userId={user?.id} 
-                startDate={filterState.from} 
-                endDate={filterState.to} 
+              <TaskBoard
+                leads={leads.filter(l => l.assignedToId === user?.id)}
+                theme={theme}
+                onUpdateStatus={refreshLeads}
+                fetchLeads={refreshLeads}
+                userId={user?.id}
+                startDate={filterState.from}
+                endDate={filterState.to}
                 initialFilter={taskFilter}
               />
             )}
@@ -366,7 +381,7 @@ const ManagerDashboard = () => {
                   <Card title="Individual Performance Trend" className="h-100">
                     <div className="py-3" style={{ height: '360px' }}>
                       <React.Suspense fallback={<ChartSkeleton />}>
-                        <RevenueTrendChart data={trend} theme={theme} />
+                        <RevenueTrendChart data={trend} theme={theme} filters={debouncedFilters} />
                       </React.Suspense>
                     </div>
                   </Card>
@@ -387,20 +402,30 @@ const ManagerDashboard = () => {
         {activeTab === 'overview' && (
           <div className="d-flex flex-column gap-3 animate-fade-in">
             {dashboardLoading && !stats ? <StatSkeleton /> : (
-              <MetricCommandCenter
-                stats={statsWithPerf}
-                role="MANAGER"
-                filters={filterState}
-                onNavigate={handleTabChange}
-                leads={filteredLeads}
-              />
+              <div className="row g-4">
+                <div className="col-12 col-xl-8">
+                  <MetricCommandCenter
+                    stats={statsWithPerf}
+                    role="MANAGER"
+                    filters={filterState}
+                    onNavigate={handleTabChange}
+                    leads={filteredLeads}
+                  />
+                </div>
+                <div className="col-12 col-xl-4">
+                  <TodayTaskList 
+                    leads={leads} 
+                    theme={theme} 
+                  />
+                </div>
+              </div>
             )}
             <div className="row g-4 animate-fade-in">
               <div className="col-12 col-xl-8">
                 <Card title="Strategic Performance Trend" className="h-100">
                   <div className="py-3" style={{ height: '360px' }}>
                     <React.Suspense fallback={<ChartSkeleton />}>
-                      <RevenueTrendChart data={trend} theme={theme} />
+                      <RevenueTrendChart data={trend} theme={theme} filters={debouncedFilters} />
                     </React.Suspense>
                   </div>
                 </Card>
@@ -421,20 +446,15 @@ const ManagerDashboard = () => {
           <div className="d-flex flex-column gap-3">
             <div className="row g-3 mb-2 animate-fade-in">
               {[
-                { label: 'Call Back', value: (stats.statusDistribution?.CALL_BACK || 0), color: 'warning', icon: '📞' },
-                { label: 'Follow Up', value: (stats.statusDistribution?.FOLLOW_UP || 0), color: 'info', icon: '⏳' },
-                { label: 'Converted', value: (stats.statusDistribution?.CONVERTED || stats.statusDistribution?.PAID || 0), color: 'success', icon: '✅' },
-                { label: 'Lost', value: (stats.statusDistribution?.LOST || 0), color: 'danger', icon: '❌' }
+                { label: 'Call Back', value: ((stats.statusDistribution?.CALL_BACK || 0) + (stats.statusDistribution?.CALLBACK || 0)), color: 'warning', icon: '📞' },
+                { label: 'Follow Up', value: ((stats.statusDistribution?.FOLLOW_UP || 0) + (stats.statusDistribution?.FOLLOWUP || 0)), color: 'info', icon: '⏳' },
+                { label: 'Converted', value: ((stats.statusDistribution?.CONVERTED || 0) + (stats.statusDistribution?.PAID || 0) + (stats.statusDistribution?.SUCCESS || 0) + (stats.statusDistribution?.EMI || 0)), color: 'success', icon: '✅' },
+                { label: 'Lost', value: ((stats.statusDistribution?.LOST || 0) + (stats.statusDistribution?.REJECTED || 0)), color: 'danger', icon: '❌' }
               ].map((card, i) => (
                 <div key={i} className="col-6 col-md-3">
-                  <div className="premium-card p-3 border border-white border-opacity-10 shadow-sm d-flex align-items-center gap-3" style={{ borderRadius: '20px', background: 'rgba(255,255,255,0.02)' }}>
-                    <div className={`p-2 rounded-3 bg-${card.color} bg-opacity-10 text-${card.color}`}>
-                      <span style={{ fontSize: '18px' }}>{card.icon}</span>
-                    </div>
-                    <div>
-                      <h4 className="mb-0 fw-black text-main">{card.value}</h4>
-                      <small className="text-muted fw-bold text-uppercase tracking-widest" style={{ fontSize: '8px' }}>{card.label}</small>
-                    </div>
+                  <div className="premium-card p-3 border border-white border-opacity-10 shadow-sm d-flex flex-column gap-1" style={{ borderRadius: '20px', background: 'rgba(255,255,255,0.02)' }}>
+                    <h4 className="mb-0 fw-black text-main" style={{ fontSize: '26px', lineHeight: 1 }}>{card.value}</h4>
+                    <small className="text-muted fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '8px' }}>{card.label}</small>
                   </div>
                 </div>
               ))}
@@ -478,22 +498,30 @@ const ManagerDashboard = () => {
         {activeTab === 'payments' && <PaymentHistory role="MANAGER" managerId={filterState.userId ? null : user?.id} userId={filterState.userId || null} teamId={filterState.teamId || null} from={filterState.from} to={filterState.to} hideHeader={true} />}
         {activeTab === 'calls' && <CallLogDashboard userId={filterState.userId} filters={debouncedFilters} hideHeader={true} />}
         {activeTab === 'attendance' && <AttendanceDashboard filters={debouncedFilters} role="MANAGER" />}
+        {activeTab === 'strategy' && (
+          <TargetDistributionHub
+            subordinates={teamLeaders}
+            onSync={handleSync}
+            filters={filterState}
+          />
+        )}
         {activeTab === 'tasks' && (
           <div className="animate-fade-in">
-            <TaskBoard 
-              leads={leads} 
-              theme={theme} 
-              onUpdateStatus={handleSync} 
+            <TaskBoard
+              leads={leads}
+              theme={theme}
+              onUpdateStatus={handleSync}
               loadLeads={handleSync}
               managerId={user?.id}
               teamId={filterState.teamId}
               userId={filterState.userId}
-              startDate={filterState.from} 
-              endDate={filterState.to} 
+              startDate={filterState.from}
+              endDate={filterState.to}
               initialFilter="ALL"
             />
           </div>
         )}
+        {activeTab === 'courses' && <CourseManagementPage />}
         {activeTab === 'reports' && (
           <div className="d-flex flex-column gap-4 animate-fade-in">
             <div className="row g-4">
@@ -501,7 +529,7 @@ const ManagerDashboard = () => {
                 <Card title="Revenue & Pipeline Trend">
                   <div className="py-3" style={{ height: '360px' }}>
                     <React.Suspense fallback={<ChartSkeleton />}>
-                      <RevenueTrendChart data={trend} theme={theme} />
+                      <RevenueTrendChart data={trend} theme={theme} filters={debouncedFilters} />
                     </React.Suspense>
                   </div>
                 </Card>
@@ -519,7 +547,24 @@ const ManagerDashboard = () => {
             <CallAnalyticsGrid filters={debouncedFilters} hideHeader={true} isDarkMode={isDarkMode} />
           </div>
         )}
-        
+        {activeTab === 'users' && (
+          <TeamManagement
+            teamLeaders={teamLeaders}
+            roles={roles}
+            offices={offices}
+            shifts={shifts}
+            handleCreateUser={handleCreateUser}
+            handleDeleteUser={handleDeleteUser}
+            handleUpdateUser={handleDeleteUser}
+            handleEditUser={setEditingUser}
+            handleAssignSupervisor={handleAssignSupervisor}
+            setSelectedPerfUserId={(id) => setFilterState(p => ({ ...p, userId: id }))}
+            setActiveTab={setActiveTab}
+            canAdd={true}
+            handleSync={handleSync}
+          />
+        )}
+
         {/* Modals moved inside the main wrapping div */}
         <LeadModal isOpen={isIngestionModalOpen} onClose={() => setIsIngestionModalOpen(false)} onAddLead={handleAddLead} onSuccess={handleSync} associates={teamLeaders} />
         <InvoiceModal isOpen={!!selectedInvoice} onClose={() => setSelectedInvoice(null)} invoiceData={selectedInvoice} />

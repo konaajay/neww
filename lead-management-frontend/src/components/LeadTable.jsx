@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { 
   History, Edit, FileText, Wallet, Zap, ChevronLeft, ChevronRight, 
   Search, Filter, ArrowUpRight, Clock, CheckCircle2, AlertCircle,
-  MoreVertical, ChevronDown, IndianRupee
+  MoreVertical, ChevronDown, IndianRupee, MessageSquare
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import LeadEditModal from './LeadEditModal';
@@ -10,6 +10,7 @@ import CallOutcomeModal from './CallOutcomeModal';
 import LeadHistoryModal from './LeadHistoryModal';
 import { useTheme } from '../context/ThemeContext';
 import ReactDOM from 'react-dom';
+import leadsApi from '../features/leads/api/leadsApi';
 
 const StatusDropdown = ({ lead, pipelineStages, onChange, getStatusColorClass, index, totalItems }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -57,7 +58,11 @@ const StatusDropdown = ({ lead, pipelineStages, onChange, getStatusColorClass, i
         }}
         onClick={toggleDropdown}
       >
-        <span className="text-truncate">{currentStage.label}</span>
+        <span className="text-truncate">
+          {(lead.status === 'CONVERTED' && lead.paidAmount >= (lead.totalAmount - (lead.discount || 0)) && lead.totalAmount > 0) 
+            ? 'PAID' 
+            : currentStage.label}
+        </span>
         <ChevronDown size={10} className="ms-1 opacity-50" />
       </button>
 
@@ -75,17 +80,17 @@ const StatusDropdown = ({ lead, pipelineStages, onChange, getStatusColorClass, i
               width: '180px', 
               maxHeight: '300px',
               overflowY: 'auto',
-              background: '#0f172a', 
-              borderColor: 'rgba(255,255,255,0.1)',
+              background: isDarkMode ? '#0f172a' : '#ffffff', 
+              borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
               left: coords.left,
               top: openUpwards ? 'auto' : coords.top + 5,
               bottom: openUpwards ? (window.innerHeight - coords.top + 30) : 'auto'
             }}
           >
-            {pipelineStages.map(s => (
+            {pipelineStages.filter(s => s.statusValue !== 'CONVERTED').map(s => (
               <div
                 key={s.statusValue}
-                className="px-3 py-2 text-white hover-bg-primary transition-all cursor-pointer d-flex align-items-center gap-2 border-bottom border-white border-opacity-5"
+                className={`px-3 py-2 ${isDarkMode ? 'text-white' : 'text-dark'} hover-bg-primary transition-all cursor-pointer d-flex align-items-center gap-2 border-bottom ${isDarkMode ? 'border-white' : 'border-dark'} border-opacity-5`}
                 style={{ fontSize: '10px', fontWeight: '800' }}
                 onClick={() => handleSelect(s.statusValue)}
               >
@@ -120,12 +125,14 @@ const LeadTable = ({
   bulkAssignTlId,
   setBulkAssignTlId,
   handleBulkAssign,
-  pipelineStages: propsPipelineStages = []
+  pipelineStages: propsPipelineStages = [],
+  currentUserId
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedEditLead, setSelectedEditLead] = useState(null);
   const [selectedOutcomeLead, setSelectedOutcomeLead] = useState(null);
   const [selectedHistoryLead, setSelectedHistoryLead] = useState(null);
+  const [errorPopup, setErrorPopup] = useState(null);
   const { isDarkMode } = useTheme();
   const navigate = useNavigate();
 
@@ -137,7 +144,7 @@ const LeadTable = ({
     return Array.from(map.values());
   }, [teamLeaders]);
 
-  const itemsPerPage = 10;
+  const itemsPerPage = 20;
 
   const pipelineStages = (propsPipelineStages && propsPipelineStages.length > 0) ? propsPipelineStages : [
     { label: 'New', statusValue: 'NEW', color: 'primary', isRoot: true },
@@ -145,17 +152,11 @@ const LeadTable = ({
     { label: 'FollowUp', statusValue: 'FOLLOW_UP', color: 'warning' },
     { label: 'Interested', statusValue: 'INTERESTED', color: 'primary' },
     { label: 'Lost', statusValue: 'LOST', color: 'danger' },
-    { label: 'Converted', statusValue: 'CONVERTED', color: 'success' },
+    { label: 'Prepayment', statusValue: 'CONVERTED', color: 'success' },
   ];
 
   const getStatusColorClass = (status) => {
-    const s = status?.toUpperCase().replace(' ', '_');
-    if (['CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'COMPLETED'].includes(s)) return 'text-success';
-    if (['LOST', 'REJECTED', 'REFUND', 'NOT_INTERESTED'].includes(s)) return 'text-danger';
-    if (['FOLLOW_UP', 'FOLLOWUP', 'CALL_BACK', 'CALLBACK'].includes(s)) return 'text-warning';
-    if (['INTERESTED', 'WORKING'].includes(s)) return 'text-primary';
-    if (['CONTACTED', 'UNDER_REVIEW'].includes(s)) return 'text-info';
-    return 'text-main';
+    return 'text-dark';
   };
 
   const handleStatusChange = (lead, newStatus) => {
@@ -173,7 +174,9 @@ const LeadTable = ({
         await onUpdateLead(leadId, { assignedToId: targetId || null });
       }
     } catch (err) {
-      console.error('Failed to assign lead', err);
+      const message = err.response?.data?.message || "Action restricted: Lead transfer limit reached.";
+      setErrorPopup(message);
+      setTimeout(() => setErrorPopup(null), 3000);
     }
   };
 
@@ -186,27 +189,27 @@ const LeadTable = ({
 
   return (
     <div className="lead-table-container">
-      {selectedLeadIds.length > 0 && role === 'ADMIN' && (
-        <div className="p-3 mb-3 bg-primary bg-opacity-10 border border-primary border-opacity-20 rounded-4 d-flex align-items-center justify-content-between animate-fade-in">
+      {selectedLeadIds.length > 0 && (role === 'ADMIN' || role === 'MANAGER' || role === 'TEAM_LEADER') && (
+        <div className="p-3 mb-3 bg-primary bg-opacity-10 border border-primary border-opacity-20 rounded-4 d-flex align-items-center justify-content-between animate-fade-in shadow-glow-sm">
           <div className="d-flex align-items-center gap-3">
             <span className="fw-black text-primary small text-uppercase tracking-widest">{selectedLeadIds.length} assets selected for redistribution</span>
           </div>
           <div className="d-flex align-items-center gap-2">
             <select 
-              className="form-select form-select-sm bg-surface border-white border-opacity-10 text-main fw-black text-uppercase"
-              style={{ width: '200px', fontSize: '10px' }}
+              className="form-select form-select-sm bg-surface border-white border-opacity-20 text-main fw-black text-uppercase"
+              style={{ width: '200px', fontSize: '10px', height: '32px' }}
               value={bulkAssignTlId}
               onChange={(e) => setBulkAssignTlId(e.target.value)}
             >
-              <option value="">Select Target Manager...</option>
+              <option value="">Select Target...</option>
               <option value="0" className="text-danger">UNASSIGN ALL</option>
-              {uniqueTeamLeaders.filter(u => u.role !== 'ADMIN').map(u => (
+              {uniqueTeamLeaders.filter(u => (role === 'ADMIN' || u.role !== 'ADMIN')).map(u => (
                 <option key={u.id} value={u.id}>{u.name.toUpperCase()}</option>
               ))}
             </select>
             <button 
               className="btn btn-primary btn-sm px-4 rounded-pill fw-black text-uppercase tracking-widest shadow-glow"
-              style={{ fontSize: '10px' }}
+              style={{ fontSize: '10px', height: '32px' }}
               onClick={() => handleBulkAssign(bulkAssignTlId)}
               disabled={!bulkAssignTlId}
             >
@@ -224,7 +227,8 @@ const LeadTable = ({
                 <th className="py-3" style={{ width: '40px' }}>
                   <input 
                     type="checkbox" 
-                    className="form-check-input bg-surface border-white border-opacity-10"
+                    className="form-check-input bg-dark border-white border-opacity-75 shadow-glow-sm"
+                    style={{ cursor: 'pointer', border: '2px solid rgba(255,255,255,0.8)', width: '18px', height: '18px' }}
                     checked={currentItems.length > 0 && currentItems.filter(l => !l.assignedToId).length > 0 && currentItems.filter(l => !l.assignedToId).every(l => selectedLeadIds.includes(l.id))}
                     onChange={() => {
                       const allUnassignedInPage = currentItems.filter(l => !l.assignedToId).map(l => l.id);
@@ -278,7 +282,8 @@ const LeadTable = ({
                       {!lead.assignedToId && (
                         <input 
                           type="checkbox" 
-                          className="form-check-input bg-surface border-white border-opacity-10"
+                          className="form-check-input bg-dark border-white border-opacity-75 shadow-glow-sm"
+                          style={{ cursor: 'pointer', border: '2px solid rgba(255,255,255,0.8)', width: '18px', height: '18px' }}
                           checked={selectedLeadIds.includes(lead.id)}
                           onChange={() => toggleSelection(lead.id)}
                         />
@@ -287,14 +292,14 @@ const LeadTable = ({
                   )}
                   <td className="py-4">
                     <span 
-                      className="fw-black text-primary hover-underline" 
+                      className="fw-black text-dark hover-underline" 
                       style={{ fontSize: '13px' }}
                     >
                       {lead.name}
                     </span>
                   </td>
-                  <td><span className="text-info small fw-black opacity-75" style={{ fontSize: '10px' }}>{lead.email?.toLowerCase() || '—'}</span></td>
-                  <td><span className="text-primary small fw-black opacity-75" style={{ fontSize: '10px' }}>{lead.mobile}</span></td>
+                  <td><span className="text-main small fw-black opacity-75" style={{ fontSize: '10px' }}>{lead.email?.toLowerCase() || '—'}</span></td>
+                  <td><span className="text-main small fw-black opacity-75" style={{ fontSize: '10px' }}>{lead.mobile}</span></td>
                   <td>
                     <div className="d-flex flex-column">
                       <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '9px', opacity: 0.6 }}>
@@ -310,6 +315,7 @@ const LeadTable = ({
                         style={{ width: '130px', fontSize: '10px', borderRadius: '8px' }}
                         onChange={(e) => handleAssignLeadInternal(lead.id, e.target.value)}
                         value={lead.assignedToId || ''}
+                        disabled={role !== 'ADMIN' && ((['PAID', 'SUCCESS'].includes(lead.status?.toUpperCase())) || (role === 'TEAM_LEADER' && lead.assignedToId && lead.assignedToId != currentUserId))}
                       >
                         <option value="" className="text-danger">UNASSIGNED</option>
                         {uniqueTeamLeaders.filter(u => (u.active || u.id === lead.assignedToId) && u.role !== 'ADMIN').map(u => (
@@ -318,15 +324,20 @@ const LeadTable = ({
                           </option>
                         ))}
                       </select>
+                      {(role !== 'ADMIN' && (['PAID', 'SUCCESS'].includes(lead.status?.toUpperCase()) || (role === 'TEAM_LEADER' && lead.assignedToId && lead.assignedToId != currentUserId))) && (
+                        <div className="text-muted fw-bold opacity-30 mt-1 px-1" style={{ fontSize: '7px' }}>PROTOCOL LOCKED</div>
+                      )}
                     </td>
                   )}
                   <td onClick={(e) => e.stopPropagation()}>
-                    {['CONVERTED', 'PAID', 'SUCCESS', 'EMI'].includes(lead.status?.toUpperCase()) ? (
+                    {['PAID', 'SUCCESS'].includes(lead.status?.toUpperCase()) ? (
                       <div 
                         className={`bg-surface bg-opacity-20 py-1 px-2 fw-black text-uppercase text-center ${getStatusColorClass(lead.status)}`}
                         style={{ width: '130px', fontSize: '10px', borderRadius: '8px' }}
                       >
-                        {lead.status?.toUpperCase()}
+                        {lead.status?.toUpperCase() === 'CONVERTED' 
+                          ? (lead.paidAmount >= (lead.totalAmount - (lead.discount || 501)) && lead.totalAmount > 0 ? 'PAID' : 'PREPAYMENT') 
+                          : lead.status?.toUpperCase()}
                       </div>
                     ) : (
                       <StatusDropdown 
@@ -343,11 +354,34 @@ const LeadTable = ({
                     <div className="d-flex align-items-center justify-content-end gap-1" onClick={(e) => e.stopPropagation()}>
                       {showActions && (
                         <>
-                          <button className="p-2 border-0 bg-transparent text-info hover-scale" onClick={() => setSelectedHistoryLead(lead)} title="Lead Audit History">
+                          {['INTERESTED', 'FOLLOW_UP', 'WORKING', 'CALL_BACK'].includes(lead.status?.toUpperCase()) && (
+                            <button 
+                              className="p-2 border-0 bg-transparent text-primary hover-scale animate-pulse" 
+                              onClick={() => {
+                                navigate(`/leads/${lead.id}/status-update`);
+                              }} 
+                              title="Generate/Manage Payment Link"
+                            >
+                              <Zap size={16} fill="currentColor" />
+                            </button>
+                          )}
+                          
+                          <button 
+                            className="p-2 border-0 bg-transparent text-success hover-scale" 
+                            onClick={() => {
+                              const message = `Hello ${lead.name}, I have generated your secure enrollment payment link and sent it to your email (${lead.email}). Please check and complete the process. Let me know if you need any help!`;
+                              window.open(`https://wa.me/${lead.mobile?.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+                            }} 
+                            title="Share via WhatsApp"
+                          >
+                            <MessageSquare size={16} />
+                          </button>
+
+                          <button className="p-2 border-0 bg-transparent text-muted hover-scale" onClick={() => setSelectedHistoryLead(lead)} title="Lead Audit History">
                             <History size={16} />
                           </button>
 
-                          <button className="p-2 border-0 bg-transparent text-warning hover-scale" onClick={() => onEdit ? onEdit(lead) : setSelectedEditLead(lead)} title="Edit Lead Registry">
+                          <button className="p-2 border-0 bg-transparent text-muted hover-scale" onClick={() => onEdit ? onEdit(lead) : setSelectedEditLead(lead)} title="Edit Lead Registry">
                             <Edit size={16} />
                           </button>
                         </>
@@ -361,17 +395,41 @@ const LeadTable = ({
         </table>
       </div>
 
-      <div className="px-4 py-3 bg-surface bg-opacity-10 border-top border-white border-opacity-5 d-flex align-items-center justify-content-between">
-        <small className="text-muted fw-bold opacity-50 text-uppercase tracking-widest" style={{ fontSize: '8px' }}>
-          Showing {leads.length > 0 ? indexOfFirstItem + 1 : 0} to {Math.min(indexOfLastItem, leads.length)} of {leads.length} leads
-        </small>
-        <div className="d-flex gap-2">
-          <button className="ui-btn ui-btn-secondary btn-sm px-3 py-1 rounded-pill" onClick={() => setCurrentPage(prev => prev - 1)} disabled={currentPage === 1 || loading}>
-            <ChevronLeft size={14} />
-          </button>
-          <button className="ui-btn ui-btn-secondary btn-sm px-3 py-1 rounded-pill" onClick={() => setCurrentPage(prev => prev + 1)} disabled={currentPage >= totalPages || loading}>
-            <ChevronRight size={14} />
-          </button>
+      <div className="px-4 py-4 bg-surface bg-opacity-10 border-top border-white border-opacity-5 d-flex align-items-center justify-content-between">
+        <div className="d-flex align-items-center gap-2">
+          <small className="text-muted fw-bold text-uppercase tracking-widest" style={{ fontSize: '10px' }}>
+            Showing {leads.length > 0 ? indexOfFirstItem + 1 : 0} - {Math.min(indexOfLastItem, leads.length)}
+          </small>
+          <span className="text-muted opacity-25">|</span>
+          <small className="text-primary fw-black text-uppercase tracking-widest" style={{ fontSize: '10px' }}>
+            Total {leads.length} Registry Assets
+          </small>
+        </div>
+        
+        <div className="d-flex align-items-center gap-3">
+          <div className="d-flex gap-1">
+            <button 
+              className={`ui-btn btn-sm rounded-pill px-3 py-2 d-flex align-items-center justify-content-center transition-all ${currentPage === 1 ? 'ui-btn-secondary opacity-25' : 'ui-btn-primary shadow-glow'}`}
+              onClick={() => setCurrentPage(prev => prev - 1)} 
+              disabled={currentPage === 1 || loading}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            
+            <div className="d-flex align-items-center px-3">
+              <span className="text-main fw-black text-uppercase tracking-widest" style={{ fontSize: '11px' }}>
+                Page {currentPage} <span className="text-muted opacity-50 mx-1">/</span> {totalPages || 1}
+              </span>
+            </div>
+
+            <button 
+              className={`ui-btn btn-sm rounded-pill px-3 py-2 d-flex align-items-center justify-content-center transition-all ${currentPage >= totalPages ? 'ui-btn-secondary opacity-25' : 'ui-btn-primary shadow-glow'}`}
+              onClick={() => setCurrentPage(prev => prev + 1)} 
+              disabled={currentPage >= totalPages || loading}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -387,8 +445,11 @@ const LeadTable = ({
           setSelectedHistoryLead(leadToHistory);
         }}
         onSubmit={async (data) => {
-          if (onRecordCallOutcome) await onRecordCallOutcome(selectedOutcomeLead.id, data);
-          else if (onUpdateStatus) await onUpdateStatus(selectedOutcomeLead.id, data.status, data);
+          if (onUpdateStatus) {
+            await onUpdateStatus(selectedOutcomeLead.id, data.status, data.note || '', data);
+          } else if (onRecordCallOutcome) {
+            await onRecordCallOutcome(selectedOutcomeLead.id, data);
+          }
           setSelectedOutcomeLead(null);
         }} 
       />
@@ -407,6 +468,26 @@ const LeadTable = ({
         onViewInvoice={onViewInvoice}
         navigate={navigate}
       />
+
+      {errorPopup && (
+        <div 
+          className="position-fixed top-0 start-50 translate-middle-x mt-4 animate-fade-in"
+          style={{ 
+            zIndex: 9999999,
+            minWidth: '400px'
+          }}
+        >
+          <div className="bg-danger bg-opacity-90 text-white p-4 rounded-4 shadow-lg border border-white border-opacity-20 backdrop-blur-md d-flex align-items-center gap-3">
+            <div className="bg-white bg-opacity-20 p-2 rounded-circle">
+              <AlertCircle size={24} />
+            </div>
+            <div>
+              <h6 className="mb-1 fw-black text-uppercase tracking-widest" style={{ fontSize: '12px' }}>Strategic Restriction</h6>
+              <p className="mb-0 small fw-bold opacity-90">{errorPopup}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .cursor-pointer { cursor: pointer; }

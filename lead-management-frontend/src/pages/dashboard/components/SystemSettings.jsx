@@ -13,13 +13,15 @@ import {
   FileText,
   Timer,
   Layers,
-  Edit2
+  Edit2,
+  BookOpen
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import adminService from '../../../services/adminService';
 import { useTheme } from '../../../context/ThemeContext';
 import PipelineStageManagement from './PipelineStageManagement';
 import AttendanceGovernance from './AttendanceGovernance';
+import CourseManagementPage from '../../CourseManagementPage';
 
 const SystemSettings = () => {
     const { isDarkMode } = useTheme();
@@ -108,6 +110,7 @@ const SystemSettings = () => {
         { id: 'offices', label: 'OFFICES', icon: Building2 },
         { id: 'governance', label: 'GOVERNANCE', icon: ShieldCheck },
         { id: 'stages', label: 'STAGES', icon: Layers },
+        { id: 'courses', label: 'COURSES', icon: BookOpen },
     ];
 
     return (
@@ -235,8 +238,9 @@ const SystemSettings = () => {
                 </div>
             )}
 
-            {activeTab === 'governance' && <AttendanceGovernance offices={offices} />}
-            {activeTab === 'stages' && <PipelineStageManagement />}
+            { activeTab === 'governance' && <AttendanceGovernance offices={offices} /> }
+            { activeTab === 'stages' && <PipelineStageManagement /> }
+            { activeTab === 'courses' && <CourseManagementPage /> }
         </div>
     );
 };

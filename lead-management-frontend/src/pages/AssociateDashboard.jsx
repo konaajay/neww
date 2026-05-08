@@ -28,6 +28,7 @@ import PaymentHistory from '../components/PaymentHistory';
 import CallLogDashboard from './dashboard/components/CallLogDashboard';
 import LeadModal from './dashboard/components/LeadModal';
 import MetricCommandCenter from './dashboard/components/MetricCommandCenter';
+import TodayTaskList from './dashboard/components/TodayTaskList';
 import FiltersBar from './dashboard/components/FiltersBar';
 import ManagerProfile from './dashboard/components/ManagerProfile';
 import AttendanceDashboard from './dashboard/components/AttendanceDashboard';
@@ -43,18 +44,27 @@ const AssociateDashboard = () => {
   const theme = isDarkMode ? 'dark' : 'light';
 
   // UI State
-  const [activeTab, setActiveTab] = useState(() => {
-    return localStorage.getItem('last_tab_associate') || 'overview';
-  });
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('associate_active_tab') || 'overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [isIngestionModalOpen, setIsIngestionModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
 
   // 1. STABLE FILTERS (Core fix to prevent API spam)
-  const [filters, setFilters] = useState({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
-    to: new Date().toISOString().split('T')[0],
-    userId: user?.id
+  const [filters, setFilters] = useState(() => {
+    const d = new Date();
+    const f = new Date(d.getFullYear(), d.getMonth(), 1);
+    const l = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    const fmt = (date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+    return {
+      from: fmt(f),
+      to: fmt(l),
+      userId: user?.id
+    };
   });
 
   const stableFilters = useMemo(() => ({
@@ -75,6 +85,7 @@ const AssociateDashboard = () => {
     leads, 
     loading: leadsLoading,
     updateLead,
+    updateStatus,
     recordCallOutcome
   } = useLeads(debouncedFilters, 'ASSOCIATE');
 
@@ -99,7 +110,7 @@ const AssociateDashboard = () => {
       return;
     }
     setActiveTab(tab);
-    localStorage.setItem('last_tab_associate', tab);
+    localStorage.setItem('associate_active_tab', tab);
   };
 
   const handleAddLead = async (leadData) => {
@@ -109,6 +120,8 @@ const AssociateDashboard = () => {
       handleSync();
       return true;
     } catch (err) {
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to initialize lead';
+      toast.error(errorMessage);
       return false;
     }
   };
@@ -160,13 +173,23 @@ const AssociateDashboard = () => {
           <div className="d-flex flex-column gap-4 animate-fade-in">
             <ManagerProfile manager={manager} />
             {dashboardLoading ? <StatSkeleton /> : (
-              <MetricCommandCenter
-                stats={stats}
-                role="ASSOCIATE"
-                filters={debouncedFilters}
-                onNavigate={handleTabChange}
-                leads={leads}
-              />
+              <div className="row g-4">
+                <div className="col-12 col-xl-8">
+                  <MetricCommandCenter
+                    stats={stats}
+                    role="ASSOCIATE"
+                    filters={debouncedFilters}
+                    onNavigate={handleTabChange}
+                    leads={leads}
+                  />
+                </div>
+                <div className="col-12 col-xl-4">
+                  <TodayTaskList 
+                    leads={leads} 
+                    theme={theme} 
+                  />
+                </div>
+              </div>
             )}
           </div>
         )}
@@ -175,20 +198,22 @@ const AssociateDashboard = () => {
           <div className="d-flex flex-column gap-3">
             <div className="row g-3 mb-2 animate-fade-in">
               {[
-                { label: 'Call Back', value: (stats.statusDistribution?.CALL_BACK || stats.statusDistribution?.CALLBACK || 0), color: 'warning', icon: '📞' },
-                { label: 'Follow Up', value: (stats.statusDistribution?.FOLLOW_UP || stats.statusDistribution?.FOLLOWUP || 0), color: 'info', icon: '⏳' },
-                { label: 'Converted', value: (stats.statusDistribution?.CONVERTED || stats.statusDistribution?.PAID || stats.statusDistribution?.SUCCESS || 0), color: 'success', icon: '✅' },
-                { label: 'Lost', value: (stats.statusDistribution?.LOST || stats.statusDistribution?.REJECTED || 0), color: 'danger', icon: '❌' }
+                { label: 'Call Back', value: ((stats.statusDistribution?.CALL_BACK || 0) + (stats.statusDistribution?.CALLBACK || 0)), color: 'warning', icon: '📞' },
+                { label: 'Follow Up', value: ((stats.statusDistribution?.FOLLOW_UP || 0) + (stats.statusDistribution?.FOLLOWUP || 0)), color: 'info', icon: '⏳' },
+                { label: 'Converted', value: ((stats.statusDistribution?.CONVERTED || 0) + (stats.statusDistribution?.PAID || 0) + (stats.statusDistribution?.SUCCESS || 0) + (stats.statusDistribution?.EMI || 0)), color: 'success', icon: '✅' },
+                { label: 'Lost', value: ((stats.statusDistribution?.LOST || 0) + (stats.statusDistribution?.REJECTED || 0)), color: 'danger', icon: '❌' }
               ].map((card, i) => (
                 <div key={i} className="col-6 col-md-3">
-                  <div className="premium-card p-3 border border-white border-opacity-10 shadow-sm d-flex align-items-center gap-3" style={{ borderRadius: '20px', background: 'rgba(255,255,255,0.02)' }}>
-                    <div className={`p-2 rounded-3 bg-${card.color} bg-opacity-10 text-${card.color}`}>
-                      <span style={{ fontSize: '18px' }}>{card.icon}</span>
-                    </div>
-                    <div>
-                      <h4 className="mb-0 fw-black text-main">{card.value}</h4>
-                      <small className="text-muted fw-bold text-uppercase tracking-widest" style={{ fontSize: '8px' }}>{card.label}</small>
-                    </div>
+                  <div className="premium-card p-3 border border-white border-opacity-10 shadow-sm d-flex flex-column gap-1" 
+                    style={{ 
+                      borderRadius: '20px', 
+                      background: isDarkMode 
+                        ? `linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(${card.color === 'warning' ? '255,193,7' : card.color === 'info' ? '13,202,240' : card.color === 'success' ? '25,135,84' : '220,53,69'}, 0.08) 100%)`
+                        : 'rgba(255,255,255,0.8)',
+                      backdropFilter: 'blur(10px)'
+                    }}>
+                    <h4 className="mb-0 fw-black text-main" style={{ fontSize: '26px', lineHeight: 1 }}>{card.value}</h4>
+                    <small className="text-muted fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '8px' }}>{card.label}</small>
                   </div>
                 </div>
               ))}
@@ -215,6 +240,7 @@ const AssociateDashboard = () => {
                 <LeadTable
                   leads={filteredLeads}
                   onUpdateLead={(id, data) => updateLead({ id, data })}
+                  onUpdateStatus={(id, status, note, extra) => updateStatus(id, status, note, extra)}
                   onRecordCallOutcome={(leadId, data) => recordCallOutcome({ leadId, data })}
                   onViewInvoice={handleViewInvoice}
                   role="ASSOCIATE"

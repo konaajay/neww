@@ -27,17 +27,18 @@ import LeadTable from '../components/LeadTable';
 import TaskBoard from '../components/TaskBoard';
 import TeamTree from './dashboard/components/TeamTree';
 import TeamManagement from './dashboard/components/TeamManagement';
+import TargetDistributionHub from './dashboard/components/TargetDistributionHub';
 import CallLogDashboard from './dashboard/components/CallLogDashboard';
 import LeadModal from './dashboard/components/LeadModal';
 import MetricCommandCenter, { MetricCard } from './dashboard/components/MetricCommandCenter';
 import AttendanceDashboard from './dashboard/components/AttendanceDashboard';
 import PipelineStageManagement from './dashboard/components/PipelineStageManagement';
-import RevenueStrategyHub from './dashboard/components/RevenueStrategyHub';
 import { StatSkeleton, ChartSkeleton } from './dashboard/components/DashboardSkeletons';
 import PaymentHistory from '../components/PaymentHistory';
 import SystemSettings from './dashboard/components/SystemSettings';
 import UserEditModal from './dashboard/components/UserEditModal';
 import InvoiceModal from './dashboard/components/InvoiceModal';
+import CourseManagementPage from './CourseManagementPage';
 import paymentService from '../services/paymentService';
 
 const RevenueTrendChart = React.lazy(() => import('./dashboard/components/RevenueTrendChart'));
@@ -47,9 +48,7 @@ const AdminDashboard = () => {
   const { user } = useAuth();
   const { theme } = useTheme();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState(() => {
-    return localStorage.getItem('admin_activeTab') || 'overview';
-  });
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('admin_active_tab') || 'team-dashboard');
   const [myDashboardSubTab, setMyDashboardSubTab] = useState('dashboard');
   const [settingsSubTab, setSettingsSubTab] = useState('pipeline');
   const [taskFilter, setTaskFilter] = useState('ALL');
@@ -59,12 +58,23 @@ const AdminDashboard = () => {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
 
   // 1. STABLE FILTERS (Core fix to prevent API spam)
-  const [filters, setFilters] = useState({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
-    to: new Date().toISOString().split('T')[0],
-    userId: null,
-    managerId: null,
-    teamId: null
+  const [filters, setFilters] = useState(() => {
+    const d = new Date();
+    const f = new Date(d.getFullYear(), d.getMonth(), 1);
+    const l = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    const fmt = (date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+    return {
+      from: fmt(f),
+      to: fmt(l),
+      userId: null,
+      managerId: null,
+      teamId: null
+    };
   });
 
   const stableFilters = useMemo(() => ({
@@ -121,17 +131,13 @@ const AdminDashboard = () => {
       return;
     }
     setActiveTab(tab);
+    localStorage.setItem('admin_active_tab', tab);
     if (tab === 'tasks' && extra.filter) {
       setTaskFilter(extra.filter);
     } else if (tab !== 'tasks') {
       setTaskFilter('ALL');
     }
-    localStorage.setItem('admin_activeTab', tab);
-    if (tab === 'my-stats') {
-      setFilters(prev => ({ ...prev, userId: user?.id, teamId: null }));
-    } else {
-      setFilters(prev => ({ ...prev, userId: null }));
-    }
+    setFilters(prev => ({ ...prev, userId: null }));
   };
 
   const handleAddLead = async (data) => {
@@ -141,7 +147,8 @@ const AdminDashboard = () => {
       handleSync();
       return true;
     } catch (err) {
-      toast.error('Could not add lead');
+      const errorMessage = err.response?.data?.message || err.message || 'Could not add lead';
+      toast.error(errorMessage);
       return false;
     }
   };
@@ -232,7 +239,7 @@ const AdminDashboard = () => {
   return (
     <DashboardLayout activeTab={activeTab} onTabChange={handleTabChange} role="ADMIN">
       <div className="dashboard-content-wrapper w-100 h-100 animate-fade-in d-flex flex-column gap-3">
-        {['overview', 'team-dashboard', 'leads', 'tasks', 'my-stats', 'calls', 'attendance', 'payments'].includes(activeTab) && (
+        {['overview', 'team-dashboard', 'leads', 'tasks', 'calls', 'attendance', 'payments'].includes(activeTab) && (
           <FiltersBar
             filters={filters}
             onChange={setFilters}
@@ -243,59 +250,12 @@ const AdminDashboard = () => {
           />
         )}
 
-        {activeTab === 'my-stats' && (
-          <div className="d-flex flex-column gap-3 animate-fade-in">
-            <div className="d-flex gap-2 p-2 bg-surface bg-opacity-20 rounded-pill border border-white border-opacity-5 mb-2 overflow-auto" style={{ width: 'fit-content' }}>
-              {[
-                { id: 'dashboard', label: 'Dashboard', icon: ShieldHalf },
-                { id: 'leads', label: 'My Leads', icon: Users },
-                { id: 'calls', label: 'Telephony Logs', icon: Phone },
-                { id: 'attendance', label: 'Attendance', icon: Clock },
-              ].map(sub => (
-                <button
-                  key={sub.id}
-                  onClick={() => setMyDashboardSubTab(sub.id)}
-                  className={`btn btn-sm rounded-pill px-4 py-2 fw-black text-uppercase tracking-widest d-flex align-items-center gap-2 transition-all ${myDashboardSubTab === sub.id ? 'bg-primary text-white shadow-glow' : 'text-muted hover-bg-white-10'}`}
-                  style={{ fontSize: '9px' }}
-                >
-                  <sub.icon size={12} />
-                  {sub.label}
-                </button>
-              ))}
-            </div>
-            {myDashboardSubTab === 'dashboard' && (
-              <div className="animate-fade-in">
-                <MetricCommandCenter stats={stats} role="ASSOCIATE" filters={debouncedFilters} onNavigate={handleTabChange} leads={leads} />
-              </div>
-            )}
-            {myDashboardSubTab === 'leads' && (
-              <div className="premium-card overflow-hidden shadow-lg border-0">
-                <div className="card-header bg-transparent p-4 border-0 border-bottom border-white border-opacity-5 d-flex justify-content-between align-items-center">
-                  <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest small">My Individual Lead Registry</h5>
-                </div>
-                <div className="card-body p-0">
-                  <LeadTable
-                    leads={leads.filter(l => l.assignedToId === user?.id)}
-                    onUpdateLead={(id, data) => updateLead({ id, data })}
-                    onUpdateStatus={updateStatus}
-                    onViewInvoice={handleViewInvoice}
-                    loading={leadsLoading}
-                    teamLeaders={users.some(u => u.id === user?.id) ? users : [user, ...users]}
-                    role="ADMIN"
-                    pipelineStages={pipelineStages}
-                  />
-                </div>
-              </div>
-            )}
-            {myDashboardSubTab === 'calls' && <CallLogDashboard userId={user?.id} filters={debouncedFilters} hideHeader={true} />}
-            {myDashboardSubTab === 'attendance' && <AttendanceDashboard filters={filters} role="ADMIN" currentUserId={user?.id} hideHeader={true} />}
-          </div>
-        )}
+
 
         {(activeTab === 'overview' || activeTab === 'team-dashboard') && (
           <div className="d-flex flex-column gap-3 animate-fade-in">
             {dashboardLoading ? <StatSkeleton /> : (
-              <MetricCommandCenter stats={stats} role="ADMIN" filters={debouncedFilters} onNavigate={handleTabChange} leads={leads} />
+              <MetricCommandCenter stats={stats} role={user?.role} filters={debouncedFilters} onNavigate={handleTabChange} leads={leads} />
             )}
             <div className="row g-4 animate-fade-in">
               <div className="col-12 col-xl-8">
@@ -324,20 +284,15 @@ const AdminDashboard = () => {
           <div className="d-flex flex-column gap-3">
             <div className="row g-3 mb-2 animate-fade-in">
               {[
-                { label: 'Converted', value: (statusDistribution.CONVERTED || 0), color: 'success', icon: '✅' },
+                { label: 'Converted', value: ((statusDistribution.CONVERTED || 0) + (statusDistribution.PAID || 0) + (statusDistribution.SUCCESS || 0) + (statusDistribution.EMI || 0)), color: 'success', icon: '✅' },
                 { label: 'Interested', value: (statusDistribution.INTERESTED || 0), color: 'warning', icon: '🔥' },
                 { label: 'Follow-up', value: stats.todayFollowups || 0, color: 'info', icon: '⏳' },
-                { label: 'Lost', value: (statusDistribution.LOST || 0), color: 'danger', icon: '❌' }
+                { label: 'Lost', value: ((statusDistribution.LOST || 0) + (statusDistribution.REJECTED || 0)), color: 'danger', icon: '❌' }
               ].map((card, i) => (
                 <div key={i} className="col-6 col-md-3">
-                  <div className="premium-card p-3 border border-white border-opacity-10 shadow-sm d-flex align-items-center gap-3" style={{ borderRadius: '20px', background: 'rgba(255,255,255,0.02)' }}>
-                    <div className={`p-2 rounded-3 bg-${card.color} bg-opacity-10 text-${card.color}`}>
-                      <span style={{ fontSize: '18px' }}>{card.icon}</span>
-                    </div>
-                    <div>
-                      <h4 className="mb-0 fw-black text-main">{card.value}</h4>
-                      <small className="text-muted fw-bold text-uppercase tracking-widest" style={{ fontSize: '8px' }}>{card.label}</small>
-                    </div>
+                  <div className="premium-card p-3 border border-white border-opacity-10 shadow-sm d-flex flex-column gap-1" style={{ borderRadius: '20px', background: 'rgba(255,255,255,0.02)' }}>
+                    <h4 className="mb-0 fw-black text-main" style={{ fontSize: '26px', lineHeight: 1 }}>{card.value}</h4>
+                    <small className="text-muted fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '8px' }}>{card.label}</small>
                   </div>
                 </div>
               ))}
@@ -360,6 +315,12 @@ const AdminDashboard = () => {
                   <button className="ui-btn ui-btn-primary btn-sm px-4 rounded-pill fw-black text-uppercase tracking-widest" style={{ fontSize: '10px' }} onClick={() => setIsIngestionModalOpen(true)}>
                     Add Lead
                   </button>
+                  <Target
+                    size={12}
+                    className="text-primary cursor-pointer opacity-30 hover-opacity-100 transition-all"
+                    onClick={() => setActiveTab('strategy')}
+                    title="Manage Strategic Targets"
+                  />
                 </div>
               </div>
               <div className="card-body p-0">
@@ -378,6 +339,7 @@ const AdminDashboard = () => {
                   setBulkAssignTlId={setBulkAssignTlId}
                   handleBulkAssign={(targetId) => bulkAssignLeads({ leadIds: selectedLeadIds, targetId })}
                   pipelineStages={pipelineStages}
+                  currentUserId={user?.id}
                 />
               </div>
             </div>
@@ -397,7 +359,14 @@ const AdminDashboard = () => {
             handleEditUser={setEditingUser}
             handleAssignSupervisor={handleAssignSupervisor}
             handleSync={handleSync}
+            setActiveTab={setActiveTab}
             canAdd={true}
+          />
+        )}
+        {activeTab === 'strategy' && (
+          <TargetDistributionHub
+            subordinates={users.filter(u => u.role === 'MANAGER')}
+            onSync={handleSync}
           />
         )}
         {activeTab === 'hierarchy' && <TeamTree data={teamTree} />}
@@ -417,27 +386,27 @@ const AdminDashboard = () => {
 
         {activeTab === 'calls' && (
           <div className="d-flex flex-column gap-4 animate-fade-in">
-             <div className="row g-4">
-               <div className="col-12 col-xl-8">
-                 <Card title="Global Performance Trend">
-                   <div style={{ height: '360px' }}>
-                     <React.Suspense fallback={<ChartSkeleton />}>
-                       <RevenueTrendChart data={trend} theme={theme} />
-                     </React.Suspense>
-                   </div>
-                 </Card>
-               </div>
-               <div className="col-12 col-xl-4">
-                 <Card title="System Pipeline Map">
-                   <div style={{ height: '360px' }}>
-                     <React.Suspense fallback={<ChartSkeleton />}>
-                       <LeadStatusPieChart distribution={statusDistribution} leads={leads} isDarkMode={theme === 'dark'} />
-                     </React.Suspense>
-                   </div>
-                 </Card>
-               </div>
-             </div>
-             <CallLogDashboard userId={user?.id} filters={debouncedFilters} hideHeader={true} />
+            <div className="row g-4">
+              <div className="col-12 col-xl-8">
+                <Card title="Global Performance Trend">
+                  <div style={{ height: '360px' }}>
+                    <React.Suspense fallback={<ChartSkeleton />}>
+                      <RevenueTrendChart data={trend} theme={theme} />
+                    </React.Suspense>
+                  </div>
+                </Card>
+              </div>
+              <div className="col-12 col-xl-4">
+                <Card title="System Pipeline Map">
+                  <div style={{ height: '360px' }}>
+                    <React.Suspense fallback={<ChartSkeleton />}>
+                      <LeadStatusPieChart distribution={statusDistribution} leads={leads} isDarkMode={theme === 'dark'} />
+                    </React.Suspense>
+                  </div>
+                </Card>
+              </div>
+            </div>
+            <CallLogDashboard userId={user?.id} filters={debouncedFilters} hideHeader={true} />
           </div>
         )}
 
@@ -463,6 +432,7 @@ const AdminDashboard = () => {
             <SystemSettings />
           </div>
         )}
+        {activeTab === 'courses' && <CourseManagementPage />}
 
         <LeadModal isOpen={isIngestionModalOpen} onClose={() => setIsIngestionModalOpen(false)} onAddLead={handleAddLead} onSuccess={handleSync} associates={users.filter(u => u.role !== 'ADMIN')} />
         <UserEditModal

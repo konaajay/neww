@@ -5,7 +5,7 @@ import tlService from '../../../services/tlService';
 import associateService from '../../../services/associateService';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
-import { Phone, PhoneOutgoing, Clock, User, Calendar, Search, Play, FileText, Upload } from 'lucide-react';
+import { Phone, PhoneOutgoing, Clock, User, Calendar, Search, Play, FileText, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
 import BulkUploadCallModal from './BulkUploadCallModal';
 import { toast } from 'react-toastify';
 import axios from 'axios';
@@ -24,6 +24,9 @@ const CallLogDashboard = ({ userId: externalUserId, hideHeader = false, filters:
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [playingId, setPlayingId] = useState(null);
     const [audioObj, setAudioObj] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 20;
+
     
     const [internalFilters, setInternalFilters] = useState({
         from: new Date().toISOString().split('T')[0],
@@ -140,6 +143,12 @@ const CallLogDashboard = ({ userId: externalUserId, hideHeader = false, filters:
         }
     };
 
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = logs.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(logs.length / itemsPerPage);
+
+
     return (
         <div className="container-fluid p-0 animate-fade-in mt-2">
             {!hideHeader && (
@@ -202,32 +211,29 @@ const CallLogDashboard = ({ userId: externalUserId, hideHeader = false, filters:
                             </tr>
                         </thead>
                         <tbody>
-                            {logs.map((log, index) => {
-                                const isConnected = log.status === 'CONNECTED' || log.status === 'PAID';
-                                const isFailed = log.status === 'NOT_INTERESTED' || log.status === 'PAYMENT_FAILED';
-
+                            {currentItems.map((log, index) => {
                                 return (
                                     <tr key={log.id} className="border-bottom border-white border-opacity-5 transition-all">
                                         <td className="ps-4 py-3 text-muted small fw-bold">
-                                            {index + 1}
+                                            {indexOfFirstItem + index + 1}
                                         </td>
                                         <td className="py-3 text-main fw-black small">
                                             {log.lead?.name || "MANUAL ENTRY"}
                                         </td>
-                                        <td className="py-3 text-primary font-monospace small fw-bold">
+                                        <td className="py-3 text-main font-monospace small fw-bold">
                                             {log.phoneNumber}
                                         </td>
                                         <td className="py-3 text-muted small opacity-75">
                                             {log.lead?.email || "—"}
                                         </td>
                                         <td className="py-3">
-                                            <span className={`badge rounded-1 px-2 py-1 text-uppercase fw-black ${isConnected ? 'bg-success bg-opacity-10 text-success' : isFailed ? 'bg-danger bg-opacity-10 text-danger' : 'bg-warning bg-opacity-10 text-warning'}`} style={{ fontSize: '8px', width: 'fit-content' }}>
+                                            <span className="badge rounded-1 px-2 py-1 text-uppercase fw-black bg-surface bg-opacity-20 text-main border border-white border-opacity-5" style={{ fontSize: '8px', width: 'fit-content' }}>
                                                 {log.status.replace(/_/g, ' ')}
                                             </span>
                                         </td>
                                         <td className="py-3">
                                             <div className="d-flex align-items-center gap-2">
-                                                <div className="p-1 rounded-circle bg-primary bg-opacity-10 text-primary border border-primary border-opacity-10">
+                                                <div className="p-1 rounded-circle bg-white bg-opacity-5 text-muted border border-white border-opacity-5">
                                                     <User size={10} />
                                                 </div>
                                                 <span className="fw-black text-main small" style={{ fontSize: '11px' }}>{log.user?.name || "SYSTEM"}</span>
@@ -256,6 +262,44 @@ const CallLogDashboard = ({ userId: externalUserId, hideHeader = false, filters:
                             })}
                         </tbody>
                     </table>
+
+                    <div className="px-4 py-4 bg-surface bg-opacity-10 border-top border-white border-opacity-5 d-flex align-items-center justify-content-between">
+                        <div className="d-flex align-items-center gap-2">
+                            <small className="text-muted fw-bold text-uppercase tracking-widest" style={{ fontSize: '10px' }}>
+                                Showing {logs.length > 0 ? indexOfFirstItem + 1 : 0} - {Math.min(indexOfLastItem, logs.length)}
+                            </small>
+                            <span className="text-muted opacity-25">|</span>
+                            <small className="text-primary fw-black text-uppercase tracking-widest" style={{ fontSize: '10px' }}>
+                                Total {logs.length} Interaction Records
+                            </small>
+                        </div>
+                        
+                        <div className="d-flex align-items-center gap-3">
+                            <div className="d-flex gap-1">
+                                <button 
+                                    className={`ui-btn btn-sm rounded-pill px-3 py-2 d-flex align-items-center justify-content-center transition-all ${currentPage === 1 ? 'ui-btn-secondary opacity-25' : 'ui-btn-primary shadow-glow'}`}
+                                    onClick={() => setCurrentPage(prev => prev - 1)} 
+                                    disabled={currentPage === 1 || loading}
+                                >
+                                    <ChevronLeft size={16} />
+                                </button>
+                                
+                                <div className="d-flex align-items-center px-3">
+                                    <span className="text-main fw-black text-uppercase tracking-widest" style={{ fontSize: '11px' }}>
+                                        Page {currentPage} <span className="text-muted opacity-50 mx-1">/</span> {totalPages || 1}
+                                    </span>
+                                </div>
+
+                                <button 
+                                    className={`ui-btn btn-sm rounded-pill px-3 py-2 d-flex align-items-center justify-content-center transition-all ${currentPage >= totalPages ? 'ui-btn-secondary opacity-25' : 'ui-btn-primary shadow-glow'}`}
+                                    onClick={() => setCurrentPage(prev => prev + 1)} 
+                                    disabled={currentPage >= totalPages || loading}
+                                >
+                                    <ChevronRight size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
                     {logs.length === 0 && !loading && (
                         <div className="text-center py-5 d-flex flex-column align-items-center opacity-20">

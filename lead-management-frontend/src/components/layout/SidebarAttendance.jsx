@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { LogIn, LogOut, Coffee, Timer, MapPin, CheckCircle2, Clock, ChevronUp, ChevronDown } from 'lucide-react';
 import { toast } from 'react-toastify';
 import attendanceService from '../../services/attendanceService';
+import wfhService from '../../services/wfhService';
 import { useTheme } from '../../context/ThemeContext';
 
 const SidebarAttendance = ({ isCollapsed }) => {
@@ -66,10 +67,10 @@ const SidebarAttendance = ({ isCollapsed }) => {
                     const [h2, m2] = targetEnd.split(':').map(Number);
                     const tStart = new Date(now).setHours(h1, m1, 0, 0);
                     const tEnd = new Date(now).setHours(h2, m2, 0, 0);
-                    
+
                     const overlapStart = Math.max(lastSeen.getTime(), tStart);
                     const overlapEnd = Math.min(now.getTime(), tEnd);
-                    
+
                     return Math.max(0, Math.floor((overlapEnd - overlapStart) / 1000));
                 };
 
@@ -77,9 +78,9 @@ const SidebarAttendance = ({ isCollapsed }) => {
                 const shiftEnd = status.shiftEndTime || "23:59";
                 const billableOverlapSecs = getOverlap(shiftStart, shiftEnd);
                 const rawSegmentSecs = Math.max(0, Math.floor((now.getTime() - lastSeen.getTime()) / 1000));
-                
-                const autoBreakSecs = getOverlap(status.shortBreakStartTime, status.shortBreakEndTime) + 
-                                     getOverlap(status.longBreakStartTime, status.longBreakEndTime);
+
+                const autoBreakSecs = getOverlap(status.shortBreakStartTime, status.shortBreakEndTime) +
+                    getOverlap(status.longBreakStartTime, status.longBreakEndTime);
 
                 const billableSegment = (status.shiftStartTime ? billableOverlapSecs : rawSegmentSecs);
                 totalSecs += Math.max(0, billableSegment - autoBreakSecs);
@@ -135,13 +136,13 @@ const SidebarAttendance = ({ isCollapsed }) => {
         const dLat = (lat2 - lat1) * Math.PI / 180;
         const dLon = (lon2 - lon1) * Math.PI / 180;
         const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     };
 
     useEffect(() => {
-        if (isPunchedIn || !status?.officeLat) {
+        if (!status?.officeLat) {
             setDistanceToOffice(null);
             return;
         }
@@ -150,9 +151,9 @@ const SidebarAttendance = ({ isCollapsed }) => {
             if (!navigator.geolocation) return;
             navigator.geolocation.getCurrentPosition((pos) => {
                 const dist = calculateDistance(
-                    pos.coords.latitude, 
-                    pos.coords.longitude, 
-                    status.officeLat, 
+                    pos.coords.latitude,
+                    pos.coords.longitude,
+                    status.officeLat,
                     status.officeLng
                 );
                 setDistanceToOffice(dist);
@@ -165,6 +166,17 @@ const SidebarAttendance = ({ isCollapsed }) => {
     }, [isPunchedIn, status?.officeLat, status?.officeLng]);
 
     const handleClockIn = () => {
+        const radius = status?.officeRadius || 150; 
+        const isWfh = status?.isWfhApproved || status?.wfhStatus === 'APPROVED';
+
+        if (distanceToOffice !== null && distanceToOffice > radius && !isWfh) {
+            toast.error(`PUNCH DENIED: You are ${Math.round(distanceToOffice)}m away. Please be within ${radius}m of the office or request WFH approval.`, {
+                position: "bottom-center",
+                autoClose: 5000
+            });
+            return;
+        }
+
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 async (position) => {
@@ -177,7 +189,7 @@ const SidebarAttendance = ({ isCollapsed }) => {
                         });
                         const data = parseStatus(res);
                         setStatus(data);
-                        toast.success('Punched in');
+                        toast.success('Punched in successfully');
                     } catch (err) {
                         toast.error(err?.response?.data?.message || err?.response?.data?.error || 'Clock-in failed');
                     }
@@ -227,12 +239,13 @@ const SidebarAttendance = ({ isCollapsed }) => {
 
     const getStatusLabel = () => {
         if (!isPunchedIn) return 'OFF DUTY';
+        const suffix = (status?.isWfhApproved || status?.wfhStatus === 'APPROVED') ? ' (WFH)' : '';
         switch (status?.status) {
-            case 'WORKING': return 'WORKING';
+            case 'WORKING': return 'WORKING' + suffix;
             case 'ON_BREAK':
             case 'AUTO_BREAK': return 'BREAK';
             case 'OUTSIDE': return 'OUTSIDE';
-            default: return status?.status || 'ACTIVE';
+            default: return (status?.status || 'ACTIVE') + suffix;
         }
     };
 
@@ -277,8 +290,8 @@ const SidebarAttendance = ({ isCollapsed }) => {
 
     return (
         <div className="mx-3 mb-4 p-3 rounded-4 border animate-fade-in shadow-sm">
-            <div 
-                className="d-flex align-items-center justify-content-between mb-3 cursor-pointer" 
+            <div
+                className="d-flex align-items-center justify-content-between mb-3 cursor-pointer"
                 onClick={() => setIsExpanded(!isExpanded)}
             >
                 <div className="d-flex align-items-center gap-2">
@@ -305,17 +318,30 @@ const SidebarAttendance = ({ isCollapsed }) => {
                             <button
                                 id="punchIn"
                                 onClick={handleClockIn}
-                                className="ui-btn ui-btn-primary w-100 py-2 rounded-3 shadow-glow fw-black text-uppercase tracking-widest d-flex align-items-center justify-content-center gap-2"
+                                disabled={distanceToOffice !== null && distanceToOffice > (status?.officeRadius || 150)}
+                                className={`ui-btn w-100 py-2 rounded-3 fw-black text-uppercase tracking-widest d-flex align-items-center justify-content-center gap-2 ${distanceToOffice !== null && distanceToOffice > (status?.officeRadius || 150) ? 'btn-secondary opacity-50' : 'ui-btn-primary shadow-glow'}`}
                                 style={{ fontSize: '10px' }}
                             >
-                                <LogIn size={14} /> Punch In
+                                <LogIn size={14} /> 
+                                {status?.isWfhApproved || status?.wfhStatus === 'APPROVED' 
+                                    ? 'Punch In (WFH)' 
+                                    : (distanceToOffice !== null && distanceToOffice > (status?.officeRadius || 150) ? 'Outside Radius' : 'Punch In')}
                             </button>
+                            {!isPunchedIn && (
+                                <button 
+                                    onClick={() => window.dispatchEvent(new CustomEvent('open-wfh-modal'))}
+                                    className="btn btn-link text-primary p-0 mt-1 fw-bold" 
+                                    style={{ fontSize: '9px', textDecoration: 'none' }}
+                                >
+                                    Need to work from home? Request Approval
+                                </button>
+                            )}
                             {distanceToOffice !== null && (
                                 <div className="d-flex align-items-center justify-content-center gap-2 py-1 bg-surface bg-opacity-30 rounded-3 border border-white border-opacity-5">
                                     <MapPin size={10} className={distanceToOffice > (status?.officeRadius || 100) ? 'text-danger' : 'text-success'} />
                                     <span className="fw-bold" style={{ fontSize: '9px', color: isDarkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)' }}>
-                                        {distanceToOffice > 1000 
-                                            ? `${(distanceToOffice / 1000).toFixed(2)} km from office` 
+                                        {distanceToOffice > 1000
+                                            ? `${(distanceToOffice / 1000).toFixed(2)} km from office`
                                             : `${Math.round(distanceToOffice)} meters from office`
                                         }
                                     </span>
@@ -324,19 +350,32 @@ const SidebarAttendance = ({ isCollapsed }) => {
                         </div>
                     ) : (
                         <div className="d-flex flex-column gap-2">
-                            <div className="p-3 border rounded-4 position-relative overflow-hidden mb-2 shadow-sm" 
-                                 style={{ 
+                            <div className="p-3 border rounded-4 position-relative overflow-hidden mb-2 shadow-sm"
+                                style={{
                                     backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.03)' : 'var(--bs-light)',
                                     borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'var(--bs-border-color)'
-                                 }}>
+                                }}>
                                 <div className="position-absolute top-0 end-0 p-3 opacity-10" style={{ transform: 'translate(10%,-10%)', color: isDarkMode ? 'white' : 'black' }}>
                                     <MapPin size={24} />
                                 </div>
                                 <div className="d-flex flex-column position-relative" style={{ zIndex: 1 }}>
                                     {status?.lastLat && (
-                                        <span className="fw-black text-main mb-2 d-block" style={{ fontSize: '10px', letterSpacing: '0.05em' }}>
-                                            {Number(status.lastLat).toFixed(4)}, {Number(status.lastLng).toFixed(4)}
-                                        </span>
+                                        <div className="d-flex flex-column gap-1 mb-2">
+                                            <span className="fw-black text-main d-block" style={{ fontSize: '10px', letterSpacing: '0.05em' }}>
+                                                {Number(status.lastLat).toFixed(4)}, {Number(status.lastLng).toFixed(4)}
+                                            </span>
+                                            {distanceToOffice !== null && (
+                                                <div className="d-flex align-items-center gap-1">
+                                                    <MapPin size={9} className={status?.status === 'OUTSIDE' ? 'text-danger' : 'text-success'} />
+                                                    <span className={`fw-bold ${status?.status === 'OUTSIDE' ? 'text-danger' : 'text-muted'}`} style={{ fontSize: '9px' }}>
+                                                        {distanceToOffice > 1000
+                                                            ? `${(distanceToOffice / 1000).toFixed(2)} km away`
+                                                            : `${Math.round(distanceToOffice)} meters away`
+                                                        }
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
                                     )}
                                     <div className="d-flex align-items-center gap-2 mb-1">
                                         <Clock size={13} className={isDarkMode ? 'text-primary' : 'text-body'} />
@@ -366,11 +405,10 @@ const SidebarAttendance = ({ isCollapsed }) => {
                                     <button
                                         onClick={() => handleBreak('SHORT')}
                                         disabled={status?.status === 'ON_LONG_BREAK'}
-                                        className={`w-100 py-2 rounded-3 fw-black d-flex align-items-center justify-content-center gap-1 transition-all border ${
-                                            status?.status === 'ON_SHORT_BREAK'
+                                        className={`w-100 py-2 rounded-3 fw-black d-flex align-items-center justify-content-center gap-1 transition-all border ${status?.status === 'ON_SHORT_BREAK'
                                                 ? 'bg-warning text-dark border-warning shadow-glow'
                                                 : 'bg-transparent text-warning border-warning border-opacity-50'
-                                        }`}
+                                            }`}
                                         style={{ fontSize: '10px' }}
                                     >
                                         <Coffee size={11} />
@@ -381,11 +419,10 @@ const SidebarAttendance = ({ isCollapsed }) => {
                                     <button
                                         onClick={() => handleBreak('LONG')}
                                         disabled={status?.status === 'ON_SHORT_BREAK'}
-                                        className={`w-100 py-2 rounded-3 fw-black d-flex align-items-center justify-content-center gap-1 transition-all border ${
-                                            status?.status === 'ON_LONG_BREAK'
+                                        className={`w-100 py-2 rounded-3 fw-black d-flex align-items-center justify-content-center gap-1 transition-all border ${status?.status === 'ON_LONG_BREAK'
                                                 ? 'bg-warning text-dark border-warning shadow-glow'
                                                 : 'bg-transparent text-warning border-warning border-opacity-50'
-                                        }`}
+                                            }`}
                                         style={{ fontSize: '10px' }}
                                     >
                                         <LogOut size={11} style={{ transform: 'rotate(90deg)' }} />

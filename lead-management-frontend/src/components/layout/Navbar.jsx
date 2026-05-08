@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Menu, User as UserIcon, LogOut, Sun, Moon, Building2, Clock, ChevronDown, Key, Phone, Check, Edit2 } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Menu, User as UserIcon, LogOut, Sun, Moon, Building2, Clock, ChevronDown, Key, Phone, Check, Edit2, Bell } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import ChangePasswordModal from './ChangePasswordModal';
+import { useTasks } from '../../features/leads/hooks/useTasks';
 
 const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras }) => {
   const { user, updateProfile } = useAuth();
@@ -12,7 +13,42 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras }) => {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [tempMobile, setTempMobile] = useState('');
   const [isEditingMobile, setIsEditingMobile] = useState(false);
+  const [notifiedTasks, setNotifiedTasks] = useState(new Set());
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const notificationRef = useRef(null);
+
+  // 1. Task Notification Logic
+  const { tasks } = useTasks({ userId: user?.id });
+
+  const upcomingTasks = useMemo(() => {
+    if (!Array.isArray(tasks)) return [];
+    const now = new Date();
+    const tenMinutesFromNow = new Date(now.getTime() + 10 * 60 * 1000);
+    
+    return tasks.filter(t => {
+      if (t.status === 'COMPLETED') return false;
+      const due = new Date(t.dueDate);
+      // Filter for tasks due within the next 10 minutes (or just past due by 1 min)
+      return due >= new Date(now.getTime() - 60000) && due <= tenMinutesFromNow;
+    }).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+  }, [tasks]);
+
+  useEffect(() => {
+    upcomingTasks.forEach(task => {
+      if (!notifiedTasks.has(task.id)) {
+        toast.info(`UPCOMING TASK: ${task.title || 'Follow-up'} for ${task.lead?.name || 'Lead'} in 10 minutes`, {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+        setNotifiedTasks(prev => new Set(prev).add(task.id));
+      }
+    });
+  }, [upcomingTasks, notifiedTasks]);
 
   useEffect(() => {
     if (user?.mobile) setTempMobile(user.mobile);
@@ -22,6 +58,9 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras }) => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsProfileOpen(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setIsNotificationOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -40,7 +79,7 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras }) => {
   };
 
   return (
-    <nav className="premium-nav d-flex align-items-center justify-content-between px-3 w-100" style={{ justifyContent: 'space-between !important' }}>
+    <nav className="premium-nav d-flex align-items-center justify-content-between px-3 w-100 shadow-sm border-bottom border-white border-opacity-5" style={{ backdropFilter: 'blur(10px)', backgroundColor: isDarkMode ? 'rgba(3, 7, 18, 0.8)' : 'rgba(255, 255, 255, 0.8)' }}>
       {/* Left Section: Toggle + Logo fallback */}
       <div className="d-flex align-items-center gap-2">
         <button 
@@ -77,6 +116,63 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras }) => {
            >
               <Moon size={12} />
            </button>
+        </div>
+
+        {/* Notifications */}
+        <div className="position-relative" ref={notificationRef}>
+          <button 
+            className={`p-2 rounded-circle border-0 transition-all position-relative ${isDarkMode ? 'bg-surface bg-opacity-30 text-main' : 'bg-light text-dark'}`}
+            onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+            style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Bell size={18} className={upcomingTasks.length > 0 ? 'text-primary' : 'opacity-50'} />
+            {upcomingTasks.length > 0 && (
+              <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: '7px', marginTop: '5px', marginLeft: '-5px' }}>
+                {upcomingTasks.length}
+              </span>
+            )}
+          </button>
+
+          {isNotificationOpen && (
+            <div className={`position-absolute top-100 end-0 mt-3 p-0 rounded-4 shadow-2xl animate-zoom-in ${isDarkMode ? 'bg-surface' : 'bg-white'}`} style={{ 
+              width: '300px', 
+              border: '1px solid rgba(0,0,0,0.05)',
+              zIndex: 2020
+            }}>
+              <div className="p-3 border-bottom border-light d-flex align-items-center justify-content-between">
+                <h6 className="mb-0 fw-black text-uppercase tracking-widest text-main" style={{ fontSize: '10px' }}>Upcoming Alerts</h6>
+                <span className="badge bg-primary bg-opacity-10 text-primary rounded-pill fw-black" style={{ fontSize: '8px' }}>NEXT 10 MINS</span>
+              </div>
+              <div className="p-2 overflow-auto" style={{ maxHeight: '300px' }}>
+                {upcomingTasks.length === 0 ? (
+                  <div className="p-4 text-center opacity-30">
+                    <Bell size={24} className="mb-2" />
+                    <p className="extra-small fw-bold text-uppercase mb-0">No immediate tasks</p>
+                  </div>
+                ) : (
+                  upcomingTasks.map(task => (
+                    <div key={task.id} className={`p-3 rounded-3 mb-1 border border-transparent hover-bg-surface transition-all ${isDarkMode ? 'bg-white bg-opacity-5' : 'bg-light bg-opacity-50'}`}>
+                      <div className="d-flex align-items-start gap-2">
+                        <div className="p-1.5 bg-primary bg-opacity-10 text-primary rounded-circle">
+                          <Clock size={12} />
+                        </div>
+                        <div className="flex-grow-1 overflow-hidden">
+                          <p className="mb-0 fw-black text-main text-uppercase text-truncate" style={{ fontSize: '10px' }}>{task.title || 'EMI Call-up'}</p>
+                          <p className="mb-1 text-muted fw-bold text-truncate" style={{ fontSize: '9px' }}>{task.lead?.name || 'Unknown Lead'}</p>
+                          <div className="d-flex align-items-center justify-content-between">
+                            <span className="text-primary fw-black" style={{ fontSize: '8px' }}>
+                              {new Date(task.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            <span className="text-muted extra-small fw-bold opacity-50">In {Math.round((new Date(task.dueDate) - new Date()) / 60000)}m</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* User Info & Dropdown */}
@@ -145,7 +241,6 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras }) => {
                       <p className="text-main fw-black mb-0" style={{ fontSize: '11px' }}>{user?.officeName || 'Remote / Not Assigned'}</p>
                     </div>
                   </div>
-
                   {/* Mobile - Editable */}
                   <div className="d-flex align-items-start gap-3 mb-4">
                     <div className={`p-2 ${isDarkMode ? 'bg-surface' : 'bg-white'} rounded-3 shadow-sm border ${isDarkMode ? 'border-white border-opacity-10' : 'border-light'}`}>

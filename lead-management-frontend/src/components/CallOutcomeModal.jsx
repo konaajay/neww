@@ -9,6 +9,7 @@ import { toast } from 'react-toastify';
 import associateService from '../services/associateService';
 import adminService from '../services/adminService';
 import api from '../api/api';
+import leadsApi from '../features/leads/api/leadsApi';
 import { useAuth } from '../context/AuthContext';
 
 const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistory }) => {
@@ -33,6 +34,9 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
   const [activeTab, setActiveTab] = useState('TIMELINE'); // TIMELINE, FEE, INVOICE
   const [feeStructure, setFeeStructure] = useState(null);
   const [isLoadingFee, setIsLoadingFee] = useState(false);
+  const [courses, setCourses] = useState([]);
+  const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [generatingLinkIds, setGeneratingLinkIds] = useState([]);
 
   // New Payment / Installment State integration
   const [totalAmount, setTotalAmount] = useState('499');
@@ -122,14 +126,26 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
       fetchStages();
       fetchAuditLogs();
       fetchFeeStructure();
+      fetchCourses();
     }
   }, [isOpen, lead?.id]);
+
+  const fetchCourses = async () => {
+    try {
+      const res = await api.get('/admin/attendance/courses');
+      if (res.data?.data) {
+        setCourses(res.data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch courses", err);
+    }
+  };
 
   const fetchFeeStructure = async () => {
     if (!lead?.id) return;
     setIsLoadingFee(true);
     try {
-      const res = await api.get(`/api/payments/lead/${lead.id}/full-structure`);
+      const res = await api.get(`/payments/lead/${lead.id}/fee-structure`);
       setFeeStructure(res.data);
     } catch (err) {
       console.error("Failed to load fee structure", err);
@@ -137,6 +153,10 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
       setIsLoadingFee(false);
     }
   };
+
+  const nextPendingInstallment = React.useMemo(() => {
+    return feeStructure?.installments?.find(i => i.status === 'PENDING' && i.paymentGatewayId);
+  }, [feeStructure]);
 
   if (!isOpen || !lead) return null;
 
@@ -190,7 +210,8 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
         paidAmount: parseFloat(outcome === 'PAID' ? totalAmount : initialAmount) || 0,
         paymentMethod: paymentMethod,
         paymentType: outcome === 'EMI' ? 'PART' : 'FULL',
-        installments: outcome === 'EMI' ? installments : []
+        installments: outcome === 'EMI' ? installments : [],
+        courseId: selectedCourseId || lead.courseId
       });
 
 
@@ -230,6 +251,74 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
       toast.error(err.response?.data?.message || 'Upload failed');
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleResendLink = (type, installment) => {
+    const inst = installment || nextPendingInstallment;
+    if (!inst) {
+      if (type === 'whatsapp') {
+        window.open(`https://wa.me/${lead.mobile?.replace(/\D/g, '')}`, '_blank');
+      } else {
+        window.location.href = `mailto:${lead.email}`;
+      }
+      return;
+    }
+
+    if (!inst.paymentGatewayId) {
+      toast.warning("Payment link not generated for this installment yet. Please click 'Generate Link' in the Fee Structure tab.");
+      return;
+    }
+    
+    const paymentLink = `${window.location.origin}/payment-instruction/${inst.paymentGatewayId}`;
+    const message = `Hello ${lead.name}, your payment of ₹${inst.amount} for ${lead.courseName || 'the course'} is pending. Please complete the payment using this secure link: ${paymentLink}`;
+    
+    if (type === 'whatsapp') {
+      const whatsappUrl = `https://wa.me/${lead.mobile?.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
+    } else {
+      const mailtoUrl = `mailto:${lead.email}?subject=Payment Link for ${lead.courseName || 'Course'}&body=${encodeURIComponent(message)}`;
+      window.location.href = mailtoUrl;
+    }
+    toast.info(`Sharing link via ${type.toUpperCase()}...`);
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Payment link copied to clipboard!');
+  };
+
+  const handleGenerateLink = async (installment) => {
+    if (generatingLinkIds.includes(installment.id)) return;
+    
+    // Immediate lockout
+    setGeneratingLinkIds(prev => [...prev, installment.id]);
+    
+    try {
+      toast.info("Generating secure payment link...");
+      const res = await leadsApi.createCashfreeOrder(
+        lead.id, 
+        installment.amount, 
+        'EMI_INSTALLMENT', 
+        [], 
+        installment.amount, 
+        0,
+        installment.id 
+      );
+      if (res.data?.order_id || res.data?.paymentGatewayId) {
+        toast.success("Link generated successfully!");
+        fetchFeeStructure();
+      } else {
+        toast.warning("Order initialized but link ID missing. Refreshing...");
+        fetchFeeStructure();
+      }
+    } catch (err) {
+      toast.error("Failed to generate link");
+    } finally {
+      // Cooldown period to prevent rapid re-clicks even after completion
+      setTimeout(() => {
+        setGeneratingLinkIds(prev => prev.filter(id => id !== installment.id));
+      }, 2000);
     }
   };
 
@@ -370,20 +459,21 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                       </a>
                     </div>
                     <div className="col-6">
-                      <a href={`mailto:${lead.email}`} className="btn btn-outline-primary btn-sm w-100 fw-bold rounded-3 py-2">
+                      <button 
+                        onClick={() => handleResendLink('email')}
+                        className="btn btn-outline-primary btn-sm w-100 fw-bold rounded-3 py-2"
+                      >
                         Email
-                      </a>
+                      </button>
                     </div>
                   </div>
-                  <a
-                    href={`https://wa.me/${lead.mobile?.replace(/\D/g, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() => handleResendLink('whatsapp')}
                     className="btn btn-sm btn-success w-100 fw-bold rounded-3 py-2 border-0"
                     style={{ backgroundColor: '#25D366' }}
                   >
                     WhatsApp
-                  </a>
+                  </button>
 
                   <div className="mt-4 border-top border-secondary border-opacity-10 pt-3">
                     <h6 className={`fw-bold text-uppercase mb-2 tracking-wider small ${isDarkMode ? 'text-white text-opacity-50' : 'text-muted'}`}>Upload Call Recording</h6>
@@ -558,8 +648,29 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                                     {outcome === 'EMI' ? 'EMI Schedule Management' : 'Full Payment Authentication'}
                                   </h6>
                                 </div>
- 
-                                <div className="row g-3">
+                                 <div className="row g-3">
+                                  <div className="col-12">
+                                    <label className="form-label small fw-bold text-uppercase text-muted mb-2 tracking-wider">Course Protocol (Mapping)</label>
+                                    <select
+                                      className={`form-select fw-bold ${isDarkMode ? 'bg-dark bg-opacity-50 text-white border-secondary border-opacity-50' : 'bg-light text-dark border-light'}`}
+                                      value={selectedCourseId || lead.courseId || ''}
+                                      onChange={(e) => {
+                                        const cid = e.target.value;
+                                        setSelectedCourseId(cid);
+                                        const course = courses.find(c => String(c.id) === String(cid));
+                                        if (course) {
+                                          setTotalAmount(course.baseFee?.toString() || '0');
+                                          setInitialAmount(course.minTokenAmount?.toString() || '500');
+                                        }
+                                      }}
+                                    >
+                                      <option value="">Select Course...</option>
+                                      {courses.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name.toUpperCase()} (₹{c.baseFee})</option>
+                                      ))}
+                                    </select>
+                                  </div>
+
                                   <div className="col-12 col-md-6">
                                     <label className="form-label small fw-bold text-uppercase text-muted mb-2 tracking-wider">Course Package Total</label>
                                     <div className="input-group">
@@ -778,7 +889,7 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                       }
 
                       return merged.map((item, index) => (
-                        <div key={item.id || index} className="position-relative mb-4 animate-fade-in">
+                        <div key={`${item.type}-${item.id || index}`} className="position-relative mb-4 animate-fade-in">
                           <div className={`position-absolute rounded-circle shadow-sm ${index === 0 ? 'bg-primary' : 'bg-secondary bg-opacity-50'}`}
                             style={{ width: '10px', height: '10px', left: '-31px', top: '6px' }}></div>
                           
@@ -877,14 +988,87 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                             </thead>
                             <tbody>
                               {feeStructure.installments?.map((p, idx) => (
-                                <tr key={idx} className="border-bottom border-light border-opacity-50">
+                                <tr key={`installment-${p.id || idx}`} className="border-bottom border-light border-opacity-50">
                                   <td className="fw-bold small text-muted">{idx + 1}</td>
                                   <td className="fw-black small text-dark">{p.amount}</td>
                                   <td className="text-muted">{p.dueDate ? formatDate(p.dueDate).split(',')[0] : 'UPFRONT'}</td>
                                   <td className="text-end pe-0">
-                                    <span className={`badge rounded-pill ${p.status === 'PAID' || p.status === 'SUCCESS' ? 'bg-success bg-opacity-10 text-success' : 'bg-warning bg-opacity-10 text-warning'}`} style={{ fontSize: '9px' }}>
-                                      {p.status}
-                                    </span>
+                                    <div className="d-flex align-items-center justify-content-end gap-2">
+                                      <span className={`badge rounded-pill ${p.status === 'PAID' || p.status === 'SUCCESS' ? 'bg-success bg-opacity-10 text-success' : 'bg-warning bg-opacity-10 text-warning'}`} style={{ fontSize: '9px' }}>
+                                        {p.status}
+                                      </span>
+                                      {(p.status === 'PENDING') && (
+                                        <>
+                                          {!p.paymentGatewayId ? (
+                                            <button 
+                                              className="btn btn-xs btn-outline-primary px-2 py-0 rounded-pill d-flex align-items-center gap-1" 
+                                              style={{ fontSize: '8px' }}
+                                              disabled={generatingLinkIds.includes(p.id)}
+                                              onClick={(e) => { e.stopPropagation(); handleGenerateLink(p); }}
+                                            >
+                                              {generatingLinkIds.includes(p.id) ? (
+                                                <>
+                                                  <span className="spinner-border spinner-border-sm" style={{ width: '8px', height: '8px' }}></span>
+                                                  Generating...
+                                                </>
+                                              ) : 'Generate Link'}
+                                            </button>
+                                          ) : (
+                                            <>
+                                              <button 
+                                                className="btn btn-xs btn-primary p-1 rounded-circle" 
+                                                title="Verify with Gateway"
+                                                onClick={async (e) => {
+                                                  e.stopPropagation();
+                                                  const btn = e.currentTarget;
+                                                  btn.disabled = true;
+                                                  try {
+                                                    const res = await api.post(`/payments/order/${p.paymentGatewayId}/verify`);
+                                                    if (res.data.updated) {
+                                                      toast.success("Payment verified and updated!");
+                                                      fetchFeeStructure();
+                                                    } else {
+                                                      toast.info(res.data.message);
+                                                    }
+                                                  } catch (err) {
+                                                    toast.error("Verification failed");
+                                                  } finally {
+                                                    btn.disabled = false;
+                                                  }
+                                                }}
+                                              >
+                                                <ShieldCheck size={10} />
+                                              </button>
+                                              <button 
+                                                className="btn btn-xs btn-secondary p-1 rounded-circle ms-1" 
+                                                title="Copy Payment Link"
+                                                onClick={(e) => { 
+                                                  e.stopPropagation(); 
+                                                  copyToClipboard(`${window.location.origin}/payment-instruction/${p.paymentGatewayId}`); 
+                                                }}
+                                              >
+                                                <Copy size={10} />
+                                              </button>
+                                              <button 
+                                                className="btn btn-xs btn-success p-1 rounded-circle ms-1" 
+                                                title="Resend via WhatsApp"
+                                                onClick={(e) => { e.stopPropagation(); handleResendLink('whatsapp', p); }}
+                                                style={{ backgroundColor: '#25D366', borderColor: '#25D366' }}
+                                              >
+                                                <MessageCircle size={10} className="text-white" />
+                                              </button>
+                                              <button 
+                                                className="btn btn-xs btn-info p-1 rounded-circle ms-1" 
+                                                title="Resend via Email"
+                                                onClick={(e) => { e.stopPropagation(); handleResendLink('email', p); }}
+                                              >
+                                                <Mail size={10} className="text-white" />
+                                              </button>
+                                            </>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
                                   </td>
                                 </tr>
                               ))}

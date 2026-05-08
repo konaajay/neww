@@ -162,29 +162,20 @@ const StudentFeePage = () => {
 
                {/* Metrics List */}
                <div className="d-flex flex-column gap-3">
-                  <div className="p-4 rounded-4 border border-light bg-white hover-scale transition-smooth shadow-sm">
-                     <div className="d-flex align-items-center justify-content-between mb-2">
-                        <span className="text-muted fw-black small text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Package Total</span>
-                        <div className="p-2 bg-light rounded-circle"><IndianRupee size={12} className="text-primary" /></div>
-                     </div>
-                     <h3 className="fw-black text-dark mb-0">₹{data.fee?.totalAmount?.toLocaleString() || '0'}</h3>
-                  </div>
+                   <div className="p-4 rounded-4 border border-light bg-white transition-smooth shadow-sm d-flex flex-column gap-1">
+                      <h3 className="fw-black text-dark mb-0" style={{ fontSize: '38px', lineHeight: 1 }}>₹{data.fee?.totalAmount?.toLocaleString() || '0'}</h3>
+                      <span className="text-muted fw-black small text-uppercase tracking-widest opacity-60" style={{ fontSize: '10px' }}>Package Total</span>
+                   </div>
 
-                  <div className="p-4 rounded-4 border border-light bg-white hover-scale transition-smooth shadow-sm">
-                     <div className="d-flex align-items-center justify-content-between mb-2">
-                        <span className="text-muted fw-black small text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Settled Capital</span>
-                        <div className="p-2 bg-success bg-opacity-10 rounded-circle"><CheckCircle2 size={12} className="text-success" /></div>
-                     </div>
-                     <h3 className="fw-black text-success mb-0">₹{data.fee?.paidAmount?.toLocaleString() || '0'}</h3>
-                  </div>
+                   <div className="p-4 rounded-4 border border-light bg-white transition-smooth shadow-sm d-flex flex-column gap-1">
+                      <h3 className="fw-black text-success mb-0" style={{ fontSize: '38px', lineHeight: 1 }}>₹{data.fee?.paidAmount?.toLocaleString() || '0'}</h3>
+                      <span className="text-muted fw-black small text-uppercase tracking-widest opacity-60" style={{ fontSize: '10px' }}>Settled Capital</span>
+                   </div>
 
-                  <div className="p-4 rounded-4 border border-light bg-white hover-scale transition-smooth shadow-sm">
-                     <div className="d-flex align-items-center justify-content-between mb-2">
-                        <span className="text-muted fw-black small text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Outstanding Balance</span>
-                         <div className="p-2 bg-light rounded-circle"><Clock size={12} className="text-dark" /></div>
-                     </div>
-                     <h3 className="fw-black text-dark mb-0">₹{data.fee?.balanceAmount?.toLocaleString() || '0'}</h3>
-                  </div>
+                   <div className="p-4 rounded-4 border border-light bg-white transition-smooth shadow-sm d-flex flex-column gap-1">
+                      <h3 className="fw-black text-dark mb-0" style={{ fontSize: '38px', lineHeight: 1 }}>₹{data.fee?.balanceAmount?.toLocaleString() || '0'}</h3>
+                      <span className="text-muted fw-black small text-uppercase tracking-widest opacity-60" style={{ fontSize: '10px' }}>Outstanding Balance</span>
+                   </div>
                </div>
 
                {/* Collection Progress */}

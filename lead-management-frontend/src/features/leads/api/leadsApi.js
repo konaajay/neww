@@ -40,7 +40,7 @@ const leadsApi = {
     let prefix = '/leads';
     if (role === 'ADMIN') prefix = '/admin';
     else if (role === 'MANAGER') prefix = '/manager';
-    else if (role === 'TEAM_LEADER') prefix = '/tl';
+    else if (role === 'TEAM_LEADER') return safeRequest(api.post(`/tl/leads/${leadId}/assign/${userId}`));
     
     return safeRequest(api.post(`${prefix}/assign-lead/${leadId}/${userId}`));
   },
@@ -56,7 +56,10 @@ const leadsApi = {
 
   recordCallOutcome: (leadId, data) => safeRequest(api.post(`/leads/${leadId}/record-outcome`, data)),
 
-  sendPaymentLink: (leadId, data) => safeRequest(api.post(`/leads/${leadId}/send-payment-link`, data))
+  sendPaymentLink: (leadId, data) => safeRequest(api.post(`/leads/${leadId}/send-payment-link`, data)),
+  
+  createCashfreeOrder: (leadId, amount, type, installments = [], totalAmount, discount, installmentId) => 
+    safeRequest(api.post('/payments/cashfree/create-order', { leadId, amount, type: type || 'FULL', installments, totalAmount, discount, installmentId }))
 };
 
 export default leadsApi;

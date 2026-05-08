@@ -19,6 +19,7 @@ import {
 import { toast } from 'react-toastify';
 import attendanceService from '../../../services/attendanceService';
 import adminService from '../../../services/adminService';
+import WfhApprovalPanel from './WfhApprovalPanel';
 import { useTheme } from '../../../context/ThemeContext';
 
 const AttendanceDashboard = ({ filters, role }) => {
@@ -29,6 +30,7 @@ const AttendanceDashboard = ({ filters, role }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [noteModal, setNoteModal] = useState(null); // { userId, date, note }
     const [noteValue, setNoteValue] = useState('');
+    const [activeSubTab, setActiveSubTab] = useState('logs');
 
     const fetchStatus = useCallback(async () => {
         try {
@@ -97,6 +99,7 @@ const AttendanceDashboard = ({ filters, role }) => {
                 formattedDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             }
             
+            await adminService.updateAttendanceNote(noteModal.userId, formattedDate, noteValue);
             toast.success("Note Saved");
             setNoteModal(null);
             fetchLogs();
@@ -204,14 +207,9 @@ const AttendanceDashboard = ({ filters, role }) => {
                     { label: 'LATE', value: summaryStats.late, icon: AlertCircle, color: 'info' }
                 ].map((s, i) => (
                     <div key={i} className="col-md-4">
-                        <div className={`premium-card p-4 d-flex align-items-center gap-4 transition-smooth ${isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-white shadow-sm'}`} style={{ borderRadius: '24px' }}>
-                            <div className={`p-3 bg-${s.color} bg-opacity-10 text-${s.color} rounded-4 shadow-glow`} style={{ boxShadow: `0 0 20px -5px var(--bs-${s.color})` }}>
-                                <s.icon size={24} />
-                            </div>
-                            <div>
-                                <h4 className="fw-black mb-0 text-main fs-4">{s.value}</h4>
-                                <p className="text-muted small mb-0 fw-black text-uppercase tracking-widest opacity-50" style={{ fontSize: '9px' }}>{s.label}</p>
-                            </div>
+                        <div className={`premium-card p-4 d-flex flex-column gap-1 transition-smooth ${isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-white shadow-sm'}`} style={{ borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                            <h4 className="fw-black mb-0 text-main" style={{ fontSize: '38px', lineHeight: 1 }}>{s.value}</h4>
+                            <p className="text-muted small mb-0 fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '10px' }}>{s.label}</p>
                         </div>
                     </div>
                 ))}
@@ -221,22 +219,35 @@ const AttendanceDashboard = ({ filters, role }) => {
 
             <div className={`premium-card border-0 shadow-lg overflow-hidden ${isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-white shadow-sm'}`} style={{ borderRadius: '32px' }}>
                 <div className="p-5 border-bottom border-white border-opacity-5 d-flex justify-content-between align-items-center">
-                    <div className="d-flex align-items-center gap-3">
-                        <div className="p-3 bg-primary bg-opacity-10 text-primary rounded-pill shadow-glow">
-                            <History size={20} />
-                        </div>
-                        <div>
+                    <div className="d-flex align-items-center gap-4">
+                        <div 
+                            className={`cursor-pointer transition-all ${activeSubTab === 'logs' ? 'opacity-100' : 'opacity-40'}`}
+                            onClick={() => setActiveSubTab('logs')}
+                        >
                             <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest">Attendance Logs</h5>
                             <p className="text-muted small mb-0 opacity-50 fw-bold">{filters?.from} TO {filters?.to}</p>
                         </div>
-
+                        
+                        {(role === 'ADMIN' || role === 'MANAGER' || role === 'TEAM_LEADER') && (
+                            <div 
+                                className={`cursor-pointer transition-all ${activeSubTab === 'wfh' ? 'opacity-100' : 'opacity-40'}`}
+                                onClick={() => setActiveSubTab('wfh')}
+                            >
+                                <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest">WFH Requests</h5>
+                                <p className="text-muted small mb-0 opacity-50 fw-bold">Review Approvals</p>
+                            </div>
+                        )}
                     </div>
                     <div className="d-flex gap-2">
-                        <button className="ui-btn ui-btn-outline rounded-pill px-4 btn-sm" onClick={fetchLogs}>UPDATE</button>
+                        {activeSubTab === 'logs' && (
+                            <button className="ui-btn ui-btn-outline rounded-pill px-4 btn-sm" onClick={fetchLogs}>UPDATE</button>
+                        )}
                     </div>
                 </div>
 
-                <div className="table-responsive p-0">
+                <div className="p-4">
+                    {activeSubTab === 'logs' ? (
+                        <div className="table-responsive p-0">
                     <table className="table table-hover align-middle mb-0 border-0 bg-transparent text-main">
                         <thead>
                             <tr className="border-bottom border-white border-opacity-5">
@@ -313,7 +324,12 @@ const AttendanceDashboard = ({ filters, role }) => {
                                         <span className="fw-black text-main small">{log.totalWorkMinutes || 0}m</span>
                                     </td>
                                     <td className="py-4">
-                                        <span className="fw-black text-warning small">{log.totalBreakMinutes || 0}m</span>
+                                        <div className="d-flex flex-column">
+                                            <span className="fw-black text-warning small">{log.totalBreakMinutes || 0}m</span>
+                                            <span className="text-muted extra-small fw-bold" style={{ fontSize: '7px' }}>
+                                                S: {log.shortBreakMinutes || 0}m | L: {log.longBreakMinutes || 0}m
+                                            </span>
+                                        </div>
                                     </td>
                                     <td className="py-4">
                                         <span className={`fw-black small ${log.totalIdleMinutes > 0 ? 'text-danger' : 'text-muted opacity-50'}`}>{log.totalIdleMinutes || 0}m</span>
@@ -360,6 +376,10 @@ const AttendanceDashboard = ({ filters, role }) => {
                             )}
                         </tbody>
                     </table>
+                </div>
+                    ) : (
+                        <WfhApprovalPanel role={role} />
+                    )}
                 </div>
             </div>
 
