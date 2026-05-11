@@ -363,8 +363,9 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
                   </button>
                 </div>
               </div>
-            </div>
+          )}
         </div>
+      </div>
       
       <ChangePasswordModal 
         isOpen={isPasswordModalOpen} 
