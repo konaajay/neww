@@ -41,13 +41,11 @@ const DashboardLayout = ({ children, activeTab, onTabChange, role, navbarExtras,
             )}
 
             {/* Mobile/Collapsed Symbolic Toggle */}
-            {(isCollapsed || window.innerWidth < 992) && (
-              <div className="d-flex align-items-center justify-content-center w-100">
-                 <div className="p-2 bg-primary rounded-circle shadow-glow transition-all hover-scale">
-                   <ShieldHalf size={28} className="text-white" />
-                 </div>
-              </div>
-            )}
+            <div className={`d-flex align-items-center justify-content-center w-100 ${!isCollapsed ? 'd-lg-none' : ''}`}>
+               <div className="p-2 bg-primary rounded-circle shadow-glow transition-all hover-scale">
+                 <ShieldHalf size={28} className="text-white" />
+               </div>
+            </div>
         </div>
 
         <div className="nav-section">

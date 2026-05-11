@@ -348,38 +348,19 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
                       <Key size={14} className="opacity-70" />
                       <span className="fw-black text-uppercase tracking-widest" style={{ fontSize: '10px' }}>Change Password</span>
                     </button>
-                    
-                    <button 
-                      onClick={onLogout}
-                      className="btn w-100 py-3 rounded-4 d-flex align-items-center justify-content-center gap-2 border-0 transition-all"
-                      style={{ background: '#ef4444', color: '#ffffff', fontWeight: '900', letterSpacing: '1px' }}
-                    >
-                      <LogOut size={16} />
-                      <span className="text-uppercase" style={{ fontSize: '11px' }}>Sign Out</span>
-                    </button>
                   </div>
                 </div>
               </div>
             )}
           </div>
-
-          {/* Direct Logout */}
-          <button 
-            onClick={onLogout}
-            className={`p-2 rounded-circle border-0 transition-all ${isDarkMode ? 'bg-danger bg-opacity-10 text-danger' : 'bg-rose-50 text-danger'}`}
-            style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            title="Sign Out"
-          >
-            <LogOut size={18} />
-          </button>
         </div>
-        
+      </div>
+      
       <ChangePasswordModal 
         isOpen={isPasswordModalOpen} 
         onClose={() => setIsPasswordModalOpen(false)} 
         userId={user?.id}
       />
-      </div>
     </nav>
   );
 };

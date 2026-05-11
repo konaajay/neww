@@ -105,26 +105,19 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
         className={`glass-sidebar ${isCollapsed ? 'closed' : ''} ${isOpen ? 'show' : ''}`}
       >
         <div className="d-flex flex-column h-100">
-          {/* Sidebar Header */}
+          {/* Sidebar Header - Synced with Main Header for consistency */}
           {!hideHeader && (
-            <div className="sidebar-header px-3 border-bottom border-white border-opacity-5">
-              <div className="d-flex align-items-center gap-3 overflow-hidden">
-                <button 
-                  onClick={onToggle}
-                  className="btn btn-link text-main p-0 border-0 flex-shrink-0"
-                  aria-label="Toggle sidebar"
-                >
-                  <Menu size={24} />
-                </button>
-                
-                <div className="d-flex align-items-center gap-2 overflow-hidden">
-                  <div className="p-2 bg-primary rounded-pill flex-shrink-0">
-                    <ShieldHalf size={22} className="text-white" />
-                  </div>
-                  {!isCollapsed && (
-                    <span className="fw-black tracking-widest text-main text-truncate" style={{ fontSize: '18px' }}>GYNATRIX</span>
-                  )}
+            <div 
+              className="sidebar-header px-3 border-bottom border-white border-opacity-5 cursor-pointer"
+              onClick={onClose}
+            >
+              <div className="d-flex align-items-center gap-3 overflow-hidden py-2">
+                <div className="p-2 bg-primary rounded-circle shadow-glow">
+                  <ShieldHalf size={26} className="text-white" />
                 </div>
+                {(!isCollapsed || isOpen) && (
+                  <span className="fw-black tracking-widest text-main text-truncate" style={{ fontSize: '18px', letterSpacing: '0.1em' }}>GYNATRIX</span>
+                )}
               </div>
             </div>
           )}
@@ -167,22 +160,6 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
           </nav>
 
           <SidebarAttendance isCollapsed={isCollapsed} />
-          
-          <div className="mt-auto border-top border-white border-opacity-5">
-            <button
-              onClick={() => {
-                if (window.confirm('Are you sure you want to logout?')) {
-                  onClose();
-                  window.dispatchEvent(new CustomEvent('auth-logout'));
-                }
-              }}
-              className="w-100 py-3 border-0 bg-transparent text-danger d-flex align-items-center justify-content-center gap-2 hover-bg-danger transition-all"
-              style={{ fontSize: '11px', fontWeight: '800', letterSpacing: '0.05em' }}
-            >
-              <LogOut size={16} />
-              {(!isCollapsed || isOpen) && <span>LOGOUT</span>}
-            </button>
-          </div>
         </div>
       </aside>
     </>
