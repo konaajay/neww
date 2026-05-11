@@ -106,35 +106,26 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
       >
         <div className="d-flex flex-column h-100">
           {/* Sidebar Header */}
-          <div className="px-3 d-flex align-items-center justify-content-between border-bottom border-white border-opacity-5" style={{ height: 'var(--header-height)' }}>
-            {!isCollapsed && (
-              <div className="d-flex align-items-center gap-2">
-                <div className="p-1.5 bg-primary rounded-pill">
-                  <ShieldHalf size={16} className="text-white" />
-                </div>
-                <span className="fw-black tracking-widest small text-main">GYNATRIX</span>
+          <div className="px-3 d-flex align-items-center justify-content-between border-bottom border-white border-opacity-5" style={{ height: 'var(--header-height)', flexShrink: 0 }}>
+            <div className="d-flex align-items-center gap-2 overflow-hidden">
+              <div className="p-1.5 bg-primary rounded-pill flex-shrink-0">
+                <ShieldHalf size={16} className="text-white" />
               </div>
-            )}
-            {isCollapsed && <ShieldHalf size={24} className="text-primary mx-auto" />}
+              {(!isCollapsed || isOpen) && (
+                <span className="fw-black tracking-widest small text-main text-truncate">GYNATRIX</span>
+              )}
+            </div>
 
+            {/* Mobile-only close button */}
             <button
-              className="btn btn-link text-main p-1 border-0 ms-2 hover-bg-surface rounded-circle transition-all d-none d-lg-flex"
-              onClick={onToggle}
-              title={isCollapsed ? "Expand" : "Collapse"}
-            >
-              <Menu size={18} className="opacity-75" />
-            </button>
-
-            {/* Desktop toggle button - hidden on mobile */}
-
-            {/* Mobile close button - only on smaller screens */}
-            <button
-              className="btn btn-link text-main p-1 border-0 d-lg-none"
+              className="btn btn-link text-main p-1 border-0 d-lg-none ms-2"
               onClick={onClose}
               aria-label="Close menu"
             >
               <X size={20} />
             </button>
+            
+            {/* Desktop-only toggle (optional, usually handled by navbar) */}
           </div>
 
           {/* Navigation Items */}

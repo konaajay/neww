@@ -100,27 +100,23 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
       {/* Left Section: Toggle + Logo fallback */}
       <div className="d-flex align-items-center gap-2">
         <button 
-          className="d-flex d-lg-none btn btn-link text-main p-1 border-0 shadow-none outline-none"
+          className="d-flex d-lg-none btn btn-link text-main p-1 border-0 shadow-none outline-none me-2"
           onClick={onToggleSidebar}
         >
           <Menu size={22} />
         </button>
 
-        <div className="d-flex d-lg-none align-items-center gap-2 ms-1">
-          <div className="p-1 bg-primary rounded-circle" style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ShieldHalf size={16} className="text-white" />
-          </div>
-          <span className="fw-black tracking-widest text-main" style={{ fontSize: '10px' }}>GYNATRIX</span>
+        <div className="d-flex align-items-center gap-2">
+           <div className="d-lg-none p-1 bg-primary rounded-circle" style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+             <ShieldHalf size={16} className="text-white" />
+           </div>
+           {navbarExtras && (
+             <div className="ms-1">
+                {navbarExtras}
+             </div>
+           )}
         </div>
-
-        {navbarExtras && (
-          <div className="d-none d-sm-block">
-             {navbarExtras}
-          </div>
-        )}
       </div>
-      {/* Spacer to force items to ends */}
-      <div className="flex-grow-1"></div>
 
       {/* Right Section */}
       <div className="d-flex align-items-center gap-3">
