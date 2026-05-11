@@ -3,9 +3,7 @@ import axios from 'axios';
 const getBaseURL = () => {
   if (import.meta.env.DEV) {
     const hostname = window.location.hostname;
-    const port = (hostname === '54.84.148.176' || hostname === 'localhost') ? '8081' : '80'; 
-    // Wait, the user said 80 inplace lolocah.
-    // If they are on the server, port 80 is backend.
+    // If they are on the server IP, port 80 is backend. Otherwise default to 8081 for local dev.
     const finalPort = hostname === '54.84.148.176' ? '80' : '8081';
     return `http://${hostname}:${finalPort}/api`;
   }
