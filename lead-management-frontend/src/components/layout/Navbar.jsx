@@ -116,9 +116,11 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
              </div>
            )}
         </div>
-      </div>
 
-      {/* Right Section */}
+        {/* Spacer to push right section to the end */}
+        <div className="flex-grow-1"></div>
+
+        {/* Right Section */}
       <div className="d-flex align-items-center gap-3">
         {/* Theme Toggle */}
         <div className="d-none d-md-flex align-items-center gap-1 p-1 bg-surface bg-opacity-30 rounded-pill border border-white border-opacity-5">
@@ -362,9 +364,7 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
                 </div>
               </div>
             </div>
-          )}
         </div>
-      </div>
       
       <ChangePasswordModal 
         isOpen={isPasswordModalOpen} 
