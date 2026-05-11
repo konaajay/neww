@@ -42,10 +42,8 @@ const DashboardLayout = ({ children, activeTab, onTabChange, role, navbarExtras,
             onTabChange={onTabChange}
           />
         )}
-        <main className="layout-body">
-          <div className="container-fluid">
-            {children}
-          </div>
+        <main className="layout-body custom-scroll">
+          {children}
         </main>
       </div>
 

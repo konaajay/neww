@@ -24,21 +24,21 @@ export const MetricCard = memo(({ title, stats, icon: Icon, color, onClick }) =>
       minHeight: '100px'
     }}
   >
-    <div className="p-4 position-relative z-10 d-flex flex-column h-100">
+    <div className="p-4 metric-card-padding position-relative z-10 d-flex flex-column h-100">
       <div className="mb-2">
         <h6 className="fw-black text-uppercase tracking-widest text-muted mb-0" style={{ fontSize: '9px', opacity: 0.6 }}>{title}</h6>
       </div>
 
       <div className="flex-grow-1 d-flex align-items-center justify-content-between my-2">
         <div>
-          <span className="fw-black text-main tabular-nums d-block" style={{ fontSize: '28px', lineHeight: 1, letterSpacing: '-1px' }}>{stats?.primary?.value ?? 0}</span>
+          <span className="fw-black text-main tabular-nums d-block metric-card-value" style={{ fontSize: '28px', lineHeight: 1, letterSpacing: '-1px' }}>{stats?.primary?.value ?? 0}</span>
           <span className="fw-black text-muted text-uppercase" style={{ fontSize: '9px', opacity: 0.7, letterSpacing: '0.8px' }}>{stats?.primary?.label ?? ''}</span>
         </div>
       </div>
 
-      <div className="mt-auto d-flex justify-content-between align-items-center pt-2 border-top border-main border-opacity-10">
+      <div className="mt-auto d-flex justify-content-between align-items-center pt-2 pb-1 border-top border-main border-opacity-10">
         {(stats?.secondary || []).map((s, idx) => (
-          <div key={idx} className="d-flex flex-column align-items-center text-center">
+          <div key={idx} className="d-flex flex-column align-items-center text-center px-1">
             <span className={`fw-black text-${s?.color || 'main'} mb-0.5`} style={{ fontSize: '12px', lineHeight: 1 }}>{s?.value ?? 0}</span>
             <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '8px', opacity: 0.6, letterSpacing: '0.4px' }}>{s?.label ?? ''}</span>
           </div>
@@ -106,7 +106,7 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
 
   return (
     <div className="metric-grid-custom no-scrollbar animate-fade-in-up pb-2 px-1">
-      <div className="flex-shrink-0" style={{ width: '300px' }}>
+      <div className="metric-card-wrapper">
         <MetricCard
           title="ATTENDANCE"
           icon={Users}
@@ -124,7 +124,7 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
       </div>
 
       {!hideUsers && (
-        <div className="flex-shrink-0" style={{ width: '300px' }}>
+        <div className="metric-card-wrapper">
           {role === 'ASSOCIATE' ? (
             <MetricCard
               title="MY PERFORMANCE"
@@ -165,7 +165,7 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
       )}
 
       {role !== 'ASSOCIATE' && (
-        <div className="flex-shrink-0" style={{ width: '300px' }}>
+        <div className="metric-card-wrapper">
           <MetricCard
             title={(!hideUsers && !filters?.userId) ? "TEAM PERFORMANCE" : "MY PERFORMANCE"}
             icon={TrendingUp}
@@ -204,7 +204,7 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
         </div>
       )}
 
-      <div className="flex-shrink-0" style={{ width: '300px' }}>
+      <div className="metric-card-wrapper">
         <MetricCard
           title="FOLLOWUP PIPELINE"
           icon={Clock}
@@ -223,32 +223,38 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
 
       <style>{`
         .metric-grid-custom { 
-          display: flex; 
-          overflow-x: auto;
-          gap: 1.25rem; 
+          display: grid; 
+          grid-template-columns: repeat(2, 1fr);
+          gap: 1rem; 
           margin-bottom: 1.5rem;
           width: 100%;
-          padding-bottom: 0.5rem;
+        }
+
+        .metric-card-wrapper {
+          width: 100% !important;
+          min-width: 0;
         }
         
         @media (min-width: 1200px) {
            .metric-grid-custom {
-              display: grid;
-              grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-              overflow-x: visible;
+              grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
            }
-           .flex-shrink-0 {
-              width: auto !important;
-              flex-shrink: 1 !important;
+        }
+
+        @media (max-width: 576px) {
+           .metric-grid-custom {
+              gap: 0.75rem;
+           }
+           .metric-card-padding {
+              padding: 1rem !important;
+           }
+           .metric-card-value {
+              font-size: 20px !important;
            }
         }
         
-        .scrollbar-hidden::-webkit-scrollbar { display: none; }
-        .scrollbar-hidden { -ms-overflow-style: none; scrollbar-width: none; }
         .premium-card { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); min-height: 90px; position: relative; overflow: hidden; }
         .hover-active-card:hover { transform: translateY(-3px) scale(1.01); background: var(--bg-surface) !important; border-color: var(--primary) !important; box-shadow: 0 10px 20px -10px rgba(0,0,0,0.4) !important; }
-        .grid-secondary-stats { display: flex; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
-        .shadow-glow-sm { box-shadow: 0 0 8px currentColor; }
         .animate-fade-in-up { animation: fadeInUp 0.4s ease-out; }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Menu, User as UserIcon, LogOut, Sun, Moon, Building2, Clock, ChevronDown, Key, Phone, Check, Edit2, Bell } from 'lucide-react';
+import { Menu, User as UserIcon, LogOut, Sun, Moon, Building2, Clock, ChevronDown, Key, Phone, Check, Edit2, Bell, ShieldHalf } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -103,8 +103,15 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
           className="d-flex d-lg-none btn btn-link text-main p-1 border-0 shadow-none outline-none"
           onClick={onToggleSidebar}
         >
-          <Menu size={20} />
+          <Menu size={22} />
         </button>
+
+        <div className="d-flex d-lg-none align-items-center gap-2 ms-1">
+          <div className="p-1 bg-primary rounded-circle" style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ShieldHalf size={16} className="text-white" />
+          </div>
+          <span className="fw-black tracking-widest text-main" style={{ fontSize: '10px' }}>GYNATRIX</span>
+        </div>
 
         {navbarExtras && (
           <div className="d-none d-sm-block">

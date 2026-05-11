@@ -13,7 +13,7 @@ const PaymentInstructionPage = () => {
         const fetchOrderDetails = async () => {
             try {
                 // Use a public endpoint to get order details
-                const res = await axios.get(`http://${window.location.hostname}:8081/api/public/payments/order/${orderId}`);
+                const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/public/payments/order/${orderId}`);
                 setOrderData(res.data);
             } catch (err) {
                 setError("Payment details could not be retrieved. Please verify the link or contact support.");

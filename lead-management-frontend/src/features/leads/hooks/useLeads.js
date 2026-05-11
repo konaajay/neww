@@ -20,7 +20,7 @@ export const useLeads = (filters, role) => {
   const { data: leads = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['leads', role, normalizedFilters.from, normalizedFilters.to, normalizedFilters.userId, normalizedFilters.teamId, normalizedFilters.managerId],
     queryFn: ({ signal }) => leadsApi.fetchLeads(role, normalizedFilters, signal),
-    staleTime: 2 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     // Extract leads from different response formats (ApiResponse.data, content array, or direct array)

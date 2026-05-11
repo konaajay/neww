@@ -1,20 +1,14 @@
 import axios from 'axios';
 
 const getBaseURL = () => {
-  if (import.meta.env.DEV) {
-    const hostname = window.location.hostname;
-    // If they are on the server IP, port 80 is backend. Otherwise default to 8081 for local dev.
-    const finalPort = hostname === '54.84.148.176' ? '80' : '8081';
-    return `http://${hostname}:${finalPort}/api`;
-  }
-  return import.meta.env.VITE_API_URL 
-    ? (import.meta.env.VITE_API_URL.endsWith('/api') ? import.meta.env.VITE_API_URL : `${import.meta.env.VITE_API_URL}/api`)
-    : 'http://54.84.148.176:80/api';
+  const url = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+  return url.endsWith('/api') ? url : `${url}/api`;
 };
 
 const api = axios.create({
   baseURL: getBaseURL(),
-  timeout: 60000
+  timeout: 60000,
+  withCredentials: true
 });
 
 // Parameter cleaning utility

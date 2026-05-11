@@ -363,7 +363,6 @@ const LeadStatusUpdatePage = () => {
                           className={`form-select border border-secondary border-opacity-10 rounded-3 fw-bold ${isDarkMode ? 'bg-surface text-white' : 'bg-white text-dark'}`}
                           onChange={(e) => handleCourseChange(e.target.value)}
                           value={selectedCourse?.id || ''}
-                          disabled={feeStructureExists}
                         >
                           <option value="">-- SELECT COURSE --</option>
                           {courses.map(c => (
@@ -371,7 +370,12 @@ const LeadStatusUpdatePage = () => {
                           ))}
                         </select>
                         {feeStructureExists && (
-                          <small className="text-warning fw-bold mt-1 d-block" style={{ fontSize: '9px' }}>Fee structure already finalized for this protocol.</small>
+                          <div className="mt-2 p-2 rounded-3 bg-warning bg-opacity-10 border border-warning border-opacity-20 d-flex align-items-center gap-2">
+                             <AlertCircle size={14} className="text-warning" />
+                             <small className="text-warning fw-bold" style={{ fontSize: '9px' }}>
+                               Existing structure detected. Updating this will overwrite all pending installments.
+                             </small>
+                          </div>
                         )}
                       </div>
 
@@ -710,6 +714,22 @@ const LeadStatusUpdatePage = () => {
                 </div>
 
                 <div className="pt-2 text-center">
+                  {!['INTERESTED', 'EMI', 'PAID', 'CONVERTED'].includes(selectedStatus?.toUpperCase()) && (
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-100 py-3 ui-btn ui-btn-primary rounded-pill fw-black text-uppercase tracking-widest shadow-glow mb-3 transition-all hover-scale"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <div className="spinner-border spinner-border-sm me-2"></div>
+                          UPDATING...
+                        </>
+                      ) : (
+                        'Update Status'
+                      )}
+                    </button>
+                  )}
                   <small className="text-muted fw-bold text-uppercase" style={{ fontSize: '8px', opacity: 0.5 }}>Accounting Protocol Enforcement System</small>
                 </div>
               </div>

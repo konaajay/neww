@@ -12,6 +12,7 @@ import { toast } from 'react-toastify';
 // Centralized Feature Hooks
 import { useDashboardData } from '../features/dashboard/hooks/useDashboardData';
 import { useLeads } from '../features/leads/hooks/useLeads';
+import { useTasks } from '../features/leads/hooks/useTasks';
 import { useLookupData } from '../features/users/hooks/useLookupData';
 
 // Modular Services
@@ -88,6 +89,8 @@ const AssociateDashboard = () => {
     updateStatus,
     recordCallOutcome
   } = useLeads(debouncedFilters, 'ASSOCIATE');
+  
+  const { tasks, loading: tasksLoading } = useTasks(debouncedFilters);
 
   // Profile hook for manager info
   const { data: profile } = useQuery({
@@ -102,6 +105,7 @@ const AssociateDashboard = () => {
   const handleSync = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     queryClient.invalidateQueries({ queryKey: ['leads'] });
+    queryClient.invalidateQueries({ queryKey: ['tasks'] });
   }, [queryClient]);
 
   const handleTabChange = (tab, extra = {}) => {
@@ -167,7 +171,7 @@ const AssociateDashboard = () => {
 
   return (
     <DashboardLayout activeTab={activeTab} onTabChange={handleTabChange} role="ASSOCIATE">
-      <div className="dashboard-content-wrapper w-100 h-100 animate-fade-in d-flex flex-column gap-3">
+      <div className="dashboard-content-wrapper w-100 animate-fade-in d-flex flex-column gap-3">
         {activeTab !== 'ingestion' && (
           <FiltersBar
             filters={filters}
@@ -196,6 +200,7 @@ const AssociateDashboard = () => {
                 <div className="col-12 col-xl-6">
                   <TodayTaskList 
                     leads={leads} 
+                    tasks={tasks}
                     theme={theme} 
                   />
                 </div>
@@ -262,7 +267,7 @@ const AssociateDashboard = () => {
         )}
         
         {activeTab === 'attendance' && <AttendanceDashboard filters={filters} role="ASSOCIATE" />}
-        {activeTab === 'tasks' && <TaskBoard leads={leads} theme={theme} onUpdateStatus={handleSync} userId={user?.id} />}
+        {activeTab === 'tasks' && <TaskBoard leads={leads} theme={theme} onUpdateStatus={handleSync} userId={user?.id} startDate={filters.from} endDate={filters.to} />}
         {activeTab === 'payments' && <PaymentHistory role="ASSOCIATE" userId={user?.id} from={filters.from} to={filters.to} hideHeader={true} />}
         {activeTab === 'calls' && <CallLogDashboard userId={user?.id} filters={debouncedFilters} hideHeader={true} />}
         

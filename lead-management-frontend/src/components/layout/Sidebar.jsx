@@ -106,11 +106,11 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
       >
         <div className="d-flex flex-column h-100">
           {/* Sidebar Header */}
-          <div className="p-4 d-flex align-items-center justify-content-between border-bottom border-white border-opacity-5" style={{ height: 'var(--header-height)' }}>
+          <div className="px-3 d-flex align-items-center justify-content-between border-bottom border-white border-opacity-5" style={{ height: 'var(--header-height)' }}>
             {!isCollapsed && (
               <div className="d-flex align-items-center gap-2">
                 <div className="p-1.5 bg-primary rounded-pill">
-                  <ShieldHalf size={18} className="text-white" />
+                  <ShieldHalf size={16} className="text-white" />
                 </div>
                 <span className="fw-black tracking-widest small text-main">GYNATRIX</span>
               </div>

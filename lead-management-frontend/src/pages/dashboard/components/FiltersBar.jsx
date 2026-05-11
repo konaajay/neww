@@ -155,7 +155,7 @@ const FiltersBar = ({
   };
 
   return (
-    <div className={`premium-card p-4 animate-fade-in ${isDarkMode ? 'bg-surface bg-opacity-40 backdrop-blur' : 'bg-card shadow-sm'} rounded-4 mb-3`}>
+    <div className={`premium-card pt-3 pb-4 px-3 animate-fade-in ${isDarkMode ? 'bg-surface bg-opacity-40 backdrop-blur' : 'bg-card shadow-sm'} rounded-4 mb-3`}>
       <div className="d-flex align-items-center justify-content-between gap-2 overflow-auto no-scrollbar" style={{ whiteSpace: 'nowrap' }}>
         {/* Left Section: Title + Hierarchy Dropdowns */}
         <div className="d-flex align-items-center gap-3">
@@ -276,7 +276,7 @@ const FiltersBar = ({
         <div className="d-flex align-items-center gap-2">
           <div className="d-flex align-items-center gap-2">
             <div 
-              className={`d-flex align-items-center gap-2 p-2 px-3 rounded-pill border cursor-pointer hover-bg-opacity ${isDarkMode ? 'border-white border-opacity-10 shadow-inner' : 'border-light'}`}
+              className={`d-flex align-items-center gap-2 pt-2 pb-2 px-3 rounded-pill border cursor-pointer hover-bg-opacity ${isDarkMode ? 'border-white border-opacity-10 shadow-inner' : 'border-light'}`}
               style={{ background: isDarkMode ? 'rgba(255,255,255,0.05)' : '#f8f9fa' }}
             >
               <CalendarDays size={12} className="text-primary" />
@@ -295,7 +295,7 @@ const FiltersBar = ({
             <span className="opacity-25 text-muted">TO</span>
 
             <div 
-              className={`d-flex align-items-center gap-2 p-2 px-3 rounded-pill border cursor-pointer hover-bg-opacity ${isDarkMode ? 'border-white border-opacity-10 shadow-inner' : 'border-light'}`}
+              className={`d-flex align-items-center gap-2 pt-2 pb-2 px-3 rounded-pill border cursor-pointer hover-bg-opacity ${isDarkMode ? 'border-white border-opacity-10 shadow-inner' : 'border-light'}`}
               style={{ background: isDarkMode ? 'rgba(255,255,255,0.05)' : '#f8f9fa' }}
             >
               <CalendarDays size={12} className="text-primary" />
@@ -331,7 +331,7 @@ const FiltersBar = ({
       </div>
 
       <style>{`
-        .filter-select-wrapper { background: ${isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'}; border: 1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}; border-radius: 50px; padding: 4px 16px; }
+        .filter-select-wrapper { background: ${isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'}; border: 1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}; border-radius: 50px; padding: 8px 16px; }
         .filter-select { background: transparent; border: 0; color: var(--text-main); font-weight: 800; font-size: 9px; text-transform: uppercase; outline: none; min-width: 80px; }
         .filter-select option { background: ${isDarkMode ? '#0f172a' : '#ffffff'}; color: ${isDarkMode ? '#ffffff' : '#000000'}; }
         .no-scrollbar::-webkit-scrollbar { display: none; }

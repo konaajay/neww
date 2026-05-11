@@ -13,7 +13,7 @@ const PaymentStatusPage = () => {
         const checkStatus = async () => {
             try {
                 // We use the same public endpoint to get order details
-                const res = await axios.get(`http://${window.location.hostname}:8081/api/public/payments/order/${orderId}`);
+                const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/public/payments/order/${orderId}`);
                 setOrderData(res.data);
                 
                 // In a real app, we would verify the actual payment status from Cashfree or our backend

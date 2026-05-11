@@ -290,7 +290,7 @@ const SidebarAttendance = ({ isCollapsed }) => {
     const color = getStatusColor();
 
     return (
-        <div className="mx-3 mb-4 p-3 rounded-4 border animate-fade-in shadow-sm">
+        <div className={`mx-3 mb-4 p-3 rounded-4 border animate-fade-in shadow-sm ${isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-light bg-opacity-50'}`} style={{ borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }}>
             <div
                 className="d-flex align-items-center justify-content-between mb-3 cursor-pointer"
                 onClick={() => setIsExpanded(!isExpanded)}
