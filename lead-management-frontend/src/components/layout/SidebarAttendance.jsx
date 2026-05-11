@@ -273,7 +273,7 @@ const SidebarAttendance = ({ isCollapsed }) => {
 
     if (loading && !status) return null;
 
-    if (isCollapsed) {
+    if (isCollapsed && window.innerWidth >= 992) {
         return (
             <div className="px-2 py-3 border-top border-white border-opacity-5 d-flex flex-column align-items-center gap-2">
                 <button

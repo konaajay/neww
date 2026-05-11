@@ -9,10 +9,8 @@
   --xxl: 1400px;
 
   /* Core Metrics (Flexible) */
-  --sidebar-width: 17.5rem;
-  /* 280px */
-  --sidebar-collapsed-width: 5rem;
-  /* 80px */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 70px;
   --header-height: 4.375rem;
   /* 70px */
   --radius-sm: 0.25rem;
@@ -44,17 +42,17 @@
 }
 
 [data-bs-theme="light"] {
-  --bg-body: #ffffff;
+  --bg-body: #f1f5f9; /* Soft gray for depth */
   --bg-card: #ffffff;
-  --bg-surface: #f1f5f9;
-  --bg-input: #f8fafc;
+  --bg-surface: #f8fafc;
+  --bg-input: #ffffff;
   --text-main: #0f172a;
   --text-muted: #64748b;
-  --border-color: rgba(0, 0, 0, 0.08);
+  --border-color: rgba(0, 0, 0, 0.06);
   --sidebar-bg: #ffffff;
   --sidebar-text: #0f172a;
-  --nav-bg: #ffffff;
-  --glass-blur: none;
+  --nav-bg: rgba(255, 255, 255, 0.8);
+  --glass-blur: blur(8px);
 }
 
 /* Utility Classes for Variables */
@@ -107,11 +105,11 @@ html {
 html,
 body,
 #root {
-  min-height: 100%;
-  height: auto !important;
+  height: 100vh !important;
+  width: 100vw;
   margin: 0;
   padding: 0;
-  overflow-y: auto !important;
+  overflow: hidden !important;
 }
 
 body {
@@ -219,22 +217,47 @@ img {
 
 @media (min-width: 992px) {
   .main-content {
-    /* No margin-left needed in flex layout */
+    flex: 1;
+    min-width: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+.layout-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  overflow-y: auto;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (max-width: 991px) {
+  .layout-body {
+    padding: 12px;
   }
 }
 
 /* Unified SaaS Header Architecture */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: var(--bg-body);
+}
+
 .unified-header {
   height: 72px !important;
   width: 100% !important;
   display: flex !important;
   align-items: center !important;
+  flex-shrink: 0 !important; /* Ensure it doesn't collapse */
   background: var(--nav-bg) !important;
   backdrop-filter: var(--glass-blur) !important;
   border-bottom: 1px solid var(--border-color) !important;
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
   z-index: 1100 !important;
 }
 
@@ -244,13 +267,25 @@ img {
   padding: 0 16px;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   flex-shrink: 0;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border-right: 1px solid var(--border-color);
-  transition: width 0.3s ease;
 }
 
 .sidebar-closed .brand-section {
-  width: var(--sidebar-collapsed-width);
+  width: var(--sidebar-collapsed-width) !important;
+  padding: 0;
+  justify-content: center;
+}
+
+@media (max-width: 991px) {
+  .brand-section {
+    width: 100px !important;
+    padding: 0 12px !important;
+    justify-content: flex-start;
+    border-right: none !important;
+  }
 }
 
 .nav-section {
@@ -268,7 +303,7 @@ img {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
-  padding-top: 72px; /* For fixed header */
+  background-color: var(--bg-body);
 }
 
 .app-main-area {
@@ -277,14 +312,50 @@ img {
   overflow: hidden;
 }
 
+/* Sidebar Architecture */
 .glass-sidebar {
-  position: relative !important;
-  height: 100% !important;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
   width: var(--sidebar-width);
-  flex-shrink: 0;
-  border-right: 1px solid var(--border-color);
   background: var(--sidebar-bg);
-  transition: width 0.3s ease;
+  border-right: 1px solid var(--border-color);
+  z-index: 1150; /* Above header if needed */
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: var(--glass-blur);
+  display: flex;
+  flex-direction: column;
+}
+
+.glass-sidebar.show {
+  transform: translateX(0);
+}
+
+@media (min-width: 992px) {
+  .glass-sidebar {
+    position: relative;
+    transform: translateX(0);
+    z-index: 1000;
+    height: 100% !important;
+    flex-shrink: 0;
+  }
+
+  .glass-sidebar.closed {
+    width: var(--sidebar-collapsed-width) !important;
+  }
+}
+
+@media (max-width: 991px) {
+  .glass-sidebar {
+    width: 280px !important; /* Fixed width for mobile */
+    box-shadow: 20px 0 50px rgba(0,0,0,0.3);
+  }
+  
+  .glass-sidebar.closed {
+    width: 280px !important; /* Ignore 'closed' state on mobile */
+  }
 }
 
 /* Old UI Glass Panels */
@@ -422,6 +493,7 @@ h6 {
 .nav-link-premium {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 12px;
   padding: 12px 16px;
   background: transparent;
@@ -435,6 +507,21 @@ h6 {
   letter-spacing: 0.05em;
   font-family: 'Outfit', sans-serif;
   border-left: 3px solid transparent;
+}
+
+.glass-sidebar.closed .nav-link-premium {
+  justify-content: center;
+  padding: 12px 0;
+  border-left: none;
+}
+
+@media (max-width: 991px) {
+  .glass-sidebar .nav-link-premium,
+  .glass-sidebar.closed .nav-link-premium {
+    justify-content: flex-start !important;
+    padding: 12px 16px !important;
+    gap: 12px !important;
+  }
 }
 
 .nav-link-premium:hover {
@@ -454,40 +541,7 @@ h6 {
   color: white !important;
 }
 
-/* Sidebar - Mobile First Drawer */
-.glass-sidebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: var(--sidebar-width);
-  background: var(--sidebar-bg);
-  border-right: 1px solid var(--border-color);
-  z-index: 1050;
-  transform: translateX(-100%);
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), width 0.35s ease, position 0s;
-  backdrop-filter: var(--glass-blur);
-}
-
-.glass-sidebar.show {
-  transform: translateX(0);
-}
-
-@media (min-width: 992px) {
-  .glass-sidebar {
-    position: relative;
-    transform: translateX(0);
-    z-index: 1000;
-    flex-shrink: 0;
-    height: 100vh !important; /* Ensure full height on desktop */
-    padding-top: 0 !important;
-  }
-
-  .glass-sidebar.closed {
-    width: var(--sidebar-collapsed-width);
-  }
-}
-
+/* Mobile Navigation Overlay Ticks */
 .hover-bg-surface:hover {
   background-color: var(--bg-surface);
 }

@@ -68,6 +68,12 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
+  useEffect(() => {
+    const handleGlobalLogout = () => logout();
+    window.addEventListener('auth-logout', handleGlobalLogout);
+    return () => window.removeEventListener('auth-logout', handleGlobalLogout);
+  }, []);
+
   const login = async (email, password) => {
     console.log("[AuthContext] Attempting login for:", email);
     try {

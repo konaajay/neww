@@ -167,6 +167,22 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
           </nav>
 
           <SidebarAttendance isCollapsed={isCollapsed} />
+          
+          <div className="mt-auto border-top border-white border-opacity-5">
+            <button
+              onClick={() => {
+                if (window.confirm('Are you sure you want to logout?')) {
+                  onClose();
+                  window.dispatchEvent(new CustomEvent('auth-logout'));
+                }
+              }}
+              className="w-100 py-3 border-0 bg-transparent text-danger d-flex align-items-center justify-content-center gap-2 hover-bg-danger transition-all"
+              style={{ fontSize: '11px', fontWeight: '800', letterSpacing: '0.05em' }}
+            >
+              <LogOut size={16} />
+              {(!isCollapsed || isOpen) && <span>LOGOUT</span>}
+            </button>
+          </div>
         </div>
       </aside>
     </>
