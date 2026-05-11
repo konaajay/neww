@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { ShieldCheck, UserCog, Users, User, Sparkles, Eye, EyeOff, Key } from 'lucide-react';
+import { ShieldHalf, Eye, EyeOff, Lock, Mail, Sparkles } from 'lucide-react';
 import ForgotPasswordModal from '../components/layout/ForgotPasswordModal';
 
 const LoginPage = () => {
@@ -15,7 +15,6 @@ const LoginPage = () => {
   const { user, login } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if already logged in
   useEffect(() => {
     if (user) {
       const role = (user.role || '').toUpperCase();
@@ -30,11 +29,10 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) return toast.error('All fields required');
-    if (!/\S+@\S+\.\S+/.test(email)) return toast.error('Invalid email');
     try {
       setLoading(true);
       const user = await login(email, password);
-      toast.success('Login successful');
+      toast.success('Access Granted');
       
       const role = (user?.role || '').toUpperCase();
       let target = '/associate';
@@ -44,121 +42,116 @@ const LoginPage = () => {
       
       navigate(target, { replace: true });
     } catch (err) {
-      console.error('Login error:', err);
-      // AuthContext throws the message string directly
-      const msg = typeof err === 'string' ? err : (err?.response?.data?.message || 'Login failed - Check credentials');
+      const msg = typeof err === 'string' ? err : (err?.response?.data?.message || 'Authentication Failed');
       toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const inputStyle = {
-    background: '#1f2937',
-    border: '1px solid rgba(255,255,255,0.1)',
-    color: '#f9fafb',
-    borderRadius: '8px',
-  };
-
   return (
-    <div style={{ 
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: '100%',
-      backgroundColor: '#030712', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center',
-      zIndex: 9999,
-      overflowY: 'auto'
+    <div className="min-vh-100 w-100 d-flex align-items-center justify-content-center" style={{ 
+      background: 'radial-gradient(circle at top right, #1e1b4b 0%, #030712 50%, #020617 100%)',
+      overflow: 'hidden',
+      position: 'relative'
     }}>
-      <div style={{ width: '100%', maxWidth: '400px', padding: '2rem 1rem' }}>
+      {/* Background Decorative Elements */}
+      <div className="position-absolute top-0 start-0 w-100 h-100 opacity-20" style={{ pointerEvents: 'none' }}>
+        <div className="position-absolute top-0 end-0 rounded-circle bg-primary blur-3xl" style={{ width: '400px', height: '400px', transform: 'translate(30%, -30%)', filter: 'blur(100px)' }}></div>
+        <div className="position-absolute bottom-0 start-0 rounded-circle bg-indigo-900 blur-3xl" style={{ width: '300px', height: '300px', transform: 'translate(-30%, 30%)', filter: 'blur(100px)' }}></div>
+      </div>
 
-        {/* Branding */}
-        <div className="text-center mb-4">
-          <div
-            className="d-inline-flex align-items-center justify-content-center rounded-3 mb-3"
-            style={{ width: 52, height: 52, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)' }}
-          >
-            <Sparkles size={24} color="#6366f1" />
+      <div className="container position-relative z-index-10 animate-fade-in" style={{ maxWidth: '440px' }}>
+        {/* Logo Section */}
+        <div className="text-center mb-5 animate-slide-up">
+          <div className="d-inline-flex p-3 bg-primary bg-opacity-10 rounded-pill border border-primary border-opacity-20 shadow-glow-sm mb-3">
+             <ShieldHalf size={32} className="text-primary" />
           </div>
-          <h4 className="fw-bold mb-1" style={{ color: '#f9fafb' }}>GYANTRIX CRM</h4>
-          <p className="mb-0" style={{ color: '#6b7280', fontSize: '13px' }}>Sign in to your account</p>
+          <h2 className="fw-black text-main tracking-widest text-uppercase mb-1" style={{ letterSpacing: '4px' }}>GYNATRIX</h2>
+          <div className="d-inline-flex align-items-center gap-2 px-3 py-1 bg-surface bg-opacity-30 rounded-pill border border-white border-opacity-5">
+             <Sparkles size={10} className="text-warning" />
+             <span className="text-muted fw-black text-uppercase" style={{ fontSize: '9px', letterSpacing: '1px' }}>Premium SaaS Edition</span>
+          </div>
         </div>
 
-        {/* Card */}
-        <div className="rounded-4 p-4" style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.06)' }}>
+        {/* Login Card */}
+        <div className="glass-morphism rounded-4 p-4 p-md-5 shadow-2xl border border-white border-opacity-5 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+          <div className="mb-4">
+            <h4 className="fw-black text-main mb-1">Welcome back</h4>
+            <p className="text-muted small fw-bold">Enter your credentials to access the terminal</p>
+          </div>
 
-          <form onSubmit={handleSubmit}>
-            <div className="mb-3">
-              <label className="form-label fw-medium" style={{ color: '#d1d5db', fontSize: '13px' }}>Email address</label>
-              <input
-                id="login-email"
-                type="email"
-                className="form-control"
-                placeholder="you@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={inputStyle}
-              />
+          <form onSubmit={handleSubmit} className="d-flex flex-column gap-4">
+            <div className="form-group">
+              <label className="text-muted fw-black text-uppercase mb-2 d-block" style={{ fontSize: '10px', letterSpacing: '1px' }}>Authentication ID</label>
+              <div className="position-relative">
+                <Mail size={16} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted opacity-50" />
+                <input
+                  type="email"
+                  className="form-control ui-input ps-5 bg-opacity-20 border-white border-opacity-10 py-2.5"
+                  placeholder="admin@gynatrix.io"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                />
+              </div>
             </div>
 
-            <div className="mb-4">
-              <label className="form-label fw-medium" style={{ color: '#d1d5db', fontSize: '13px' }}>Password</label>
-              <div className="input-group">
-                <input
-                  id="login-password"
-                  type={show ? 'text' : 'password'}
-                  className="form-control"
-                  placeholder="Enter password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  style={{ ...inputStyle, borderRight: 'none', borderRadius: '8px 0 0 8px' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShow(!show)}
-                  style={{
-                    background: '#1f2937',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderLeft: 'none',
-                    color: '#9ca3af',
-                    borderRadius: '0 8px 8px 0',
-                    padding: '0 12px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {show ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              <div className="text-end mt-2">
+            <div className="form-group">
+              <div className="d-flex justify-content-between align-items-center mb-2">
+                <label className="text-muted fw-black text-uppercase d-block" style={{ fontSize: '10px', letterSpacing: '1px' }}>Security Protocol</label>
                 <button 
                   type="button" 
                   onClick={() => setIsForgotModalOpen(true)}
-                  className="btn btn-link p-0 text-primary fw-bold text-decoration-none"
-                  style={{ fontSize: '11px' }}
+                  className="btn btn-link p-0 text-primary fw-black text-uppercase text-decoration-none"
+                  style={{ fontSize: '9px' }}
                 >
-                  Forgot password?
+                  Recovery
+                </button>
+              </div>
+              <div className="position-relative">
+                <Lock size={16} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted opacity-50" />
+                <input
+                  type={show ? 'text' : 'password'}
+                  className="form-control ui-input ps-5 bg-opacity-20 border-white border-opacity-10 py-2.5"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  className="btn btn-link position-absolute top-50 end-0 translate-middle-y me-2 p-1 text-muted border-0 opacity-50 hover-opacity-100"
+                  onClick={() => setShow(!show)}
+                >
+                  {show ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
             <button
-              id="login-submit"
               type="submit"
-              className="btn w-100 fw-semibold"
+              className="ui-btn ui-btn-primary w-100 py-3 rounded-3 fw-black text-uppercase tracking-widest mt-2"
               disabled={loading}
-              style={{ background: '#6366f1', color: '#fff', borderRadius: '8px', padding: '10px', border: 'none' }}
+              style={{ fontSize: '12px' }}
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? (
+                <div className="d-flex align-items-center justify-content-center gap-2">
+                  <span className="spinner-border spinner-border-sm" role="status"></span>
+                  <span>Authenticating...</span>
+                </div>
+              ) : 'Establish Connection'}
             </button>
           </form>
+        </div>
 
-
+        {/* Footer Info */}
+        <div className="text-center mt-5 opacity-40 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+           <p className="text-muted small fw-bold mb-0">© 2026 GYNATRIX INTELLIGENCE SYSTEMS</p>
+           <p className="text-muted" style={{ fontSize: '8px' }}>ENCRYPTED SESSION • MULTI-CLUSTER ARCHITECTURE</p>
         </div>
       </div>
+
       <ForgotPasswordModal isOpen={isForgotModalOpen} onClose={() => setIsForgotModalOpen(false)} />
     </div>
   );

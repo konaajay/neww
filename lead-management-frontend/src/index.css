@@ -77,25 +77,6 @@ select option {
 }
 
 /* Utility Classes for Variables */
-.premium-nav {
-  height: 72px;
-  background: var(--nav-bg);
-  backdrop-filter: var(--glass-blur);
-  border-bottom: 1px solid var(--border-color);
-  width: 100%;
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-}
-
-.premium-nav-inner {
-  padding: 0 20px; /* User requested 20px */
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
 
 /* SaaS Spacing System (Strict 72px Baseline) */
 .premium-nav {
@@ -104,14 +85,15 @@ select option {
   max-height: 72px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
+  justify-content: flex-end; /* Push to corner */
+  padding: 0 10px; /* Minimal padding for corner look */
   border-bottom: 1px solid var(--border-color);
   background: var(--nav-bg);
   backdrop-filter: var(--glass-blur);
   position: sticky;
   top: 0;
   z-index: 1000;
+  width: 100%;
 }
 
 .sidebar-header {

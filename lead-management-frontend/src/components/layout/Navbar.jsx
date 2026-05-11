@@ -97,21 +97,15 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
 
   return (
     <nav className="premium-nav">
-      <div className="premium-nav-inner">
-      {/* Left Section: Contextual Extras */}
-      <div className="d-flex align-items-center gap-2">
-         {navbarExtras && (
-           <div className="ms-1">
+      <div className="premium-nav-inner justify-content-end">
+        {/* Right Section Cluster */}
+        <div className="d-flex align-items-center gap-3">
+          {/* Contextual Extras (Moved to Right) */}
+          {navbarExtras && (
+            <div className="me-2">
               {navbarExtras}
-           </div>
-         )}
-      </div>
-
-      {/* Spacer to push right section to the end */}
-      <div className="flex-grow-1"></div>
-
-      {/* Right Section */}
-      <div className="d-flex align-items-center gap-3">
+            </div>
+          )}
           {/* Theme Toggle */}
           <div className="d-none d-md-flex align-items-center gap-1 p-1 bg-surface bg-opacity-30 rounded-pill border border-white border-opacity-5">
              <button 
@@ -368,6 +362,16 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
               </div>
             )}
           </div>
+
+          {/* Direct Logout */}
+          <button 
+            onClick={onLogout}
+            className={`p-2 rounded-circle border-0 transition-all ${isDarkMode ? 'bg-danger bg-opacity-10 text-danger' : 'bg-rose-50 text-danger'}`}
+            style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title="Sign Out"
+          >
+            <LogOut size={18} />
+          </button>
         </div>
         
       <ChangePasswordModal 

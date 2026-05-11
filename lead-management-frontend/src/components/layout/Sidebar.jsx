@@ -107,29 +107,30 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
         <div className="d-flex flex-column h-100">
           {/* Sidebar Header */}
           {!hideHeader && (
-            <div className="sidebar-header-connected">
-              <div className="d-flex align-items-center gap-2 overflow-hidden">
-                <div className="p-1.5 bg-primary rounded-pill flex-shrink-0">
-                  <ShieldHalf size={16} className="text-white" />
+            <div className="sidebar-header px-3 border-bottom border-white border-opacity-5">
+              <div className="d-flex align-items-center gap-3 overflow-hidden">
+                <button 
+                  onClick={onToggle}
+                  className="btn btn-link text-main p-0 border-0 flex-shrink-0"
+                  aria-label="Toggle sidebar"
+                >
+                  <Menu size={24} />
+                </button>
+                
+                <div className="d-flex align-items-center gap-2 overflow-hidden">
+                  <div className="p-2 bg-primary rounded-pill flex-shrink-0">
+                    <ShieldHalf size={22} className="text-white" />
+                  </div>
+                  {!isCollapsed && (
+                    <span className="fw-black tracking-widest text-main text-truncate" style={{ fontSize: '18px' }}>GYNATRIX</span>
+                  )}
                 </div>
-                {(!isCollapsed || isOpen) && (
-                  <span className="fw-black tracking-widest small text-main text-truncate">GYNATRIX</span>
-                )}
               </div>
-
-              {/* Mobile-only close button */}
-              <button
-                className="btn btn-link text-main p-1 border-0 d-lg-none ms-2"
-                onClick={onClose}
-                aria-label="Close menu"
-              >
-                <X size={20} />
-              </button>
             </div>
           )}
 
           {/* Navigation Items */}
-          <nav className="flex-grow-1 py-3 overflow-auto custom-scroll">
+          <nav className="flex-grow-1 overflow-auto custom-scroll">
             <div className="d-flex flex-column px-1">
               {navItems.map(item => {
                 const Icon = item.icon;
