@@ -199,33 +199,33 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
   return (
     <div className="d-flex flex-column gap-3 animate-fade-in pb-5">
       {/* Analytics Summary */}
-      <div className="row g-3 mb-2">
+      <div className="row g-3 mb-1">
         {[
           { label: "Pending (Today)", color: "primary", value: processedTasks.filter(t => t.status !== 'COMPLETED' && isToday(t.dueDate) && !t.isOverdue).length },
           { label: "Overdue Tasks", color: "danger", value: processedTasks.filter(t => t.isOverdue && t.status !== 'COMPLETED').length },
           { label: "Completed Today", color: "success", value: processedTasks.filter(t => t.status?.toUpperCase() === 'COMPLETED' && isToday(t.updatedAt)).length }
         ].map((stat, i) => (
           <div key={i} className="col-12 col-md-4">
-            <div className="premium-card p-4 shadow-lg border-0 d-flex flex-column gap-1" style={{ background: 'rgba(255, 255, 255, 0.03)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <h2 className="fw-black text-dark mb-0 tabular-nums" style={{ fontSize: '38px', lineHeight: 1 }}>{stat.value}</h2>
-              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '10px' }}>{stat.label}</div>
+            <div className="premium-card p-3 shadow-lg border border-white border-opacity-5 d-flex flex-column gap-1" style={{ background: 'var(--bg-card)', backdropFilter: 'blur(10px)', borderRadius: '20px' }}>
+              <h3 className="fw-black text-main mb-0 tabular-nums" style={{ fontSize: '32px', lineHeight: 1 }}>{stat.value}</h3>
+              <div className="text-muted extra-small fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '9px' }}>{stat.label}</div>
             </div>
           </div>
         ))}
       </div>
 
       {/* Search & Actions */}
-      <div className="px-1 d-flex justify-content-between align-items-center mb-1">
+      <div className="px-1 d-flex justify-content-between align-items-center mb-1 mt-2">
         <div className="d-flex align-items-center gap-3">
-          <div className={`input-group ${isDarkMode ? 'bg-surface' : 'bg-light'} rounded-pill border border-secondary border-opacity-20`} style={{ width: '320px' }}>
-            <span className="input-group-text border-0 bg-transparent ps-3"><Search size={16} className="text-muted" /></span>
+          <div className="position-relative" style={{ width: '320px' }}>
+            <Search size={14} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted opacity-50" />
             <input
               type="text"
-              className="form-control border-0 bg-transparent text-dark py-2.5 fw-bold"
+              className="form-control bg-surface border-white border-opacity-10 py-2 ps-5 rounded-pill transition-all fw-bold text-main"
               placeholder="Search tasks..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ fontSize: '13px' }}
+              style={{ fontSize: '13px', background: 'rgba(255,255,255,0.03)' }}
             />
           </div>
         </div>

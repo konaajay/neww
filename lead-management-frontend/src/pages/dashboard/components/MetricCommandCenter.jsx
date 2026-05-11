@@ -17,30 +17,31 @@ export const MetricCard = memo(({ title, stats, icon: Icon, color, onClick }) =>
     className="premium-card h-100 cursor-pointer border border-main border-opacity-10 shadow-lg group hover-active-card overflow-hidden"
     onClick={onClick}
     style={{
-      borderRadius: '24px',
+      borderRadius: '20px',
       background: 'var(--bg-card)',
       backdropFilter: 'var(--glass-blur)',
       position: 'relative',
-      minHeight: '100px'
+      minHeight: '80px',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
     }}
   >
-    <div className="p-4 metric-card-padding position-relative z-10 d-flex flex-column h-100">
-      <div className="mb-2">
-        <h6 className="fw-black text-uppercase tracking-widest text-muted mb-0" style={{ fontSize: '9px', opacity: 0.6 }}>{title}</h6>
+    <div className="p-3 metric-card-padding position-relative z-10 d-flex flex-column h-100">
+      <div className="mb-1">
+        <h6 className="fw-black text-uppercase tracking-widest text-muted mb-0" style={{ fontSize: '8px', opacity: 0.5 }}>{title}</h6>
       </div>
 
-      <div className="flex-grow-1 d-flex align-items-center justify-content-between my-2">
+      <div className="flex-grow-1 d-flex align-items-center justify-content-between my-1">
         <div>
-          <span className="fw-black text-main tabular-nums d-block metric-card-value" style={{ fontSize: '28px', lineHeight: 1, letterSpacing: '-1px' }}>{stats?.primary?.value ?? 0}</span>
-          <span className="fw-black text-muted text-uppercase" style={{ fontSize: '9px', opacity: 0.7, letterSpacing: '0.8px' }}>{stats?.primary?.label ?? ''}</span>
+          <span className="fw-black text-main tabular-nums d-block metric-card-value" style={{ fontSize: '24px', lineHeight: 1, letterSpacing: '-0.5px' }}>{stats?.primary?.value ?? 0}</span>
+          <span className="fw-black text-muted text-uppercase" style={{ fontSize: '8px', opacity: 0.6, letterSpacing: '0.5px' }}>{stats?.primary?.label ?? ''}</span>
         </div>
       </div>
 
-      <div className="mt-auto d-flex justify-content-between align-items-center pt-2 pb-1 border-top border-main border-opacity-10">
+      <div className="mt-auto d-flex justify-content-between align-items-center pt-2 border-top border-white border-opacity-5">
         {(stats?.secondary || []).map((s, idx) => (
           <div key={idx} className="d-flex flex-column align-items-center text-center px-1">
-            <span className={`fw-black text-${s?.color || 'main'} mb-0.5`} style={{ fontSize: '12px', lineHeight: 1 }}>{s?.value ?? 0}</span>
-            <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '8px', opacity: 0.6, letterSpacing: '0.4px' }}>{s?.label ?? ''}</span>
+            <span className={`fw-black text-${s?.color || 'main'} mb-0`} style={{ fontSize: '11px', lineHeight: 1 }}>{s?.value ?? 0}</span>
+            <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '7px', opacity: 0.5, letterSpacing: '0.2px' }}>{s?.label ?? ''}</span>
           </div>
         ))}
       </div>
@@ -221,43 +222,6 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
         />
       </div>
 
-      <style>{`
-        .metric-grid-custom { 
-          display: grid; 
-          grid-template-columns: repeat(2, 1fr);
-          gap: 1rem; 
-          margin-bottom: 1.5rem;
-          width: 100%;
-        }
-
-        .metric-card-wrapper {
-          width: 100% !important;
-          min-width: 0;
-        }
-        
-        @media (min-width: 1200px) {
-           .metric-grid-custom {
-              grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-           }
-        }
-
-        @media (max-width: 576px) {
-           .metric-grid-custom {
-              gap: 0.75rem;
-           }
-           .metric-card-padding {
-              padding: 1rem !important;
-           }
-           .metric-card-value {
-              font-size: 20px !important;
-           }
-        }
-        
-        .premium-card { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); min-height: 90px; position: relative; overflow: hidden; }
-        .hover-active-card:hover { transform: translateY(-3px) scale(1.01); background: var(--bg-surface) !important; border-color: var(--primary) !important; box-shadow: 0 10px 20px -10px rgba(0,0,0,0.4) !important; }
-        .animate-fade-in-up { animation: fadeInUp 0.4s ease-out; }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-      `}</style>
     </div>
   );
 });

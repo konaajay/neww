@@ -238,7 +238,7 @@ const AdminDashboard = () => {
 
   return (
     <DashboardLayout activeTab={activeTab} onTabChange={handleTabChange} role="ADMIN">
-      <div className="dashboard-content-wrapper w-100 h-100 animate-fade-in d-flex flex-column gap-3">
+      <div className="dashboard-content-wrapper w-100 flex-grow-1 animate-fade-in d-flex flex-column gap-3">
         {['overview', 'team-dashboard', 'leads', 'tasks', 'calls', 'attendance', 'payments'].includes(activeTab) && (
           <FiltersBar
             filters={filters}

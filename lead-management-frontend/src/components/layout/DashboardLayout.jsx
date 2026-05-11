@@ -5,6 +5,7 @@ import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import CallOutcomeModal from '../CallOutcomeModal';
 import WfhRequestModal from './WfhRequestModal';
+import { ShieldHalf, Menu } from 'lucide-react';
 
 const DashboardLayout = ({ children, activeTab, onTabChange, role, navbarExtras, hideNavbar = false }) => {
   const { user, logout, clearCall } = useAuth();
@@ -21,15 +22,7 @@ const DashboardLayout = ({ children, activeTab, onTabChange, role, navbarExtras,
   };
 
   return (
-    <div
-      className={`dashboard-wrapper ${isCollapsed ? 'sidebar-closed' : ''}`}
-      style={{
-        height: '100vh',
-        overflow: 'hidden',
-        display: 'flex',
-        background: 'var(--bg-body)'
-      }}
-    >
+    <div className={`dashboard-wrapper ${isCollapsed ? 'sidebar-closed' : ''}`}>
       <Sidebar
         isOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
@@ -40,49 +33,18 @@ const DashboardLayout = ({ children, activeTab, onTabChange, role, navbarExtras,
         onToggle={toggleSidebar}
       />
 
-      <div
-        className="main-content"
-        style={{
-          flex: 1,
-          marginLeft: window.innerWidth >= 992
-            ? (isCollapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)')
-            : '0',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          transition: 'all 0.3s ease',
-          width: '100%'
-        }}
-      >
+      <div className="main-content">
         {!hideNavbar && (
-          <div
-            style={{
-              position: 'sticky',
-              top: 0,
-              zIndex: 1000,
-              flexShrink: 0
-            }}
-          >
-            <Navbar
-              userEmail={user?.email}
-              onLogout={logout}
-              onToggleSidebar={toggleSidebar}
-              navbarExtras={navbarExtras}
-              onTabChange={onTabChange}
-            />
-          </div>
+          <Navbar
+            userEmail={user?.email}
+            onLogout={logout}
+            onToggleSidebar={toggleSidebar}
+            navbarExtras={navbarExtras}
+            onTabChange={onTabChange}
+          />
         )}
 
-        <main
-          className="layout-body custom-scroll"
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            minHeight: 0,
-            padding: '24px'
-          }}
-        >
+        <main className="layout-body custom-scroll">
           {children}
         </main>
       </div>

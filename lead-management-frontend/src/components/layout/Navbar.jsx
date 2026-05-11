@@ -8,7 +8,7 @@ import { useTasks } from '../../features/leads/hooks/useTasks';
 import { useQuery } from '@tanstack/react-query';
 import wfhService from '../../services/wfhService';
 
-const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChange }) => {
+const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChange, isCollapsed }) => {
   const { user, updateProfile } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -96,282 +96,286 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
   };
 
   return (
-    <nav className="premium-nav d-flex align-items-center justify-content-between px-3 w-100 shadow-sm border-bottom border-white border-opacity-5" style={{ backdropFilter: 'blur(10px)', backgroundColor: isDarkMode ? 'rgba(3, 7, 18, 0.8)' : 'rgba(255, 255, 255, 0.8)' }}>
-      {/* Left Section: Toggle + Logo fallback */}
+    <nav className="premium-nav">
+      <div className="premium-nav-inner">
+      {/* Left Section: Contextual Extras */}
       <div className="d-flex align-items-center gap-2">
-        <button 
-          className="d-flex d-lg-none btn btn-link text-main p-1 border-0 shadow-none outline-none me-2"
-          onClick={onToggleSidebar}
-        >
-          <Menu size={22} />
-        </button>
-
-        <div className="d-flex align-items-center gap-2">
-           <div className="d-lg-none p-1 bg-primary rounded-circle" style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-             <ShieldHalf size={16} className="text-white" />
+         {navbarExtras && (
+           <div className="ms-1">
+              {navbarExtras}
            </div>
-           {navbarExtras && (
-             <div className="ms-1">
-                {navbarExtras}
-             </div>
-           )}
-        </div>
+         )}
+      </div>
 
-        {/* Spacer to push right section to the end */}
-        <div className="flex-grow-1"></div>
+      {/* Spacer to push right section to the end */}
+      <div className="flex-grow-1"></div>
 
-        {/* Right Section */}
+      {/* Right Section */}
       <div className="d-flex align-items-center gap-3">
-        {/* Theme Toggle */}
-        <div className="d-none d-md-flex align-items-center gap-1 p-1 bg-surface bg-opacity-30 rounded-pill border border-white border-opacity-5">
-           <button 
-             className={`p-1 rounded-circle border-0 d-flex ${!isDarkMode ? 'bg-primary text-white shadow-sm' : 'bg-transparent text-muted opacity-50'}`}
-             onClick={() => isDarkMode && toggleTheme()}
-             style={{ width: '24px', height: '24px', alignItems: 'center', justifyContent: 'center' }}
-           >
-              <Sun size={12} />
-           </button>
-           <button 
-             className={`p-1 rounded-circle border-0 d-flex ${isDarkMode ? 'bg-primary text-white shadow-sm' : 'bg-transparent text-muted opacity-50'}`}
-             onClick={() => !isDarkMode && toggleTheme()}
-             style={{ width: '24px', height: '24px', alignItems: 'center', justifyContent: 'center' }}
-           >
-              <Moon size={12} />
-           </button>
-        </div>
-
-        {/* Notifications */}
-        <div className="position-relative" ref={notificationRef}>
-          <button 
-            className={`p-2 rounded-circle border-0 transition-all position-relative ${isDarkMode ? 'bg-surface bg-opacity-30 text-main' : 'bg-light text-dark'}`}
-            onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-            style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
-            <Bell size={18} className={(upcomingTasks.length > 0 || wfhPendingCount > 0) ? 'text-primary' : 'opacity-50'} />
-            {(upcomingTasks.length > 0 || wfhPendingCount > 0) && (
-              <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: '7px', marginTop: '5px', marginLeft: '-5px' }}>
-                {upcomingTasks.length + wfhPendingCount}
-              </span>
-            )}
-          </button>
-
-          {isNotificationOpen && (
-            <div className={`position-absolute top-100 end-0 mt-3 p-0 rounded-4 shadow-2xl animate-zoom-in ${isDarkMode ? 'bg-surface' : 'bg-card'}`} style={{ 
-              width: '300px', 
-              border: '1px solid rgba(0,0,0,0.05)',
-              zIndex: 2020
-            }}>
-              <div className="p-3 border-bottom border-light d-flex align-items-center justify-content-between">
-                <h6 className="mb-0 fw-black text-uppercase tracking-widest text-main" style={{ fontSize: '10px' }}>Upcoming Alerts</h6>
-                <span className="badge bg-primary bg-opacity-10 text-primary rounded-pill fw-black" style={{ fontSize: '8px' }}>{(upcomingTasks.length + wfhPendingCount)} TOTAL</span>
-              </div>
-              <div className="p-2 overflow-auto" style={{ maxHeight: '300px' }}>
-                {upcomingTasks.length === 0 && wfhPendingCount === 0 ? (
-                  <div className="p-4 text-center opacity-30">
-                    <Bell size={24} className="mb-2" />
-                    <p className="extra-small fw-bold text-uppercase mb-0">No immediate tasks</p>
-                  </div>
-                ) : (
-                  <>
-                    {wfhPendingCount > 0 && (
-                      <div className={`p-3 rounded-3 mb-2 border border-primary border-opacity-20 transition-all ${isDarkMode ? 'bg-primary bg-opacity-5' : 'bg-primary bg-opacity-10'}`}>
-                        <div className="d-flex align-items-start gap-2">
-                          <div className="p-1.5 bg-danger bg-opacity-10 text-danger rounded-circle">
-                             <Bell size={12} />
-                          </div>
-                          <div className="flex-grow-1">
-                             <p className="mb-0 fw-black text-danger text-uppercase" style={{ fontSize: '10px' }}>Attendance Action Needed</p>
-                             <p className="mb-1 text-muted fw-bold" style={{ fontSize: '9px' }}>You have {wfhPendingCount} pending WFH requests to review.</p>
-                             <button 
-                               className="btn btn-link p-0 text-primary fw-black text-uppercase tracking-widest border-0" 
-                               style={{ fontSize: '8px' }}
-                               onClick={() => {
-                                 setIsNotificationOpen(false);
-                                 if (onTabChange) onTabChange('attendance');
-                               }}
-                             >
-                               Review Now
-                             </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    {upcomingTasks.map(task => (
-                    <div key={task.id} className={`p-3 rounded-3 mb-1 border border-transparent hover-bg-surface transition-all ${isDarkMode ? 'bg-white bg-opacity-5' : 'bg-light bg-opacity-50'}`}>
-                      <div className="d-flex align-items-start gap-2">
-                        <div className="p-1.5 bg-primary bg-opacity-10 text-primary rounded-circle">
-                          <Clock size={12} />
-                        </div>
-                        <div className="flex-grow-1 overflow-hidden">
-                          <p className="mb-0 fw-black text-main text-uppercase text-truncate" style={{ fontSize: '10px' }}>{task.title || 'EMI Call-up'}</p>
-                          <p className="mb-1 text-muted fw-bold text-truncate" style={{ fontSize: '9px' }}>{task.lead?.name || 'Unknown Lead'}</p>
-                          <div className="d-flex align-items-center justify-content-between">
-                            <span className="text-primary fw-black" style={{ fontSize: '8px' }}>
-                              {new Date(task.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                            <span className="text-muted extra-small fw-bold opacity-50">In {Math.round((new Date(task.dueDate) - new Date()) / 60000)}m</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    ))}
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* User Info & Dropdown */}
-        <div className="d-flex align-items-center gap-3 position-relative" ref={dropdownRef}>
-          <div 
-            className="d-flex align-items-center gap-3 cursor-pointer hover-bg-surface p-1 px-2 rounded-4 transition-all"
-            onClick={() => setIsProfileOpen(!isProfileOpen)}
-          >
-            <div className="text-end d-none d-lg-block" style={{ lineHeight: '1.2' }}>
-                <p className="mb-0 fw-black text-main text-uppercase" style={{ fontSize: '10px' }}>
-                  {user?.name?.toUpperCase() === 'SYSTEM ADMIN' ? 'ADMIN' : (user?.name || userEmail?.split('@')[0])}
-                </p>
-               <p className="mb-0 text-muted fw-bold opacity-40 text-uppercase" style={{ fontSize: '8px' }}>Identity Active</p>
-            </div>
-            
-            <div className="position-relative">
-              <div className="p-2 bg-primary bg-opacity-10 text-primary rounded-circle border border-primary border-opacity-10 shadow-glow flex-shrink-0 d-flex align-items-center justify-content-center" style={{ width: '36px', height: '36px' }}>
-                 <UserIcon size={16} />
-              </div>
-              <div className="position-absolute bottom-0 end-0 bg-success border border-2 border-white rounded-circle" style={{ width: '10px', height: '10px', marginRight: '-2px', marginBottom: '-2px' }}></div>
-            </div>
-            <ChevronDown size={14} className={`text-muted transition-all ${isProfileOpen ? 'rotate-180' : ''}`} />
+          {/* Theme Toggle */}
+          <div className="d-none d-md-flex align-items-center gap-1 p-1 bg-surface bg-opacity-30 rounded-pill border border-white border-opacity-5">
+             <button 
+               className={`p-1 rounded-circle border-0 d-flex ${!isDarkMode ? 'bg-primary text-white shadow-sm' : 'bg-transparent text-muted opacity-50'}`}
+               onClick={() => isDarkMode && toggleTheme()}
+               style={{ width: '24px', height: '24px', alignItems: 'center', justifyContent: 'center' }}
+             >
+                <Sun size={12} />
+             </button>
+             <button 
+               className={`p-1 rounded-circle border-0 d-flex ${isDarkMode ? 'bg-primary text-white shadow-sm' : 'bg-transparent text-muted opacity-50'}`}
+               onClick={() => !isDarkMode && toggleTheme()}
+               style={{ width: '24px', height: '24px', alignItems: 'center', justifyContent: 'center' }}
+             >
+                <Moon size={12} />
+             </button>
           </div>
-
-          {/* Profile Dropdown Menu */}
-          {isProfileOpen && (
-            <div className="position-absolute top-100 end-0 mt-3 p-0 rounded-4 shadow-2xl animate-zoom-in bg-card" style={{ 
-              width: '320px', 
-              maxHeight: 'calc(100vh - 100px)',
-              overflowY: 'auto',
-              border: '1px solid rgba(0,0,0,0.05)',
-              zIndex: 2010,
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none'
-            }}>
-              <div className="p-4 border-bottom border-light" style={{ background: 'linear-gradient(to bottom right, rgba(79, 70, 229, 0.05), rgba(59, 130, 246, 0.05))' }}>
-                <div className="d-flex align-items-center gap-3">
-                  <div className="position-relative">
-                    <div className="bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center rounded-circle" style={{ width: '52px', height: '52px' }}>
-                      <UserIcon size={26} />
-                    </div>
-                  </div>
-                  <div className="overflow-hidden">
-                    <h6 className="fw-black text-main mb-0 text-truncate text-uppercase tracking-wider" style={{ fontSize: '13px' }}>
-                      {user?.name?.toUpperCase() === 'SYSTEM ADMIN' ? 'ADMIN' : user?.name}
-                    </h6>
-                    <p className="text-muted small mb-1 text-truncate fw-bold" style={{ fontSize: '10px' }}>{user?.email}</p>
-                    <div className="badge bg-primary bg-opacity-10 text-primary fw-black border-0 px-2 py-1" style={{ fontSize: '8px', letterSpacing: '0.5px' }}>
-                      {user?.role?.toUpperCase() === 'SYSTEM ADMIN' ? 'ADMIN' : user?.role}
-                    </div>
-                  </div>
+  
+          {/* Notifications */}
+          <div className="position-relative" ref={notificationRef}>
+            <button 
+              className={`p-2 rounded-circle border-0 transition-all position-relative ${isDarkMode ? 'bg-surface bg-opacity-30 text-main' : 'bg-light text-dark'}`}
+              onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+              style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Bell size={18} className={(upcomingTasks.length > 0 || wfhPendingCount > 0) ? 'text-primary' : 'opacity-50'} />
+              {(upcomingTasks.length > 0 || wfhPendingCount > 0) && (
+                <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: '7px', marginTop: '5px', marginLeft: '-5px' }}>
+                  {upcomingTasks.length + wfhPendingCount}
+                </span>
+              )}
+            </button>
+  
+            {isNotificationOpen && (
+              <div className={`position-absolute top-100 end-0 mt-3 p-0 rounded-4 shadow-2xl animate-zoom-in ${isDarkMode ? 'bg-surface' : 'bg-card'}`} style={{ 
+                width: '320px', 
+                maxHeight: 'calc(100vh - 100px)',
+                overflowY: 'auto',
+                border: '1px solid rgba(0,0,0,0.05)',
+                zIndex: 2010 
+              }}>
+                <div className="p-4 border-bottom border-light d-flex align-items-center justify-content-between">
+                  <h6 className="fw-black text-main mb-0 text-uppercase tracking-widest" style={{ fontSize: '11px' }}>Notifications</h6>
+                  {upcomingTasks.length + wfhPendingCount > 0 && (
+                    <span className="badge rounded-pill bg-primary bg-opacity-10 text-primary fw-black" style={{ fontSize: '9px' }}>
+                      {upcomingTasks.length + wfhPendingCount} NEW
+                    </span>
+                  )}
                 </div>
-              </div>
-
-              <div className="p-3">
-                {/* Information Cluster */}
-                <div className={`${isDarkMode ? 'bg-surface bg-opacity-40' : 'bg-light bg-opacity-50'} rounded-4 p-3 mb-3 border ${isDarkMode ? 'border-white border-opacity-10' : 'border-light'}`}>
-                  {/* Workspace */}
-                  <div className="d-flex align-items-start gap-3 mb-4">
-                    <div className={`p-2 ${isDarkMode ? 'bg-surface' : 'bg-white'} rounded-3 shadow-sm border ${isDarkMode ? 'border-white border-opacity-10' : 'border-light'}`}>
-                      <Building2 size={14} className="text-primary" />
+  
+                <div className="p-2">
+                  {upcomingTasks.length === 0 && wfhPendingCount === 0 ? (
+                    <div className="p-5 text-center">
+                      <div className="mb-3 opacity-20">
+                        <Bell size={40} className="text-muted" />
+                      </div>
+                      <p className="text-muted small fw-bold text-uppercase tracking-wider mb-0">No new alerts</p>
                     </div>
-                    <div>
-                      <p className="text-muted fw-bold text-uppercase mb-1" style={{ fontSize: '8px', letterSpacing: '0.5px' }}>Workspace / Office</p>
-                      <p className="text-main fw-black mb-0" style={{ fontSize: '11px' }}>{user?.officeName || 'Remote / Not Assigned'}</p>
-                    </div>
-                  </div>
-                  {/* Mobile - Editable */}
-                  <div className="d-flex align-items-start gap-3 mb-4">
-                    <div className={`p-2 ${isDarkMode ? 'bg-surface' : 'bg-white'} rounded-3 shadow-sm border ${isDarkMode ? 'border-white border-opacity-10' : 'border-light'}`}>
-                      <Phone size={14} className="text-primary" />
-                    </div>
-                    <div className="flex-grow-1">
-                      <p className="text-muted fw-bold text-uppercase mb-1" style={{ fontSize: '8px', letterSpacing: '0.5px' }}>Direct Connection</p>
-                      {isEditingMobile ? (
-                        <div className="d-flex align-items-center gap-2">
-                          <input 
-                            autoFocus
-                            className="text-primary fw-black mb-0 border-0 border-bottom border-primary bg-transparent p-0 w-100 outline-none" 
-                            style={{ fontSize: '11px' }}
-                            value={tempMobile}
-                            onChange={(e) => setTempMobile(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleMobileUpdate()}
-                          />
-                          <button onClick={handleMobileUpdate} className="btn btn-link p-0 text-success border-0">
-                            <Check size={14} />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="d-flex align-items-center justify-content-between">
-                          <p className="text-main fw-black mb-0" style={{ fontSize: '11px' }}>{user?.mobile || 'No Contact Set'}</p>
-                          <button onClick={() => setIsEditingMobile(true)} className="btn btn-link p-0 text-primary border-0 opacity-40 hover-opacity-100 transition-all">
-                            <Edit2 size={10} />
-                          </button>
+                  ) : (
+                    <>
+                      {/* WFH Pending Alerts */}
+                      {wfhPendingCount > 0 && (
+                        <div 
+                          className="p-3 mb-2 rounded-3 bg-warning bg-opacity-10 border border-warning border-opacity-20 cursor-pointer hover-bg-opacity-20 transition-all"
+                          onClick={() => { onTabChange('attendance'); setIsNotificationOpen(false); }}
+                        >
+                          <div className="d-flex align-items-center gap-3">
+                            <div className="p-2 bg-warning bg-opacity-20 rounded-circle text-warning">
+                              <ShieldHalf size={14} />
+                            </div>
+                            <div>
+                              <p className="mb-0 fw-black text-main" style={{ fontSize: '11px' }}>WFH Requests Pending</p>
+                              <p className="mb-0 text-muted extra-small fw-bold">{wfhPendingCount} request(s) need your review</p>
+                            </div>
+                          </div>
                         </div>
                       )}
-                    </div>
-                  </div>
-
-                  {/* Operating Shift */}
-                  <div className="d-flex align-items-start gap-3 mb-4">
-                    <div className={`p-2 ${isDarkMode ? 'bg-surface' : 'bg-white'} rounded-3 shadow-sm border ${isDarkMode ? 'border-white border-opacity-10' : 'border-light'}`}>
-                      <Clock size={14} className="text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-muted fw-bold text-uppercase mb-1" style={{ fontSize: '8px', letterSpacing: '0.5px' }}>Operating Shift</p>
-                      <p className="text-main fw-black mb-0" style={{ fontSize: '11px' }}>{user?.shiftTime || 'General Timing'}</p>
-                    </div>
-                  </div>
-
-                  {/* GPS Coordinates */}
-                  <div className="d-flex align-items-start gap-3">
-                    <div className={`p-2 ${isDarkMode ? 'bg-surface' : 'bg-white'} rounded-3 shadow-sm border ${isDarkMode ? 'border-white border-opacity-10' : 'border-light'}`}>
-                      <span className="text-primary fw-black" style={{ fontSize: '9px' }}>GPS</span>
-                    </div>
-                    <div>
-                      <p className="text-muted fw-bold text-uppercase mb-1" style={{ fontSize: '8px', letterSpacing: '0.5px' }}>Geo Coordinates</p>
-                      <p className="text-main fw-black mb-0" style={{ fontSize: '10px' }}>
-                        {user?.latitude && user?.longitude ? `${user.latitude.toFixed(4)}, ${user.longitude.toFixed(4)}` : 'Location Not Synced'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="d-flex flex-column gap-2">
-                  <button 
-                    onClick={() => { setIsPasswordModalOpen(true); setIsProfileOpen(false); }}
-                    className="btn btn-link text-primary d-flex align-items-center gap-3 p-3 rounded-4 border-0 text-decoration-none hover-bg-primary hover-bg-opacity-5 transition-all"
-                  >
-                    <Key size={14} className="opacity-70" />
-                    <span className="fw-black text-uppercase tracking-widest" style={{ fontSize: '10px' }}>Change Password</span>
-                  </button>
-                  
-                  <button 
-                    onClick={onLogout}
-                    className="btn w-100 py-3 rounded-4 d-flex align-items-center justify-content-center gap-2 border-0 transition-all"
-                    style={{ background: '#ef4444', color: '#ffffff', fontWeight: '900', letterSpacing: '1px' }}
-                  >
-                    <LogOut size={16} />
-                    <span className="text-uppercase" style={{ fontSize: '11px' }}>Sign Out</span>
-                  </button>
+  
+                      {/* Task Alerts */}
+                      {upcomingTasks.map(task => (
+                        <div 
+                        key={task.id} 
+                        className={`p-3 mb-2 rounded-3 border transition-all cursor-pointer ${isDarkMode ? 'bg-surface bg-opacity-40 border-white border-opacity-5 hover-bg-opacity-60' : 'bg-white border-light hover-shadow-sm'}`}
+                        onClick={() => {
+                          onTabChange('tasks', { filter: 'UPCOMING' });
+                          setIsNotificationOpen(false);
+                        }}
+                      >
+                        <div className="d-flex align-items-center gap-3">
+                          <div className={`p-2 rounded-circle ${isDarkMode ? 'bg-surface' : 'bg-primary bg-opacity-10 text-primary'}`}>
+                            <Clock size={14} />
+                          </div>
+                          <div className="flex-grow-1 overflow-hidden">
+                            <p className="mb-0 fw-black text-main text-truncate" style={{ fontSize: '11px' }}>{task.taskType?.replace('_', ' ')}</p>
+                            <p className="mb-0 text-muted extra-small fw-bold text-truncate">{task.leadName}</p>
+                            <div className="d-flex align-items-center gap-2 mt-1">
+                              <span className="text-primary fw-black" style={{ fontSize: '8px' }}>
+                                {new Date(task.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              <span className="text-muted extra-small fw-bold opacity-50">In {Math.round((new Date(task.dueDate) - new Date()) / 60000)}m</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
-          )}
+            )}
+          </div>
+  
+          <div className="d-flex align-items-center gap-2 position-relative" ref={dropdownRef}>
+            <div 
+              className="d-flex align-items-center gap-3 cursor-pointer hover-bg-surface p-1 ps-3 pe-2 rounded-pill transition-all border border-transparent hover-border-white hover-border-opacity-10"
+              onClick={() => setIsProfileOpen(!isProfileOpen)}
+              style={{ background: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}
+            >
+              <div className="text-end d-none d-lg-block" style={{ lineHeight: '1' }}>
+                  <p className="mb-1 fw-black text-main text-uppercase" style={{ fontSize: '10px', letterSpacing: '0.5px' }}>
+                    {user?.name?.toUpperCase() === 'SYSTEM ADMIN' ? 'ADMIN' : (user?.name || userEmail?.split('@')[0])}
+                  </p>
+                 <p className="mb-0 text-primary fw-bold text-uppercase" style={{ fontSize: '7px', letterSpacing: '1px' }}>Identity Active</p>
+              </div>
+              
+              <div className="position-relative">
+                <div className="p-2 bg-primary bg-opacity-10 text-primary rounded-circle border border-primary border-opacity-10 shadow-glow flex-shrink-0 d-flex align-items-center justify-content-center" style={{ width: '36px', height: '36px' }}>
+                   <UserIcon size={16} />
+                </div>
+                <div className="position-absolute bottom-0 end-0 bg-success border border-2 border-white rounded-circle" style={{ width: '10px', height: '10px', marginRight: '-2px', marginBottom: '-2px' }}></div>
+              </div>
+              <ChevronDown size={14} className={`text-muted transition-all ${isProfileOpen ? 'rotate-180' : ''}`} />
+            </div>
+  
+            {/* Profile Dropdown Menu */}
+            {isProfileOpen && (
+              <div className="position-absolute top-100 end-0 mt-3 p-0 rounded-4 shadow-2xl animate-zoom-in bg-card" style={{ 
+                width: '320px', 
+                maxHeight: 'calc(100vh - 100px)',
+                overflowY: 'auto',
+                border: '1px solid rgba(0,0,0,0.05)',
+                zIndex: 2010,
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none'
+              }}>
+                <div className="p-4 border-bottom border-light" style={{ background: 'linear-gradient(to bottom right, rgba(79, 70, 229, 0.05), rgba(59, 130, 246, 0.05))' }}>
+                  <div className="d-flex align-items-center gap-3">
+                    <div className="position-relative">
+                      <div className="bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center rounded-circle" style={{ width: '52px', height: '52px' }}>
+                        <UserIcon size={26} />
+                      </div>
+                    </div>
+                    <div className="overflow-hidden">
+                      <h6 className="fw-black text-main mb-0 text-truncate text-uppercase tracking-wider" style={{ fontSize: '13px' }}>
+                        {user?.name?.toUpperCase() === 'SYSTEM ADMIN' ? 'ADMIN' : user?.name}
+                      </h6>
+                      <p className="text-muted small mb-1 text-truncate fw-bold" style={{ fontSize: '10px' }}>{user?.email}</p>
+                      <div className="badge bg-primary bg-opacity-10 text-primary fw-black border-0 px-2 py-1" style={{ fontSize: '8px', letterSpacing: '0.5px' }}>
+                        {user?.role?.toUpperCase() === 'SYSTEM ADMIN' ? 'ADMIN' : user?.role}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+  
+                <div className="p-3">
+                  {/* Information Cluster */}
+                  <div className={`${isDarkMode ? 'bg-surface bg-opacity-40' : 'bg-light bg-opacity-50'} rounded-4 p-3 mb-3 border ${isDarkMode ? 'border-white border-opacity-10' : 'border-light'}`}>
+                    {/* Workspace */}
+                    <div className="d-flex align-items-start gap-3 mb-4">
+                      <div className={`p-2 ${isDarkMode ? 'bg-surface' : 'bg-white'} rounded-3 shadow-sm border ${isDarkMode ? 'border-white border-opacity-10' : 'border-light'}`}>
+                        <Building2 size={14} className="text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-muted fw-bold text-uppercase mb-1" style={{ fontSize: '8px', letterSpacing: '0.5px' }}>Workspace / Office</p>
+                        <p className="text-main fw-black mb-0" style={{ fontSize: '11px' }}>{user?.officeName || 'Remote / Not Assigned'}</p>
+                      </div>
+                    </div>
+                    {/* Mobile - Editable */}
+                    <div className="d-flex align-items-start gap-3 mb-4">
+                      <div className={`p-2 ${isDarkMode ? 'bg-surface' : 'bg-white'} rounded-3 shadow-sm border ${isDarkMode ? 'border-white border-opacity-10' : 'border-light'}`}>
+                        <Phone size={14} className="text-primary" />
+                      </div>
+                      <div className="flex-grow-1">
+                        <p className="text-muted fw-bold text-uppercase mb-1" style={{ fontSize: '8px', letterSpacing: '0.5px' }}>Direct Connection</p>
+                        {isEditingMobile ? (
+                          <div className="d-flex align-items-center gap-2">
+                            <input 
+                              autoFocus
+                              className="text-primary fw-black mb-0 border-0 border-bottom border-primary bg-transparent p-0 w-100 outline-none" 
+                              style={{ fontSize: '11px' }}
+                              value={tempMobile}
+                              onChange={(e) => setTempMobile(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && handleMobileUpdate()}
+                            />
+                            <button onClick={handleMobileUpdate} className="btn btn-link p-0 text-success border-0">
+                              <Check size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="d-flex align-items-center justify-content-between">
+                            <p className="text-main fw-black mb-0" style={{ fontSize: '11px' }}>{user?.mobile || 'No Contact Set'}</p>
+                            <button onClick={() => setIsEditingMobile(true)} className="btn btn-link p-0 text-primary border-0 opacity-40 hover-opacity-100 transition-all">
+                              <Edit2 size={10} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+  
+                    {/* Operating Shift */}
+                    <div className="d-flex align-items-start gap-3 mb-4">
+                      <div className={`p-2 ${isDarkMode ? 'bg-surface' : 'bg-white'} rounded-3 shadow-sm border ${isDarkMode ? 'border-white border-opacity-10' : 'border-light'}`}>
+                        <Clock size={14} className="text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-muted fw-bold text-uppercase mb-1" style={{ fontSize: '8px', letterSpacing: '0.5px' }}>Operating Shift</p>
+                        <p className="text-main fw-black mb-0" style={{ fontSize: '11px' }}>{user?.shiftTime || 'General Timing'}</p>
+                      </div>
+                    </div>
+  
+                    {/* GPS Coordinates */}
+                    <div className="d-flex align-items-start gap-3">
+                      <div className={`p-2 ${isDarkMode ? 'bg-surface' : 'bg-white'} rounded-3 shadow-sm border ${isDarkMode ? 'border-white border-opacity-10' : 'border-light'}`}>
+                        <span className="text-primary fw-black" style={{ fontSize: '9px' }}>GPS</span>
+                      </div>
+                      <div>
+                        <p className="text-muted fw-bold text-uppercase mb-1" style={{ fontSize: '8px', letterSpacing: '0.5px' }}>Geo Coordinates</p>
+                        <p className="text-main fw-black mb-0" style={{ fontSize: '10px' }}>
+                          {user?.latitude && user?.longitude ? `${user.latitude.toFixed(4)}, ${user.longitude.toFixed(4)}` : 'Location Not Synced'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+  
+                  <div className="d-flex flex-column gap-2">
+                    <button 
+                      onClick={() => { setIsPasswordModalOpen(true); setIsProfileOpen(false); }}
+                      className="btn btn-link text-primary d-flex align-items-center gap-3 p-3 rounded-4 border-0 text-decoration-none hover-bg-primary hover-bg-opacity-5 transition-all"
+                    >
+                      <Key size={14} className="opacity-70" />
+                      <span className="fw-black text-uppercase tracking-widest" style={{ fontSize: '10px' }}>Change Password</span>
+                    </button>
+                    
+                    <button 
+                      onClick={onLogout}
+                      className="btn w-100 py-3 rounded-4 d-flex align-items-center justify-content-center gap-2 border-0 transition-all"
+                      style={{ background: '#ef4444', color: '#ffffff', fontWeight: '900', letterSpacing: '1px' }}
+                    >
+                      <LogOut size={16} />
+                      <span className="text-uppercase" style={{ fontSize: '11px' }}>Sign Out</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-      
+        
       <ChangePasswordModal 
         isOpen={isPasswordModalOpen} 
         onClose={() => setIsPasswordModalOpen(false)} 
         userId={user?.id}
       />
+      </div>
     </nav>
   );
 };

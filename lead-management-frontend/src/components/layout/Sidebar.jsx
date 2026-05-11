@@ -8,7 +8,7 @@ import {
 import SidebarAttendance from './SidebarAttendance';
 
 
-const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, onToggle }) => {
+const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, onToggle, hideHeader = false }) => {
   const normalizedRole = (role || '').toUpperCase();
   const isSuperior = ['ADMIN', 'MANAGER', 'MGR', 'TEAM_LEADER', 'TL', 'TEAMLEAD'].some(r => normalizedRole.includes(r));
 
@@ -106,27 +106,27 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
       >
         <div className="d-flex flex-column h-100">
           {/* Sidebar Header */}
-          <div className="px-3 d-flex align-items-center justify-content-between border-bottom border-white border-opacity-5" style={{ height: 'var(--header-height)', flexShrink: 0 }}>
-            <div className="d-flex align-items-center gap-2 overflow-hidden">
-              <div className="p-1.5 bg-primary rounded-pill flex-shrink-0">
-                <ShieldHalf size={16} className="text-white" />
+          {!hideHeader && (
+            <div className="sidebar-header-connected">
+              <div className="d-flex align-items-center gap-2 overflow-hidden">
+                <div className="p-1.5 bg-primary rounded-pill flex-shrink-0">
+                  <ShieldHalf size={16} className="text-white" />
+                </div>
+                {(!isCollapsed || isOpen) && (
+                  <span className="fw-black tracking-widest small text-main text-truncate">GYNATRIX</span>
+                )}
               </div>
-              {(!isCollapsed || isOpen) && (
-                <span className="fw-black tracking-widest small text-main text-truncate">GYNATRIX</span>
-              )}
-            </div>
 
-            {/* Mobile-only close button */}
-            <button
-              className="btn btn-link text-main p-1 border-0 d-lg-none ms-2"
-              onClick={onClose}
-              aria-label="Close menu"
-            >
-              <X size={20} />
-            </button>
-            
-            {/* Desktop-only toggle (optional, usually handled by navbar) */}
-          </div>
+              {/* Mobile-only close button */}
+              <button
+                className="btn btn-link text-main p-1 border-0 d-lg-none ms-2"
+                onClick={onClose}
+                aria-label="Close menu"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          )}
 
           {/* Navigation Items */}
           <nav className="flex-grow-1 py-3 overflow-auto custom-scroll">
