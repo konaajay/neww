@@ -18,11 +18,13 @@ import {
 } from 'lucide-react';
 import api from '../../../api/api';
 import { useAuth } from '../../../context/AuthContext';
+import { useTheme } from '../../../context/ThemeContext';
 import { toast } from 'react-toastify';
 import TargetHistoryModal from './TargetHistoryModal';
 
 const TargetDistributionHub = ({ filters }) => {
     const { user } = useAuth();
+    const { isDarkMode } = useTheme();
     const [subordinates, setSubordinates] = useState([]);
     const [selectedUserId, setSelectedUserId] = useState('');
     const [amount, setAmount] = useState('');
@@ -40,6 +42,8 @@ const TargetDistributionHub = ({ filters }) => {
 
     const isManager = user?.roles?.some(r => ['ROLE_MANAGER', 'MANAGER', 'ROLE_ADMIN', 'ADMIN'].includes(r.name?.toUpperCase())) || 
                      ['ROLE_MANAGER', 'MANAGER', 'ROLE_ADMIN', 'ADMIN'].includes(user?.role?.toUpperCase() || user?.roleName?.toUpperCase());
+    const isAdmin = user?.roles?.some(r => ['ROLE_ADMIN', 'ADMIN'].includes(r.name?.toUpperCase())) || 
+                     ['ROLE_ADMIN', 'ADMIN'].includes(user?.role?.toUpperCase() || user?.roleName?.toUpperCase());
 
     const months = [
         "January", "February", "March", "April", "May", "June",
@@ -56,9 +60,13 @@ const TargetDistributionHub = ({ filters }) => {
             const budgetUserId = (isManager && filters?.userId) ? filters.userId : user.id;
             try {
                 const summaryRes = await api.get(`/targets/v2/user/${budgetUserId}`, { params: { month, year } });
-                setBudgetData(prev => ({ ...prev, assigned: summaryRes.data?.data?.assignedTarget || 0 }));
+                const resData = summaryRes.data?.data || summaryRes.data || {};
+                setBudgetData({
+                    assigned: resData.assignedTarget || 0,
+                    distributed: resData.distributedAmount || 0
+                });
             } catch (e) {
-                setBudgetData(prev => ({ ...prev, assigned: 0 }));
+                setBudgetData({ assigned: 0, distributed: 0 });
             }
 
             // 2. Load Team with Fallback
@@ -97,13 +105,29 @@ const TargetDistributionHub = ({ filters }) => {
                 }
             });
 
-            const filteredData = (isManager && !filters?.userId) 
-                ? uniqueTeamData.filter(u => {
-                    const r = (u.role?.name || u.roleName || u.role || u.role?.id?.toString() || '').toUpperCase();
-                    const isTL = r.includes('TEAM') || r.includes('LEAD') || r.includes('TL') || r.includes('SUPER') || r.includes('ADMIN') || r.includes('MANAGER');
-                    return isTL && u.id !== user.id;
-                })
-                : uniqueTeamData.filter(u => u.id !== user.id);
+            const userRole = (user?.role || user?.roleName || '').toUpperCase();
+            const isAdmin = userRole.includes('ADMIN');
+            
+            const filteredData = uniqueTeamData.filter(u => {
+                if (u.id === user.id) return false;
+                const name = (u.name || '').toUpperCase();
+                if (name.includes('ASSIGN TO SELF')) return false;
+                
+                const r = (u.role?.name || u.roleName || u.role || '').toUpperCase();
+                
+                if (isAdmin) {
+                    // Admins only distribute to Managers
+                    return r.includes('MANAGER') || r === 'MGR';
+                }
+                
+                if (isManager) {
+                    // Managers only distribute to Team Leaders/Supervisors
+                    return r.includes('TEAM') || r.includes('LEAD') || r.includes('TL') || r.includes('SUPER');
+                }
+                
+                // Team Leaders distribute to their Associates
+                return true;
+            });
 
             // If empty for TL, try a direct fetch as fallback
             if (!isManager && filteredData.length === 0) {
@@ -115,7 +139,7 @@ const TargetDistributionHub = ({ filters }) => {
 
             console.log(`[TEAM-DEBUG] Found ${filteredData.length} associates/TLs:`, filteredData.map(u => u.name));
 
-            const fullList = [{ 
+            const fullList = isAdmin ? filteredData : [{ 
                 id: (isManager && filters?.userId) ? filters.userId : user.id, 
                 name: "Assign to Self", 
                 email: user.email, 
@@ -170,7 +194,7 @@ const TargetDistributionHub = ({ filters }) => {
                 amount: parseFloat(amount),
                 month: parseInt(month),
                 year: parseInt(year),
-                type: 'DISTRIBUTED'
+                type: 'ASSIGNED'
             });
             toast.success("Target saved successfully");
             setAmount('');
@@ -186,11 +210,13 @@ const TargetDistributionHub = ({ filters }) => {
         const payloads = Object.entries(distributions).map(([uid, val]) => ({
             userId: parseInt(uid),
             amount: parseFloat(val || 0),
-            month, year, type: 'DISTRIBUTED'
+            month, year, type: 'ASSIGNED'
         }));
 
         const total = payloads.reduce((sum, p) => sum + p.amount, 0);
-        if (Math.abs(total - budgetData.assigned) > 1) {
+        
+        // Admins define the top-level budget, so they don't need to balance against a pre-assigned amount
+        if (!isAdmin && Math.abs(total - budgetData.assigned) > 1) {
             return toast.error(`Imbalance: Total must be ₹${budgetData.assigned.toLocaleString()}`);
         }
 
@@ -205,28 +231,29 @@ const TargetDistributionHub = ({ filters }) => {
     };
 
     const currentTotal = Object.values(distributions).reduce((sum, val) => sum + parseFloat(val || 0), 0);
-    const isBalanced = Math.abs(currentTotal - budgetData.assigned) <= 1;    return (
+    const isBalanced = isAdmin || Math.abs(currentTotal - budgetData.assigned) <= 1;
+    return (
         <div className="position-relative animate-fade-in">
             {isLoading && (
-                <div className="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-flex align-items-center justify-content-center z-3 rounded-4">
+                <div className={`position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center z-3 rounded-4 ${isDarkMode ? 'bg-dark bg-opacity-50' : 'bg-white bg-opacity-75'}`}>
                     <div className="spinner-border text-primary text-opacity-25" role="status"></div>
                 </div>
             )}
 
-            <div className="p-4 bg-white border border-gray-100 shadow-sm rounded-4">
+            <div className={`p-4 border shadow-sm rounded-4 bg-card ${isDarkMode ? 'border-main border-opacity-10' : 'border-gray-100'}`}>
                 {/* Minimalist Header */}
-                <div className="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom border-gray-50">
+                <div className={`d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom ${isDarkMode ? 'border-main border-opacity-10' : 'border-gray-50'}`}>
                     <div className="d-flex align-items-center gap-3">
                         <div className="p-2 bg-blue-50 rounded-3 text-blue-500">
                             <Target size={20} strokeWidth={2.5} />
                         </div>
                         <div>
-                            <h5 className="fw-black m-0 text-gray-800 tracking-tight">Strategic Hub</h5>
+                            <h5 className="fw-black m-0 text-main tracking-tight">Strategic Hub</h5>
                             <p className="text-muted tiny m-0 fw-bold tracking-widest text-uppercase opacity-40">Target Distribution</p>
                         </div>
                     </div>
                     
-                    <div className="d-flex align-items-center gap-3 bg-gray-50 p-1 rounded-pill">
+                    <div className={`d-flex align-items-center gap-3 p-1 rounded-pill ${isDarkMode ? 'bg-surface' : 'bg-gray-50'}`}>
                         <button 
                             onClick={() => { 
                                 if (month === 1) {
@@ -237,11 +264,11 @@ const TargetDistributionHub = ({ filters }) => {
                                 }
                                 setEditMode(false); 
                             }} 
-                            className="btn btn-white btn-sm rounded-circle shadow-sm border-0"
+                            className={`btn btn-sm rounded-circle border-0 shadow-sm ${isDarkMode ? 'bg-surface text-main' : 'bg-white'}`}
                         >
                             <ChevronLeft size={12}/>
                         </button>
-                        <span className="small fw-black text-gray-600 px-2 uppercase tracking-tighter" style={{ minWidth: '100px', textAlign: 'center' }}>{months[month-1]} {year}</span>
+                        <span className="small fw-black text-main px-2 uppercase tracking-tighter" style={{ minWidth: '100px', textAlign: 'center' }}>{months[month-1]} {year}</span>
                         <button 
                             onClick={() => { 
                                 if (month === 12) {
@@ -252,7 +279,7 @@ const TargetDistributionHub = ({ filters }) => {
                                 }
                                 setEditMode(false); 
                             }} 
-                            className="btn btn-white btn-sm rounded-circle shadow-sm border-0"
+                            className={`btn btn-sm rounded-circle border-0 shadow-sm ${isDarkMode ? 'bg-surface text-main' : 'bg-white'}`}
                         >
                             <ChevronRight size={12}/>
                         </button>
@@ -261,44 +288,66 @@ const TargetDistributionHub = ({ filters }) => {
 
                 {/* Clean Budget Summary */}
                 <div className="row g-3 mb-4">
-                    <div className="col-md-4">
-                        <div className="p-3 bg-white border border-gray-100 rounded-4">
-                            <span className="text-muted tiny fw-black text-uppercase tracking-widest opacity-40 d-block mb-1">Assigned Budget</span>
-                            <h4 className="fw-black m-0 text-gray-800">₹{budgetData.assigned.toLocaleString()}</h4>
-                        </div>
-                    </div>
-                    <div className="col-md-4">
-                        <div className="p-3 bg-blue-50/30 border border-blue-50 rounded-4">
-                            <span className="text-blue-400 tiny fw-black text-uppercase tracking-widest d-block mb-1">Allocated Pool</span>
-                            <h4 className="fw-black m-0 text-blue-600">₹{currentTotal.toLocaleString()}</h4>
-                        </div>
-                    </div>
-                    <div className="col-md-4">
-                        <div className={`p-3 border rounded-4 transition-all ${isBalanced ? 'bg-emerald-50/30 border-emerald-50 text-emerald-600' : 'bg-rose-50/30 border-rose-50 text-rose-600'}`}>
-                            <span className={`${isBalanced ? 'text-emerald-400' : 'text-rose-400'} tiny fw-black text-uppercase tracking-widest d-block mb-1`}>Parity Status</span>
-                            <div className="d-flex align-items-center justify-content-between">
-                                <div className="d-flex align-items-center gap-2 fw-black small">
-                                    {isBalanced ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
-                                    {isBalanced ? 'ALIGNED' : 'IMBALANCED'}
+                    {!isAdmin ? (
+                        <>
+                            <div className="col-md-4">
+                                <div className={`p-3 border rounded-4 ${isDarkMode ? 'bg-surface bg-opacity-50 border-main border-opacity-10 shadow-inner' : 'bg-white border-gray-100 shadow-sm'}`}>
+                                    <span className="text-muted tiny fw-black text-uppercase tracking-widest opacity-40 d-block mb-1">Assigned Budget</span>
+                                    <h4 className="fw-black m-0 text-main">₹{budgetData.assigned.toLocaleString()}</h4>
                                 </div>
-                                {!isBalanced && (
-                                    <div className="tiny fw-black">
-                                        {currentTotal > budgetData.assigned ? (
-                                            <span className="opacity-75">+{ (currentTotal - budgetData.assigned).toLocaleString() } Surplus</span>
-                                        ) : (
-                                            <span className="opacity-75">-{ (budgetData.assigned - currentTotal).toLocaleString() } Deficit</span>
+                            </div>
+                            <div className="col-md-4">
+                                <div className={`p-3 border rounded-4 ${isDarkMode ? 'bg-primary bg-opacity-5 border-primary border-opacity-10' : 'bg-blue-50/30 border-blue-50'}`}>
+                                    <span className="text-primary tiny fw-black text-uppercase tracking-widest d-block mb-1 opacity-70">Allocated Pool</span>
+                                    <h4 className="fw-black m-0 text-primary">₹{currentTotal.toLocaleString()}</h4>
+                                </div>
+                            </div>
+                            <div className="col-md-4">
+                                <div className={`p-3 border rounded-4 transition-all ${isBalanced ? (isDarkMode ? 'bg-success bg-opacity-5 border-success border-opacity-10 text-success' : 'bg-emerald-50/30 border-emerald-50 text-emerald-600') : (isDarkMode ? 'bg-danger bg-opacity-5 border-danger border-opacity-10 text-danger' : 'bg-rose-50/30 border-rose-50 text-rose-600')}`}>
+                                    <span className={`tiny fw-black text-uppercase tracking-widest d-block mb-1 opacity-70`}>Parity Status</span>
+                                    <div className="d-flex align-items-center justify-content-between">
+                                        <div className="d-flex align-items-center gap-2 fw-black small">
+                                            {isBalanced ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
+                                            {isBalanced ? 'ALIGNED' : 'IMBALANCED'}
+                                        </div>
+                                        {!isBalanced && (
+                                            <div className="tiny fw-black">
+                                                {currentTotal > budgetData.assigned ? (
+                                                    <span className="opacity-75">+{ (currentTotal - budgetData.assigned).toLocaleString() } Surplus</span>
+                                                ) : (
+                                                    <span className="opacity-75">-{ (budgetData.assigned - currentTotal).toLocaleString() } Deficit</span>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
-                                )}
+                                </div>
                             </div>
-                        </div>
-                    </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="col-md-6">
+                                <div className={`p-3 border rounded-4 ${isDarkMode ? 'bg-primary bg-opacity-5 border-primary border-opacity-10 shadow-inner' : 'bg-blue-50/30 border-blue-50 shadow-sm'}`}>
+                                    <span className="text-primary tiny fw-black text-uppercase tracking-widest d-block mb-1 opacity-70">Total Team Target (Allocated)</span>
+                                    <h4 className="fw-black m-0 text-primary">₹{currentTotal.toLocaleString()}</h4>
+                                </div>
+                            </div>
+                            <div className="col-md-6">
+                                <div className={`p-3 border rounded-4 ${isDarkMode ? 'bg-surface bg-opacity-50 border-main border-opacity-10 shadow-inner' : 'bg-white border-gray-100 shadow-sm'}`}>
+                                    <span className="text-muted tiny fw-black text-uppercase tracking-widest opacity-40 d-block mb-1">Status</span>
+                                    <div className="d-flex align-items-center gap-2 text-main fw-black small">
+                                        <div className="p-1 rounded-circle bg-success shadow-glow"></div>
+                                        ADMINISTRATIVE SOURCE ACTIVE
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
 
-                <div className="border border-gray-50 rounded-4 overflow-hidden">
+                <div className={`border rounded-4 overflow-hidden ${isDarkMode ? 'border-main border-opacity-10' : 'border-gray-50'}`}>
                     <div className="table-responsive">
                             <table className="table table-hover m-0 align-middle">
-                                <thead className="bg-gray-50 bg-opacity-50">
+                                <thead className={isDarkMode ? 'bg-surface bg-opacity-30' : 'bg-gray-50 bg-opacity-50'}>
                                     <tr>
                                         <th className="px-4 py-3 border-0 tiny fw-black text-muted text-uppercase tracking-widest">Team Member</th>
                                         <th className="px-4 py-3 border-0 tiny fw-black text-muted text-uppercase tracking-widest">Role</th>
@@ -307,21 +356,23 @@ const TargetDistributionHub = ({ filters }) => {
                                 </thead>
                                 <tbody>
                                     {subordinates.map(sub => (
-                                        <tr key={sub.id} className="border-bottom border-gray-50">
+                                        <tr key={sub.id} className={`border-bottom ${isDarkMode ? 'border-main border-opacity-10' : 'border-gray-50'}`}>
                                             <td className="px-4 py-3">
                                                 <div className="d-flex align-items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-circle bg-gray-50 text-gray-400 d-flex align-items-center justify-content-center fw-black small">{sub.name.charAt(0)}</div>
-                                                    <div className="fw-bold small text-gray-700">{sub.name}</div>
+                                                    <div className={`w-8 h-8 rounded-circle d-flex align-items-center justify-content-center fw-black small ${isDarkMode ? 'bg-surface text-muted' : 'bg-gray-50 text-gray-400'}`}>{sub.name.charAt(0)}</div>
+                                                    <div className="fw-bold small text-main">{sub.name}</div>
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3">
-                                                <span className="badge bg-gray-50 text-muted rounded-pill px-2 py-1 fw-bold tracking-tighter" style={{fontSize: '9px'}}>{sub.roleName || 'ASSOCIATE'}</span>
+                                                <span className={`badge rounded-pill px-2 py-1 fw-bold tracking-tighter ${isDarkMode ? 'bg-white bg-opacity-5 text-muted' : 'bg-gray-50 text-muted'}`} style={{fontSize: '9px'}}>
+                                                    {sub.role?.name || sub.roleName || sub.role || 'ASSOCIATE'}
+                                                </span>
                                             </td>
                                             <td className="px-4 py-3 text-end">
                                                 <div className="d-flex align-items-center justify-content-end gap-3">
                                                     <input 
                                                         type="number" 
-                                                        className={`form-control form-control-sm text-end fw-black border-gray-100 rounded-2 p-2 transition-all ${!editMode ? 'bg-transparent border-transparent cursor-default' : 'bg-gray-50 bg-opacity-30'}`}
+                                                        className={`form-control form-control-sm text-end fw-black rounded-2 p-2 transition-all ${!editMode ? 'bg-transparent border-transparent cursor-default text-main' : (isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-10 text-main' : 'bg-gray-50 bg-opacity-30 border-gray-100')}`}
                                                         style={{width: '110px', fontSize: '12px'}} 
                                                         value={distributions[sub.id] || ''} 
                                                         onChange={e => setDistributions({...distributions, [sub.id]: e.target.value})} 
@@ -334,7 +385,7 @@ const TargetDistributionHub = ({ filters }) => {
                                     ))}
                                 </tbody>
                             </table>
-                            <div className="p-4 bg-white border-top border-gray-50 d-flex gap-3">
+                            <div className={`p-4 border-top d-flex gap-3 bg-card ${isDarkMode ? 'border-white border-opacity-5' : 'border-gray-50'}`}>
                                 {editMode ? (
                                     <button 
                                         onClick={handleBulkSave} 
@@ -346,7 +397,7 @@ const TargetDistributionHub = ({ filters }) => {
                                 ) : (
                                     <button 
                                         onClick={() => setEditMode(true)} 
-                                        className="btn btn-outline-primary w-100 py-3 rounded-pill fw-black text-uppercase tracking-[0.1em] small"
+                                        className={`btn w-100 py-3 rounded-pill fw-black text-uppercase tracking-[0.1em] small ${isDarkMode ? 'btn-outline-light border-opacity-20' : 'btn-outline-primary'}`}
                                     >
                                         EDIT ALLOCATIONS
                                     </button>

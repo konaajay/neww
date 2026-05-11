@@ -809,12 +809,17 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                           </div>
                         </div>
 
-                        <div className="d-flex justify-content-end gap-2 mt-4 pt-3 border-top border-secondary border-opacity-10">
+                        <div className="d-flex justify-content-end align-items-center gap-3 mt-4 pt-3 border-top border-secondary border-opacity-10">
+                          {!lead.assignedToId && (
+                            <span className="text-danger fw-black small text-uppercase tracking-widest opacity-75" style={{ fontSize: '9px' }}>
+                              <AlertCircle size={12} className="me-1" /> Assignment Required to Log Interaction
+                            </span>
+                          )}
                           <button type="button" className={`btn btn-link text-decoration-none fw-bold small ${isDarkMode ? 'text-white text-opacity-50' : 'text-muted'}`} onClick={() => setShowAddNote(false)}>Discard</button>
                           <button
                             type="submit"
                             className="btn btn-primary rounded-pill fw-bold text-uppercase px-4 py-2 shadow-sm d-flex align-items-center gap-2"
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || !lead.assignedToId}
                           >
                             {isSubmitting ? (
                               <span className="spinner-border spinner-border-sm"></span>

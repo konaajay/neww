@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Search, Clock, AlertCircle, Calendar, CheckSquare, RefreshCw, Plus, Phone, Mail } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import CallOutcomeModal from './CallOutcomeModal';
 import ManualTaskModal from './ManualTaskModal';
 import { toast } from 'react-toastify';
@@ -16,6 +17,7 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
   const [reschedulingTask, setReschedulingTask] = useState(null);
   const { activeCall, startCall: logActiveCall } = useAuth();
   const [isStartingCall, setIsStartingCall] = useState(false);
+  const navigate = useNavigate();
 
   // React to initialFilter changes from parent
   React.useEffect(() => {
@@ -149,6 +151,9 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
 
   const filteredTasks = useMemo(() => {
     return processedTasks.filter(task => {
+      // 1. Core Filter: Hide COMPLETED tasks from the active ledger
+      if (task.status === 'COMPLETED') return false;
+
       const s = searchTerm.toLowerCase();
       const matchesSearch =
         (task.title || "").toLowerCase().includes(s) ||
@@ -267,7 +272,7 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
                       </div>
                     </td>
                     <td>
-                      <span className={`badge bg-${task.lead?.status === 'CONVERTED' ? 'success' : 'primary'} bg-opacity-5 text-dark border border-${task.lead?.status === 'CONVERTED' ? 'success' : 'primary'} border-opacity-10 fw-black text-uppercase`} style={{ fontSize: '8px', letterSpacing: '0.5px' }}>
+                      <span className={`fw-black text-uppercase text-${task.lead?.status === 'CONVERTED' ? 'success' : 'primary'}`} style={{ fontSize: '10px', letterSpacing: '0.5px' }}>
                         {task.lead?.status?.toUpperCase() === 'CONVERTED' ? 'EMI' : (task.lead?.status || 'N/A')}
                       </span>
                     </td>
@@ -286,13 +291,36 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
                       </div>
                     </td>
                     <td>
-                      <span className={`badge rounded-pill fw-bold bg-${task.status === 'COMPLETED' ? 'success' : task.isOverdue ? 'danger' : 'warning'} bg-opacity-10 text-${task.status === 'COMPLETED' ? 'success' : task.isOverdue ? 'danger' : 'warning'}`} style={{ fontSize: '9px' }}>
-                        {task.status === 'COMPLETED' ? 'COMPLETED' : task.isOverdue ? 'OVERDUE' : 'PENDING'}
+                      <span className={`badge rounded-pill fw-bold bg-${
+                        task.status === 'COMPLETED' ? 'success' : 
+                        task.isOverdue ? 'danger' : 
+                        isToday(task.dueDate) ? 'primary' : 'info'
+                      } bg-opacity-10 text-${
+                        task.status === 'COMPLETED' ? 'success' : 
+                        task.isOverdue ? 'danger' : 
+                        isToday(task.dueDate) ? 'primary' : 'info'
+                      }`} style={{ fontSize: '9px' }}>
+                        {task.status === 'COMPLETED' ? 'COMPLETED' : 
+                         task.isOverdue ? 'OVERDUE' : 
+                         isToday(task.dueDate) ? 'TODAY' : 'UPCOMING'}
                       </span>
                     </td>
                     <td className="pe-4 text-end">
                       {task.status !== 'COMPLETED' && (
-                        <button className="btn btn-sm btn-outline-primary rounded-pill py-1 px-3" style={{ fontSize: '10px' }} onClick={(e) => { e.stopPropagation(); handleUpdateTaskStatus(task.id, 'COMPLETED'); }}>Complete</button>
+                        <button 
+                          className="btn btn-sm btn-outline-primary rounded-pill py-1 px-3" 
+                          style={{ fontSize: '10px' }} 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (task.lead?.id) {
+                              navigate(`/leads/${task.lead.id}/status-update`);
+                            } else {
+                              handleUpdateTaskStatus(task.id, 'COMPLETED');
+                            }
+                          }}
+                        >
+                          Complete
+                        </button>
                       )}
                     </td>
                   </tr>

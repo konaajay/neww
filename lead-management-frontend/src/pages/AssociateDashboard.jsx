@@ -104,11 +104,21 @@ const AssociateDashboard = () => {
     queryClient.invalidateQueries({ queryKey: ['leads'] });
   }, [queryClient]);
 
-  const handleTabChange = (tab) => {
+  const handleTabChange = (tab, extra = {}) => {
     if (tab === 'ingestion') {
       setIsIngestionModalOpen(true);
       return;
     }
+    
+    // If we have extra filters (like from/to from a metric card click), apply them
+    if (extra && (extra.from || extra.to)) {
+      setFilters(prev => ({
+        ...prev,
+        from: extra.from || prev.from,
+        to: extra.to || prev.to
+      }));
+    }
+    
     setActiveTab(tab);
     localStorage.setItem('associate_active_tab', tab);
   };
@@ -173,8 +183,8 @@ const AssociateDashboard = () => {
           <div className="d-flex flex-column gap-4 animate-fade-in">
             <ManagerProfile manager={manager} />
             {dashboardLoading ? <StatSkeleton /> : (
-              <div className="row g-4">
-                <div className="col-12 col-xl-8">
+              <div className="row g-4 align-items-start">
+                <div className="col-12 col-xl-6">
                   <MetricCommandCenter
                     stats={stats}
                     role="ASSOCIATE"
@@ -183,7 +193,7 @@ const AssociateDashboard = () => {
                     leads={leads}
                   />
                 </div>
-                <div className="col-12 col-xl-4">
+                <div className="col-12 col-xl-6">
                   <TodayTaskList 
                     leads={leads} 
                     theme={theme} 
@@ -204,15 +214,15 @@ const AssociateDashboard = () => {
                 { label: 'Lost', value: ((stats.statusDistribution?.LOST || 0) + (stats.statusDistribution?.REJECTED || 0)), color: 'danger', icon: '❌' }
               ].map((card, i) => (
                 <div key={i} className="col-6 col-md-3">
-                  <div className="premium-card p-3 border border-white border-opacity-10 shadow-sm d-flex flex-column gap-1" 
+                  <div 
+                    className="premium-card p-3 border border-main border-opacity-10 shadow-sm d-flex flex-column gap-1 transition-smooth" 
                     style={{ 
                       borderRadius: '20px', 
-                      background: isDarkMode 
-                        ? `linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(${card.color === 'warning' ? '255,193,7' : card.color === 'info' ? '13,202,240' : card.color === 'success' ? '25,135,84' : '220,53,69'}, 0.08) 100%)`
-                        : 'rgba(255,255,255,0.8)',
-                      backdropFilter: 'blur(10px)'
-                    }}>
-                    <h4 className="mb-0 fw-black text-main" style={{ fontSize: '26px', lineHeight: 1 }}>{card.value}</h4>
+                      background: 'var(--bg-card)',
+                      backdropFilter: 'var(--glass-blur)'
+                    }}
+                  >
+                    <h4 className="mb-0 fw-black text-main" style={{ fontSize: '24px', lineHeight: 1 }}>{card.value}</h4>
                     <small className="text-muted fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '8px' }}>{card.label}</small>
                   </div>
                 </div>

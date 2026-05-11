@@ -8,13 +8,7 @@ const WfhApprovalPanel = ({ role }) => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('PENDING');
-    const [actionLoading, setActionLoading] = useState(null);
-
-    const canApprove = role === 'ADMIN' || role === 'MANAGER';
-
-    useEffect(() => {
-        fetchRequests();
-    }, [statusFilter]);
+    const [actionModal, setActionModal] = useState(null); // { id, action, notes }
 
     const fetchRequests = async () => {
         setLoading(true);
@@ -28,12 +22,14 @@ const WfhApprovalPanel = ({ role }) => {
         }
     };
 
-    const handleAction = async (requestId, action) => {
-        const notes = window.prompt(`Optional notes for ${action}:`);
-        setActionLoading(requestId);
+    const handleConfirmAction = async () => {
+        if (!actionModal) return;
+        const { id, action, notes } = actionModal;
+        setActionLoading(id);
         try {
-            await wfhService.handleRequest(requestId, action, notes);
+            await wfhService.handleRequest(id, action, notes);
             toast.success(`WFH Request ${action} successful`);
+            setActionModal(null);
             fetchRequests();
         } catch (err) {
             toast.error('Failed to process request');
@@ -42,6 +38,17 @@ const WfhApprovalPanel = ({ role }) => {
         }
     };
 
+    const handleAction = (id, action) => {
+        setActionModal({ id, action, notes: '' });
+    };
+
+    const [actionLoading, setActionLoading] = useState(null);
+    const canApprove = role === 'ADMIN' || role === 'MANAGER';
+
+    useEffect(() => {
+        fetchRequests();
+    }, [statusFilter]);
+
     const filteredRequests = requests.filter(r => 
         r.userName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         r.reason?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -49,6 +56,50 @@ const WfhApprovalPanel = ({ role }) => {
 
     return (
         <div className="animate-fade-in">
+            {/* Action Confirmation Modal */}
+            {actionModal && (
+                <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 10000, background: 'rgba(3, 7, 18, 0.9)', backdropFilter: 'blur(10px)' }}>
+                    <div className="premium-card p-4 border-0 shadow-2xl bg-surface" style={{ borderRadius: '28px', width: '400px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div className="d-flex align-items-center gap-3 mb-4">
+                            <div className={`p-2 rounded-circle ${actionModal.action === 'APPROVED' ? 'bg-success bg-opacity-10 text-success' : 'bg-danger bg-opacity-10 text-danger'}`}>
+                                {actionModal.action === 'APPROVED' ? <CheckCircle size={24} /> : <XCircle size={24} />}
+                            </div>
+                            <div>
+                                <h6 className="fw-black text-main text-uppercase tracking-widest mb-0">{actionModal.action} WFH REQUEST</h6>
+                                <p className="text-muted small mb-0 fw-bold">Add optional administrative notes</p>
+                            </div>
+                        </div>
+
+                        <textarea 
+                            className="form-control bg-dark border-white border-opacity-10 rounded-4 p-3 text-main mb-4"
+                            rows="3"
+                            placeholder="Type administrative notes here (optional)..."
+                            value={actionModal.notes}
+                            onChange={(e) => setActionModal(prev => ({ ...prev, notes: e.target.value }))}
+                            style={{ resize: 'none', fontSize: '12px' }}
+                        ></textarea>
+
+                        <div className="d-flex gap-2">
+                            <button 
+                                className="btn flex-grow-1 py-2.5 rounded-pill fw-black text-uppercase tracking-widest border-0 opacity-50 hover-opacity-100" 
+                                style={{ fontSize: '10px', background: 'rgba(255,255,255,0.05)', color: '#fff' }}
+                                onClick={() => setActionModal(null)}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                className={`btn flex-grow-1 py-2.5 rounded-pill fw-black text-uppercase tracking-widest border-0 shadow-glow ${actionModal.action === 'APPROVED' ? 'bg-success' : 'bg-danger'}`}
+                                style={{ fontSize: '10px', color: '#fff' }}
+                                onClick={handleConfirmAction}
+                                disabled={actionLoading === actionModal.id}
+                            >
+                                {actionLoading === actionModal.id ? 'Processing...' : `Confirm ${actionModal.action.toLowerCase()}`}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="d-flex align-items-center justify-content-between mb-4">
                 <div>
                     <h5 className="fw-black text-uppercase tracking-wider mb-1">WFH Approval Center</h5>

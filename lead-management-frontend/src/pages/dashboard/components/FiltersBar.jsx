@@ -155,7 +155,7 @@ const FiltersBar = ({
   };
 
   return (
-    <div className={`premium-card p-4 animate-fade-in ${isDarkMode ? 'bg-surface bg-opacity-40 backdrop-blur' : 'bg-white shadow-sm'} rounded-4 mb-3`}>
+    <div className={`premium-card p-4 animate-fade-in ${isDarkMode ? 'bg-surface bg-opacity-40 backdrop-blur' : 'bg-card shadow-sm'} rounded-4 mb-3`}>
       <div className="d-flex align-items-center justify-content-between gap-2 overflow-auto no-scrollbar" style={{ whiteSpace: 'nowrap' }}>
         {/* Left Section: Title + Hierarchy Dropdowns */}
         <div className="d-flex align-items-center gap-3">
@@ -353,4 +353,4 @@ const FiltersBar = ({
   );
 };
 
-export default FiltersBar;
+export default React.memo(FiltersBar);

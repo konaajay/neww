@@ -9,9 +9,9 @@
   --xxl: 1400px;
 
   /* Core Metrics (Flexible) */
-  --sidebar-width: 17.5rem; /* 280px */
-  --sidebar-collapsed-width: 5rem; /* 80px */
-  --header-height: 4.375rem; /* 70px */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 70px;
+  --header-height: 64px;
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
@@ -113,7 +113,7 @@ select option {
 
 * {
   box-sizing: border-box;
-  transition: background-color 0.4s ease, border-color 0.4s ease, transform 0.2s ease;
+  transition: background-color 0.4s ease, border-color 0.4s ease;
 }
 
 html {
@@ -123,11 +123,9 @@ html {
 html,
 body,
 #root {
-  min-height: 100%;
-  height: auto !important;
+  min-height: 100vh;
   margin: 0;
   padding: 0;
-  overflow-y: auto !important;
 }
 
 body {
@@ -182,41 +180,79 @@ img {
 
 /* Layout Core - Mobile First */
 .dashboard-wrapper {
-  display: flex;
-  min-height: 100vh;
-  width: 100%;
+  display: block;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
   background-color: var(--bg-body);
+  position: relative;
 }
 
 .main-content {
-  flex-grow: 1;
-  width: 100%;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background-color: var(--bg-body);
   position: relative;
-  overflow-x: hidden;
-  overflow-y: auto !important;
-  /* Only transition width/margin to prevent vertical jumping */
-  transition: padding 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 100vh;
+  width: 100%;
+  background-color: var(--bg-body);
+  padding-left: var(--sidebar-width);
+  padding-top: var(--header-height);
+  transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: block;
 }
 
-@media (min-width: 992px) {
+.main-content.sidebar-closed {
+  padding-left: var(--sidebar-collapsed-width);
+}
+
+.layout-body {
+  width: 100%;
+  min-height: calc(100vh - var(--header-height));
+  padding: 1.5rem;
+  padding-bottom: 5rem;
+  display: block;
+  position: relative;
+  background-color: var(--bg-body);
+}
+
+@media (max-width: 991px) {
   .main-content {
-    /* No margin-left needed in flex layout */
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    height: auto !important;
+    min-height: 100vh;
+    display: block;
+    overflow: visible !important;
+  }
+  
+  .layout-body {
+    padding: 1rem;
+    height: auto !important;
+    min-height: calc(100vh - var(--header-height));
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  /* Ensure tables are scrollable and VISIBLE on small screens */
+  .table-responsive {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch;
+    min-height: 300px !important;
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .card {
+    overflow: visible !important;
   }
 }
 
 /* Navbar - Responsive Positioning */
 .premium-nav {
-  position: sticky !important;
+  position: fixed !important;
   top: 0 !important;
-  right: 0 !important;
-  left: 0 !important;
-  width: 100% !important;
-  height: 64px !important;
-  min-height: 64px !important;
+  left: var(--sidebar-width) !important;
+  width: calc(100% - var(--sidebar-width)) !important;
+  height: var(--header-height) !important;
   background-color: var(--nav-bg) !important;
   border-bottom: 1px solid var(--border-color) !important;
   z-index: 1000 !important;
@@ -226,7 +262,20 @@ img {
   justify-content: space-between !important;
   padding: 0 1.5rem !important;
   margin: 0 !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-closed .premium-nav {
+  left: var(--sidebar-collapsed-width) !important;
+  width: calc(100% - var(--sidebar-collapsed-width)) !important;
+}
+
+@media (max-width: 991px) {
+  .premium-nav {
+    left: 0 !important;
+    width: 100% !important;
+    padding: 0 1rem !important;
+  }
 }
 
 @media (min-width: 992px) {
@@ -440,10 +489,13 @@ select option {
 
 @media (min-width: 992px) {
   .glass-sidebar {
-    position: relative;
-    transform: translateX(0);
-    z-index: 1000;
-    flex-shrink: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: var(--sidebar-width);
+    transform: translateX(0) !important;
+    z-index: 2000;
   }
   
   .glass-sidebar.closed {
@@ -649,12 +701,12 @@ select option {
   gap: 1rem;
 }
 
-.hide-scrollbar {
+.hide-scrollbar, .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
-.hide-scrollbar::-webkit-scrollbar {
+.hide-scrollbar::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 

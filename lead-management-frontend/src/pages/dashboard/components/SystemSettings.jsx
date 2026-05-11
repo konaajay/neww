@@ -116,15 +116,15 @@ const SystemSettings = () => {
     return (
         <div className="d-flex flex-column gap-4 animate-fade-in">
             {/* Top Navigation Tabs */}
-            <div className="d-flex gap-3 p-1 bg-surface bg-opacity-10 rounded-pill border border-white border-opacity-5 overflow-auto custom-scroll" style={{ width: 'fit-content' }}>
+            <div className="d-flex gap-3 p-2 bg-surface bg-opacity-10 rounded-pill border border-white border-opacity-5 overflow-auto custom-scroll" style={{ width: 'fit-content' }}>
                 {tabs.map(tab => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`px-5 py-2.5 rounded-pill border-0 fw-black text-uppercase tracking-widest transition-all d-flex align-items-center gap-2 ${activeTab === tab.id ? 'bg-primary text-white shadow-glow' : 'bg-transparent text-muted opacity-50'}`}
-                        style={{ fontSize: '10px', minWidth: '140px' }}
+                        className={`px-5 py-3.5 rounded-pill border-0 fw-black text-uppercase tracking-widest transition-all d-flex align-items-center gap-2 ${activeTab === tab.id ? 'bg-primary text-white shadow-glow' : 'bg-transparent text-muted opacity-50'}`}
+                        style={{ fontSize: '13px', minWidth: '180px' }}
                     >
-                        <tab.icon size={14} /> {tab.label}
+                        <tab.icon size={18} /> {tab.label}
                     </button>
                 ))}
             </div>

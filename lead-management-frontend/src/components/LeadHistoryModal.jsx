@@ -37,7 +37,7 @@ const LeadHistoryModal = ({ isOpen, onClose, lead, onEdit, onRecordCallOutcome, 
     }
   };
 
-  const isFinalized = ['PAID', 'CONVERTED', 'EMI'].includes(lead.status?.toUpperCase());
+  const isFinalized = ['PAID', 'CONVERTED', 'EMI', 'INTERESTED'].includes(lead.status?.toUpperCase());
 
   const modalContent = (
     <div 

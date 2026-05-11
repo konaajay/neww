@@ -62,7 +62,7 @@ const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) =
         }
 
         return (
-            <div className={`p-3 border-bottom border-white border-opacity-10 ${isDarkMode ? 'bg-slate-900 text-white' : 'bg-light text-dark'}`}>
+            <div className={`p-3 border-bottom border-white border-opacity-10 ${isDarkMode ? 'bg-surface text-main' : 'bg-light text-main'}`}>
                 <div className="d-flex align-items-center justify-content-between">
                     <div className="d-flex align-items-center gap-3">
                         {mode && (
@@ -74,7 +74,7 @@ const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) =
                             </button>
                         )}
                         <div>
-                            <h5 className={`fw-black mb-0 text-uppercase tracking-widest ${isDarkMode ? 'text-white' : 'text-dark'}`}>{title}</h5>
+                            <h5 className={`fw-black mb-0 text-uppercase tracking-widest text-main`}>{title}</h5>
                             <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>{sub}</p>
                         </div>
                     </div>
@@ -104,7 +104,7 @@ const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) =
 
         if (mode === 'SINGLE') {
             return (
-                <div className={`p-4 p-md-5 animate-fade-in h-100 ${isDarkMode ? 'bg-slate-900' : 'bg-white'}`}>
+                <div className={`p-4 p-md-5 animate-fade-in h-100 bg-card`}>
                     <div className="mx-auto" style={{ maxWidth: '800px' }}>
                         <LeadForm
                             onSubmit={async (data) => {
@@ -140,16 +140,15 @@ const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) =
             );
         }
 
-        // CHOICE MODE (mode === null)
         return (
-            <div className={`p-5 animate-fade-in h-100 ${isDarkMode ? 'bg-slate-900' : 'bg-white'}`}>
+            <div className={`p-5 animate-fade-in h-100 bg-card`}>
                 <div className="row g-4 justify-content-center pb-4">
                     <div className="col-md-6">
                         <div
                             onClick={() => handleModeChange('SINGLE')}
                             className="p-5 rounded-4 border h-100 d-flex flex-column hover-lift cursor-pointer transition-all"
                             style={{ 
-                                backgroundColor: isDarkMode ? '#1e293b' : '#f8fafc',
+                                backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : '#f8fafc',
                                 borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
                                 cursor: 'pointer',
                                 minHeight: '320px'
@@ -170,7 +169,7 @@ const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) =
                             onClick={() => handleModeChange('BULK')}
                             className="p-5 rounded-4 border h-100 d-flex flex-column hover-lift cursor-pointer transition-all"
                             style={{ 
-                                backgroundColor: isDarkMode ? '#1e293b' : '#f8fafc',
+                                backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : '#f8fafc',
                                 borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
                                 cursor: 'pointer',
                                 minHeight: '320px'
@@ -179,7 +178,7 @@ const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) =
                             <div className="p-4 bg-success bg-opacity-10 text-success rounded-4 d-inline-block mb-4 shadow-glow group-hover:scale-110 transition-all" style={{width: 'fit-content'}}>
                                 <Upload size={48} strokeWidth={1.5} />
                             </div>
-                            <h3 className={`fw-black mb-3 text-uppercase tracking-wider ${isDarkMode ? 'text-white' : 'text-dark'}`}>Bulk Add</h3>
+                            <h3 className={`fw-black mb-3 text-uppercase tracking-wider text-main`}>Bulk Add</h3>
                             <p className="text-muted mb-4 opacity-75 fw-bold"> Upload an Excel or CSV file </p>
                             <div className="d-flex align-items-center text-success small tracking-widest gap-2 mt-auto fw-black">
                                 OPEN UPLOAD <ChevronRight size={18} />
@@ -196,7 +195,7 @@ const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) =
             className="terminal-backdrop fade show d-flex align-items-center justify-content-center p-3"
             style={{
                 position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                backgroundColor: isDarkMode ? '#020617' : 'rgba(248, 250, 252, 0.95)',
+                backgroundColor: isDarkMode ? 'rgba(3, 7, 18, 0.9)' : 'rgba(248, 250, 252, 0.95)',
                 backgroundImage: isDarkMode ? 'radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.05) 0%, transparent 100%)' : 'none',
                 zIndex: 1500,
                 opacity: 1
@@ -214,14 +213,13 @@ const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) =
                 }}
                 onClick={e => e.stopPropagation()}
             >
-                <div className={`border rounded-5 shadow-2xl overflow-hidden flex-column d-flex p-0 transition-colors duration-500`} style={{
-                    backgroundColor: isDarkMode ? '#0f172a' : '#ffffff',
+                <div className={`border rounded-5 shadow-2xl overflow-hidden flex-column d-flex p-0 transition-colors duration-500 bg-card`} style={{
                     border: isDarkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.08)'
                 }}>
                     {renderHeader()}
-                    <div className={`modal-body custom-scroll p-0 ${isDarkMode ? 'bg-slate-900' : 'bg-white'}`} style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+                    <div className={`modal-body custom-scroll p-0 bg-card`} style={{ maxHeight: '90vh', overflowY: 'auto' }}>
                         {renderContent()}
-                        <div className={`py-4 text-center opacity-0 ${isDarkMode ? 'bg-slate-900' : 'bg-white'}`} style={{ height: '10px' }}></div>
+                        <div className={`py-4 text-center opacity-0 bg-card`} style={{ height: '10px' }}></div>
                     </div>
                 </div>
             </div>

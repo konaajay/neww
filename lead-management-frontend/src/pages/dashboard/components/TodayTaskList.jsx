@@ -25,7 +25,7 @@ const TodayTaskList = ({ leads = [], theme = 'light' }) => {
             extra={extra}
             className="h-100"
         >
-            <div className="px-1 pt-2 pb-2" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+            <div className="px-1 pt-2 pb-2" style={{ maxHeight: '450px', overflowY: 'auto' }}>
                 {todayTasks.length === 0 ? (
                     <div className="h-100 d-flex flex-column align-items-center justify-content-center py-5 opacity-40">
                         <div style={{ fontSize: '40px' }}>🎯</div>
@@ -39,7 +39,7 @@ const TodayTaskList = ({ leads = [], theme = 'light' }) => {
                                 key={lead.id}
                                 onClick={() => navigate(`/leads/${lead.id}`)}
                                 className={`p-3 rounded-4 d-flex align-items-center justify-content-between transition-all cursor-pointer ${
-                                    isDarkMode ? 'bg-white bg-opacity-5 hover-bg-opacity-10' : 'bg-light hover-bg-white border'
+                                    isDarkMode ? 'bg-white bg-opacity-5 hover-bg-opacity-10' : 'bg-card hover-bg-surface border'
                                 }`}
                                 style={{ transition: '0.2s ease' }}
                             >

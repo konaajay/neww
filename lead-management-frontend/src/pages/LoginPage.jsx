@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -12,8 +12,20 @@ const LoginPage = () => {
   const [show, setShow] = useState(false);
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
 
-  const { login } = useAuth();
+  const { user, login } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      const role = (user.role || '').toUpperCase();
+      let target = '/associate';
+      if (role === 'ADMIN') target = '/admin';
+      else if (role === 'MANAGER' || role === 'MGR') target = '/manager';
+      else if (role.includes('TEAM_LEADER') || role.includes('TL') || role.includes('TEAM_LEAD') || role.includes('TEAMLEAD')) target = '/tl';
+      navigate(target, { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,10 +37,12 @@ const LoginPage = () => {
       toast.success('Login successful');
       
       const role = (user?.role || '').toUpperCase();
-      if (role === 'ADMIN') navigate('/admin');
-      else if (role === 'MANAGER' || role === 'MGR') navigate('/manager');
-      else if (role.includes('TEAM_LEADER') || role.includes('TL') || role.includes('TEAM_LEAD') || role.includes('TEAMLEAD')) navigate('/tl');
-      else navigate('/associate');
+      let target = '/associate';
+      if (role === 'ADMIN') target = '/admin';
+      else if (role === 'MANAGER' || role === 'MGR') target = '/manager';
+      else if (role.includes('TEAM_LEADER') || role.includes('TL') || role.includes('TEAM_LEAD') || role.includes('TEAMLEAD')) target = '/tl';
+      
+      navigate(target, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
       // AuthContext throws the message string directly

@@ -170,7 +170,8 @@ const SidebarAttendance = ({ isCollapsed }) => {
         const isWfh = status?.isWfhApproved || status?.wfhStatus === 'APPROVED';
 
         if (distanceToOffice !== null && distanceToOffice > radius && !isWfh) {
-            toast.error(`PUNCH DENIED: You are ${Math.round(distanceToOffice)}m away. Please be within ${radius}m of the office or request WFH approval.`, {
+            const distStr = distanceToOffice > 1000 ? `${(distanceToOffice / 1000).toFixed(2)} km` : `${Math.round(distanceToOffice)}m`;
+            toast.error(`PUNCH DENIED: You are ${distStr} away from the office. Please be within ${radius}m of the office or request WFH approval.`, {
                 position: "bottom-center",
                 autoClose: 5000
             });
@@ -336,67 +337,12 @@ const SidebarAttendance = ({ isCollapsed }) => {
                                     Need to work from home? Request Approval
                                 </button>
                             )}
-                            {distanceToOffice !== null && (
-                                <div className="d-flex align-items-center justify-content-center gap-2 py-1 bg-surface bg-opacity-30 rounded-3 border border-white border-opacity-5">
-                                    <MapPin size={10} className={distanceToOffice > (status?.officeRadius || 100) ? 'text-danger' : 'text-success'} />
-                                    <span className="fw-bold" style={{ fontSize: '9px', color: isDarkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)' }}>
-                                        {distanceToOffice > 1000
-                                            ? `${(distanceToOffice / 1000).toFixed(2)} km from office`
-                                            : `${Math.round(distanceToOffice)} meters from office`
-                                        }
-                                    </span>
-                                </div>
-                            )}
+                             {/* Distance tracking active in background */}
                         </div>
                     ) : (
                         <div className="d-flex flex-column gap-2">
-                            <div className="p-3 border rounded-4 position-relative overflow-hidden mb-2 shadow-sm"
-                                style={{
-                                    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.03)' : 'var(--bs-light)',
-                                    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'var(--bs-border-color)'
-                                }}>
-                                <div className="position-absolute top-0 end-0 p-3 opacity-10" style={{ transform: 'translate(10%,-10%)', color: isDarkMode ? 'white' : 'black' }}>
-                                    <MapPin size={24} />
-                                </div>
-                                <div className="d-flex flex-column position-relative" style={{ zIndex: 1 }}>
-                                    {status?.lastLat && (
-                                        <div className="d-flex flex-column gap-1 mb-2">
-                                            <span className="fw-black text-main d-block" style={{ fontSize: '10px', letterSpacing: '0.05em' }}>
-                                                {Number(status.lastLat).toFixed(4)}, {Number(status.lastLng).toFixed(4)}
-                                            </span>
-                                            {distanceToOffice !== null && (
-                                                <div className="d-flex align-items-center gap-1">
-                                                    <MapPin size={9} className={status?.status === 'OUTSIDE' ? 'text-danger' : 'text-success'} />
-                                                    <span className={`fw-bold ${status?.status === 'OUTSIDE' ? 'text-danger' : 'text-muted'}`} style={{ fontSize: '9px' }}>
-                                                        {distanceToOffice > 1000
-                                                            ? `${(distanceToOffice / 1000).toFixed(2)} km away`
-                                                            : `${Math.round(distanceToOffice)} meters away`
-                                                        }
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                    <div className="d-flex align-items-center gap-2 mb-1">
-                                        <Clock size={13} className={isDarkMode ? 'text-primary' : 'text-body'} />
-                                        <span className={isDarkMode ? 'fw-black text-white' : 'fw-black text-body'} style={{ fontSize: '20px', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em' }}>
-                                            {pad(elapsed.h)}:{pad(elapsed.m)}:{pad(elapsed.s)}
-                                        </span>
-                                    </div>
-                                    <div className="d-flex align-items-center gap-3">
-                                        <span className="fw-bold text-muted" style={{ fontSize: '10px' }}>
-                                            Work: {status?.totalWorkHours || '0h 0m'}
-                                        </span>
-                                        <span className="fw-bold text-muted d-flex align-items-center gap-1" style={{ fontSize: '10px' }}>
-                                            <Coffee size={10} />
-                                            Break: {status?.totalBreakHours || '0h 0m'}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="d-flex align-items-center gap-2 px-1 mb-2">
-                                <CheckCircle2 size={9} className="text-muted" />
+                            <div className="d-flex align-items-center gap-2 px-1 mb-3 mt-1 justify-content-center">
+                                <CheckCircle2 size={10} className="text-success" />
                                 <span className="text-muted fw-bold" style={{ fontSize: '9px' }}>Synced: {formatSyncTime()}</span>
                             </div>
 

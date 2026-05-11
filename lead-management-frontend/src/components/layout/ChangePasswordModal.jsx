@@ -9,7 +9,7 @@ import authService from '../../services/authService';
 const ChangePasswordModal = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const { isDarkMode } = useTheme();
-  const [step, setStep] = useState(1); // 1: Send OTP, 2: Reset with OTP
+  const [step, setStep] = useState(1);
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -33,7 +33,7 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) return toast.error('Passcodes do not match');
     if (newPassword.length < 6) return toast.error('Passcode must be at least 6 characters');
-    
+
     try {
       setLoading(true);
       await authService.resetPassword(user.email, otp, newPassword);
@@ -50,18 +50,18 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
   };
 
   if (!isOpen) return null;
-  
+
   return createPortal(
-    <div className="modal-overlay d-flex justify-content-center align-items-start p-3" style={{ 
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+    <div className="modal-overlay d-flex justify-content-center align-items-start p-3" style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
       backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(12px)', zIndex: 10000,
       overflowY: 'auto'
     }}>
-      <div className="premium-card p-0 overflow-hidden shadow-2xl animate-zoom-in border-0" 
-        style={{ 
-          width: '100%', 
-          maxWidth: '420px', 
-          borderRadius: '24px', 
+      <div className="premium-card p-0 overflow-hidden shadow-2xl animate-zoom-in border-0"
+        style={{
+          width: '100%',
+          maxWidth: '420px',
+          borderRadius: '24px',
           background: isDarkMode ? '#111827' : '#ffffff',
           marginTop: '10vh',
           marginBottom: '10vh'
@@ -92,8 +92,8 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
               </div>
               <h6 className="fw-black text-main mb-2 text-uppercase tracking-wider" style={{ fontSize: '14px' }}>Request OTP</h6>
               <p className="text-muted small mb-5 px-3 leading-relaxed">A 6-digit security code will be sent to your email to authorize this change.</p>
-              
-              <button 
+
+              <button
                 onClick={handleRequestOtp}
                 disabled={loading}
                 className="btn w-100 py-3 rounded-4 d-flex align-items-center justify-content-center gap-3 transition-all"
@@ -156,7 +156,7 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
               </div>
 
               <div className="d-flex flex-column gap-3 pt-2">
-                <button 
+                <button
                   type="submit"
                   disabled={loading}
                   className="btn py-3 rounded-4 d-flex align-items-center justify-content-center gap-3 transition-all"
@@ -165,7 +165,7 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
                   {loading ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} />}
                   <span className="text-uppercase tracking-widest" style={{ fontSize: '12px' }}>FINALIZE UPDATE</span>
                 </button>
-                <button 
+                <button
                   type="button"
                   onClick={() => setStep(1)}
                   className="btn btn-link text-muted fw-bold text-decoration-none small border-0 transition-all"

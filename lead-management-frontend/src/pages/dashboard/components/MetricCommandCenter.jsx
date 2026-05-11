@@ -14,14 +14,14 @@ import {
 
 export const MetricCard = memo(({ title, stats, icon: Icon, color, onClick }) => (
   <div
-    className="premium-card h-100 cursor-pointer border border-white border-opacity-10 shadow-lg group hover-active-card overflow-hidden"
+    className="premium-card h-100 cursor-pointer border border-main border-opacity-10 shadow-lg group hover-active-card overflow-hidden"
     onClick={onClick}
     style={{
       borderRadius: '24px',
-      background: 'rgba(255, 255, 255, 0.03)',
-      backdropFilter: 'blur(30px)',
+      background: 'var(--bg-card)',
+      backdropFilter: 'var(--glass-blur)',
       position: 'relative',
-      minHeight: '120px'
+      minHeight: '100px'
     }}
   >
     <div className="p-4 position-relative z-10 d-flex flex-column h-100">
@@ -31,16 +31,16 @@ export const MetricCard = memo(({ title, stats, icon: Icon, color, onClick }) =>
 
       <div className="flex-grow-1 d-flex align-items-center justify-content-between my-2">
         <div>
-          <span className="fw-black text-main tabular-nums d-block" style={{ fontSize: '38px', lineHeight: 1, letterSpacing: '-1px' }}>{stats?.primary?.value ?? 0}</span>
-          <span className="fw-black text-muted text-uppercase" style={{ fontSize: '11px', opacity: 0.7, letterSpacing: '0.8px' }}>{stats?.primary?.label ?? ''}</span>
+          <span className="fw-black text-main tabular-nums d-block" style={{ fontSize: '28px', lineHeight: 1, letterSpacing: '-1px' }}>{stats?.primary?.value ?? 0}</span>
+          <span className="fw-black text-muted text-uppercase" style={{ fontSize: '9px', opacity: 0.7, letterSpacing: '0.8px' }}>{stats?.primary?.label ?? ''}</span>
         </div>
       </div>
 
-      <div className="mt-auto d-flex justify-content-between align-items-center pt-3 border-top border-white border-opacity-5">
+      <div className="mt-auto d-flex justify-content-between align-items-center pt-2 border-top border-main border-opacity-10">
         {(stats?.secondary || []).map((s, idx) => (
           <div key={idx} className="d-flex flex-column align-items-center text-center">
-            <span className={`fw-black text-${s?.color || 'main'} mb-0.5`} style={{ fontSize: '14px', lineHeight: 1 }}>{s?.value ?? 0}</span>
-            <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '10px', opacity: 0.6, letterSpacing: '0.4px' }}>{s?.label ?? ''}</span>
+            <span className={`fw-black text-${s?.color || 'main'} mb-0.5`} style={{ fontSize: '12px', lineHeight: 1 }}>{s?.value ?? 0}</span>
+            <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '8px', opacity: 0.6, letterSpacing: '0.4px' }}>{s?.label ?? ''}</span>
           </div>
         ))}
       </div>
@@ -48,7 +48,7 @@ export const MetricCard = memo(({ title, stats, icon: Icon, color, onClick }) =>
   </div>
 ));
 
-const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = [], hideUsers = false }) => {
+const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = [], hideUsers = false, vertical = false }) => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
 
@@ -56,7 +56,10 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
     if (!stats) return null;
 
     const isAssociate = role === 'ASSOCIATE';
-    const statsToUse = isAssociate ? stats : (stats?.performance?.[0] || stats);
+    // Prioritize current subject (filtered user or current user)
+    const subjectId = filters?.userId || currentUser?.id;
+    const personalRecord = stats?.performance?.find(p => p.userId == subjectId);
+    const statsToUse = (isAssociate || filters?.userId) ? stats : (personalRecord || (hideUsers ? {} : (stats?.performance?.[0] || stats)));
     const getCount = (k) => {
       const target = k.toUpperCase().replace(/_/g, '').replace(/\s/g, '');
       // Handle various role name formats (TEAMLEAS, TEAMLEAD, TL -> TEAMLEADER)
@@ -102,11 +105,8 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
   };
 
   return (
-    <div 
-      className="d-flex overflow-auto pb-3 gap-3 animate-fade-in-up scrollbar-hidden" 
-      style={{ scrollSnapType: 'x mandatory' }}
-    >
-      <div style={{ minWidth: '320px', scrollSnapAlign: 'start' }}>
+    <div className="metric-grid-custom no-scrollbar animate-fade-in-up pb-2 px-1">
+      <div className="flex-shrink-0" style={{ width: '300px' }}>
         <MetricCard
           title="ATTENDANCE"
           icon={Users}
@@ -124,7 +124,7 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
       </div>
 
       {!hideUsers && (
-        <div style={{ minWidth: '320px', scrollSnapAlign: 'start' }}>
+        <div className="flex-shrink-0" style={{ width: '300px' }}>
           {role === 'ASSOCIATE' ? (
             <MetricCard
               title="MY PERFORMANCE"
@@ -132,12 +132,12 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
               color="success"
               onClick={() => handleNav('revenue', '/revenue')}
               stats={{
-                primary: { value: `₹${(stats.monthlyRevenue || 0).toLocaleString()}`, label: 'Month Collection' },
+                primary: { value: `₹${(stats.dailyRevenue || 0).toLocaleString()}`, label: 'Today Collection' },
                 secondary: [
-                  { label: 'Today', value: `₹${(stats.dailyRevenue || 0).toLocaleString()}`, color: 'success' },
+                  { label: 'This Month', value: `₹${(stats.monthlyRevenue || 0).toLocaleString()}`, color: 'success' },
                   { label: 'Target', value: `₹${(stats.monthlyTarget || stats.assignedTarget || stats.targetAmount || stats.target || stats.distributedTarget || 0).toLocaleString()}`, color: 'primary' },
                   { 
-                    label: 'Pending Amount', 
+                    label: 'Pending', 
                     value: `₹${(stats.pendingPaymentsAmount || 0).toLocaleString()}`, 
                     color: 'info' 
                   }
@@ -165,26 +165,38 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
       )}
 
       {role !== 'ASSOCIATE' && (
-        <div style={{ minWidth: '320px', scrollSnapAlign: 'start' }}>
+        <div className="flex-shrink-0" style={{ width: '300px' }}>
           <MetricCard
-            title="MY PERFORMANCE"
+            title={(!hideUsers && !filters?.userId) ? "TEAM PERFORMANCE" : "MY PERFORMANCE"}
             icon={TrendingUp}
             color="success"
             onClick={() => handleNav('revenue', '/revenue')}
             stats={(() => {
-              const myStats = stats?.performance?.find(p => p.userId === currentUser?.id) || stats?.performance?.[0] || stats;
-              const target = myStats.monthlyTarget || myStats.assignedTarget || myStats.targetAmount || myStats.target || myStats.distributedTarget || 0;
-              const revenue = myStats.monthlyRevenue || myStats.revenue || 0;
+              // The "subject" is either the filtered user or the current user
+              const subjectId = filters?.userId || currentUser?.id;
+              
+              // If we have a specific user filter OR we are in Team Dashboard mode (not hideUsers),
+              // the 'stats' object itself represents our current context (individual or team)
+              const myStats = stats?.performance?.find(p => (p.userId || p.id) == subjectId) || 
+                             (role === 'ASSOCIATE' || filters?.userId || !hideUsers ? stats : null);
+              
+              const target = myStats 
+                ? (myStats.assignedTarget || myStats.targetAmount || myStats.monthlyTarget || myStats.target || 0) 
+                : (stats.assignedTarget || stats.targetAmount || stats.personalTarget || stats.individualTarget || stats.target || 
+                  ((role === 'ASSOCIATE' || filters?.userId) 
+                    ? (stats.monthlyTarget || 0) 
+                    : Math.max(0, (stats.monthlyTarget || 0) - (stats.distributedAmount || stats.distributedTarget || 0))));
+                
+              const revenue = myStats ? (myStats.monthlyRevenue || myStats.totalRevenue || myStats.revenue || 0) : 0;
+              const dailyRevenue = myStats ? (myStats.dailyRevenue || myStats.todayCollection || 0) : 0;
+              const pending = myStats ? (myStats.pendingPaymentsAmount || myStats.totalPending || myStats.pendingRevenue || 0) : 0;
+
               return {
-                primary: { value: `₹${(revenue).toLocaleString()}`, label: 'Month Collection' },
+                primary: { value: `₹${(dailyRevenue).toLocaleString()}`, label: 'Today Collection' },
                 secondary: [
-                  { label: 'Today', value: `₹${(myStats.dailyRevenue || 0).toLocaleString()}`, color: 'success' },
+                  { label: 'This Month', value: `₹${(revenue).toLocaleString()}`, color: 'success' },
                   { label: 'Target', value: `₹${(target).toLocaleString()}`, color: 'primary' },
-                  { 
-                    label: 'Pending Amount', 
-                    value: `₹${(myStats.pendingPaymentsAmount || 0).toLocaleString()}`, 
-                    color: 'info' 
-                  }
+                  { label: 'Pending', value: `₹${(pending).toLocaleString()}`, color: 'info' }
                 ]
               };
             })()}
@@ -192,7 +204,7 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
         </div>
       )}
 
-      <div style={{ minWidth: '320px', scrollSnapAlign: 'start' }}>
+      <div className="flex-shrink-0" style={{ width: '300px' }}>
         <MetricCard
           title="FOLLOWUP PIPELINE"
           icon={Clock}
@@ -210,16 +222,36 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
       </div>
 
       <style>{`
+        .metric-grid-custom { 
+          display: flex; 
+          overflow-x: auto;
+          gap: 1.25rem; 
+          margin-bottom: 1.5rem;
+          width: 100%;
+          padding-bottom: 0.5rem;
+        }
+        
+        @media (min-width: 1200px) {
+           .metric-grid-custom {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+              overflow-x: visible;
+           }
+           .flex-shrink-0 {
+              width: auto !important;
+              flex-shrink: 1 !important;
+           }
+        }
+        
         .scrollbar-hidden::-webkit-scrollbar { display: none; }
         .scrollbar-hidden { -ms-overflow-style: none; scrollbar-width: none; }
         .premium-card { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); min-height: 90px; position: relative; overflow: hidden; }
-        .hover-active-card:hover { transform: translateY(-3px) scale(1.01); background: rgba(255,255,255,0.05) !important; border-color: rgba(255,255,255,0.15) !important; box-shadow: 0 10px 20px -10px rgba(0,0,0,0.4) !important; }
+        .hover-active-card:hover { transform: translateY(-3px) scale(1.01); background: var(--bg-surface) !important; border-color: var(--primary) !important; box-shadow: 0 10px 20px -10px rgba(0,0,0,0.4) !important; }
         .grid-secondary-stats { display: flex; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
         .shadow-glow-sm { box-shadow: 0 0 8px currentColor; }
         .animate-fade-in-up { animation: fadeInUp 0.4s ease-out; }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
-    </div>
     </div>
   );
 });

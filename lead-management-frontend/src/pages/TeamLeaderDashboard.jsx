@@ -315,15 +315,15 @@ const TeamLeaderDashboard = () => {
                 { label: 'Lost', value: (stats.statusDistribution?.LOST || 0), color: 'danger', icon: '❌' }
               ].map((card, i) => (
                 <div key={i} className="col-6 col-md-3">
-                  <div className="premium-card p-3 border border-white border-opacity-10 shadow-sm d-flex flex-column gap-1" 
+                  <div 
+                    className="premium-card p-3 border border-main border-opacity-10 shadow-sm d-flex flex-column gap-1 transition-smooth" 
                     style={{ 
                       borderRadius: '20px', 
-                      background: isDarkMode 
-                        ? `linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(${card.color === 'warning' ? '255,193,7' : card.color === 'info' ? '13,202,240' : card.color === 'success' ? '25,135,84' : '220,53,69'}, 0.08) 100%)`
-                        : 'rgba(255,255,255,0.8)',
-                      backdropFilter: 'blur(10px)'
-                    }}>
-                    <h4 className="mb-0 fw-black text-main" style={{ fontSize: '26px', lineHeight: 1 }}>{card.value}</h4>
+                      background: 'var(--bg-card)',
+                      backdropFilter: 'var(--glass-blur)'
+                    }}
+                  >
+                    <h4 className="mb-0 fw-black text-main" style={{ fontSize: '24px', lineHeight: 1 }}>{card.value}</h4>
                     <small className="text-muted fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '8px' }}>{card.label}</small>
                   </div>
                 </div>

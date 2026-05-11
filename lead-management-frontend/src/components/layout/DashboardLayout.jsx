@@ -21,7 +21,7 @@ const DashboardLayout = ({ children, activeTab, onTabChange, role, navbarExtras,
   };
 
   return (
-    <div className="dashboard-wrapper">
+    <div className={`dashboard-wrapper ${isCollapsed ? 'sidebar-closed' : ''}`}>
       <Sidebar
         isOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
@@ -32,17 +32,17 @@ const DashboardLayout = ({ children, activeTab, onTabChange, role, navbarExtras,
         onToggle={toggleSidebar}
       />
 
-      <div className={`main-content ${isCollapsed ? 'sidebar-closed' : ''}`}>
+      <div className="main-content">
         {!hideNavbar && (
           <Navbar 
             userEmail={user?.email} 
             onLogout={logout} 
             onToggleSidebar={toggleSidebar}
             navbarExtras={navbarExtras}
+            onTabChange={onTabChange}
           />
         )}
-
-        <main className="layout-body animate-fade-in">
+        <main className="layout-body">
           <div className="container-fluid">
             {children}
           </div>

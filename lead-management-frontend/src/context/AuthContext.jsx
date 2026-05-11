@@ -48,8 +48,18 @@ export const AuthProvider = ({ children }) => {
           latitude: fullUser.latitude,
           longitude: fullUser.longitude
         };
-        localStorage.setItem('user', JSON.stringify(userData));
-        setUser(userData);
+
+        // Deep equality check to prevent infinite re-renders
+        const currentUserStr = localStorage.getItem('user');
+        const newUserStr = JSON.stringify(userData);
+        
+        if (currentUserStr !== newUserStr) {
+          console.log("[AuthContext] Profile data changed, updating session state.");
+          localStorage.setItem('user', newUserStr);
+          setUser(userData);
+        } else {
+          console.log("[AuthContext] Profile data stable.");
+        }
       }).catch(err => {
         console.warn("[AuthContext] Profile sync failed:", err);
       });

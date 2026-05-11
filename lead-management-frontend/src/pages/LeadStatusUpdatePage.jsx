@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import {
   ShieldCheck, Calendar, MessageSquare, ArrowLeft, Activity,
-  Info, Zap, AlertCircle, IndianRupee, Plus, X, Shield
+  Info, Zap, AlertCircle, IndianRupee, Plus, X, Shield, Copy
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -29,6 +29,8 @@ const LeadStatusUpdatePage = () => {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [feeStructureExists, setFeeStructureExists] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const getDefaultFollowUp = useCallback(() => {
     const tomorrow = new Date();
@@ -94,7 +96,15 @@ const LeadStatusUpdatePage = () => {
 
       if (stagesRes.status === 'fulfilled') {
         const stages = stagesRes.value.data || stagesRes.value;
-        setPipelineStages(Array.isArray(stages) ? stages.filter(s => s.active) : []);
+        const processedStages = Array.isArray(stages) && stages.length > 0 ? stages : [
+          { label: 'New', statusValue: 'NEW', color: 'primary', isRoot: true },
+          { label: 'Contacted', statusValue: 'CONTACTED', color: 'info' },
+          { label: 'FollowUp', statusValue: 'FOLLOW_UP', color: 'warning' },
+          { label: 'Interested', statusValue: 'INTERESTED', color: 'primary' },
+          { label: 'Lost', statusValue: 'LOST', color: 'danger' },
+          { label: 'Prepayment', statusValue: 'CONVERTED', color: 'success' },
+        ];
+        setPipelineStages(processedStages);
       }
 
       if (feeRes.status === 'fulfilled' && feeRes.value) {
@@ -169,6 +179,26 @@ const LeadStatusUpdatePage = () => {
       setIsSubmitting(false);
     }
   };
+
+  if (lead && !lead.assignedToId) {
+    return (
+      <div className="min-vh-100 d-flex flex-column align-items-center justify-content-center gap-4 p-4 text-center" style={{ background: isDarkMode ? '#0a0a0a' : '#f8f9fa' }}>
+        <div className="p-4 rounded-circle bg-danger bg-opacity-10 text-danger shadow-glow-sm">
+          <Shield size={48} />
+        </div>
+        <div className="max-w-md">
+          <h4 className={`fw-black text-uppercase tracking-widest mb-2 ${isDarkMode ? 'text-white' : 'text-dark'}`}>Protocol Restricted</h4>
+          <p className="text-muted fw-bold small mb-4 px-4">
+            Lead <span className="text-primary">{lead.name}</span> is currently in an <span className="text-danger">UNASSIGNED</span> state. 
+            Assignment to a Strategic Representative is required before status transitions or financial protocols can be initiated.
+          </p>
+          <button onClick={() => navigate(-1)} className="ui-btn ui-btn-primary px-5 py-3 rounded-pill shadow-glow fw-black text-uppercase tracking-widest">
+            Back to Command Center
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) return (
     <div className="min-vh-100 bg-dark d-flex align-items-center justify-content-center">
@@ -420,15 +450,15 @@ const LeadStatusUpdatePage = () => {
                     {paymentType === 'EMI' && (
                       <div className={`p-3 rounded-4 mb-3 border border-primary border-opacity-10 animate-slide-up ${isDarkMode ? 'bg-surface' : 'bg-white'}`}>
                         <div className="d-flex align-items-center justify-content-between mb-3">
-                          <label className="form-label fw-bold text-uppercase text-muted mb-0" style={{ fontSize: '10px' }}>Plan Future Dues</label>
+                          <label className="form-label fw-bold text-uppercase text-muted mb-0" style={{ fontSize: '10px' }}>Plan Future Dues (Max 4)</label>
                           <button 
                             type="button" 
-                            disabled={installments.length >= 5}
+                            disabled={installments.length >= 4}
                             onClick={addInstallment} 
-                            className={`btn btn-sm btn-link text-decoration-none fw-bold p-0 ${installments.length >= 5 ? 'text-muted' : 'text-primary'}`} 
+                            className={`btn btn-sm btn-link text-decoration-none fw-bold p-0 ${installments.length >= 4 ? 'text-muted' : 'text-primary'}`} 
                             style={{ fontSize: '11px' }}
                           >
-                            + ADD DUE DATE
+                            {installments.length >= 4 ? 'LIMIT REACHED' : '+ ADD DUE DATE'}
                           </button>
                         </div>
                         <div className="d-flex flex-column gap-2">
@@ -456,26 +486,44 @@ const LeadStatusUpdatePage = () => {
                             </div>
                           ))}
                         </div>
-                        {((paymentType === 'EMI' && installments.length > 0) || (paymentType === 'FULL')) && (
-                           <div className={`mt-3 p-3 rounded-4 text-center fw-bold text-uppercase border ${isMatch ? 'text-success bg-success bg-opacity-10 border-success border-opacity-20' : 'text-warning bg-warning bg-opacity-10 border-warning border-opacity-20'}`} style={{ fontSize: '10px' }}>
-                             {isMatch ? (
-                               <div className="d-flex align-items-center justify-content-center gap-2">
-                                 <ShieldCheck size={14} /> ACCOUNTING VERIFIED: ₹{discountedTotal}
-                               </div>
-                             ) : (
-                               <div className="d-flex align-items-center justify-content-center gap-2">
-                                 <AlertCircle size={14} /> MATH MISMATCH: ₹{balanceRemaining} UNPLANNED
-                               </div>
-                             )}
-                           </div>
+                      </div>
+                    )}
+
+                    {((paymentType === 'EMI' && installments.length > 0) || (paymentType === 'FULL')) && (
+                      <div className={`mt-2 mb-3 p-3 rounded-4 text-center fw-bold text-uppercase border animate-fade-in ${isMatch ? 'text-success bg-success bg-opacity-10 border-success border-opacity-20' : 'text-danger bg-danger bg-opacity-10 border-danger border-opacity-20'}`} style={{ fontSize: '10px' }}>
+                        {isMatch ? (
+                          <div className="d-flex align-items-center justify-content-center gap-2">
+                            <ShieldCheck size={14} /> ACCOUNTING VERIFIED: ₹{discountedTotal}
+                          </div>
+                        ) : (
+                          <div className="d-flex align-items-center justify-content-center gap-2">
+                            <AlertCircle size={14} /> 
+                            {paymentType === 'FULL' 
+                              ? `MISMATCH: Commitment (₹${initialAmount || 0}) must match Settlement (₹${discountedTotal})`
+                              : `MATH MISMATCH: ₹${Math.abs(balanceRemaining).toLocaleString()} ${balanceRemaining > 0 ? 'UNPLANNED' : 'EXCESS'}`
+                            }
+                          </div>
                         )}
                       </div>
                     )}
 
                     <button
                       type="button"
-                      disabled={isGeneratingLink || !initialAmount || initialAmount < 500 || Number(initialAmount) > Number(discountedTotal) || !totalAmount || (paymentType === 'EMI' && installments.length > 0 && !isMatch)}
+                      disabled={isGeneratingLink || !initialAmount || initialAmount < 500 || !totalAmount || !isMatch}
                       onClick={async () => {
+                        if (!isMatch) {
+                          toast.error("Accounting Protocol Violation: Amounts must match exactly");
+                          return;
+                        }
+
+                        // Validation: Ensure all EMI installments have dates
+                        if (paymentType === 'EMI') {
+                          const invalidInst = installments.find(i => !i.amount || !i.dueDate);
+                          if (invalidInst) {
+                            toast.warning("Protocol Incomplete: Every installment requires an amount and a due date.");
+                            return;
+                          }
+                        }
                         setIsGeneratingLink(true);
                         try {
                           // 1. First, automatically save the lead status (e.g., INTERESTED) and note
@@ -490,15 +538,23 @@ const LeadStatusUpdatePage = () => {
                             courseId: selectedCourse?.id
                           });
 
-                          // 2. Generate the Cashfree Link (Don't send full installments array again to prevent duplication)
-                          const res = await leadsApi.createCashfreeOrder(id, initialAmount, paymentType, [], totalAmount, discount);
+                          // 2. Generate the Cashfree Link
+                          const res = await leadsApi.createCashfreeOrder(
+                            id, 
+                            initialAmount || "0", 
+                            paymentType, 
+                            paymentType === 'EMI' ? installments : [], 
+                            totalAmount || null, 
+                            discount || null
+                          );
                           if (res && res.payment_session_id) {
                             const paymentUrl = `${window.location.origin}/payment-instruction/${res.order_id}`;
-                            prompt("Lead Updated & Payment link generated! Copy link to share manually:", paymentUrl);
-                            navigate(-1); // Return to Command Center automatically
+                            setGeneratedLink(paymentUrl);
+                            setShowSuccessModal(true);
+                            // navigate(-1); // No longer auto-navigate, let user copy link first
                           }
                         } catch (err) {
-                          toast.error("Failed to generate payment link or update status");
+                          toast.error(err.response?.data?.message || "Failed to generate payment link or update status");
                         } finally {
                           setIsGeneratingLink(false);
                         }
@@ -579,15 +635,15 @@ const LeadStatusUpdatePage = () => {
 
                       <div className="mt-4">
                         <div className="d-flex align-items-center justify-content-between mb-3">
-                          <label className="form-label fw-bold text-uppercase text-muted mb-0" style={{ fontSize: '10px' }}>Installment Breakdown (Max 5)</label>
+                          <label className="form-label fw-bold text-uppercase text-muted mb-0" style={{ fontSize: '10px' }}>Installment Breakdown (Max 5 Total)</label>
                           <button 
                             type="button" 
-                            disabled={installments.length >= 5}
+                            disabled={installments.length >= 4}
                             onClick={addInstallment} 
-                            className={`btn btn-sm btn-link text-decoration-none fw-bold p-0 ${installments.length >= 5 ? 'text-muted' : 'text-primary'}`} 
+                            className={`btn btn-sm btn-link text-decoration-none fw-bold p-0 ${installments.length >= 4 ? 'text-muted' : 'text-primary'}`} 
                             style={{ fontSize: '11px' }}
                           >
-                            {installments.length >= 5 ? 'LIMIT REACHED' : '+ ADD NEW'}
+                            {installments.length >= 4 ? 'LIMIT REACHED' : '+ ADD NEW'}
                           </button>
                         </div>
                         <div className="d-flex flex-column gap-2">
@@ -653,17 +709,102 @@ const LeadStatusUpdatePage = () => {
                   ></textarea>
                 </div>
 
-                {/* Submit */}
-                <div className="pt-4 border-top border-white border-opacity-5 d-flex justify-content-end">
-                  <button type="submit" disabled={isSubmitting} className="ui-btn ui-btn-primary px-5 py-3 rounded-pill shadow-glow fw-black text-uppercase tracking-widest">
-                    {isSubmitting ? 'UPDATING...' : 'UPDATE LEAD'}
-                  </button>
+                <div className="pt-2 text-center">
+                  <small className="text-muted fw-bold text-uppercase" style={{ fontSize: '8px', opacity: 0.5 }}>Accounting Protocol Enforcement System</small>
                 </div>
               </div>
             </form>
           </div>
         </div>
       </div>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div 
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center animate-fade-in" 
+          style={{ 
+            zIndex: 10000, 
+            background: 'rgba(0,0,0,0.7)', 
+            backdropFilter: 'blur(8px)' 
+          }}
+        >
+          <div 
+            className={`p-4 rounded-4 shadow-2xl animate-scale-in border border-secondary border-opacity-10`}
+            style={{ 
+              width: '90%', 
+              maxWidth: '450px', 
+              background: isDarkMode ? '#1a1c24' : '#ffffff',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+            }}
+          >
+            <div className="text-center">
+              <div 
+                className="mx-auto mb-4 d-flex align-items-center justify-content-center rounded-circle" 
+                style={{ 
+                  width: '80px', 
+                  height: '80px', 
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  color: '#10b981'
+                }}
+              >
+                <ShieldCheck size={40} />
+              </div>
+              
+              <h3 className={`fw-black text-uppercase tracking-wider mb-2 ${isDarkMode ? 'text-white' : 'text-dark'}`}>
+                Protocol Success
+              </h3>
+              
+              <p className="text-muted fw-bold small mb-4">
+                Lead status updated to <span className="text-primary">{selectedStatus}</span>. 
+                The secure payment gateway link has been successfully initialized.
+              </p>
+              
+              <div 
+                className={`p-3 rounded-4 mb-4 border text-start`}
+                style={{ 
+                  background: isDarkMode ? 'rgba(0,0,0,0.2)' : '#f8f9fa',
+                  borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'
+                }}
+              >
+                <label className="text-primary fw-black text-uppercase tracking-widest mb-2 d-block" style={{ fontSize: '9px' }}>
+                  Shareable Link
+                </label>
+                <div className="d-flex align-items-center gap-2">
+                  <input 
+                    readOnly 
+                    value={generatedLink} 
+                    className="form-control border-0 bg-transparent p-0 fw-bold text-truncate"
+                    style={{ 
+                      fontSize: '12px', 
+                      color: isDarkMode ? '#e2e8f0' : '#475569',
+                      boxShadow: 'none'
+                    }}
+                  />
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedLink);
+                      toast.success("Link copied to clipboard!");
+                    }}
+                    className="btn btn-primary btn-sm rounded-3 p-2 d-flex align-items-center justify-content-center"
+                    style={{ minWidth: '36px', height: '36px' }}
+                    title="Copy Link"
+                  >
+                    <Copy size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => navigate(-1)}
+                className="w-100 py-3 ui-btn ui-btn-primary rounded-3 fw-black text-uppercase tracking-widest shadow-glow"
+                style={{ fontSize: '11px' }}
+              >
+                Return to Command Center
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -49,18 +49,17 @@ const StatusDropdown = ({ lead, pipelineStages, onChange, getStatusColorClass, i
     <div className="position-relative" style={{ width: '130px' }}>
       <button
         ref={buttonRef}
-        className={`w-100 d-flex align-items-center justify-content-between py-1 px-2 border-0 rounded-3 fw-black text-uppercase ${getStatusColorClass(lead.status)}`}
+        className={`w-100 d-flex align-items-center justify-content-between py-1 px-0 border-0 bg-transparent fw-black text-uppercase ${getStatusColorClass(lead.status)}`}
         style={{ 
           fontSize: '10px', 
-          background: 'rgba(255,255,255,0.05)',
           cursor: 'pointer',
           height: '24px'
         }}
         onClick={toggleDropdown}
       >
         <span className="text-truncate">
-          {(lead.status === 'CONVERTED' && lead.paidAmount >= (lead.totalAmount - (lead.discount || 0)) && lead.totalAmount > 0) 
-            ? 'PAID' 
+          {(lead.status === 'CONVERTED' || lead.paymentStatus) 
+            ? (lead.paymentStatus?.replace('_', ' ') || 'CONVERTED') 
             : currentStage.label}
         </span>
         <ChevronDown size={10} className="ms-1 opacity-50" />
@@ -156,7 +155,16 @@ const LeadTable = ({
   ];
 
   const getStatusColorClass = (status) => {
-    return 'text-dark';
+    switch(status?.toUpperCase()) {
+      case 'NEW': return 'text-primary';
+      case 'CONTACTED': return 'text-info';
+      case 'FOLLOW_UP': return 'text-warning';
+      case 'INTERESTED': return 'text-primary';
+      case 'LOST': return 'text-danger';
+      case 'CONVERTED': return 'text-success';
+      case 'PAID': return 'text-success';
+      default: return 'text-muted';
+    }
   };
 
   const handleStatusChange = (lead, newStatus) => {
@@ -220,15 +228,15 @@ const LeadTable = ({
       )}
       <div className="overflow-auto custom-scroll">
         <table className="table table-hover mb-0 align-middle">
-          <thead className="bg-surface bg-opacity-10 border-bottom border-white border-opacity-5">
+          <thead className="bg-surface bg-opacity-10 border-bottom border-main border-opacity-10">
             <tr>
               <th className="ps-4 py-3 text-muted fw-black small text-uppercase tracking-widest" style={{ width: '50px', fontSize: '9px' }}>S/N</th>
               {role !== 'ASSOCIATE' && (
                 <th className="py-3" style={{ width: '40px' }}>
                   <input 
                     type="checkbox" 
-                    className="form-check-input bg-dark border-white border-opacity-75 shadow-glow-sm"
-                    style={{ cursor: 'pointer', border: '2px solid rgba(255,255,255,0.8)', width: '18px', height: '18px' }}
+                    className="form-check-input bg-dark border-main border-opacity-75 shadow-glow-sm"
+                    style={{ cursor: 'pointer', border: '2px solid var(--primary)', width: '18px', height: '18px' }}
                     checked={currentItems.length > 0 && currentItems.filter(l => !l.assignedToId).length > 0 && currentItems.filter(l => !l.assignedToId).every(l => selectedLeadIds.includes(l.id))}
                     onChange={() => {
                       const allUnassignedInPage = currentItems.filter(l => !l.assignedToId).map(l => l.id);
@@ -271,7 +279,7 @@ const LeadTable = ({
               currentItems.map((lead, idx) => (
                 <tr 
                   key={lead.id} 
-                  className="border-bottom border-white border-opacity-5 hover-bg-light cursor-pointer"
+                  className="border-bottom border-main border-opacity-10 hover-bg-light cursor-pointer"
                   onClick={() => setSelectedOutcomeLead(lead)}
                 >
                   <td className="ps-4 py-4 text-muted fw-black small" style={{ fontSize: '10px' }}>
@@ -282,8 +290,8 @@ const LeadTable = ({
                       {!lead.assignedToId && (
                         <input 
                           type="checkbox" 
-                          className="form-check-input bg-dark border-white border-opacity-75 shadow-glow-sm"
-                          style={{ cursor: 'pointer', border: '2px solid rgba(255,255,255,0.8)', width: '18px', height: '18px' }}
+                          className="form-check-input bg-dark border-main border-opacity-75 shadow-glow-sm"
+                          style={{ cursor: 'pointer', border: '2px solid var(--primary)', width: '18px', height: '18px' }}
                           checked={selectedLeadIds.includes(lead.id)}
                           onChange={() => toggleSelection(lead.id)}
                         />
@@ -330,14 +338,22 @@ const LeadTable = ({
                     </td>
                   )}
                   <td onClick={(e) => e.stopPropagation()}>
-                    {['PAID', 'SUCCESS'].includes(lead.status?.toUpperCase()) ? (
+                    {(lead.status === 'CONVERTED' || lead.paymentStatus) ? (
                       <div 
-                        className={`bg-surface bg-opacity-20 py-1 px-2 fw-black text-uppercase text-center ${getStatusColorClass(lead.status)}`}
-                        style={{ width: '130px', fontSize: '10px', borderRadius: '8px' }}
+                        className={`bg-transparent py-1 px-0 fw-black text-uppercase text-center ${getStatusColorClass(lead.paymentStatus || lead.status)}`}
+                        style={{ width: '130px', fontSize: '10px' }}
                       >
-                        {lead.status?.toUpperCase() === 'CONVERTED' 
-                          ? (lead.paidAmount >= (lead.totalAmount - (lead.discount || 501)) && lead.totalAmount > 0 ? 'PAID' : 'PREPAYMENT') 
-                          : lead.status?.toUpperCase()}
+                        {lead.paymentStatus?.replace('_', ' ') || lead.status?.toUpperCase()}
+                      </div>
+                    ) : !lead.assignedToId ? (
+                      <div className="d-flex flex-column align-items-center" style={{ width: '130px' }}>
+                        <div 
+                          className="w-100 bg-surface bg-opacity-10 py-1 px-2 fw-black text-uppercase text-center text-muted border border-white border-opacity-5"
+                          style={{ fontSize: '10px', borderRadius: '8px', cursor: 'not-allowed', opacity: 0.6 }}
+                        >
+                          {pipelineStages.find(s => s.statusValue === (lead.status || 'NEW'))?.label || lead.status}
+                        </div>
+                        <div className="text-muted fw-bold opacity-30 mt-1" style={{ fontSize: '7px' }}>ASSIGNMENT REQUIRED</div>
                       </div>
                     ) : (
                       <StatusDropdown 
@@ -395,7 +411,7 @@ const LeadTable = ({
         </table>
       </div>
 
-      <div className="px-4 py-4 bg-surface bg-opacity-10 border-top border-white border-opacity-5 d-flex align-items-center justify-content-between">
+      <div className="px-4 py-4 bg-surface bg-opacity-10 border-top border-main border-opacity-10 d-flex align-items-center justify-content-between">
         <div className="d-flex align-items-center gap-2">
           <small className="text-muted fw-bold text-uppercase tracking-widest" style={{ fontSize: '10px' }}>
             Showing {leads.length > 0 ? indexOfFirstItem + 1 : 0} - {Math.min(indexOfLastItem, leads.length)}

@@ -49,7 +49,19 @@ const PipelineStageManagement = () => {
 
     const handleSave = async (e) => {
         e.preventDefault();
-        if (!formData.label.trim()) return;
+        const label = formData.label.trim();
+        if (!label) return;
+
+        // Duplicate Check
+        const isDuplicate = stages.some(s => 
+            s.label?.toUpperCase() === label.toUpperCase() && 
+            (!editingStage || s.id !== editingStage.id)
+        );
+
+        if (isDuplicate) {
+            toast.warning(`Duplicate status detected: "${label}" is already in your architecture.`);
+            return;
+        }
 
         try {
             const payload = {
@@ -72,7 +84,8 @@ const PipelineStageManagement = () => {
             resetForm();
             fetchStages();
         } catch (err) {
-            toast.error("Process failed - system sync error");
+            const errorMessage = err.response?.data?.message || "Process failed - system sync error";
+            toast.error(errorMessage);
         }
     };
 
@@ -91,6 +104,38 @@ const PipelineStageManagement = () => {
             createTask: stage.createTask
         });
         setIsAdding(true);
+    };
+
+    const handleAutoSetup = async () => {
+        if (!window.confirm("Initialize strategic sales funnel? This will add standard stages (Interested, Follow-up, Lost, Converted).")) return;
+        
+        const standardStages = [
+            { label: 'Follow-up', requireNote: true, requireDate: true, createTask: true, analyticBucket: 'CONTACTED', color: 'info' },
+            { label: 'Interested', requireNote: true, requireDate: false, createTask: false, analyticBucket: 'CONTACTED', color: 'warning' },
+            { label: 'Lost', requireNote: true, requireDate: false, createTask: false, analyticBucket: 'LOST', color: 'danger' },
+            { label: 'Converted', requireNote: true, requireDate: false, createTask: false, analyticBucket: 'CONVERTED', color: 'success' },
+        ];
+
+        setLoading(true);
+        try {
+            for (const stage of standardStages) {
+                // Check if already exists to avoid duplicates
+                if (stages.some(s => s.label?.toUpperCase() === stage.label.toUpperCase())) continue;
+                
+                await adminService.createPipelineStage({
+                    ...stage,
+                    statusValue: stage.label.toUpperCase().replace(/\s+/g, '_'),
+                    orderIndex: stages.length + 1,
+                    active: true
+                });
+            }
+            toast.success("Strategic funnel initialized");
+            fetchStages();
+        } catch (err) {
+            toast.error("Partial failure during initialization");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleDelete = async (id) => {
@@ -117,14 +162,24 @@ const PipelineStageManagement = () => {
                             <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest">Pipeline Architecture</h5>
                         </div>
                     </div>
-                    <button 
-                        onClick={() => isAdding ? resetForm() : setIsAdding(true)}
-                        className={`ui-btn ${isAdding ? 'ui-btn-outline' : 'ui-btn-primary'} px-4 py-2 rounded-pill fw-black text-uppercase tracking-widest d-flex align-items-center gap-2`}
-                        style={{ fontSize: '10px' }}
-                    >
-                        {isAdding ? <RotateCcw size={14} /> : <Plus size={14} />}
-                        {isAdding ? 'CANCEL' : 'ADD STATUS'}
-                    </button>
+                    <div className="d-flex gap-2">
+                        <button 
+                            onClick={handleAutoSetup}
+                            className="ui-btn ui-btn-outline px-4 py-2 rounded-pill fw-black text-uppercase tracking-widest d-flex align-items-center gap-2"
+                            style={{ fontSize: '10px', borderColor: 'rgba(var(--primary-rgb), 0.2)' }}
+                            disabled={loading}
+                        >
+                            <Zap size={14} className="text-warning" /> AUTO-SETUP FUNNEL
+                        </button>
+                        <button 
+                            onClick={() => isAdding ? resetForm() : setIsAdding(true)}
+                            className={`ui-btn ${isAdding ? 'ui-btn-outline' : 'ui-btn-primary'} px-4 py-2 rounded-pill fw-black text-uppercase tracking-widest d-flex align-items-center gap-2`}
+                            style={{ fontSize: '10px' }}
+                        >
+                            {isAdding ? <RotateCcw size={14} /> : <Plus size={14} />}
+                            {isAdding ? 'CANCEL' : 'ADD STATUS'}
+                        </button>
+                    </div>
                 </div>
 
                 {isAdding && (
@@ -184,15 +239,15 @@ const PipelineStageManagement = () => {
                 
                 <style>{`
                     .tab-checkbox { 
-                        width: 18px; height: 18px; border-radius: 6px; 
-                        border: 2px solid rgba(255,255,255,0.1); 
+                        width: 20px; height: 20px; border-radius: 6px; 
+                        border: 2px solid ${isDarkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)'}; 
                         display: flex; align-items: center; justify-content: center;
                         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-                        background: rgba(255,255,255,0.02);
+                        background: ${isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'};
                         cursor: pointer;
                     }
                     .tab-checkbox.active { background: var(--primary); border-color: var(--primary); color: white; box-shadow: 0 0 10px var(--primary-glow); }
-                    .tab-checkbox:not(.active):hover { border-color: rgba(255,255,255,0.2); }
+                    .tab-checkbox:not(.active):hover { border-color: var(--primary); opacity: 0.8; }
                 `}</style>
             </div>
 

@@ -75,12 +75,12 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
     };
 
     return (
-        <div className="min-vh-100 bg-light py-5 px-3 px-md-5 animate-fade-in" style={{ backgroundColor: '#f8fafc' }}>
+        <div className={`min-vh-100 py-5 px-3 px-md-5 animate-fade-in ${isDarkMode ? 'bg-dark bg-opacity-50' : 'bg-light'}`}>
             <div className="mx-auto" style={{ maxWidth: '900px' }}>
                 {/* Header Section */}
                 <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-5 gap-3">
                     <div>
-                        <h2 className="fw-bold text-dark mb-1" style={{ fontSize: '24px', letterSpacing: '-0.5px' }}>Edit Lead </h2>
+                        <h2 className="fw-bold text-main mb-1" style={{ fontSize: '24px', letterSpacing: '-0.5px' }}>Edit Lead </h2>
                         <p className="text-muted mb-0" style={{ fontSize: '14px' }}>Update lead details and assignments</p>
                     </div>
                     <div className="d-flex gap-2">
@@ -108,7 +108,7 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
                 </div>
 
                 {/* Main Form Card */}
-                <div className="bg-white rounded-4 shadow-sm border border-light overflow-hidden">
+                <div className={`rounded-4 shadow-sm border overflow-hidden bg-card ${isDarkMode ? 'border-white border-opacity-5' : 'border-light'}`}>
                     <div className="p-4 p-md-5">
 
 
@@ -117,19 +117,17 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
                         <div className="mb-5">
                             <div className="d-flex align-items-center gap-2 mb-4">
                                 <Info size={18} className="text-primary" />
-                                <h5 className="fw-bold text-dark mb-0" style={{ fontSize: '16px' }}>Basic Details</h5>
+                                <h5 className="fw-bold text-main mb-0" style={{ fontSize: '16px' }}>Basic Details</h5>
                             </div>
                             <div className="row g-4">
                                 <div className="col-12 col-md-6">
                                     <label className="form-label text-secondary fw-semibold small text-uppercase mb-2">Name</label>
                                     <input
                                         type="text"
-                                        name="name"
-                                        className={`form-control py-2 px-3 rounded-3 border-light-subtle ${errors.name ? 'is-invalid' : ''}`}
-                                        placeholder="Lead Name"
                                         value={formData.name}
                                         onChange={handleChange}
-                                        style={{ backgroundColor: '#fdfdfd', height: '48px' }}
+                                        className={`form-control py-2 px-3 rounded-3 transition-all ${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-10 text-main' : 'bg-light border-light-subtle'}`}
+                                        style={{ height: '48px' }}
                                     />
                                     {errors.name && <div className="invalid-feedback">{errors.name}</div>}
                                 </div>
@@ -151,11 +149,11 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
                                     <input
                                         type="email"
                                         name="email"
-                                        className="form-control py-2 px-3 rounded-3 border-light-subtle"
+                                        className={`form-control py-2 px-3 rounded-3 transition-all ${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-10 text-main' : 'bg-light border-light-subtle'}`}
                                         placeholder="Email Address"
                                         value={formData.email}
                                         onChange={handleChange}
-                                        style={{ backgroundColor: '#fdfdfd', height: '48px' }}
+                                        style={{ height: '48px' }}
                                     />
                                 </div>
                                 <div className="col-12 col-md-6">

@@ -9,8 +9,9 @@ import SplitInstallmentModal from './SplitInstallmentModal';
 import RecordPaymentModal from './RecordPaymentModal';
 import ManualPaymentModal from './ManualPaymentModal';
 import InvoiceModal from '../pages/dashboard/components/InvoiceModal';
+import { TableSkeleton, MetricSkeletonRow } from '../pages/dashboard/components/DashboardSkeletons';
 
-const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManagerId, teamId: externalTeamId, from: externalFrom, to: externalTo, hideHeader = false, hideFilters = false, refreshTrigger }) => {
+const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManagerId, teamId: externalTeamId, from: externalFrom, to: externalTo, hideHeader = false, hideFilters = false, refreshTrigger, externalStats }) => {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [teamLeaders, setTeamLeaders] = useState([]);
@@ -99,7 +100,8 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
       const payload = res.data !== undefined ? res.data : res;
       setPayments(Array.isArray(payload) ? payload : (payload?.content || []));
     } catch (err) {
-      toast.error('Failed to sync financial history');
+      console.error('Failed to sync financial history', err);
+      setPayments([]); // Ensure we don't hang in loading
     } finally {
       setLoading(false);
     }
@@ -153,7 +155,17 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
   useEffect(() => {
     fetchHistory(debouncedFilters);
     fetchTeamLeaders();
-  }, [role, debouncedFilters, externalUserId, refreshTrigger]);
+  }, [
+    role, 
+    debouncedFilters.startDate, 
+    debouncedFilters.endDate, 
+    debouncedFilters.managerId, 
+    debouncedFilters.tlId, 
+    debouncedFilters.userId, 
+    debouncedFilters.status,
+    externalUserId, 
+    refreshTrigger
+  ]);
 
   useEffect(() => {
     if (filters.tlId) {
@@ -176,10 +188,13 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
     setAssociates([]);
   };
 
+  // Only show skeletons on initial load (when no payments exist yet)
   if (loading && (!payments || payments.length === 0)) return (
-    <div className="text-center py-5">
-      <div className="spinner-border spinner-border-sm text-primary" role="status"></div>
-      <p className="text-muted small fw-bold text-uppercase mt-3 tracking-widest" style={{ fontSize: '10px' }}>Synchronizing Ledger...</p>
+    <div className="animate-fade-in mt-2">
+      <MetricSkeletonRow />
+      <div className="mt-4">
+        <TableSkeleton rows={8} />
+      </div>
     </div>
   );
 
@@ -193,16 +208,20 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
     return true;
   });
 
-  const successfulPayments = (payments || []).filter(p => ['PAID', 'SUCCESS', 'APPROVED', 'PARTIAL', 'COMPLETED'].includes(p.status));
+  const successfulPayments = (payments || []).filter(p => ['PAID', 'SUCCESS', 'APPROVED', 'PARTIAL', 'COMPLETED'].includes(p.status?.toUpperCase()));
   const paymentStats = {
-    totalRevenue: successfulPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0),
-    pendingRevenue: (payments || [])
-      .filter(p => p.status === 'PENDING' || p.status === 'FAILED')
-      .reduce((sum, p) => sum + p.amount, 0),
-    totalInvoiced: (payments || []).reduce((sum, p) => sum + p.amount, 0),
-    overdueCount: (payments || []).filter(p => {
-        const isOverdue = p.status === 'FAILED' || p.status === 'OVERDUE';
-        const isPending = p.status === 'PENDING' || p.status === 'INITIATED' || p.status === 'PARTIAL';
+    totalRevenue: externalStats ? (externalStats.monthlyRevenue || externalStats.totalRevenue || externalStats.revenue || 0) : successfulPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0),
+    pendingRevenue: externalStats ? (externalStats.pendingPaymentsAmount || externalStats.totalPending || externalStats.pendingRevenue || 0) : (payments || [])
+      .filter(p => {
+        const s = p.status?.toUpperCase();
+        return s === 'PENDING' || s === 'FAILED' || s === 'INITIATED' || s === 'PARTIAL_PENDING';
+      })
+      .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0),
+    totalInvoiced: (payments || []).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0),
+    overdueCount: externalStats ? (externalStats.overdueCount || 0) : (payments || []).filter(p => {
+        const status = p.status?.toUpperCase();
+        const isOverdue = status === 'FAILED' || status === 'OVERDUE';
+        const isPending = status === 'PENDING' || status === 'INITIATED' || status === 'PARTIAL';
         const now = new Date();
         const targetDate = new Date(p.dueDate || p.createdAt);
         return isOverdue || (isPending && targetDate < now);
@@ -273,9 +292,9 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
           </div>
         )}
 
-        {/* Desktop Table View */}
-        <div className="table-responsive d-none d-md-block p-0">
-          <table className="table table-hover align-middle mb-0 border-0 bg-transparent text-main">
+        {/* Desktop Table View - Now responsive for all screens */}
+        <div className="table-responsive no-scrollbar p-0" style={{ overflowX: 'auto' }}>
+          <table className="table table-hover align-middle mb-0 border-0 bg-transparent text-main" style={{ minWidth: '900px' }}>
             <thead>
               <tr className="border-bottom border-white border-opacity-5">
                 <th className="ps-4 py-3 text-muted small fw-black text-uppercase tracking-widest" style={{ fontSize: '9px' }}>EMI Identifier</th>

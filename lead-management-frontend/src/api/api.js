@@ -1,10 +1,21 @@
 import axios from 'axios';
 
+const getBaseURL = () => {
+  if (import.meta.env.DEV) {
+    const hostname = window.location.hostname;
+    const port = (hostname === '54.84.148.176' || hostname === 'localhost') ? '8081' : '80'; 
+    // Wait, the user said 80 inplace lolocah.
+    // If they are on the server, port 80 is backend.
+    const finalPort = hostname === '54.84.148.176' ? '80' : '8081';
+    return `http://${hostname}:${finalPort}/api`;
+  }
+  return import.meta.env.VITE_API_URL 
+    ? (import.meta.env.VITE_API_URL.endsWith('/api') ? import.meta.env.VITE_API_URL : `${import.meta.env.VITE_API_URL}/api`)
+    : 'http://54.84.148.176:80/api';
+};
+
 const api = axios.create({
-  baseURL: (import.meta.env.DEV 
-    ? `http://${window.location.hostname}:8081/api` 
-    : (import.meta.env.VITE_API_URL ? (import.meta.env.VITE_API_URL.endsWith('/api') ? import.meta.env.VITE_API_URL : `${import.meta.env.VITE_API_URL}/api`) : 'https://sales-backend-1-3tnk.onrender.com/api')
-  ),
+  baseURL: getBaseURL(),
   timeout: 60000
 });
 

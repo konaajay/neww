@@ -39,7 +39,7 @@ import TodayTaskList from './dashboard/components/TodayTaskList';
 import LeadEditPage from './dashboard/components/LeadEditPage';
 import AttendanceDashboard from './dashboard/components/AttendanceDashboard';
 import CourseManagementPage from './CourseManagementPage';
-import { StatSkeleton, ChartSkeleton } from './dashboard/components/DashboardSkeletons';
+import { StatSkeleton, ChartSkeleton, MetricSkeletonRow, TableSkeleton } from './dashboard/components/DashboardSkeletons';
 
 const RevenueTrendChart = React.lazy(() => import('./dashboard/components/RevenueTrendChart'));
 const LeadStatusPieChart = React.lazy(() => import('./dashboard/components/LeadStatusPieChart'));
@@ -82,11 +82,15 @@ const ManagerDashboard = () => {
   });
 
   const stableFilters = useMemo(() => ({
-    ...filterState,
+    from: filterState.from,
+    to: filterState.to,
+    userId: filterState.userId,
+    teamId: filterState.teamId,
+    managerId: filterState.managerId,
     currentUserId: user?.id
-  }), [filterState, user?.id]);
+  }), [filterState.from, filterState.to, filterState.userId, filterState.teamId, filterState.managerId, user?.id]);
 
-  const debouncedFilters = useDebounce(stableFilters, 400);
+  const debouncedFilters = useDebounce(stableFilters, 300);
 
   // 2. Data Hooks
   const {
@@ -275,7 +279,7 @@ const ManagerDashboard = () => {
   return (
     <DashboardLayout activeTab={activeTab} onTabChange={handleTabChange} role="MANAGER">
       <div className="animate-fade-in d-flex flex-column gap-3">
-        {activeTab !== 'edit-lead' && activeTab !== 'ingestion' && activeTab !== 'users' && (
+        {activeTab !== 'edit-lead' && activeTab !== 'ingestion' && activeTab !== 'users' && activeTab !== 'strategy' && activeTab !== 'courses' && (
           <FiltersBar
             filters={filterState}
             onChange={setFilterState}
@@ -314,7 +318,7 @@ const ManagerDashboard = () => {
             {myDashboardSubTab === 'dashboard' && (
               <>
                 <ManagerProfile manager={null} />
-                {dashboardLoading && !stats ? <StatSkeleton /> : (
+                {dashboardLoading && !dashboardData ? <MetricSkeletonRow /> : (
                   <MetricCommandCenter
                     stats={personalStats}
                     role="MANAGER"
@@ -401,21 +405,15 @@ const ManagerDashboard = () => {
         )}
         {activeTab === 'overview' && (
           <div className="d-flex flex-column gap-3 animate-fade-in">
-            {dashboardLoading && !stats ? <StatSkeleton /> : (
+            {dashboardLoading && !dashboardData ? <MetricSkeletonRow /> : (
               <div className="row g-4">
-                <div className="col-12 col-xl-8">
+                <div className="col-12">
                   <MetricCommandCenter
                     stats={statsWithPerf}
                     role="MANAGER"
                     filters={filterState}
                     onNavigate={handleTabChange}
                     leads={filteredLeads}
-                  />
-                </div>
-                <div className="col-12 col-xl-4">
-                  <TodayTaskList 
-                    leads={leads} 
-                    theme={theme} 
                   />
                 </div>
               </div>
@@ -452,8 +450,15 @@ const ManagerDashboard = () => {
                 { label: 'Lost', value: ((stats.statusDistribution?.LOST || 0) + (stats.statusDistribution?.REJECTED || 0)), color: 'danger', icon: '❌' }
               ].map((card, i) => (
                 <div key={i} className="col-6 col-md-3">
-                  <div className="premium-card p-3 border border-white border-opacity-10 shadow-sm d-flex flex-column gap-1" style={{ borderRadius: '20px', background: 'rgba(255,255,255,0.02)' }}>
-                    <h4 className="mb-0 fw-black text-main" style={{ fontSize: '26px', lineHeight: 1 }}>{card.value}</h4>
+                  <div 
+                    className="premium-card p-3 border border-main border-opacity-10 shadow-sm d-flex flex-column gap-1 transition-smooth" 
+                    style={{ 
+                      borderRadius: '20px', 
+                      background: 'var(--bg-card)',
+                      backdropFilter: 'var(--glass-blur)'
+                    }}
+                  >
+                    <h4 className="mb-0 fw-black text-main" style={{ fontSize: '24px', lineHeight: 1 }}>{card.value}</h4>
                     <small className="text-muted fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '8px' }}>{card.label}</small>
                   </div>
                 </div>
@@ -495,7 +500,7 @@ const ManagerDashboard = () => {
             </div>
           </div>
         )}
-        {activeTab === 'payments' && <PaymentHistory role="MANAGER" managerId={filterState.userId ? null : user?.id} userId={filterState.userId || null} teamId={filterState.teamId || null} from={filterState.from} to={filterState.to} hideHeader={true} />}
+        {activeTab === 'payments' && <PaymentHistory role="MANAGER" managerId={filterState.userId ? null : user?.id} userId={filterState.userId || null} teamId={filterState.teamId || null} from={filterState.from} to={filterState.to} hideHeader={true} externalStats={statsWithPerf} />}
         {activeTab === 'calls' && <CallLogDashboard userId={filterState.userId} filters={debouncedFilters} hideHeader={true} />}
         {activeTab === 'attendance' && <AttendanceDashboard filters={debouncedFilters} role="MANAGER" />}
         {activeTab === 'strategy' && (

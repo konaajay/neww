@@ -31,7 +31,7 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
       return [
         // { id: 'overview', label: 'MY HOME', icon: LayoutDashboard },
         { id: 'team-dashboard', label: 'Team Dashboard', icon: LayoutDashboard },
-        // { id: 'strategy', label: 'Revenue Strategy', icon: TrendingUp },
+        { id: 'strategy', label: 'Revenue Strategy', icon: TrendingUp },
         { id: 'users', label: 'USERS', icon: Users },
         { id: 'hierarchy', label: 'Hierarchy', icon: Layers },
         { id: 'attendance', label: 'Attendance logs', icon: FileText },
@@ -152,14 +152,14 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
                   >
                     <Icon size={18} className={isActive ? 'text-white' : 'text-muted'} />
                     {(!isCollapsed || isOpen) && <span>{item.label}</span>}
-                    
+
                     {item.id === 'attendance' && pendingCount > 0 && (
-                      <span 
-                        className="position-absolute translate-middle badge rounded-pill bg-danger shadow-sm border border-white border-opacity-10" 
-                        style={{ 
-                          top: '12px', 
-                          right: isCollapsed ? '8px' : '15px', 
-                          fontSize: '8px', 
+                      <span
+                        className="position-absolute translate-middle badge rounded-pill bg-danger shadow-sm border border-white border-opacity-10"
+                        style={{
+                          top: '12px',
+                          right: isCollapsed ? '8px' : '15px',
+                          fontSize: '8px',
                           padding: '3px 5px',
                           zIndex: 2,
                           animation: 'pulse-red 2s infinite'

@@ -5,8 +5,10 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import ChangePasswordModal from './ChangePasswordModal';
 import { useTasks } from '../../features/leads/hooks/useTasks';
+import { useQuery } from '@tanstack/react-query';
+import wfhService from '../../services/wfhService';
 
-const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras }) => {
+const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChange }) => {
   const { user, updateProfile } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -20,6 +22,21 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras }) => {
 
   // 1. Task Notification Logic
   const { tasks } = useTasks({ userId: user?.id });
+  
+  const normalizedRole = (user?.role || '').toUpperCase();
+  const isSuperior = ['ADMIN', 'MANAGER', 'MGR', 'TEAM_LEADER', 'TL', 'TEAMLEAD'].some(r => normalizedRole.includes(r));
+
+  const { data: wfhNotify } = useQuery({
+    queryKey: ['wfh-pending-count'],
+    queryFn: async () => {
+      const res = await wfhService.getPendingCount();
+      return res.data;
+    },
+    enabled: isSuperior,
+    refetchInterval: 30000 // Refresh every 30 seconds
+  });
+
+  const wfhPendingCount = wfhNotify?.count || 0;
 
   const upcomingTasks = useMemo(() => {
     if (!Array.isArray(tasks)) return [];
@@ -125,32 +142,56 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras }) => {
             onClick={() => setIsNotificationOpen(!isNotificationOpen)}
             style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            <Bell size={18} className={upcomingTasks.length > 0 ? 'text-primary' : 'opacity-50'} />
-            {upcomingTasks.length > 0 && (
+            <Bell size={18} className={(upcomingTasks.length > 0 || wfhPendingCount > 0) ? 'text-primary' : 'opacity-50'} />
+            {(upcomingTasks.length > 0 || wfhPendingCount > 0) && (
               <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: '7px', marginTop: '5px', marginLeft: '-5px' }}>
-                {upcomingTasks.length}
+                {upcomingTasks.length + wfhPendingCount}
               </span>
             )}
           </button>
 
           {isNotificationOpen && (
-            <div className={`position-absolute top-100 end-0 mt-3 p-0 rounded-4 shadow-2xl animate-zoom-in ${isDarkMode ? 'bg-surface' : 'bg-white'}`} style={{ 
+            <div className={`position-absolute top-100 end-0 mt-3 p-0 rounded-4 shadow-2xl animate-zoom-in ${isDarkMode ? 'bg-surface' : 'bg-card'}`} style={{ 
               width: '300px', 
               border: '1px solid rgba(0,0,0,0.05)',
               zIndex: 2020
             }}>
               <div className="p-3 border-bottom border-light d-flex align-items-center justify-content-between">
                 <h6 className="mb-0 fw-black text-uppercase tracking-widest text-main" style={{ fontSize: '10px' }}>Upcoming Alerts</h6>
-                <span className="badge bg-primary bg-opacity-10 text-primary rounded-pill fw-black" style={{ fontSize: '8px' }}>NEXT 10 MINS</span>
+                <span className="badge bg-primary bg-opacity-10 text-primary rounded-pill fw-black" style={{ fontSize: '8px' }}>{(upcomingTasks.length + wfhPendingCount)} TOTAL</span>
               </div>
               <div className="p-2 overflow-auto" style={{ maxHeight: '300px' }}>
-                {upcomingTasks.length === 0 ? (
+                {upcomingTasks.length === 0 && wfhPendingCount === 0 ? (
                   <div className="p-4 text-center opacity-30">
                     <Bell size={24} className="mb-2" />
                     <p className="extra-small fw-bold text-uppercase mb-0">No immediate tasks</p>
                   </div>
                 ) : (
-                  upcomingTasks.map(task => (
+                  <>
+                    {wfhPendingCount > 0 && (
+                      <div className={`p-3 rounded-3 mb-2 border border-primary border-opacity-20 transition-all ${isDarkMode ? 'bg-primary bg-opacity-5' : 'bg-primary bg-opacity-10'}`}>
+                        <div className="d-flex align-items-start gap-2">
+                          <div className="p-1.5 bg-danger bg-opacity-10 text-danger rounded-circle">
+                             <Bell size={12} />
+                          </div>
+                          <div className="flex-grow-1">
+                             <p className="mb-0 fw-black text-danger text-uppercase" style={{ fontSize: '10px' }}>Attendance Action Needed</p>
+                             <p className="mb-1 text-muted fw-bold" style={{ fontSize: '9px' }}>You have {wfhPendingCount} pending WFH requests to review.</p>
+                             <button 
+                               className="btn btn-link p-0 text-primary fw-black text-uppercase tracking-widest border-0" 
+                               style={{ fontSize: '8px' }}
+                               onClick={() => {
+                                 setIsNotificationOpen(false);
+                                 if (onTabChange) onTabChange('attendance');
+                               }}
+                             >
+                               Review Now
+                             </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {upcomingTasks.map(task => (
                     <div key={task.id} className={`p-3 rounded-3 mb-1 border border-transparent hover-bg-surface transition-all ${isDarkMode ? 'bg-white bg-opacity-5' : 'bg-light bg-opacity-50'}`}>
                       <div className="d-flex align-items-start gap-2">
                         <div className="p-1.5 bg-primary bg-opacity-10 text-primary rounded-circle">
@@ -168,7 +209,8 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras }) => {
                         </div>
                       </div>
                     </div>
-                  ))
+                    ))}
+                  </>
                 )}
               </div>
             </div>
@@ -199,11 +241,10 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras }) => {
 
           {/* Profile Dropdown Menu */}
           {isProfileOpen && (
-            <div className="position-absolute top-100 end-0 mt-3 p-0 rounded-4 shadow-2xl animate-zoom-in" style={{ 
+            <div className="position-absolute top-100 end-0 mt-3 p-0 rounded-4 shadow-2xl animate-zoom-in bg-card" style={{ 
               width: '320px', 
               maxHeight: 'calc(100vh - 100px)',
               overflowY: 'auto',
-              background: isDarkMode ? '#111827' : '#ffffff', 
               border: '1px solid rgba(0,0,0,0.05)',
               zIndex: 2010,
               scrollbarWidth: 'none',
@@ -217,7 +258,7 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras }) => {
                     </div>
                   </div>
                   <div className="overflow-hidden">
-                    <h6 className="fw-black text-dark mb-0 text-truncate text-uppercase tracking-wider" style={{ fontSize: '13px' }}>
+                    <h6 className="fw-black text-main mb-0 text-truncate text-uppercase tracking-wider" style={{ fontSize: '13px' }}>
                       {user?.name?.toUpperCase() === 'SYSTEM ADMIN' ? 'ADMIN' : user?.name}
                     </h6>
                     <p className="text-muted small mb-1 text-truncate fw-bold" style={{ fontSize: '10px' }}>{user?.email}</p>

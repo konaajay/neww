@@ -45,6 +45,9 @@ const AttendanceDashboard = ({ filters, role }) => {
 
     const formatDate = (dateStr) => {
         if (!dateStr) return null;
+        // If already in YYYY-MM-DD format, return as is to avoid timezone shifts
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+        
         const d = new Date(dateStr);
         if (isNaN(d.getTime())) return dateStr;
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -52,6 +55,7 @@ const AttendanceDashboard = ({ filters, role }) => {
 
     const fetchLogs = useCallback(async () => {
         try {
+            console.log(">>> [ATTENDANCE DASHBOARD] Fetching logs for filters:", filters);
             const isAdminOrManagerOrTL = role === 'ADMIN' || role === 'MANAGER' || role === 'TEAM_LEADER';
             
             if (isAdminOrManagerOrTL) {
@@ -66,20 +70,20 @@ const AttendanceDashboard = ({ filters, role }) => {
                 const res = await attendanceService.getDailySummaries(params);
                 const data = res.data || res || [];
                 console.log(">>> [ATTENDANCE FETCH] RECEIVED DATA SIZE:", data.length);
-                if (data.length > 0) {
-                    console.log(">>> [ATTENDANCE DEBUG] FIRST LOG ENTRY:", JSON.stringify(data[0], null, 2));
-                }
                 setLogs(data);
             } else {
-                const res = await attendanceService.getMyLogs({
+                const params = {
                     from: formatDate(filters.from),
                     to: formatDate(filters.to)
-                });
+                };
+                console.log(">>> [ATTENDANCE FETCH] MY LOGS PARAMS:", params);
+                const res = await attendanceService.getMyLogs(params);
                 const data = res.data || res || [];
+                console.log(">>> [ATTENDANCE FETCH] RECEIVED MY LOGS SIZE:", data.length);
                 setLogs(data);
             }
         } catch (err) {
-            console.error("Failed to fetch logs", err);
+            console.error(">>> [ATTENDANCE FETCH] ERROR:", err);
         }
     }, [filters, role]);
 
@@ -207,9 +211,16 @@ const AttendanceDashboard = ({ filters, role }) => {
                     { label: 'LATE', value: summaryStats.late, icon: AlertCircle, color: 'info' }
                 ].map((s, i) => (
                     <div key={i} className="col-md-4">
-                        <div className={`premium-card p-4 d-flex flex-column gap-1 transition-smooth ${isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-white shadow-sm'}`} style={{ borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <h4 className="fw-black mb-0 text-main" style={{ fontSize: '38px', lineHeight: 1 }}>{s.value}</h4>
-                            <p className="text-muted small mb-0 fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '10px' }}>{s.label}</p>
+                        <div 
+                            className="premium-card p-4 d-flex flex-column gap-1 transition-smooth border border-main border-opacity-10 shadow-sm" 
+                            style={{ 
+                                borderRadius: '24px',
+                                background: 'var(--bg-card)',
+                                backdropFilter: 'var(--glass-blur)'
+                            }}
+                        >
+                            <h4 className="fw-black mb-0 text-main" style={{ fontSize: '28px', lineHeight: 1 }}>{s.value}</h4>
+                            <p className="text-muted small mb-0 fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '9px' }}>{s.label}</p>
                         </div>
                     </div>
                 ))}
@@ -217,7 +228,7 @@ const AttendanceDashboard = ({ filters, role }) => {
 
 
 
-            <div className={`premium-card border-0 shadow-lg overflow-hidden ${isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-white shadow-sm'}`} style={{ borderRadius: '32px' }}>
+            <div className={`premium-card border-0 shadow-lg overflow-hidden ${isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-card shadow-sm'}`} style={{ borderRadius: '32px' }}>
                 <div className="p-5 border-bottom border-white border-opacity-5 d-flex justify-content-between align-items-center">
                     <div className="d-flex align-items-center gap-4">
                         <div 
@@ -386,7 +397,7 @@ const AttendanceDashboard = ({ filters, role }) => {
             {/* Note Modal */}
             {noteModal && (
                 <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 9999, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}>
-                    <div className={`premium-card p-5 border-0 shadow-lg ${isDarkMode ? 'bg-surface' : 'bg-white'}`} style={{ borderRadius: '32px', width: '400px' }}>
+                    <div className={`premium-card p-5 border-0 shadow-lg ${isDarkMode ? 'bg-surface' : 'bg-card'}`} style={{ borderRadius: '32px', width: '400px' }}>
                         <div className="d-flex justify-content-between align-items-center mb-4">
                             <h5 className="fw-black text-main text-uppercase mb-0 tracking-widest">
                                 {noteModal.note ? 'Edit Note/Permission' : 'Add Note/Permission'}

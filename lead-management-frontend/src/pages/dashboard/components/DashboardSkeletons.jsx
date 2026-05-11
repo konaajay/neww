@@ -16,6 +16,16 @@ export const StatSkeleton = () => (
   </div>
 );
 
+export const MetricSkeletonRow = () => (
+  <div className="row g-4">
+    {[1, 2, 3, 4].map(i => (
+      <div key={i} className="col-12 col-md-6 col-xl-3">
+        <StatSkeleton />
+      </div>
+    ))}
+  </div>
+);
+
 export const ChartSkeleton = () => (
   <div className="premium-card h-100 border border-white border-opacity-10 shadow-lg overflow-hidden" 
        style={{ borderRadius: '24px', background: 'rgba(255, 255, 255, 0.03)', minHeight: '400px' }}>
@@ -32,7 +42,11 @@ export const ChartSkeleton = () => (
 );
 
 export const TableSkeleton = ({ rows = 5 }) => (
-  <div className="w-100">
+  <div className="w-100 p-4">
+    <div className="d-flex gap-4 mb-4">
+      <div className="shimmer" style={{ width: '150px', height: '10px' }}></div>
+      <div className="shimmer ms-auto" style={{ width: '100px', height: '10px' }}></div>
+    </div>
     {[...Array(rows)].map((_, i) => (
       <div key={i} className="p-3 d-flex gap-4 border-bottom border-white border-opacity-5">
         <div className="shimmer rounded-circle" style={{ width: '32px', height: '32px', flexShrink: 0 }}></div>

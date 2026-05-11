@@ -1,13 +1,15 @@
 import React from 'react';
 import { 
-  PieChart, 
-  Pie, 
+  BarChart, 
+  Bar, 
   Cell, 
+  XAxis,
+  YAxis,
   Tooltip, 
   ResponsiveContainer, 
-  Legend 
+  CartesianGrid
 } from 'recharts';
-import { PieChart as PieIcon } from 'lucide-react';
+import { BarChart as BarIcon } from 'lucide-react';
 
 const LeadStatusPieChart = ({ leads, distribution, isDarkMode }) => {
   const hasData = (leads && leads.length > 0) || (distribution && Object.keys(distribution).length > 0);
@@ -15,7 +17,7 @@ const LeadStatusPieChart = ({ leads, distribution, isDarkMode }) => {
   if (!hasData) {
     return (
       <div className="d-flex flex-column align-items-center justify-content-center h-100 opacity-20">
-        <PieIcon size={48} className="mb-2" />
+        <BarIcon size={48} className="mb-2" />
         <p className="fw-black text-uppercase small tracking-widest">No Pipeline Data</p>
       </div>
     );
@@ -63,24 +65,34 @@ const LeadStatusPieChart = ({ leads, distribution, isDarkMode }) => {
 
   return (
     <div className="w-100 h-100 d-flex flex-column">
-      <div className="flex-grow-1">
+      <div className="flex-grow-1 mt-2">
         <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={81}
-              paddingAngle={5}
-              dataKey="value"
+          <BarChart 
+            data={data} 
+            layout="vertical" 
+            margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} />
+            <XAxis type="number" hide />
+            <YAxis 
+              dataKey="name" 
+              type="category" 
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 9, fontWeight: 900, fill: 'var(--text-muted)' }}
+              width={80}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+            <Bar 
+              dataKey="value" 
+              radius={[0, 4, 4, 0]} 
+              barSize={12}
             >
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={getStatusColor(entry.name)} />
               ))}
-            </Pie>
-            <Tooltip content={<CustomTooltip />} />
-          </PieChart>
+            </Bar>
+          </BarChart>
         </ResponsiveContainer>
       </div>
       <div className="p-3 border-top border-white border-opacity-5 d-flex flex-wrap justify-content-center gap-3">

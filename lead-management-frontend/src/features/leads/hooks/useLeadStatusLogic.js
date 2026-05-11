@@ -14,7 +14,7 @@ export const useLeadStatusLogic = (initialTotal = '', initialPaid = 0) => {
 
   const addInstallment = useCallback(() => {
     setInstallments(prev => {
-      if (prev.length >= 5) return prev;
+      if (prev.length >= 4) return prev;
       return [...prev, { amount: '', dueDate: '' }];
     });
     setPaymentType('EMI');
