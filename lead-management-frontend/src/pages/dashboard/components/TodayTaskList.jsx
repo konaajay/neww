@@ -69,8 +69,8 @@ const TodayTaskList = ({ leads = [], tasks = [], theme = 'light' }) => {
                             <div 
                                 key={item.isTask ? `task-${item.id}-${idx}` : `lead-${item.id}`}
                                 onClick={() => navigate(`/leads/${item.id}/status-update`)}
-                                className={`p-3 rounded-4 d-flex align-items-center justify-content-between transition-all cursor-pointer ${
-                                    isDarkMode ? 'bg-white bg-opacity-5 hover-bg-opacity-10' : 'bg-card hover-bg-surface border'
+                                className={`p-3 rounded-4 d-flex align-items-center justify-content-between transition-smooth cursor-pointer ${
+                                    isDarkMode ? 'bg-surface bg-opacity-40 hover-bg-opacity-60' : 'bg-card hover-bg-surface border border-light'
                                 }`}
                                 style={{ transition: '0.2s ease' }}
                             >

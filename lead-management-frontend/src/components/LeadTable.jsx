@@ -79,17 +79,16 @@ const StatusDropdown = ({ lead, pipelineStages, onChange, getStatusColorClass, i
               width: '180px', 
               maxHeight: '300px',
               overflowY: 'auto',
-              background: isDarkMode ? '#0f172a' : '#ffffff', 
-              borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+              background: 'var(--bg-card)', 
+              borderColor: 'var(--border-color)',
               left: coords.left,
               top: openUpwards ? 'auto' : coords.top + 5,
               bottom: openUpwards ? (window.innerHeight - coords.top + 30) : 'auto'
             }}
           >
-            {pipelineStages.filter(s => s.statusValue !== 'CONVERTED').map(s => (
               <div
                 key={s.statusValue}
-                className={`px-3 py-2 ${isDarkMode ? 'text-white' : 'text-dark'} hover-bg-primary transition-all cursor-pointer d-flex align-items-center gap-2 border-bottom ${isDarkMode ? 'border-white' : 'border-dark'} border-opacity-5`}
+                className={`px-3 py-2 text-main hover-bg-primary transition-all cursor-pointer d-flex align-items-center gap-2 border-bottom border-main border-opacity-5`}
                 style={{ fontSize: '10px', fontWeight: '800' }}
                 onClick={() => handleSelect(s.statusValue)}
               >
@@ -300,7 +299,7 @@ const LeadTable = ({
                   )}
                   <td className="py-4">
                     <span 
-                      className="fw-black text-dark hover-underline" 
+                      className="fw-black text-main hover-underline" 
                       style={{ fontSize: '13px' }}
                     >
                       {lead.name}

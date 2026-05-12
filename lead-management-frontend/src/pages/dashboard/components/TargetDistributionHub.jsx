@@ -298,13 +298,16 @@ const TargetDistributionHub = ({ filters }) => {
                                 </div>
                             </div>
                             <div className="col-md-4">
-                                <div className={`p-3 border rounded-4 ${isDarkMode ? 'bg-primary bg-opacity-5 border-primary border-opacity-10' : 'bg-blue-50/30 border-blue-50'}`}>
+                                <div className={`p-3 border rounded-4 transition-all ${isDarkMode ? 'bg-surface border-primary border-opacity-30' : 'bg-blue-50/30 border-blue-50'}`} style={{ boxShadow: isDarkMode ? '0 0 15px rgba(99, 102, 241, 0.05)' : 'none' }}>
                                     <span className="text-primary tiny fw-black text-uppercase tracking-widest d-block mb-1 opacity-70">Allocated Pool</span>
                                     <h4 className="fw-black m-0 text-primary">₹{currentTotal.toLocaleString()}</h4>
                                 </div>
                             </div>
                             <div className="col-md-4">
-                                <div className={`p-3 border rounded-4 transition-all ${isBalanced ? (isDarkMode ? 'bg-success bg-opacity-5 border-success border-opacity-10 text-success' : 'bg-emerald-50/30 border-emerald-50 text-emerald-600') : (isDarkMode ? 'bg-danger bg-opacity-5 border-danger border-opacity-10 text-danger' : 'bg-rose-50/30 border-rose-50 text-rose-600')}`}>
+                                <div className={`p-3 border rounded-4 transition-all ${isBalanced 
+                                    ? (isDarkMode ? 'bg-surface border-success border-opacity-30 text-success' : 'bg-emerald-50/30 border-emerald-50 text-emerald-600') 
+                                    : (isDarkMode ? 'bg-surface border-danger border-opacity-30 text-danger' : 'bg-rose-50/30 border-rose-50 text-rose-600')}`}
+                                    style={{ boxShadow: isDarkMode ? (isBalanced ? '0 0 15px rgba(16, 185, 129, 0.05)' : '0 0 15px rgba(244, 63, 94, 0.05)') : 'none' }}>
                                     <span className={`tiny fw-black text-uppercase tracking-widest d-block mb-1 opacity-70`}>Parity Status</span>
                                     <div className="d-flex align-items-center justify-content-between">
                                         <div className="d-flex align-items-center gap-2 fw-black small">
@@ -327,7 +330,7 @@ const TargetDistributionHub = ({ filters }) => {
                     ) : (
                         <>
                             <div className="col-md-6">
-                                <div className={`p-3 border rounded-4 ${isDarkMode ? 'bg-primary bg-opacity-5 border-primary border-opacity-10 shadow-inner' : 'bg-blue-50/30 border-blue-50 shadow-sm'}`}>
+                                <div className={`p-3 border rounded-4 ${isDarkMode ? 'bg-surface border-primary border-opacity-30 shadow-inner' : 'bg-blue-50/30 border-blue-50 shadow-sm'}`} style={{ boxShadow: isDarkMode ? '0 0 15px rgba(99, 102, 241, 0.05)' : 'none' }}>
                                     <span className="text-primary tiny fw-black text-uppercase tracking-widest d-block mb-1 opacity-70">Total Team Target (Allocated)</span>
                                     <h4 className="fw-black m-0 text-primary">₹{currentTotal.toLocaleString()}</h4>
                                 </div>

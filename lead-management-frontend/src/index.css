@@ -26,12 +26,12 @@
   --warning: #f59e0b;
   --info: #0ea5e9;
 
-   /* Deep Glass Theme (Old UI Aesthetic) */
-   --bg-body: #030712;
-   --bg-card: rgba(17, 24, 39, 0.7);
-   --bg-surface: rgba(31, 41, 55, 0.5);
-   --bg-main: #030712;
-   --text-main: #f9fafb;
+  /* Deep Glass Theme (Old UI Aesthetic) - DARK MODE DEFAULT */
+  --bg-body: #030712;
+  --bg-card: rgba(17, 24, 39, 0.7);
+  --bg-surface: rgba(31, 41, 55, 0.5);
+  --bg-main: #030712;
+  --text-main: #f9fafb;
   --text-muted: #9ca3af;
   --border-color: rgba(255, 255, 255, 0.06);
   --sidebar-bg: #030712;
@@ -39,26 +39,27 @@
   --nav-bg: rgba(3, 7, 18, 0.8);
   --bg-input: rgba(255, 255, 255, 0.05);
   --glass-blur: blur(12px);
-}
-
-select option {
-  background-color: #0f172a;
-  color: #f9fafb;
-}
-
-[data-bs-theme="dark"] select option {
-  background-color: #0f172a;
-  color: #f9fafb;
-}
-
-[data-bs-theme="dark"] select {
   color-scheme: dark;
 }
 
-/* Force dark dropdowns project-wide */
+[data-bs-theme="dark"] {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: #030712;
+  color: #ffffff;
+}
+
 [data-bs-theme="dark"] select option {
   background-color: #030712 !important;
   color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] select,
+[data-bs-theme="dark"] input,
+[data-bs-theme="dark"] textarea {
+  color-scheme: dark !important;
 }
 
 [data-bs-theme="light"] {
@@ -73,7 +74,7 @@ select option {
   --sidebar-text: #0f172a;
   --nav-bg: #ffffff;
   --glass-blur: none;
-  --border-color: rgba(0, 0, 0, 0.08);
+  color-scheme: light;
 }
 
 /* Utility Classes for Variables */

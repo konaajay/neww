@@ -163,7 +163,7 @@ const ShiftManagement = ({ offices = [] }) => {
                     </div>
 
                     <div className="col-md-6 mt-4">
-                        <div className={`p-4 rounded-4 border ${isDarkMode ? 'border-white border-opacity-5 bg-white bg-opacity-5' : 'border-light bg-light bg-opacity-50'}`}>
+                        <div className={`p-4 rounded-4 border ${isDarkMode ? 'border-white border-opacity-5 bg-surface' : 'border-light bg-light bg-opacity-50'}`}>
                             <span className="text-muted small fw-black text-uppercase tracking-widest mb-3 d-block" style={{ fontSize: '9px' }}>Operational Window</span>
                             <div className="row g-3">
                                 <div className="col-6">
@@ -192,7 +192,7 @@ const ShiftManagement = ({ offices = [] }) => {
                         <h6 className="text-primary fw-black text-uppercase tracking-widest mb-4" style={{ fontSize: '11px' }}>Shift-Specific Break Windows</h6>
                         <div className="row g-4">
                             <div className="col-md-6">
-                                <div className={`p-4 rounded-4 border ${isDarkMode ? 'border-white border-opacity-5 bg-white bg-opacity-5' : 'border-light bg-light bg-opacity-50'}`}>
+                                <div className={`p-4 rounded-4 border ${isDarkMode ? 'border-white border-opacity-5 bg-surface' : 'border-light bg-light bg-opacity-50'}`}>
                                     <span className="text-muted small fw-black text-uppercase tracking-widest mb-3 d-block" style={{ fontSize: '9px' }}>Short Break</span>
                                     <div className="d-flex gap-3 align-items-center">
                                         <div className="flex-fill">
@@ -218,7 +218,7 @@ const ShiftManagement = ({ offices = [] }) => {
                                 </div>
                             </div>
                             <div className="col-md-6">
-                                <div className={`p-4 rounded-4 border ${isDarkMode ? 'border-white border-opacity-5 bg-white bg-opacity-5' : 'border-light bg-light bg-opacity-50'}`}>
+                                <div className={`p-4 rounded-4 border ${isDarkMode ? 'border-white border-opacity-5 bg-surface' : 'border-light bg-light bg-opacity-50'}`}>
                                     <span className="text-muted small fw-black text-uppercase tracking-widest mb-3 d-block" style={{ fontSize: '9px' }}>Long Break / Lunch</span>
                                     <div className="d-flex gap-3 align-items-center">
                                         <div className="flex-fill">
@@ -272,7 +272,7 @@ const ShiftManagement = ({ offices = [] }) => {
                                 </div>
                             </div>
 
-                            <div className={`p-4 rounded-4 mb-4 d-flex justify-content-between align-items-center ${isDarkMode ? 'bg-white bg-opacity-5' : 'bg-light'}`}>
+                            <div className={`p-4 rounded-4 mb-4 d-flex justify-content-between align-items-center ${isDarkMode ? 'bg-surface' : 'bg-light'}`}>
                                 <div className="text-center flex-fill border-end border-white border-opacity-10">
                                     <span className="text-muted small fw-black text-uppercase d-block mb-1" style={{ fontSize: '8px' }}>Start</span>
                                     <span className="fw-black text-main" style={{ fontSize: '15px' }}>{shift.startTime}</span>

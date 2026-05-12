@@ -326,7 +326,9 @@ const SidebarAttendance = ({ isCollapsed }) => {
                                 <LogIn size={14} /> 
                                 {status?.isWfhApproved || status?.wfhStatus === 'APPROVED' 
                                     ? 'Punch In (WFH)' 
-                                    : (distanceToOffice !== null && distanceToOffice > (status?.officeRadius || 150) ? 'Outside Radius' : 'Punch In')}
+                                    : (distanceToOffice !== null && distanceToOffice > (status?.officeRadius || 150) 
+                                        ? `OUTSIDE RADIUS (${distanceToOffice > 1000 ? (distanceToOffice / 1000).toFixed(2) + 'km' : Math.round(distanceToOffice) + 'm'})` 
+                                        : 'Punch In')}
                             </button>
                             {!isPunchedIn && (
                                 <button 

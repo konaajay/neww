@@ -5,7 +5,7 @@ const ManagerProfile = ({ manager }) => {
   if (!manager) return null;
 
   return (
-    <div className="premium-card p-4 border border-primary border-opacity-10 bg-primary bg-opacity-5 animate-slide-in mb-4">
+    <div className="premium-card p-4 border border-primary border-opacity-20 animate-slide-in mb-4" style={{ background: 'var(--bg-card)', backdropFilter: 'var(--glass-blur)' }}>
       <div className="d-flex align-items-center justify-content-between mb-3">
         <div className="d-flex align-items-center gap-3">
           <div className="p-3 bg-primary bg-opacity-20 rounded-circle text-primary border border-primary border-opacity-20 shadow-glow">

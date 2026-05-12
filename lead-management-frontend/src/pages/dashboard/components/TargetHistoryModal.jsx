@@ -65,7 +65,7 @@ const TargetHistoryModal = ({ isOpen, onClose, user, onEdit }) => {
                             {history.map((entry, idx) => {
                                 const isSuccessful = entry.achievementRate >= 100;
                                 return (
-                                    <div key={idx} className={`p-3 rounded-4 border ${isDarkMode ? 'border-white border-opacity-5 bg-white bg-opacity-[0.02]' : 'border-light bg-light bg-opacity-30'}`}>
+                                    <div key={idx} className={`p-3 rounded-4 border ${isDarkMode ? 'border-white border-opacity-5 bg-surface' : 'border-light bg-light bg-opacity-30'}`}>
                                         <div className="row align-items-center g-3">
                                             <div className="col-12 col-md-3">
                                                 <div className="d-flex align-items-center gap-2 mb-0">
@@ -108,7 +108,7 @@ const TargetHistoryModal = ({ isOpen, onClose, user, onEdit }) => {
 
                 {/* Footer */}
                 <div className="p-4 border-top border-light border-opacity-10">
-                    <button onClick={onClose} className="btn w-100 py-2 rounded-3 fw-black text-uppercase tracking-widest shadow-sm" style={{ fontSize: '10px', background: isDarkMode ? 'rgba(255,255,255,0.05)' : '#f8f9fa', color: 'var(--text-main)' }}>
+                    <button onClick={onClose} className="btn w-100 py-2 rounded-3 fw-black text-uppercase tracking-widest shadow-sm" style={{ fontSize: '10px', background: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}>
                         Close Audit
                     </button>
                 </div>

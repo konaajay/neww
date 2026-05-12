@@ -49,6 +49,7 @@ const AssociateDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isIngestionModalOpen, setIsIngestionModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [leadStatusFilter, setLeadStatusFilter] = useState('ALL');
 
   // 1. STABLE FILTERS (Core fix to prevent API spam)
   const [filters, setFilters] = useState(() => {
@@ -160,14 +161,29 @@ const AssociateDashboard = () => {
   const statusDistribution = dashboardData?.statusDistribution || {};
   
   const filteredLeads = useMemo(() => {
-    if (!searchTerm) return leads;
+    let result = leads;
+    
+    // 1. Status Filter Grouping
+    if (leadStatusFilter !== 'ALL') {
+      result = result.filter(l => {
+        const s = l.status?.toUpperCase() || '';
+        if (leadStatusFilter === 'CALL_BACK') return ['CALL_BACK', 'CALLBACK'].includes(s);
+        if (leadStatusFilter === 'FOLLOW_UP') return !['LOST', 'REJECTED', 'CLOSED', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(s);
+        if (leadStatusFilter === 'CONVERTED') return ['CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(s);
+        if (leadStatusFilter === 'LOST') return ['LOST', 'REJECTED', 'CLOSED'].includes(s);
+        return true;
+      });
+    }
+
+    // 2. Search Term Filter
+    if (!searchTerm) return result;
     const term = searchTerm.toLowerCase();
-    return leads.filter(l => 
+    return result.filter(l => 
       l.name?.toLowerCase().includes(term) || 
       l.email?.toLowerCase().includes(term) || 
       l.mobile?.includes(term)
     );
-  }, [leads, searchTerm]);
+  }, [leads, searchTerm, leadStatusFilter]);
 
   return (
     <DashboardLayout activeTab={activeTab} onTabChange={handleTabChange} role="ASSOCIATE">
@@ -214,21 +230,23 @@ const AssociateDashboard = () => {
           <div className="d-flex flex-column gap-3">
             <div className="row g-3 mb-2 animate-fade-in">
               {[
-                { label: 'Call Back', value: ((stats.statusDistribution?.CALL_BACK || 0) + (stats.statusDistribution?.CALLBACK || 0)), color: 'warning', icon: '📞' },
-                { label: 'Follow Up', value: ((stats.statusDistribution?.FOLLOW_UP || 0) + (stats.statusDistribution?.FOLLOWUP || 0)), color: 'info', icon: '⏳' },
-                { label: 'Converted', value: ((stats.statusDistribution?.CONVERTED || 0) + (stats.statusDistribution?.PAID || 0) + (stats.statusDistribution?.SUCCESS || 0) + (stats.statusDistribution?.EMI || 0)), color: 'success', icon: '✅' },
-                { label: 'Lost', value: ((stats.statusDistribution?.LOST || 0) + (stats.statusDistribution?.REJECTED || 0)), color: 'danger', icon: '❌' }
+                { id: 'CALL_BACK', label: 'Call Back', value: ((stats.statusDistribution?.CALL_BACK || 0) + (stats.statusDistribution?.CALLBACK || 0)), color: 'warning', icon: '📞' },
+                { id: 'FOLLOW_UP', label: 'Follow Up', value: ((stats.statusDistribution?.FOLLOW_UP || 0) + (stats.statusDistribution?.FOLLOWUP || 0)), color: 'info', icon: '⏳' },
+                { id: 'CONVERTED', label: 'Converted', value: ((stats.statusDistribution?.CONVERTED || 0) + (stats.statusDistribution?.PAID || 0) + (stats.statusDistribution?.SUCCESS || 0) + (stats.statusDistribution?.EMI || 0) + (stats.statusDistribution?.PRE_PAYMENT || 0) + (stats.statusDistribution?.['PRE-PAYMENT'] || 0)), color: 'success', icon: '✅' },
+                { id: 'LOST', label: 'Lost', value: ((stats.statusDistribution?.LOST || 0) + (stats.statusDistribution?.REJECTED || 0)), color: 'danger', icon: '❌' }
               ].map((card, i) => (
                 <div key={i} className="col-6 col-md-3">
                   <div 
-                    className="premium-card p-3 border border-main border-opacity-10 shadow-sm d-flex flex-column gap-1 transition-smooth" 
+                    className={`premium-card p-3 border shadow-sm d-flex flex-column gap-1 transition-smooth cursor-pointer ${leadStatusFilter === card.id ? 'border-primary shadow-glow' : 'border-main border-opacity-10'}`} 
                     style={{ 
                       borderRadius: '20px', 
-                      background: 'var(--bg-card)',
-                      backdropFilter: 'var(--glass-blur)'
+                      background: leadStatusFilter === card.id ? 'rgba(var(--primary-rgb), 0.1)' : 'var(--bg-card)',
+                      backdropFilter: 'var(--glass-blur)',
+                      transform: leadStatusFilter === card.id ? 'scale(1.05)' : 'none'
                     }}
+                    onClick={() => setLeadStatusFilter(prev => prev === card.id ? 'ALL' : card.id)}
                   >
-                    <h4 className="mb-0 fw-black text-main" style={{ fontSize: '24px', lineHeight: 1 }}>{card.value}</h4>
+                    <h4 className={`mb-0 fw-black ${leadStatusFilter === card.id ? 'text-primary' : 'text-main'}`} style={{ fontSize: '24px', lineHeight: 1 }}>{card.value}</h4>
                     <small className="text-muted fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '8px' }}>{card.label}</small>
                   </div>
                 </div>

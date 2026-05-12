@@ -87,7 +87,7 @@ const TeamManagement = ({
         <td className="">
           <div className={`badge rounded-pill px-2 py-1 ${user.role === 'MANAGER' ? 'bg-warning bg-opacity-10 text-warning' :
             user.role === 'TEAM_LEADER' ? 'bg-primary bg-opacity-10 text-primary' :
-              'bg-light bg-opacity-5 text-muted'
+            'bg-surface text-muted'
             }`} style={{ fontSize: '8px', fontWeight: '900', letterSpacing: '0.5px' }}>
             {user.role?.replace(/_/g, ' ')}
           </div>
@@ -258,40 +258,43 @@ const TeamManagement = ({
                         }
                         setFormData({ ...formData, role: newRole, supervisorId: defaultSupId });
                       }} required>
-                      <option value="" className="text-dark">Select Target Role...</option>
-                      {roles.filter(r => r.name !== 'USER').map(r => <option key={r.id} value={r.name} className="text-dark">{r.name.replace(/_/g, ' ')}</option>)}
+                      <option value="">Select Target Role...</option>
+                      {roles.filter(r => r.name !== 'USER').map(r => <option key={r.id} value={r.name}>{r.name.replace(/_/g, ' ')}</option>)}
                     </select>
                   </div>
 
                   {(formData.role === 'ASSOCIATE' || formData.role === 'TEAM_LEADER' || formData.role === 'MANAGER') && (
                     <div className="col-12 col-md-6 col-lg-4">
                       <label className="form-label small fw-black text-uppercase text-primary mb-2 tracking-widest" style={{ fontSize: '10px' }}>Hierarchy Mapping (Superior ID)</label>
-                      <select className="ui-input py-3 w-100 border-primary border-opacity-30 fw-black text-uppercase tracking-widest cursor-pointer" value={formData.supervisorId} onChange={e => setFormData({ ...formData, supervisorId: e.target.value })} required>
-                        <option value="" className="text-dark">Select Direct Reporting Lead...</option>
+                      <select className="ui-input py-3 w-100 border-primary border-opacity-30 fw-black text-uppercase tracking-widest cursor-pointer" 
+                        value={formData.supervisorId} onChange={e => setFormData({ ...formData, supervisorId: e.target.value })} required>
+                        <option value="">Select Direct Reporting Lead...</option>
                         {teamLeaders.filter(u => {
                           if (formData.role === 'ASSOCIATE') return u.role === 'TEAM_LEADER';
                           if (formData.role === 'TEAM_LEADER') return u.role === 'MANAGER';
                           if (formData.role === 'MANAGER') return u.role === 'ADMIN';
                           return false;
                         })
-                          .map(sup => <option key={sup.id} value={sup.id} className="text-dark">{sup.name} ({sup.role})</option>)}
+                          .map(sup => <option key={sup.id} value={sup.id}>{sup.name} ({sup.role})</option>)}
                       </select>
                     </div>
                   )}
 
                   <div className="col-12 col-md-6 col-lg-4">
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Office Location</label>
-                    <select className="ui-input py-3 w-100 fw-black text-uppercase tracking-widest cursor-pointer" value={formData.officeId} onChange={e => setFormData({ ...formData, officeId: e.target.value })} required>
-                      <option value="" className="text-dark">Select Office...</option>
-                      {offices.map(o => <option key={o.id} value={o.id} className="text-dark">{o.name}</option>)}
+                    <select className="ui-input py-3 w-100 fw-black text-uppercase tracking-widest cursor-pointer" 
+                      value={formData.officeId} onChange={e => setFormData({ ...formData, officeId: e.target.value })} required>
+                      <option value="">Select Office...</option>
+                      {offices.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
                     </select>
                   </div>
 
                   <div className="col-12 col-md-6 col-lg-4">
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Shift Timing</label>
-                    <select className="ui-input py-3 w-100 fw-black text-uppercase tracking-widest cursor-pointer" value={formData.shiftId} onChange={e => setFormData({ ...formData, shiftId: e.target.value })} required>
-                      <option value="" className="text-dark">Select Shift...</option>
-                      {shifts.map(s => <option key={s.id} value={s.id} className="text-dark">{s.name} ({s.startTime}-{s.endTime})</option>)}
+                    <select className="ui-input py-3 w-100 fw-black text-uppercase tracking-widest cursor-pointer" 
+                      value={formData.shiftId} onChange={e => setFormData({ ...formData, shiftId: e.target.value })} required>
+                      <option value="">Select Shift...</option>
+                      {shifts.map(s => <option key={s.id} value={s.id}>{s.name} ({s.startTime}-{s.endTime})</option>)}
                     </select>
                   </div>
 

@@ -17,8 +17,9 @@ export const MetricCard = memo(({ title, stats, icon: Icon, color, onClick }) =>
     className="premium-card h-100 cursor-pointer border border-light shadow-sm transition-all hover-translate-y-1"
     onClick={onClick}
     style={{
-      borderRadius: '16px',
-      background: '#ffffff',
+      borderRadius: '24px',
+      background: 'var(--bg-card)',
+      backdropFilter: 'var(--glass-blur)',
       position: 'relative',
       overflow: 'hidden',
       minHeight: '140px',
@@ -29,9 +30,9 @@ export const MetricCard = memo(({ title, stats, icon: Icon, color, onClick }) =>
     <div className="p-3 d-flex flex-column h-100">
       <div className="d-flex align-items-start justify-content-between mb-auto">
         <div className="flex-grow-1">
-          <h6 className="fw-black text-uppercase tracking-widest text-muted mb-2" style={{ fontSize: '9px', letterSpacing: '1px', opacity: 0.6 }}>{title}</h6>
+          <h6 className="fw-black text-uppercase tracking-widest text-muted mb-2" style={{ fontSize: '10px', letterSpacing: '1px', opacity: 0.5 }}>{title}</h6>
           <div className="d-flex align-items-baseline gap-2">
-            <span className="fw-black text-dark tabular-nums d-block" style={{ fontSize: '26px', lineHeight: 1, letterSpacing: '-1px' }}>{stats?.primary?.value ?? 0}</span>
+            <span className="fw-black text-main tabular-nums d-block" style={{ fontSize: '32px', lineHeight: 1, letterSpacing: '-1px' }}>{stats?.primary?.value ?? 0}</span>
             {stats?.primary?.label && (
               <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '8px', opacity: 0.5, letterSpacing: '0.5px' }}>{stats?.primary?.label}</span>
             )}
@@ -42,13 +43,13 @@ export const MetricCard = memo(({ title, stats, icon: Icon, color, onClick }) =>
         </div>
       </div>
 
-      <div className="d-flex align-items-center justify-content-between pt-3 border-top border-light mt-3">
+      <div className="d-flex align-items-center justify-content-between pt-3 border-top border-white border-opacity-5 mt-auto">
         {(stats?.secondary || []).map((s, idx) => (
           <div key={idx} className="d-flex flex-column align-items-center">
-            <span className="fw-black text-dark mb-1" style={{ fontSize: '14px', lineHeight: 1 }}>{s?.value ?? 0}</span>
+            <span className="fw-black text-main mb-1" style={{ fontSize: '16px', lineHeight: 1 }}>{s?.value ?? 0}</span>
             <div className="d-flex align-items-center gap-1">
               <div className={`rounded-circle bg-${s?.color || color}`} style={{ width: '6px', height: '6px' }}></div>
-              <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '8px', opacity: 0.6, letterSpacing: '0.5px' }}>{s?.label ?? ''}</span>
+              <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '8px', opacity: 0.4, letterSpacing: '0.5px' }}>{s?.label ?? ''}</span>
             </div>
           </div>
         ))}

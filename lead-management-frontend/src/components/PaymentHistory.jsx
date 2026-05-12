@@ -164,8 +164,11 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
     debouncedFilters.userId, 
     debouncedFilters.status,
     externalUserId, 
-    refreshTrigger
+    refreshTrigger,
+    debouncedFilters.tlId // Ensure associate fetch trigger is separate if needed
   ]);
+
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('ALL');
 
   useEffect(() => {
     if (filters.tlId) {
@@ -188,6 +191,47 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
     setAssociates([]);
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Apply client-side filters for student name and due date
+  const filteredPayments = (payments || []).filter(payment => {
+    if (payment.status === 'CANCELLED') return false;
+    
+    // Status Card Filter
+    if (paymentStatusFilter !== 'ALL') {
+      const s = payment.status?.toUpperCase();
+      const isPaid = ['PAID', 'SUCCESS', 'APPROVED', 'COMPLETED'].includes(s);
+      const isPending = ['PENDING', 'INITIATED', 'PARTIAL', 'PARTIAL_PENDING'].includes(s);
+      
+      const now = new Date();
+      const targetDate = new Date(payment.dueDate || payment.createdAt);
+      const isOverdueByDate = isPending && targetDate < now;
+      const isExplicitOverdue = s === 'FAILED' || s === 'OVERDUE';
+      const isAnyOverdue = isExplicitOverdue || isOverdueByDate;
+
+      if (paymentStatusFilter === 'PAID' && !isPaid) return false;
+      if (paymentStatusFilter === 'PENDING' && (!isPending || isOverdueByDate)) return false;
+      if (paymentStatusFilter === 'OVERDUE' && !isAnyOverdue) return false;
+    }
+
+    if (studentSearch && !(payment.leadName || '').toLowerCase().includes(studentSearch.toLowerCase())) return false;
+    const dueDateStr = payment.dueDate ? payment.dueDate.substring(0, 10) : (payment.createdAt ? payment.createdAt.substring(0, 10) : '');
+    if (dueFrom && dueDateStr < dueFrom) return false;
+    if (dueTo && dueDateStr > dueTo) return false;
+    return true;
+  });
+
+  // Reset to first page when search or filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [studentSearch, dueFrom, dueTo, debouncedFilters]);
+
+  const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredPayments.slice(indexOfFirstItem, indexOfLastItem);
+
   // Only show skeletons on initial load (when no payments exist yet)
   if (loading && (!payments || payments.length === 0)) return (
     <div className="animate-fade-in mt-2">
@@ -197,16 +241,6 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
       </div>
     </div>
   );
-
-  // Apply client-side filters for student name and due date
-  const filteredPayments = (payments || []).filter(payment => {
-    if (payment.status === 'CANCELLED') return false;
-    if (studentSearch && !(payment.leadName || '').toLowerCase().includes(studentSearch.toLowerCase())) return false;
-    const dueDateStr = payment.dueDate ? payment.dueDate.substring(0, 10) : (payment.createdAt ? payment.createdAt.substring(0, 10) : '');
-    if (dueFrom && dueDateStr < dueFrom) return false;
-    if (dueTo && dueDateStr > dueTo) return false;
-    return true;
-  });
 
   const successfulPayments = (payments || []).filter(p => ['PAID', 'SUCCESS', 'APPROVED', 'PARTIAL', 'COMPLETED'].includes(p.status?.toUpperCase()));
   const paymentStats = {
@@ -229,27 +263,29 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
   };
 
   return (
-    <div className="animate-fade-in mt-2">
+    <div className="animate-fade-in mt-2 pb-5">
       {/* Financial Analytics Workspace */}
       <div className="row g-3 mb-4 animate-fade-in">
-        <div className="col-12 col-md-4">
-          <div className="premium-card p-4 border-0 shadow-lg h-100 d-flex flex-column gap-1 overflow-hidden" style={{ borderRadius: '24px', background: 'rgba(255, 255, 255, 0.03)' }}>
-              <h3 className="fw-black text-success mb-0" style={{ fontSize: '38px', lineHeight: 1 }}>₹{paymentStats.totalRevenue.toLocaleString()}</h3>
-              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '10px' }}>Collected</div>
+        {[
+          { id: 'PAID', label: 'Collected', value: `₹${paymentStats.totalRevenue.toLocaleString()}`, color: 'text-success' },
+          { id: 'PENDING', label: 'Pending', value: `₹${paymentStats.pendingRevenue.toLocaleString()}`, color: 'text-dark' },
+          { id: 'OVERDUE', label: 'Overdue', value: paymentStats.overdueCount, color: 'text-danger' }
+        ].map((stat, i) => (
+          <div key={i} className="col-12 col-md-4">
+            <div 
+              className={`premium-card p-4 border shadow-lg h-100 d-flex flex-column gap-1 overflow-hidden cursor-pointer transition-all ${paymentStatusFilter === stat.id ? 'border-primary' : 'border-0'}`} 
+              style={{ 
+                borderRadius: '24px', 
+                background: paymentStatusFilter === stat.id ? 'rgba(var(--primary-rgb), 0.1)' : 'rgba(255, 255, 255, 0.03)',
+                transform: paymentStatusFilter === stat.id ? 'scale(1.02)' : 'none'
+              }}
+              onClick={() => setPaymentStatusFilter(prev => prev === stat.id ? 'ALL' : stat.id)}
+            >
+                <h3 className={`fw-black mb-0 ${paymentStatusFilter === stat.id ? 'text-primary' : stat.color}`} style={{ fontSize: '38px', lineHeight: 1 }}>{stat.value}</h3>
+                <div className="text-muted small fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '10px' }}>{stat.label}</div>
+            </div>
           </div>
-        </div>
-        <div className="col-12 col-md-4">
-          <div className="premium-card p-4 border-0 shadow-lg h-100 d-flex flex-column gap-1 overflow-hidden" style={{ borderRadius: '24px', background: 'rgba(255, 255, 255, 0.03)' }}>
-              <h3 className="fw-black text-dark mb-0" style={{ fontSize: '38px', lineHeight: 1 }}>₹{paymentStats.pendingRevenue.toLocaleString()}</h3>
-              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '10px' }}>Pending</div>
-          </div>
-        </div>
-        <div className="col-12 col-md-4">
-          <div className="premium-card p-4 border-0 shadow-lg h-100 d-flex flex-column gap-1 overflow-hidden" style={{ borderRadius: '24px', background: 'rgba(255, 255, 255, 0.03)' }}>
-              <h3 className="fw-black text-danger mb-0" style={{ fontSize: '38px', lineHeight: 1 }}>{paymentStats.overdueCount}</h3>
-              <div className="text-muted small fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '10px' }}>Overdue</div>
-          </div>
-        </div>
+        ))}
       </div>
 
       <div className="mt-1"></div>
@@ -306,8 +342,9 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
               </tr>
             </thead>
             <tbody>
-              {filteredPayments.map((payment, index) => {
-                const emiId = payment.paymentGatewayId || `E-${(index + 1).toString().padStart(2, '0')}`;
+              {currentItems.map((payment, index) => {
+                const globalIndex = indexOfFirstItem + index;
+                const emiId = payment.paymentGatewayId || `E-${(globalIndex + 1).toString().padStart(2, '0')}`;
                 const isOverdue = payment.status === 'FAILED' || payment.status === 'OVERDUE';
                 const isPending = payment.status === 'PENDING' || payment.status === 'INITIATED' || payment.status === 'PARTIAL';
                 const isPaid = payment.status === 'PAID' || payment.status === 'SUCCESS' || payment.status === 'APPROVED';
@@ -333,8 +370,8 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
                     </td>
                     <td className="py-4">
                       <div className="d-flex flex-column">
-                        <span className={`fw-black small ${isOverdue || isOverdueByDate ? 'text-danger' : 'text-dark'}`}>{dueDate}</span>
-                        <span className="text-muted fw-bold" style={{ fontSize: '9px' }}>{dueTime}</span>
+                        <span className={`fw-black small ${isOverdue || isOverdueByDate ? 'text-danger' : 'text-main'}`}>{dueDate}</span>
+                        <span className="text-muted fw-bold opacity-60" style={{ fontSize: '10px' }}>{dueTime}</span>
                       </div>
                     </td>
                     <td className="py-4">
@@ -390,8 +427,70 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
               })}
             </tbody>
           </table>
+
+          {/* Pagination Controls */}
+          <div className="d-flex justify-content-between align-items-center p-4 border-top border-main border-opacity-10">
+              <div className="text-muted small fw-bold">
+                Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredPayments.length)} of {filteredPayments.length} entries
+              </div>
+              <div className="d-flex gap-2">
+                <button
+                  className={`ui-btn btn-sm px-3 rounded-pill ${currentPage === 1 ? 'opacity-25 cursor-not-allowed' : ''}`}
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  style={{ fontSize: '10px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)' }}
+                >
+                  PREVIOUS
+                </button>
+                
+                <div className="d-flex gap-1">
+                  {[...Array(totalPages)].map((_, i) => {
+                    const pageNum = i + 1;
+                    // Show first, last, and pages around current
+                    if (
+                      pageNum === 1 || 
+                      pageNum === totalPages || 
+                      (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`ui-btn btn-sm rounded-circle d-flex align-items-center justify-content-center p-0 ${currentPage === pageNum ? 'ui-btn-primary' : ''}`}
+                          style={{ 
+                            width: '28px', 
+                            height: '28px', 
+                            fontSize: '10px',
+                            background: currentPage === pageNum ? '' : 'rgba(255,255,255,0.05)',
+                            color: 'var(--text-main)'
+                          }}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    } else if (
+                      pageNum === currentPage - 2 || 
+                      pageNum === currentPage + 2
+                    ) {
+                      return <span key={pageNum} className="text-muted px-1">...</span>;
+                    }
+                    return null;
+                  })}
+                </div>
+
+                <button
+                  className={`ui-btn btn-sm px-3 rounded-pill ${currentPage === totalPages ? 'opacity-25 cursor-not-allowed' : ''}`}
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  style={{ fontSize: '10px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)' }}
+                >
+                  NEXT
+                </button>
+              </div>
+            </div>
+
           
-          {payments.length === 0 && !loading && (
+          {filteredPayments.length === 0 && !loading && (
             <div className="text-center py-5 d-flex flex-column align-items-center opacity-20">
                 <IndianRupee size={48} className="mb-3 text-muted" />
                 <p className="fw-black text-muted text-uppercase mb-0 tracking-widest small">FINANCIAL CLEARANCE NULL</p>

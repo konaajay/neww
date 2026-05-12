@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Clock, AlertCircle, Calendar, CheckSquare, RefreshCw, Plus, Phone, Mail } from 'lucide-react';
+import { Search, Clock, AlertCircle, Calendar, CheckSquare, RefreshCw, Plus, Phone, Mail, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CallOutcomeModal from './CallOutcomeModal';
 import ManualTaskModal from './ManualTaskModal';
@@ -13,6 +13,8 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
   const [dateFilter, setDateFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState(initialFilter);
   const [selectedLead, setSelectedLead] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [reschedulingTask, setReschedulingTask] = useState(null);
   const { activeCall, startCall: logActiveCall } = useAuth();
@@ -151,8 +153,11 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
 
   const filteredTasks = useMemo(() => {
     return processedTasks.filter(task => {
-      // 1. Core Filter: Hide COMPLETED tasks from the active ledger
-      if (task.status === 'COMPLETED') return false;
+      // 1. Core Filter Logic
+      // If we are NOT specifically looking for COMPLETED tasks, hide them by default
+      if (statusFilter !== 'COMPLETED' && task.status === 'COMPLETED') return false;
+      // If we ARE looking for COMPLETED tasks, hide anything that isn't completed
+      if (statusFilter === 'COMPLETED' && task.status !== 'COMPLETED') return false;
 
       const s = searchTerm.toLowerCase();
       const matchesSearch =
@@ -170,10 +175,12 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
 
       let matchesStatus = true;
       if (statusFilter !== 'ALL') {
-        if (statusFilter.toUpperCase() === 'TODAY') {
+        if (statusFilter === 'TODAY') {
           matchesStatus = task.dueDate && isToday(task.dueDate);
-        } else if (statusFilter.toUpperCase() === 'OVERDUE') {
+        } else if (statusFilter === 'OVERDUE') {
           matchesStatus = task.dueDate && isOverdue(task.dueDate) && task.status !== 'COMPLETED';
+        } else if (statusFilter === 'COMPLETED') {
+          matchesStatus = task.status?.toUpperCase() === 'COMPLETED' && isToday(task.updatedAt);
         } else {
           matchesStatus = task.priority && task.priority.toUpperCase() === statusFilter.toUpperCase();
         }
@@ -182,6 +189,17 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
       return matchesSearch && matchesDate && matchesStatus;
     });
   }, [processedTasks, searchTerm, dateFilter, statusFilter]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentTasks = filteredTasks.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Reset page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, dateFilter, statusFilter]);
 
   const handleUpdateTaskStatus = async (taskId, newStatus) => {
     await updateStatus({ taskId, status: newStatus });
@@ -201,13 +219,22 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
       {/* Analytics Summary */}
       <div className="row g-3 mb-1">
         {[
-          { label: "Pending (Today)", color: "primary", value: processedTasks.filter(t => t.status !== 'COMPLETED' && isToday(t.dueDate) && !t.isOverdue).length },
-          { label: "Overdue Tasks", color: "danger", value: processedTasks.filter(t => t.isOverdue && t.status !== 'COMPLETED').length },
-          { label: "Completed Today", color: "success", value: processedTasks.filter(t => t.status?.toUpperCase() === 'COMPLETED' && isToday(t.updatedAt)).length }
+          { id: 'TODAY', label: "Pending (Today)", color: "primary", value: processedTasks.filter(t => t.status !== 'COMPLETED' && isToday(t.dueDate) && !t.isOverdue).length },
+          { id: 'OVERDUE', label: "Overdue Tasks", color: "danger", value: processedTasks.filter(t => t.isOverdue && t.status !== 'COMPLETED').length },
+          { id: 'COMPLETED', label: "Completed Today", color: "success", value: processedTasks.filter(t => t.status?.toUpperCase() === 'COMPLETED' && isToday(t.updatedAt)).length }
         ].map((stat, i) => (
           <div key={i} className="col-12 col-md-4">
-            <div className="premium-card p-3 shadow-lg border border-white border-opacity-5 d-flex flex-column gap-1" style={{ background: 'var(--bg-card)', backdropFilter: 'blur(10px)', borderRadius: '20px' }}>
-              <h3 className="fw-black text-main mb-0 tabular-nums" style={{ fontSize: '32px', lineHeight: 1 }}>{stat.value}</h3>
+            <div 
+              className={`premium-card p-3 shadow-lg border d-flex flex-column gap-1 cursor-pointer transition-all ${statusFilter === stat.id ? 'border-primary' : 'border-white border-opacity-5'}`}
+              style={{ 
+                background: statusFilter === stat.id ? 'rgba(var(--primary-rgb), 0.1)' : 'var(--bg-card)', 
+                backdropFilter: 'blur(10px)', 
+                borderRadius: '20px',
+                transform: statusFilter === stat.id ? 'scale(1.02)' : 'none'
+              }}
+              onClick={() => setStatusFilter(prev => prev === stat.id ? 'ALL' : stat.id)}
+            >
+              <h3 className={`fw-black mb-0 tabular-nums ${statusFilter === stat.id ? 'text-primary' : 'text-main'}`} style={{ fontSize: '32px', lineHeight: 1 }}>{stat.value}</h3>
               <div className="text-muted extra-small fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '9px' }}>{stat.label}</div>
             </div>
           </div>
@@ -262,9 +289,9 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
               ) : filteredTasks.length === 0 ? (
                 <tr><td colSpan="9" className="text-center py-5 opacity-50"><CheckSquare size={32} className="mb-2" /></td></tr>
               ) : (
-                filteredTasks.map((task, idx) => (
+                currentTasks.map((task, idx) => (
                   <tr key={task.id} className="border-bottom border-light hover-bg-light-subtle cursor-pointer" onClick={() => setSelectedLead(task)}>
-                    <td className="ps-4"><span className="text-muted small">{idx + 1}</span></td>
+                    <td className="ps-4"><span className="text-muted small">{indexOfFirstItem + idx + 1}</span></td>
                     <td>
                       <div className="d-flex flex-column">
                         <span className="fw-bold text-main small">{task.name}</span>
@@ -328,6 +355,45 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Task Pagination Footer */}
+        <div className="px-4 py-4 bg-surface bg-opacity-10 border-top border-main border-opacity-10 d-flex align-items-center justify-content-between">
+          <div className="d-flex align-items-center gap-2">
+            <small className="text-muted fw-bold text-uppercase tracking-widest" style={{ fontSize: '10px' }}>
+              Showing {filteredTasks.length > 0 ? indexOfFirstItem + 1 : 0} - {Math.min(indexOfLastItem, filteredTasks.length)}
+            </small>
+            <span className="text-muted opacity-25">|</span>
+            <small className="text-primary fw-black text-uppercase tracking-widest" style={{ fontSize: '10px' }}>
+              Total {filteredTasks.length} Scheduled Tasks
+            </small>
+          </div>
+          
+          <div className="d-flex align-items-center gap-3">
+            <div className="d-flex gap-1">
+              <button 
+                className={`ui-btn btn-sm rounded-pill px-3 py-2 d-flex align-items-center justify-content-center transition-all ${currentPage === 1 ? 'ui-btn-secondary opacity-25' : 'ui-btn-primary shadow-glow'}`}
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              
+              <div className="d-flex align-items-center px-3">
+                <span className="text-main fw-black text-uppercase tracking-widest" style={{ fontSize: '11px' }}>
+                  Page {currentPage} <span className="text-muted opacity-50 mx-1">/</span> {totalPages || 1}
+                </span>
+              </div>
+
+              <button 
+                className={`ui-btn btn-sm rounded-pill px-3 py-2 d-flex align-items-center justify-content-center transition-all ${currentPage >= totalPages ? 'ui-btn-secondary opacity-25' : 'ui-btn-primary shadow-glow'}`}
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
+                disabled={currentPage >= totalPages || totalPages === 0}
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

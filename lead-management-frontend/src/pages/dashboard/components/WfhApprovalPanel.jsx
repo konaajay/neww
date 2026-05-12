@@ -107,7 +107,7 @@ const WfhApprovalPanel = ({ role }) => {
                 </div>
                 <div className="d-flex gap-2">
                     <select 
-                        className="form-select form-select-sm border-0 bg-light rounded-pill px-3 fw-bold"
+                        className="form-select form-select-sm border border-white border-opacity-10 bg-surface text-main rounded-pill px-3 fw-bold"
                         style={{ width: '130px', fontSize: '11px' }}
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
@@ -122,7 +122,7 @@ const WfhApprovalPanel = ({ role }) => {
                         <input 
                             type="text" 
                             placeholder="Search associates..." 
-                            className="form-control ps-5 border-0 bg-light rounded-pill small fw-bold"
+                            className="form-control ps-5 border border-white border-opacity-10 bg-surface text-main rounded-pill small fw-bold"
                             style={{ width: '200px' }}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -136,15 +136,15 @@ const WfhApprovalPanel = ({ role }) => {
                     <div className="spinner-border text-primary"></div>
                 </div>
             ) : filteredRequests.length === 0 ? (
-                <div className="text-center py-5 bg-light rounded-4 border border-dashed">
-                    <ShieldCheck size={48} className="text-muted opacity-20 mb-3" />
-                    <h6 className="fw-bold text-muted">All clear! No {statusFilter.toLowerCase()} WFH requests found.</h6>
+                <div className="text-center py-5 bg-surface bg-opacity-40 rounded-4 border border-dashed border-main border-opacity-10 shadow-sm animate-pulse-slow">
+                    <ShieldCheck size={48} className="text-primary opacity-20 mb-3" />
+                    <h6 className="fw-black text-muted text-uppercase tracking-widest small">All clear! No {statusFilter.toLowerCase()} WFH requests found.</h6>
                 </div>
             ) : (
                 <div className="table-responsive">
                     <table className="table table-hover align-middle custom-table border-0">
                         <thead>
-                            <tr className="bg-light bg-opacity-50">
+                            <tr className="bg-surface bg-opacity-30">
                                 <th className="border-0 small fw-black text-muted text-uppercase tracking-widest ps-4">Associate</th>
                                 <th className="border-0 small fw-black text-muted text-uppercase tracking-widest">Duration</th>
                                 <th className="border-0 small fw-black text-muted text-uppercase tracking-widest">Status</th>
@@ -211,7 +211,7 @@ const WfhApprovalPanel = ({ role }) => {
                                                         </button>
                                                     </>
                                                 ) : (
-                                                    <span className="badge bg-light text-muted rounded-pill px-3 py-2 border border-dashed fw-bold" style={{ fontSize: '9px' }}>
+                                                    <span className="badge bg-surface bg-opacity-50 text-muted rounded-pill px-3 py-2 border border-white border-opacity-10 fw-black" style={{ fontSize: '9px' }}>
                                                         Pending Authorization
                                                     </span>
                                                 )
