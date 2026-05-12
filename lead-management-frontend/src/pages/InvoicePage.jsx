@@ -61,7 +61,7 @@ const InvoicePage = () => {
     }
 
     return (
-        <div className="min-vh-100" style={{ background: '#020617', padding: 'min(5vh, 40px) 15px' }}>
+        <div className="min-vh-100 custom-scroll" style={{ background: '#020617', padding: 'min(5vh, 40px) 15px', height: '100vh', overflowY: 'auto' }}>
             <div
                 id="printable-invoice"
                 className="invoice-container shadow-2xl mx-auto"

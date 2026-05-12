@@ -217,7 +217,14 @@ const LeadStatusUpdatePage = () => {
   );
 
   return (
-    <div className={`${isDarkMode ? 'bg-dark text-white' : 'bg-white text-dark'} py-4 w-100`} style={{ minHeight: '100vh', background: isDarkMode ? '#0a0a0a' : '#f8f9fa' }}>
+    <div 
+      className={`${isDarkMode ? 'bg-dark text-white' : 'bg-white text-dark'} py-4 w-100 custom-scroll`} 
+      style={{ 
+        height: '100vh', 
+        overflowY: 'auto', 
+        background: isDarkMode ? '#0a0a0a' : '#f8f9fa' 
+      }}
+    >
       <div className="container py-2" style={{ maxWidth: '720px' }}>
         <button onClick={() => navigate(-1)} className="btn btn-link text-decoration-none text-muted fw-bold small p-0 mb-4 d-flex align-items-center gap-2">
           <ArrowLeft size={16} /> BACK TO COMMAND CENTER
@@ -714,7 +721,7 @@ const LeadStatusUpdatePage = () => {
                 </div>
 
                 <div className="pt-2 text-center">
-                  {!['INTERESTED', 'EMI', 'PAID', 'CONVERTED'].includes(selectedStatus?.toUpperCase()) && (
+                  {!['EMI', 'PAID', 'CONVERTED'].includes(selectedStatus?.toUpperCase()) && (
                     <button
                       type="submit"
                       disabled={isSubmitting}

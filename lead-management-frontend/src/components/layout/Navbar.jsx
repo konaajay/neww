@@ -348,6 +348,14 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
                       <Key size={14} className="opacity-70" />
                       <span className="fw-black text-uppercase tracking-widest" style={{ fontSize: '10px' }}>Change Password</span>
                     </button>
+
+                    <button 
+                      onClick={() => { onLogout(); setIsProfileOpen(false); }}
+                      className="btn btn-link text-danger d-flex align-items-center gap-3 p-3 rounded-4 border-0 text-decoration-none hover-bg-danger hover-bg-opacity-5 transition-all"
+                    >
+                      <LogOut size={14} className="opacity-70" />
+                      <span className="fw-black text-uppercase tracking-widest" style={{ fontSize: '10px' }}>Sign Out Account</span>
+                    </button>
                   </div>
                 </div>
               </div>
