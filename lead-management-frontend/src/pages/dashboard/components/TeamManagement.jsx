@@ -20,6 +20,14 @@ const TeamManagement = ({
   canAdd = false,
   handleSync
 }) => {
+  useEffect(() => {
+    // Force native select dropdowns to honor dark mode
+    const selects = document.querySelectorAll('select.ui-input');
+    selects.forEach(s => {
+      s.style.colorScheme = 'dark';
+    });
+  }, []);
+
   const { isDarkMode } = useTheme();
   const [activeSubTab, setActiveSubTab] = useState(defaultShowForm ? 'onboarding' : 'active');
   const [formData, setFormData] = useState({
@@ -218,11 +226,17 @@ const TeamManagement = ({
       {activeSubTab === 'onboarding' ? (
         <div className="row justify-content-center animate-slide-in">
           <div className="col-12 col-xl-8">
-            <div className="premium-card overflow-hidden shadow-glow border-0">
-              <div className="card-header bg-primary bg-opacity-5 p-4 border-0 border-bottom border-white border-opacity-5">
-                <h6 className="fw-black mb-0 text-primary text-uppercase tracking-widest small">Create User</h6>
+            <div className="premium-card overflow-hidden shadow-glow border-0" style={{ borderRadius: '24px' }}>
+              <div className="card-header bg-primary bg-opacity-10 p-4 border-0 border-bottom border-white border-opacity-5 d-flex align-items-center gap-3">
+                <div className="p-2 bg-primary rounded-3 shadow-glow">
+                  <UserPlus size={20} className="text-white" />
+                </div>
+                <div>
+                  <h6 className="fw-black mb-0 text-main text-uppercase tracking-widest small">Create New Identity</h6>
+                  <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>INITIALIZING PERSONNEL ONBOARDING PROTOCOL</p>
+                </div>
               </div>
-              <form onSubmit={handleSubmit} className="p-4 bg-surface bg-opacity-10">
+              <form onSubmit={handleSubmit} className="p-4 p-md-5 bg-surface bg-opacity-10">
                 <div className="row g-4">
                   <div className="col-md-6">
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Full Name</label>

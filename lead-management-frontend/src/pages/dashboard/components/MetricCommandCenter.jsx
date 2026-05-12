@@ -31,10 +31,10 @@ export const MetricCard = memo(({ title, stats, icon: Icon, color, onClick }) =>
       <div className="d-flex align-items-start justify-content-between mb-auto">
         <div className="flex-grow-1">
           <h6 className="fw-black text-uppercase tracking-widest text-muted mb-2" style={{ fontSize: '10px', letterSpacing: '1px', opacity: 0.5 }}>{title}</h6>
-          <div className="d-flex align-items-baseline gap-2">
-            <span className="fw-black text-main tabular-nums d-block" style={{ fontSize: '32px', lineHeight: 1, letterSpacing: '-1px' }}>{stats?.primary?.value ?? 0}</span>
+          <div className="d-flex flex-column align-items-start">
+            <span className="fw-black text-main tabular-nums d-block" style={{ fontSize: '32px', lineHeight: 1.1, letterSpacing: '-1px' }}>{stats?.primary?.value ?? 0}</span>
             {stats?.primary?.label && (
-              <span className="text-muted fw-bold text-uppercase" style={{ fontSize: '8px', opacity: 0.5, letterSpacing: '0.5px' }}>{stats?.primary?.label}</span>
+              <span className="text-muted fw-black text-uppercase mt-1" style={{ fontSize: '10px', opacity: 0.8, letterSpacing: '0.8px' }}>{stats?.primary?.label}</span>
             )}
           </div>
         </div>
@@ -68,7 +68,7 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
     const isAssociate = role === 'ASSOCIATE';
     const subjectId = filters?.userId || currentUser?.id;
     const personalRecord = stats?.performance?.find(p => p.userId == subjectId);
-    const statsToUse = (isAssociate || filters?.userId) ? stats : (personalRecord || (hideUsers ? {} : (stats?.performance?.[0] || stats)));
+    const statsToUse = (isAssociate || filters?.userId || filters?.teamId || filters?.managerId || ((role === 'ADMIN' || role === 'MANAGER' || role === 'TL') && !hideUsers)) ? stats : (personalRecord || (hideUsers ? {} : (stats?.performance?.[0] || stats)));
     
     const getCount = (k) => {
       const target = k.toUpperCase().replace(/_/g, '').replace(/\s/g, '');
@@ -122,7 +122,7 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
           color="primary"
           onClick={() => handleNav('attendance', `/attendance`)}
           stats={{
-            primary: { value: stats.presentCount || 0, label: 'Present Today' },
+            primary: { value: stats.presentCount || 0, label: 'WORKING TODAY' },
             secondary: [
               { label: 'Absent', value: stats.absentCount || 0, color: 'danger' },
               { label: 'Present', value: stats.presentCount || 0, color: 'success' },
@@ -141,8 +141,12 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
             color="info"
             onClick={() => handleNav('users', '/users')}
             stats={{
-              primary: { value: statsMemo.totalUsers, label: 'Total Staff' },
+              primary: { 
+                value: statsMemo.totalUsers, 
+                label: (role === 'ADMIN' && !filters?.managerId && !filters?.teamId && !filters?.userId) ? 'STAFF (INCL. ADMIN)' : 'TOTAL STAFF' 
+              },
               secondary: [
+                ...( (role === 'ADMIN' && !filters?.managerId && !filters?.teamId && !filters?.userId) ? [{ label: 'ADMIN', value: statsMemo.getCount('ADMIN'), color: 'success' }] : [] ),
                 { label: 'MGR', value: statsMemo.getCount('MANAGER'), color: 'primary' },
                 { label: 'TL', value: statsMemo.getCount('TEAM_LEADER'), color: 'info' },
                 { label: 'BDA', value: statsMemo.getCount('ASSOCIATE'), color: 'warning' },

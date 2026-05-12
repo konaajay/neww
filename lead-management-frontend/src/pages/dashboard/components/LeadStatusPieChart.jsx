@@ -79,7 +79,7 @@ const LeadStatusPieChart = ({ leads, distribution, isDarkMode }) => {
               type="category" 
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 9, fontWeight: 900, fill: 'var(--text-muted)' }}
+              tick={{ fontSize: 9, fontWeight: 900, fill: isDarkMode ? '#a0aec0' : '#64748b' }}
               width={80}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
@@ -99,7 +99,7 @@ const LeadStatusPieChart = ({ leads, distribution, isDarkMode }) => {
         {data.map((entry, index) => (
           <div key={index} className="d-flex align-items-center gap-2">
             <div className="rounded-circle" style={{ width: 8, height: 8, backgroundColor: getStatusColor(entry.name) }}></div>
-            <span className="fw-black text-muted text-uppercase" style={{ fontSize: '9px' }}>{entry.name} ({entry.value})</span>
+            <span className="fw-black text-uppercase" style={{ fontSize: '9px', color: isDarkMode ? '#a0aec0' : '#64748b' }}>{entry.name} ({entry.value})</span>
           </div>
         ))}
       </div>

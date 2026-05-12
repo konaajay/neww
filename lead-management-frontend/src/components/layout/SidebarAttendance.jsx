@@ -319,8 +319,8 @@ const SidebarAttendance = ({ isCollapsed }) => {
                             <button
                                 id="punchIn"
                                 onClick={handleClockIn}
-                                disabled={distanceToOffice !== null && distanceToOffice > (status?.officeRadius || 150)}
-                                className={`ui-btn w-100 py-2 rounded-3 fw-black text-uppercase tracking-widest d-flex align-items-center justify-content-center gap-2 ${distanceToOffice !== null && distanceToOffice > (status?.officeRadius || 150) ? 'btn-secondary opacity-50' : 'ui-btn-primary shadow-glow'}`}
+                                disabled={distanceToOffice !== null && distanceToOffice > (status?.officeRadius || 150) && !(status?.isWfhApproved || status?.wfhStatus === 'APPROVED')}
+                                className={`ui-btn w-100 py-2 rounded-3 fw-black text-uppercase tracking-widest d-flex align-items-center justify-content-center gap-2 ${ (distanceToOffice !== null && distanceToOffice > (status?.officeRadius || 150) && !(status?.isWfhApproved || status?.wfhStatus === 'APPROVED')) ? 'btn-secondary opacity-50' : 'ui-btn-primary shadow-glow'}`}
                                 style={{ fontSize: '10px' }}
                             >
                                 <LogIn size={14} /> 
