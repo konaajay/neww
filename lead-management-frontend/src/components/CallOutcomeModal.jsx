@@ -963,20 +963,26 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                     <div className="d-flex flex-column gap-4">
                       {/* Fee Summary Cards */}
                       <div className="row g-3">
-                        <div className="col-4">
-                          <div className="p-3 rounded-4 bg-primary bg-opacity-10 border border-primary border-opacity-10">
+                        <div className="col-3">
+                          <div className="p-3 rounded-4 bg-primary bg-opacity-10 border border-primary border-opacity-10 h-100">
                             <p className="text-primary fw-bold text-uppercase mb-1" style={{ fontSize: '8px', letterSpacing: '1px' }}>Total Package</p>
                             <h5 className="fw-black mb-0 text-dark">{feeStructure.fee.totalAmount}</h5>
                           </div>
                         </div>
-                        <div className="col-4">
-                          <div className="p-3 rounded-4 bg-success bg-opacity-10 border border-success border-opacity-10">
+                        <div className="col-3">
+                          <div className="p-3 rounded-4 bg-warning bg-opacity-10 border border-warning border-opacity-10 h-100">
+                            <p className="text-warning fw-bold text-uppercase mb-1" style={{ fontSize: '8px', letterSpacing: '1px', color: '#854d0e' }}>Discount</p>
+                            <h5 className="fw-black mb-0" style={{ color: '#854d0e' }}>{feeStructure.fee.discount || 0}</h5>
+                          </div>
+                        </div>
+                        <div className="col-3">
+                          <div className="p-3 rounded-4 bg-success bg-opacity-10 border border-success border-opacity-10 h-100">
                             <p className="text-success fw-bold text-uppercase mb-1" style={{ fontSize: '8px', letterSpacing: '1px' }}>Total Paid</p>
                             <h5 className="fw-black mb-0 text-dark">{feeStructure.fee.paidAmount}</h5>
                           </div>
                         </div>
-                        <div className="col-4">
-                          <div className="p-3 rounded-4 bg-danger bg-opacity-10 border border-danger border-opacity-10">
+                        <div className="col-3">
+                          <div className="p-3 rounded-4 bg-danger bg-opacity-10 border border-danger border-opacity-10 h-100">
                             <p className="text-danger fw-bold text-uppercase mb-1" style={{ fontSize: '8px', letterSpacing: '1px' }}>Balance Due</p>
                             <h5 className="fw-black mb-0 text-dark">{feeStructure.fee.balanceAmount}</h5>
                           </div>
