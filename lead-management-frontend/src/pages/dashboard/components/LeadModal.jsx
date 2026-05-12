@@ -129,7 +129,7 @@ const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) =
                 <div className={`animate-fade-in ${isDarkMode ? 'bg-slate-900' : 'bg-white'}`}>
                     <BulkIngestion
                         onSuccess={() => {
-                            onSuccess();
+                            if (typeof onSuccess === 'function') onSuccess();
                             setTimeout(() => {
                                 handleClose();
                             }, 1500);

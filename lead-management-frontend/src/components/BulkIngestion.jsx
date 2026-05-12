@@ -89,16 +89,28 @@ const BulkIngestion = ({ onSuccess, assignees = [] }) => {
 
                 <div className={`p-4 rounded-5 border mb-5 ${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-10' : 'bg-light border-dark border-opacity-10'}`}>
                     <div className="row g-3">
-                        <div className="col-12 col-md-6">
-                            <div className={`p-3 rounded-4 ${isDarkMode ? 'bg-black bg-opacity-20' : 'bg-white border'}`}>
-                                <p className="text-muted small mb-1 fw-black opacity-50">RECORDS PROCESSED</p>
-                                <h4 className={`mb-0 fw-black ${isDarkMode ? 'text-white' : 'text-dark'}`}>{uploadResult.total_rows || 0}</h4>
+                        <div className="col-12 col-md-3">
+                            <div className={`p-3 rounded-4 h-100 ${isDarkMode ? 'bg-black bg-opacity-20' : 'bg-white border'}`}>
+                                <p className="text-muted small mb-1 fw-black opacity-50">TOTAL ROWS</p>
+                                <h4 className={`mb-0 fw-black ${isDarkMode ? 'text-white' : 'text-dark'}`}>{uploadResult.totalProcessed || 0}</h4>
                             </div>
                         </div>
-                        <div className="col-12 col-md-6">
-                            <div className={`p-3 rounded-4 ${isDarkMode ? 'bg-black bg-opacity-20' : 'bg-white border'}`}>
-                                <p className="text-muted small mb-1 fw-black opacity-50">STATUS LEAD</p>
-                                <h4 className="mb-0 fw-black text-success">READY</h4>
+                        <div className="col-12 col-md-3">
+                            <div className={`p-3 rounded-4 h-100 ${isDarkMode ? 'bg-black bg-opacity-20' : 'bg-white border'}`}>
+                                <p className="text-success small mb-1 fw-black opacity-50">SUCCESS</p>
+                                <h4 className="mb-0 fw-black text-success">{uploadResult.successCount || 0}</h4>
+                            </div>
+                        </div>
+                        <div className="col-12 col-md-3">
+                            <div className={`p-3 rounded-4 h-100 ${isDarkMode ? 'bg-black bg-opacity-20' : 'bg-white border'}`}>
+                                <p className="text-warning small mb-1 fw-black opacity-50">DUPLICATES</p>
+                                <h4 className="mb-0 fw-black text-warning">{uploadResult.duplicateCount || 0}</h4>
+                            </div>
+                        </div>
+                        <div className="col-12 col-md-3">
+                            <div className={`p-3 rounded-4 h-100 ${isDarkMode ? 'bg-black bg-opacity-20' : 'bg-white border'}`}>
+                                <p className="text-danger small mb-1 fw-black opacity-50">FAILURES</p>
+                                <h4 className="mb-0 fw-black text-danger">{uploadResult.failureCount || 0}</h4>
                             </div>
                         </div>
                     </div>

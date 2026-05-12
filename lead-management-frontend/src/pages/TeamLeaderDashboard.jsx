@@ -152,7 +152,7 @@ const TeamLeaderDashboard = () => {
 
   // 4. MEMOIZED UI DATA
   const statsWithPerf = useMemo(() => ({ ...stats, performance }), [stats, performance]);
-  const membersList = useMemo(() => [user, ...(subordinates || [])].filter(Boolean), [user, subordinates]);
+  const membersList = useMemo(() => subordinates || [], [subordinates]);
 
   const filteredLeads = useMemo(() => {
     if (!searchTerm) return leads;
@@ -309,8 +309,8 @@ const TeamLeaderDashboard = () => {
           <div className="d-flex flex-column gap-3">
             <div className="row g-3 mb-2 animate-fade-in">
               {[
-                { label: 'Call Back', value: (stats.statusDistribution?.CALL_BACK || 0), color: 'warning', icon: '📞' },
-                { label: 'Follow Up', value: (stats.statusDistribution?.FOLLOW_UP || 0), color: 'info', icon: '⏳' },
+                { label: 'Call Back', value: (stats.statusDistribution?.NEW || 0), color: 'warning', icon: '📞' },
+                { label: 'Follow Up', value: ((stats.statusDistribution?.FOLLOW_UP || 0) + (stats.statusDistribution?.CONTACTED || 0)), color: 'info', icon: '⏳' },
                 { label: 'Converted', value: (stats.statusDistribution?.CONVERTED || stats.statusDistribution?.PAID || 0), color: 'success', icon: '✅' },
                 { label: 'Lost', value: (stats.statusDistribution?.LOST || 0), color: 'danger', icon: '❌' }
               ].map((card, i) => (
@@ -433,7 +433,7 @@ const TeamLeaderDashboard = () => {
           />
         )}
         
-        <LeadModal isOpen={isIngestionModalOpen} onClose={() => setIsIngestionModalOpen(false)} onAddLead={handleAddLead} associates={membersList} />
+        <LeadModal isOpen={isIngestionModalOpen} onClose={() => setIsIngestionModalOpen(false)} onAddLead={handleAddLead} onSuccess={handleSync} associates={membersList} />
         <InvoiceModal isOpen={!!selectedInvoice} onClose={() => setSelectedInvoice(null)} invoiceData={selectedInvoice} />
       </div>
     </DashboardLayout>

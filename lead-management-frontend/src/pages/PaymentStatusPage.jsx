@@ -16,13 +16,14 @@ const PaymentStatusPage = () => {
                 const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/public/payments/order/${orderId}`);
                 setOrderData(res.data);
                 
-                // In a real app, we would verify the actual payment status from Cashfree or our backend
-                // For now, if the webhook updated the database, the order might show as PAID
-                // But the public endpoint we have doesn't return status yet.
-                
-                // Let's assume success for now if we reached this page, 
-                // but ideally we should verify with a status endpoint.
-                setStatus('success');
+                const backendStatus = res.data.status?.toUpperCase();
+                if (backendStatus === 'PAID' || backendStatus === 'SUCCESS' || backendStatus === 'COMPLETED') {
+                    setStatus('success');
+                } else if (backendStatus === 'FAILED' || backendStatus === 'CANCELLED') {
+                    setStatus('failed');
+                } else {
+                    setStatus('pending');
+                }
             } catch (err) {
                 setStatus('failed');
             }
@@ -84,6 +85,25 @@ const PaymentStatusPage = () => {
                         <button onClick={() => navigate(`/payment-instruction/${orderId}`)} className="btn btn-primary rounded-pill px-5 py-3 fw-black text-uppercase tracking-widest shadow-glow">
                             Retry Payment Protocol
                         </button>
+                    </div>
+                );
+            case 'pending':
+                return (
+                    <div className="text-center animate-fade-in">
+                        <div className="bg-warning bg-opacity-10 text-warning p-4 rounded-circle d-inline-block mb-4">
+                            <Clock size={64} />
+                        </div>
+                        <h2 className="fw-black mb-2 tracking-tighter" style={{ fontSize: '2.5rem' }}>PAYMENT PENDING</h2>
+                        <p className="text-muted mb-5">We are waiting for confirmation from your bank. This usually takes a few minutes.</p>
+                        
+                        <div className="d-grid gap-3">
+                            <button onClick={() => window.location.reload()} className="btn btn-warning rounded-pill py-3 fw-black text-uppercase tracking-widest text-white shadow-glow">
+                                Refresh Status
+                            </button>
+                            <button onClick={() => window.close()} className="btn btn-link text-muted fw-bold small text-decoration-none">
+                                I'll check back later
+                            </button>
+                        </div>
                     </div>
                 );
             default:

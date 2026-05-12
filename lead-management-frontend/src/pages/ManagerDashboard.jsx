@@ -444,8 +444,8 @@ const ManagerDashboard = () => {
           <div className="d-flex flex-column gap-3">
             <div className="row g-3 mb-2 animate-fade-in">
               {[
-                { label: 'Call Back', value: ((stats.statusDistribution?.CALL_BACK || 0) + (stats.statusDistribution?.CALLBACK || 0)), color: 'warning', icon: '📞' },
-                { label: 'Follow Up', value: ((stats.statusDistribution?.FOLLOW_UP || 0) + (stats.statusDistribution?.FOLLOWUP || 0)), color: 'info', icon: '⏳' },
+                { label: 'Call Back', value: (stats.statusDistribution?.NEW || 0), color: 'warning', icon: '📞' },
+                { label: 'Follow Up', value: ((stats.statusDistribution?.FOLLOW_UP || 0) + (stats.statusDistribution?.FOLLOWUP || 0) + (stats.statusDistribution?.CONTACTED || 0)), color: 'info', icon: '⏳' },
                 { label: 'Converted', value: ((stats.statusDistribution?.CONVERTED || 0) + (stats.statusDistribution?.PAID || 0) + (stats.statusDistribution?.SUCCESS || 0) + (stats.statusDistribution?.EMI || 0)), color: 'success', icon: '✅' },
                 { label: 'Lost', value: ((stats.statusDistribution?.LOST || 0) + (stats.statusDistribution?.REJECTED || 0)), color: 'danger', icon: '❌' }
               ].map((card, i) => (
@@ -571,7 +571,7 @@ const ManagerDashboard = () => {
         )}
 
         {/* Modals moved inside the main wrapping div */}
-        <LeadModal isOpen={isIngestionModalOpen} onClose={() => setIsIngestionModalOpen(false)} onAddLead={handleAddLead} onSuccess={handleSync} associates={teamLeaders} />
+        <LeadModal isOpen={isIngestionModalOpen} onClose={() => setIsIngestionModalOpen(false)} onAddLead={handleAddLead} onSuccess={handleSync} associates={subordinates} />
         <InvoiceModal isOpen={!!selectedInvoice} onClose={() => setSelectedInvoice(null)} invoiceData={selectedInvoice} />
       </div>
     </DashboardLayout>

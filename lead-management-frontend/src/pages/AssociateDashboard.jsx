@@ -78,19 +78,19 @@ const AssociateDashboard = () => {
   const debouncedFilters = useDebounce(stableFilters, 400);
 
   // 2. DATA HOOKS (Single source of truth)
-  const { 
-    data: dashboardData, 
-    isLoading: dashboardLoading 
+  const {
+    data: dashboardData,
+    isLoading: dashboardLoading
   } = useDashboardData(debouncedFilters);
 
   const {
-    leads, 
+    leads,
     loading: leadsLoading,
     updateLead,
     updateStatus,
     recordCallOutcome
   } = useLeads(debouncedFilters, 'ASSOCIATE');
-  
+
   const { tasks, loading: tasksLoading } = useTasks(debouncedFilters);
 
   // Profile hook for manager info
@@ -114,7 +114,7 @@ const AssociateDashboard = () => {
       setIsIngestionModalOpen(true);
       return;
     }
-    
+
     // If we have extra filters (like from/to from a metric card click), apply them
     if (extra && (extra.from || extra.to)) {
       setFilters(prev => ({
@@ -123,7 +123,7 @@ const AssociateDashboard = () => {
         to: extra.to || prev.to
       }));
     }
-    
+
     setActiveTab(tab);
     localStorage.setItem('associate_active_tab', tab);
   };
@@ -159,16 +159,16 @@ const AssociateDashboard = () => {
   const trend = dashboardData?.trend || [];
   const performance = dashboardData?.performance || [];
   const statusDistribution = dashboardData?.statusDistribution || {};
-  
+
   const filteredLeads = useMemo(() => {
     let result = leads;
-    
+
     // 1. Status Filter Grouping
     if (leadStatusFilter !== 'ALL') {
       result = result.filter(l => {
         const s = l.status?.toUpperCase() || '';
-        if (leadStatusFilter === 'CALL_BACK') return ['CALL_BACK', 'CALLBACK'].includes(s);
-        if (leadStatusFilter === 'FOLLOW_UP') return !['LOST', 'REJECTED', 'CLOSED', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(s);
+        if (leadStatusFilter === 'CALL_BACK') return s === 'NEW';
+        if (leadStatusFilter === 'FOLLOW_UP') return ['CONTACTED', 'FOLLOW_UP', 'FOLLOWUP', 'WORKING'].includes(s);
         if (leadStatusFilter === 'CONVERTED') return ['CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(s);
         if (leadStatusFilter === 'LOST') return ['LOST', 'REJECTED', 'CLOSED'].includes(s);
         return true;
@@ -178,9 +178,9 @@ const AssociateDashboard = () => {
     // 2. Search Term Filter
     if (!searchTerm) return result;
     const term = searchTerm.toLowerCase();
-    return result.filter(l => 
-      l.name?.toLowerCase().includes(term) || 
-      l.email?.toLowerCase().includes(term) || 
+    return result.filter(l =>
+      l.name?.toLowerCase().includes(term) ||
+      l.email?.toLowerCase().includes(term) ||
       l.mobile?.includes(term)
     );
   }, [leads, searchTerm, leadStatusFilter]);
@@ -211,14 +211,14 @@ const AssociateDashboard = () => {
                     filters={debouncedFilters}
                     onNavigate={handleTabChange}
                     leads={leads}
-                    vertical={true}
+                    columns={2}
                   />
                 </div>
                 <div className="col-12 col-xl-6">
-                  <TodayTaskList 
-                    leads={leads} 
+                  <TodayTaskList
+                    leads={leads}
                     tasks={tasks}
-                    theme={theme} 
+                    theme={theme}
                   />
                 </div>
               </div>
@@ -230,16 +230,16 @@ const AssociateDashboard = () => {
           <div className="d-flex flex-column gap-3">
             <div className="row g-3 mb-2 animate-fade-in">
               {[
-                { id: 'CALL_BACK', label: 'Call Back', value: ((stats.statusDistribution?.CALL_BACK || 0) + (stats.statusDistribution?.CALLBACK || 0)), color: 'warning', icon: '📞' },
-                { id: 'FOLLOW_UP', label: 'Follow Up', value: ((stats.statusDistribution?.FOLLOW_UP || 0) + (stats.statusDistribution?.FOLLOWUP || 0)), color: 'info', icon: '⏳' },
+                { id: 'CALL_BACK', label: 'Call Back', value: (stats.statusDistribution?.NEW || 0), color: 'warning', icon: '📞' },
+                { id: 'FOLLOW_UP', label: 'Follow Up', value: ((stats.statusDistribution?.FOLLOW_UP || 0) + (stats.statusDistribution?.FOLLOWUP || 0) + (stats.statusDistribution?.CONTACTED || 0)), color: 'info', icon: '⏳' },
                 { id: 'CONVERTED', label: 'Converted', value: ((stats.statusDistribution?.CONVERTED || 0) + (stats.statusDistribution?.PAID || 0) + (stats.statusDistribution?.SUCCESS || 0) + (stats.statusDistribution?.EMI || 0) + (stats.statusDistribution?.PRE_PAYMENT || 0) + (stats.statusDistribution?.['PRE-PAYMENT'] || 0)), color: 'success', icon: '✅' },
                 { id: 'LOST', label: 'Lost', value: ((stats.statusDistribution?.LOST || 0) + (stats.statusDistribution?.REJECTED || 0)), color: 'danger', icon: '❌' }
               ].map((card, i) => (
                 <div key={i} className="col-6 col-md-3">
-                  <div 
-                    className={`premium-card p-3 border shadow-sm d-flex flex-column gap-1 transition-smooth cursor-pointer ${leadStatusFilter === card.id ? 'border-primary shadow-glow' : 'border-main border-opacity-10'}`} 
-                    style={{ 
-                      borderRadius: '20px', 
+                  <div
+                    className={`premium-card p-3 border shadow-sm d-flex flex-column gap-1 transition-smooth cursor-pointer ${leadStatusFilter === card.id ? 'border-primary shadow-glow' : 'border-main border-opacity-10'}`}
+                    style={{
+                      borderRadius: '20px',
                       background: leadStatusFilter === card.id ? 'rgba(var(--primary-rgb), 0.1)' : 'var(--bg-card)',
                       backdropFilter: 'var(--glass-blur)',
                       transform: leadStatusFilter === card.id ? 'scale(1.05)' : 'none'
@@ -284,12 +284,12 @@ const AssociateDashboard = () => {
             </div>
           </div>
         )}
-        
+
         {activeTab === 'attendance' && <AttendanceDashboard filters={filters} role="ASSOCIATE" />}
         {activeTab === 'tasks' && <TaskBoard leads={leads} theme={theme} onUpdateStatus={handleSync} userId={user?.id} startDate={filters.from} endDate={filters.to} />}
         {activeTab === 'payments' && <PaymentHistory role="ASSOCIATE" userId={user?.id} from={filters.from} to={filters.to} hideHeader={true} />}
         {activeTab === 'calls' && <CallLogDashboard userId={user?.id} filters={debouncedFilters} hideHeader={true} />}
-        
+
         {activeTab === 'reports' && (
           <div className="d-flex flex-column gap-4 animate-fade-in">
             <div className="row g-4">
@@ -315,7 +315,7 @@ const AssociateDashboard = () => {
           </div>
         )}
 
-        <LeadModal isOpen={isIngestionModalOpen} onClose={() => setIsIngestionModalOpen(false)} onAddLead={handleAddLead} />
+        <LeadModal isOpen={isIngestionModalOpen} onClose={() => setIsIngestionModalOpen(false)} onAddLead={handleAddLead} onSuccess={handleSync} />
         <InvoiceModal isOpen={!!selectedInvoice} onClose={() => setSelectedInvoice(null)} invoiceData={selectedInvoice} />
       </div>
     </DashboardLayout>
