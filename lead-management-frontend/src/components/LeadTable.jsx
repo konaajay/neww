@@ -86,6 +86,7 @@ const StatusDropdown = ({ lead, pipelineStages, onChange, getStatusColorClass, i
               bottom: openUpwards ? (window.innerHeight - coords.top + 30) : 'auto'
             }}
           >
+            {pipelineStages.map((s) => (
               <div
                 key={s.statusValue}
                 className={`px-3 py-2 text-main hover-bg-primary transition-all cursor-pointer d-flex align-items-center gap-2 border-bottom border-main border-opacity-5`}
