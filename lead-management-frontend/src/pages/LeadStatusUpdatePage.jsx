@@ -247,10 +247,10 @@ const LeadStatusUpdatePage = () => {
             <form onSubmit={handleSubmit}>
               <div className="d-flex flex-column gap-4">
                 {/* Simplified Status & Date Row */}
-                <div className="row g-4 align-items-center">
-                  <div className={['LOST', 'NOT_INTERESTED', 'REJECTED', 'CONVERTED', 'PAID'].includes(selectedStatus?.toUpperCase()) ? "col-12" : "col-12 col-md-6"}>
+                <div className="row g-4 align-items-stretch">
+                  <div className={['LOST', 'NOT_INTERESTED', 'REJECTED', 'PAID'].includes(selectedStatus?.toUpperCase()) && lead?.status?.toUpperCase() !== 'CONVERTED' ? "col-12" : "col-12 col-md-6"}>
                     <label className="form-label small fw-bold text-uppercase text-muted tracking-wider mb-2 d-block">System Status</label>
-                    <div className={`d-flex align-items-center gap-3 p-3 rounded-4 border border-secondary border-opacity-10 ${isDarkMode ? 'bg-surface bg-opacity-80' : 'bg-light'}`}>
+                    <div className={`d-flex align-items-center gap-3 p-3 rounded-4 border border-secondary border-opacity-10 h-100 ${isDarkMode ? 'bg-surface bg-opacity-80' : 'bg-light'}`}>
                       <Activity size={22} className="text-primary" />
                       <div>
                         <span className="fw-bold text-main text-uppercase tracking-normal d-block fs-5">
@@ -269,12 +269,13 @@ const LeadStatusUpdatePage = () => {
                   </div>
 
                   {lead?.status?.toUpperCase() === 'CONVERTED' && (
-                    <div className="col-12 mt-2">
-                      <div className="p-3 rounded-4 bg-success bg-opacity-10 border border-success border-opacity-20 d-flex align-items-center gap-3 animate-fade-in">
+                    <div className="col-12 col-md-6 d-flex flex-column">
+                      <label className="form-label small fw-bold text-uppercase text-muted tracking-wider mb-2 d-block opacity-0">Protocol Status</label>
+                      <div className="p-3 rounded-4 bg-success bg-opacity-10 border border-success border-opacity-20 d-flex align-items-center gap-3 h-100 animate-fade-in">
                         <ShieldCheck size={20} className="text-success" />
                         <div>
                           <h6 className="mb-0 fw-black text-uppercase tracking-wider small text-success">Lead Protocol Finalized</h6>
-                          <small className="text-success opacity-75 fw-bold" style={{ fontSize: '9px' }}>Status modification is locked for converted profiles.</small>
+                          <small className="text-success opacity-75 fw-bold" style={{ fontSize: '9px' }}>Active tracking mode for EMI protocol.</small>
                         </div>
                       </div>
                     </div>
@@ -291,25 +292,27 @@ const LeadStatusUpdatePage = () => {
                           else if (input) input.focus();
                         }}
                       >
-                        <Calendar size={18} className="text-primary opacity-50" />
+                        <div className="p-2 bg-primary bg-opacity-10 rounded-2 text-primary d-flex align-items-center justify-content-center" style={{ width: '32px', height: '32px' }}>
+                          <Calendar size={16} />
+                        </div>
                         <input
                           type="datetime-local"
-                          className="bg-transparent border-0 fw-black text-main w-100 cursor-pointer"
-                          style={{ outline: 'none', fontSize: '13px' }}
+                          className="bg-transparent border-0 fw-bold text-main flex-grow-1 cursor-pointer"
+                          style={{ outline: 'none', fontSize: '13px', color: 'inherit' }}
                           value={followUpDate}
                           onChange={(e) => setFollowUpDate(e.target.value)}
                         />
                         <button 
                           type="button"
-                          className="ui-btn ui-btn-primary btn-sm rounded-pill px-3 py-1 fw-black tracking-widest"
-                          style={{ fontSize: '9px', minWidth: 'fit-content' }}
+                          className="btn btn-primary btn-sm rounded-pill fw-black tracking-widest flex-shrink-0 border-0 shadow-sm"
+                          style={{ fontSize: '9px', padding: '6px 14px' }}
                           onClick={(e) => {
                             e.stopPropagation();
                             const input = e.currentTarget.parentElement.querySelector('input');
                             if (input) input.blur();
                           }}
                         >
-                          DONE
+                          CONFIRM
                         </button>
                       </div>
                     </div>
@@ -320,30 +323,67 @@ const LeadStatusUpdatePage = () => {
                 {/* Status List (Collapsible if not initial) */}
                 {(!initialStatus || showStatusList) && (
                   <div className="animate-fade-in mt-2">
-                    <div className="d-flex align-items-center justify-content-between mb-3">
+                    <div className="mb-3">
                       <label className="form-label small fw-black text-uppercase text-muted tracking-widest mb-0 d-block">Full Pipeline Map</label>
-                      <button type="button" onClick={() => setShowStatusList(false)} className="btn btn-sm p-0 text-muted small fw-bold">CLOSE</button>
                     </div>
                     <div className="row g-2">
-                      {pipelineStages.filter(s => !['CONVERTED', 'PAID'].includes(s.statusValue?.toUpperCase())).map(stage => (
-                        <div key={stage.id} className="col-12 col-sm-6 col-md-4">
-                          <div
-                            onClick={() => {
-                              setSelectedStatus(stage.statusValue);
-                              if (!initialStatus) setShowStatusList(false);
-                            }}
-                            className={`p-3 rounded-4 border cursor-pointer transition-all ${selectedStatus === stage.statusValue ? 'bg-primary bg-opacity-10 border-primary shadow-glow-sm' : isDarkMode ? 'bg-surface bg-opacity-50 border-white border-opacity-10 opacity-60 hover:opacity-100 hover:border-primary' : 'bg-white border-secondary border-opacity-10 opacity-60 hover:opacity-100 hover:border-primary'}`}
-                          >
-                            <span className={`fw-black small text-uppercase tracking-wider ${selectedStatus === stage.statusValue ? 'text-primary' : 'text-muted'}`}>{stage.label}</span>
+                      {['CONVERTED', 'EMI', 'PAID'].includes(lead?.status?.toUpperCase()) ? (
+                        <>
+                          <div className="col-12 col-sm-6 col-md-4">
+                            <div
+                              onClick={() => { setSelectedStatus('PAID'); if (!initialStatus) setShowStatusList(false); }}
+                              className={`p-3 rounded-4 border cursor-pointer transition-all ${selectedStatus === 'PAID' ? 'bg-success bg-opacity-10 border-success shadow-glow-sm' : isDarkMode ? 'bg-surface bg-opacity-50 border-white border-opacity-10 opacity-60 hover:opacity-100 hover:border-success' : 'bg-white border-secondary border-opacity-10 opacity-60 hover:opacity-100 hover:border-success'}`}
+                            >
+                              <span className={`fw-black small text-uppercase tracking-wider ${selectedStatus === 'PAID' ? 'text-success' : 'text-muted'}`}>Payment Complete</span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                          <div className="col-12 col-sm-6 col-md-4">
+                            <div
+                              onClick={() => { 
+                                setSelectedStatus('EMI'); 
+                                setNote('Payment not complete. Rescheduled for follow-up.');
+                                if (!initialStatus) setShowStatusList(false); 
+                              }}
+                              className={`p-3 rounded-4 border cursor-pointer transition-all ${selectedStatus === 'EMI' && note.includes('Payment not complete') ? 'bg-danger bg-opacity-10 border-danger shadow-glow-sm' : isDarkMode ? 'bg-surface bg-opacity-50 border-white border-opacity-10 opacity-60 hover:opacity-100 hover:border-danger' : 'bg-white border-secondary border-opacity-10 opacity-60 hover:opacity-100 hover:border-danger'}`}
+                            >
+                              <span className={`fw-black small text-uppercase tracking-wider ${selectedStatus === 'EMI' && note.includes('Payment not complete') ? 'text-danger' : 'text-muted'}`}>Payment Not Complete</span>
+                            </div>
+                          </div>
+                          <div className="col-12 col-sm-6 col-md-4">
+                            <div
+                              onClick={() => { 
+                                setSelectedStatus('EMI'); 
+                                if (note.includes('Payment not complete')) setNote('');
+                                if (!initialStatus) setShowStatusList(false); 
+                              }}
+                              className={`p-3 rounded-4 border cursor-pointer transition-all ${selectedStatus === 'EMI' && !note.includes('Payment not complete') ? 'bg-warning bg-opacity-10 border-warning shadow-glow-sm' : isDarkMode ? 'bg-surface bg-opacity-50 border-white border-opacity-10 opacity-60 hover:opacity-100 hover:border-warning' : 'bg-white border-secondary border-opacity-10 opacity-60 hover:opacity-100 hover:border-warning'}`}
+                            >
+                              <span className={`fw-black small text-uppercase tracking-wider ${selectedStatus === 'EMI' && !note.includes('Payment not complete') ? 'text-warning' : 'text-muted'}`}>Reschedule Follow-up</span>
+                            </div>
+                          </div>
+
+                        </>
+                      ) : (
+                        pipelineStages.filter(s => !['CONVERTED', 'PAID', 'PAYMENT_DEFAULTED'].includes(s.statusValue?.toUpperCase())).map((stage, idx) => (
+                          <div key={stage.id || stage.statusValue || `stage-${idx}`} className="col-12 col-sm-6 col-md-4">
+                            <div
+                              onClick={() => {
+                                setSelectedStatus(stage.statusValue);
+                                if (!initialStatus) setShowStatusList(false);
+                              }}
+                              className={`p-3 rounded-4 border cursor-pointer transition-all ${selectedStatus === stage.statusValue ? 'bg-primary bg-opacity-10 border-primary shadow-glow-sm' : isDarkMode ? 'bg-surface bg-opacity-50 border-white border-opacity-10 opacity-60 hover:opacity-100 hover:border-primary' : 'bg-white border-secondary border-opacity-10 opacity-60 hover:opacity-100 hover:border-primary'}`}
+                            >
+                              <span className={`fw-black small text-uppercase tracking-wider ${selectedStatus === stage.statusValue ? 'text-primary' : 'text-muted'}`}>{stage.label}</span>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
 
                 {/* Cashfree Payment Link Generation */}
-                {['INTERESTED', 'EMI', 'PAID', 'CONVERTED'].includes(selectedStatus?.toUpperCase()) && (
+                {selectedStatus?.toUpperCase() === 'INTERESTED' && lead?.status?.toUpperCase() !== 'CONVERTED' && (
                   <div className={`p-4 rounded-4 border border-secondary border-opacity-10 animate-fade-in shadow-sm ${isDarkMode ? 'bg-surface bg-opacity-80' : 'bg-white'}`}>
                     <div className="d-flex align-items-center justify-content-between mb-3">
                       <div className="d-flex align-items-center gap-2">
@@ -588,157 +628,45 @@ const LeadStatusUpdatePage = () => {
                   </div>
                 )}
 
-                {/* Converted Status - Payment Logic */}
-                {selectedStatus?.toUpperCase() === 'CONVERTED' && (
-                  <div className={`p-4 rounded-4 border border-secondary border-opacity-10 animate-fade-in shadow-sm ${isDarkMode ? 'bg-surface bg-opacity-80' : 'bg-white'}`}>
-                    <div className="d-flex align-items-center gap-2 mb-4 px-1">
-                      <IndianRupee size={16} className="text-primary" />
-                      <h6 className="mb-0 fw-bold text-uppercase tracking-wider text-main">Payment Details</h6>
+
+
+
+                {/* Interaction Notes - Visible for all except when generating payment links */}
+                {selectedStatus?.toUpperCase() !== 'INTERESTED' && (
+                  <div className="animate-fade-in">
+                    <div className="mt-2">
+                      <label className="form-label small fw-bold text-uppercase text-muted tracking-wider mb-2 d-block px-1">Interaction Notes</label>
+                      <textarea
+                        className={`form-control border border-secondary border-opacity-10 rounded-4 p-4 shadow-sm fw-bold transition-all focus-border-primary ${isDarkMode ? 'bg-surface bg-opacity-50 text-white' : 'bg-white text-dark'}`}
+                        rows="3"
+                        placeholder="Input interaction context here..."
+                        style={{ outline: 'none' }}
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                      ></textarea>
                     </div>
 
-                  <div className="row g-2 mb-3">
-                      <div className="col-6">
+                    <div className="pt-4 text-center">
+                      {(!['EMI', 'PAID', 'CONVERTED'].includes(selectedStatus?.toUpperCase()) || ['CONVERTED', 'EMI', 'PAID'].includes(lead?.status?.toUpperCase())) && (
                         <button
-                          type="button"
-                          onClick={() => setPaymentType('FULL')}
-                          className={`w-100 py-3 rounded-3 border fw-bold text-uppercase tracking-wider transition-all ${paymentType === 'FULL' ? 'bg-primary text-white border-primary shadow-glow-sm' : isDarkMode ? 'bg-surface bg-opacity-50 text-muted border-transparent' : 'bg-light text-muted border-secondary border-opacity-10'}`}
-                          style={{ fontSize: '11px' }}
+                          type="submit"
+                          disabled={isSubmitting}
+                          className="w-100 py-3 ui-btn ui-btn-primary rounded-pill fw-black text-uppercase tracking-widest shadow-glow mb-3 transition-all hover-scale"
                         >
-                          Full Settlement
+                          {isSubmitting ? (
+                            <>
+                              <div className="spinner-border spinner-border-sm me-2"></div>
+                              UPDATING SYSTEM...
+                            </>
+                          ) : (
+                            'Commit Status Update'
+                          )}
                         </button>
-                      </div>
-                      <div className="col-6">
-                        <button
-                          type="button"
-                          onClick={() => setPaymentType('EMI')}
-                          className={`w-100 py-3 rounded-3 border fw-bold text-uppercase tracking-wider transition-all ${paymentType === 'EMI' ? 'bg-primary text-white border-primary shadow-glow-sm' : isDarkMode ? 'bg-surface bg-opacity-50 text-muted border-transparent' : 'bg-light text-muted border-secondary border-opacity-10'}`}
-                          style={{ fontSize: '11px' }}
-                        >
-                          EMI Installments
-                        </button>
-                      </div>
-                  </div>
-
-                  {paymentType === 'EMI' && (
-                    <div className={`p-3 rounded-4 shadow-sm animate-slide-up ${isDarkMode ? 'bg-surface' : 'bg-white'}`}>
-                      <div className="row g-2">
-                        <div className="col-6">
-                          <label className="form-label fw-bold text-uppercase text-muted mb-2" style={{ fontSize: '10px' }}>Package Total</label>
-                          <input
-                            type="number"
-                            className={`form-control form-control-lg border-0 rounded-3 fw-bold ${isDarkMode ? 'bg-surface bg-opacity-50 text-white' : 'bg-light text-dark'}`}
-                            style={{ fontSize: '14px' }}
-                            value={totalAmount}
-                            onChange={(e) => setTotalAmount(e.target.value)}
-                          />
-                        </div>
-                        <div className="col-6">
-                          <label className="form-label fw-bold text-uppercase text-muted mb-2" style={{ fontSize: '10px' }}>Commitment</label>
-                          <input
-                            type="number"
-                            className={`form-control form-control-lg border border-secondary border-opacity-10 rounded-3 fw-bold ${isDarkMode ? 'bg-surface text-white' : 'bg-white text-dark'}`}
-                            style={{ fontSize: '14px' }}
-                            value={initialAmount}
-                            onChange={(e) => setInitialAmount(e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="mt-4">
-                        <div className="d-flex align-items-center justify-content-between mb-3">
-                          <label className="form-label fw-bold text-uppercase text-muted mb-0" style={{ fontSize: '10px' }}>Installment Breakdown (Max 5 Total)</label>
-                          <button 
-                            type="button" 
-                            disabled={installments.length >= 4}
-                            onClick={addInstallment} 
-                            className={`btn btn-sm btn-link text-decoration-none fw-bold p-0 ${installments.length >= 4 ? 'text-muted' : 'text-primary'}`} 
-                            style={{ fontSize: '11px' }}
-                          >
-                            {installments.length >= 4 ? 'LIMIT REACHED' : '+ ADD NEW'}
-                          </button>
-                        </div>
-                        <div className="d-flex flex-column gap-2">
-                          {installments.map((inst, idx) => (
-                            <div key={idx} className="d-flex align-items-center gap-2 animate-fade-in">
-                              <input
-                                type="number"
-                                className={`form-control border-0 rounded-3 fw-bold ${isDarkMode ? 'bg-surface bg-opacity-50 text-white' : 'bg-light text-dark'}`}
-                                style={{ fontSize: '13px' }}
-                                placeholder="Amount"
-                                value={inst.amount}
-                                onChange={(e) => handleInstallmentChange(idx, 'amount', e.target.value)}
-                              />
-                              <input
-                                type="datetime-local"
-                                className={`form-control border border-secondary border-opacity-10 rounded-3 fw-bold cursor-pointer ${isDarkMode ? 'bg-surface text-white' : 'bg-white text-dark'}`}
-                                style={{ fontSize: '13px' }}
-                                value={inst.dueDate}
-                                onClick={(e) => e.target.showPicker && e.target.showPicker()}
-                                onChange={(e) => handleInstallmentChange(idx, 'dueDate', e.target.value)}
-                              />
-                              <button type="button" onClick={() => removeInstallment(idx)} className="btn btn-sm text-danger p-0">
-                                <X size={12} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className={`mt-4 p-3 rounded-3 text-center fw-bold text-uppercase tracking-wider ${isMatch ? 'bg-success bg-opacity-10 text-success' : 'bg-danger bg-opacity-10 text-danger'}`} style={{ fontSize: '11px' }}>
-                          {isMatch ? 'Total Balanced' : `Pending Balance: ₹${balanceRemaining}`}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {paymentType === 'FULL' && (
-                    <div className={`p-3 rounded-4 shadow-sm animate-slide-up text-center ${isDarkMode ? 'bg-surface' : 'bg-white'}`}>
-                      <div className="d-flex align-items-center justify-content-center gap-3">
-                        <IndianRupee size={20} className="text-primary" />
-                        <input
-                          type="number"
-                          className={`form-control form-control-lg border border-secondary border-opacity-10 rounded-3 fw-bold text-center w-50 ${isDarkMode ? 'bg-surface text-white' : 'bg-white text-dark'}`}
-                          style={{ fontSize: '18px' }}
-                          value={totalAmount}
-                          onChange={(e) => setTotalAmount(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-
-                <div className="mt-2">
-                  <label className="form-label small fw-bold text-uppercase text-muted tracking-wider mb-2 d-block px-1">Interaction Notes</label>
-                  <textarea
-                    className={`form-control border border-secondary border-opacity-10 rounded-4 p-4 shadow-sm fw-bold transition-all focus-border-primary ${isDarkMode ? 'bg-surface bg-opacity-50 text-white' : 'bg-white text-dark'}`}
-                    rows="3"
-                    placeholder="Input interaction context here..."
-                    style={{ outline: 'none' }}
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                  ></textarea>
-                </div>
-
-                <div className="pt-2 text-center">
-                  {!['EMI', 'PAID', 'CONVERTED'].includes(selectedStatus?.toUpperCase()) && (
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-100 py-3 ui-btn ui-btn-primary rounded-pill fw-black text-uppercase tracking-widest shadow-glow mb-3 transition-all hover-scale"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <div className="spinner-border spinner-border-sm me-2"></div>
-                          UPDATING...
-                        </>
-                      ) : (
-                        'Update Status'
                       )}
-                    </button>
-                  )}
-                  <small className="text-muted fw-bold text-uppercase" style={{ fontSize: '8px', opacity: 0.5 }}>Accounting Protocol Enforcement System</small>
-                </div>
+                      <small className="text-muted fw-bold text-uppercase d-block" style={{ fontSize: '8px', opacity: 0.5 }}>Protocol Security Enforcement Active</small>
+                    </div>
+                  </div>
+                )}
               </div>
             </form>
           </div>

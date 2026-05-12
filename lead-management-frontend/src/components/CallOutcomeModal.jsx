@@ -301,15 +301,10 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
       } else {
         toast.info("Generating secure payment link...");
       }
-      const res = await leadsApi.createCashfreeOrder(
-        lead.id, 
-        installment.amount, 
-        'EMI_INSTALLMENT', 
-        [], 
-        installment.amount, 
-        0,
-        installment.id 
-      );
+      
+      // SAFE FIX: Use the specific endpoint for existing installments
+      // instead of the 'create-order' endpoint which resets the plan.
+      const res = await api.post(`/payments/${installment.id}/link`);
       if (res.data?.order_id || res.data?.paymentGatewayId) {
         toast.success("Link generated successfully!");
         fetchFeeStructure();
@@ -999,6 +994,7 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                                 <th className="text-muted small fw-bold pb-2">#</th>
                                 <th className="text-muted small fw-bold pb-2">AMOUNT</th>
                                 <th className="text-muted small fw-bold pb-2">DUE DATE</th>
+                                <th className="text-muted small fw-bold pb-2">PAID DATE</th>
                                 <th className="text-muted small fw-bold pb-2 text-end">STATUS</th>
                               </tr>
                             </thead>
@@ -1007,7 +1003,18 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                                 <tr key={`installment-${p.id || idx}`} className="border-bottom border-light border-opacity-50">
                                   <td className="fw-bold small text-muted">{idx + 1}</td>
                                   <td className="fw-black small text-dark">{p.amount}</td>
-                                  <td className="text-muted">{p.dueDate ? formatDate(p.dueDate).split(',')[0] : 'UPFRONT'}</td>
+                                  <td className="text-muted" style={{ fontSize: '11px' }}>
+                                    {p.dueDate ? formatDate(p.dueDate).split(',')[0] : (
+                                      <span className="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-10">UPFRONT</span>
+                                    )}
+                                  </td>
+                                  <td className="text-muted fw-bold" style={{ fontSize: '11px' }}>
+                                    {(p.status === 'PAID' || p.status === 'SUCCESS') && p.updatedAt ? (
+                                      <span className="text-success">{formatDate(p.updatedAt).split(',')[0]}</span>
+                                    ) : (
+                                      <span className="text-muted opacity-50">--</span>
+                                    )}
+                                  </td>
                                   <td className="text-end pe-0">
                                     <div className="d-flex align-items-center justify-content-end gap-2">
                                       <span className={`badge rounded-pill ${p.status === 'PAID' || p.status === 'SUCCESS' ? 'bg-success bg-opacity-10 text-success' : 'bg-warning bg-opacity-10 text-warning'}`} style={{ fontSize: '9px' }}>

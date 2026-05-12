@@ -195,6 +195,7 @@ const AssociateDashboard = () => {
                     filters={debouncedFilters}
                     onNavigate={handleTabChange}
                     leads={leads}
+                    vertical={true}
                   />
                 </div>
                 <div className="col-12 col-xl-6">

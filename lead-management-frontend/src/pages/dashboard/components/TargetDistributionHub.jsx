@@ -210,7 +210,8 @@ const TargetDistributionHub = ({ filters }) => {
         const payloads = Object.entries(distributions).map(([uid, val]) => ({
             userId: parseInt(uid),
             amount: parseFloat(val || 0),
-            month, year, type: 'ASSIGNED'
+            month, year, 
+            type: parseInt(uid) === (filters?.userId || user.id) ? 'DISTRIBUTED' : 'ASSIGNED'
         }));
 
         const total = payloads.reduce((sum, p) => sum + p.amount, 0);

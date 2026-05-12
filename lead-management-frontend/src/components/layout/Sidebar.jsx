@@ -39,7 +39,7 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
         { id: 'tasks', label: 'Team Task ', icon: Layers },
         { id: 'payments', label: 'Revenue Stats', icon: IndianRupee },
         { id: 'calls', label: 'Team Calllogs', icon: PhoneIcon },
-        { id: 'courses', label: 'Courses', icon: BookOpen },
+        // { id: 'courses', label: 'Courses', icon: BookOpen },
         { id: 'settings', label: 'Global Settings', icon: Settings },
       ];
     }
@@ -55,7 +55,7 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
         { id: 'payments', label: 'Team Revenue', icon: IndianRupee },
         { id: 'calls', label: 'Team Calllogs', icon: PhoneIcon },
         { id: 'tasks', label: 'Team Task ', icon: Layers },
-        { id: 'courses', label: 'Courses', icon: BookOpen },
+        // { id: 'courses', label: 'Courses', icon: BookOpen },
         { id: 'reports', label: 'Team Reports', icon: TrendingUp },
       ];
     }
@@ -107,7 +107,7 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
         <div className="d-flex flex-column h-100">
           {/* Sidebar Header - Synced with Main Header for consistency */}
           {!hideHeader && (
-            <div 
+            <div
               className="sidebar-header px-3 border-bottom border-white border-opacity-5 cursor-pointer"
               onClick={onClose}
             >

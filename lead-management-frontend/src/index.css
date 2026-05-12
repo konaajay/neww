@@ -651,9 +651,14 @@ select option {
   width: 2px;
 }
 
-/* Custom Premium Extensions */
+@keyframes pulse {
+  0% { transform: translate(-50%, -50%) scale(0.95); opacity: 0.5; }
+  50% { transform: translate(-50%, -50%) scale(1.05); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(0.95); opacity: 0.5; }
+}
+
 .animate-pulse-slow {
-  animation: pulse 4s infinite;
+  animation: pulse 3s infinite ease-in-out;
 }
 
 @keyframes slideUp {
