@@ -179,16 +179,6 @@ const LeadHistoryModal = ({ isOpen, onClose, lead, onEdit, onRecordCallOutcome, 
           {isFinalized && (
             <>
               <button 
-                className="btn btn-success rounded-3 py-2 fw-bold text-white d-flex align-items-center justify-content-center gap-2 px-3" 
-                style={{ fontSize: '11px' }} 
-                onClick={() => {
-                  onClose();
-                  if (navigate) navigate(`/leads/${lead.id}/fee-structure`);
-                }}
-              >
-                <IndianRupee size={14} /> FEE
-              </button>
-              <button 
                 className="btn btn-primary rounded-3 py-2 fw-bold text-white d-flex align-items-center justify-content-center gap-2 px-3" 
                 style={{ fontSize: '11px' }} 
                 onClick={() => {

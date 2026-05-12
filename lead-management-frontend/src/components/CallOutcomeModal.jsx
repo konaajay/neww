@@ -270,7 +270,8 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
       return;
     }
     
-    const paymentLink = `${window.location.origin}/payment-instruction/${inst.paymentGatewayId}`;
+    const productionUrl = "http://100.30.239.118";
+    const paymentLink = `${productionUrl}/payment-instruction/${inst.paymentGatewayId}`;
     const message = `Hello ${lead.name}, your payment of ₹${inst.amount} for ${lead.courseName || 'the course'} is pending. Please complete the payment using this secure link: ${paymentLink}`;
     
     if (type === 'whatsapp') {
@@ -295,7 +296,11 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
     setGeneratingLinkIds(prev => [...prev, installment.id]);
     
     try {
-      toast.info("Generating secure payment link...");
+      if (installment.paymentGatewayId) {
+        toast.info("Refreshing/Regenerating payment link...");
+      } else {
+        toast.info("Generating secure payment link...");
+      }
       const res = await leadsApi.createCashfreeOrder(
         lead.id, 
         installment.amount, 
@@ -1002,7 +1007,7 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                                       <span className={`badge rounded-pill ${p.status === 'PAID' || p.status === 'SUCCESS' ? 'bg-success bg-opacity-10 text-success' : 'bg-warning bg-opacity-10 text-warning'}`} style={{ fontSize: '9px' }}>
                                         {p.status}
                                       </span>
-                                      {(p.status === 'PENDING') && (
+                                      {(p.status === 'PENDING' || p.status === 'OVERDUE') && (
                                         <>
                                           {!p.paymentGatewayId ? (
                                             <button 
@@ -1043,6 +1048,18 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                                                 }}
                                               >
                                                 <ShieldCheck size={10} />
+                                              </button>
+                                              <button 
+                                                className="btn btn-xs btn-warning p-1 rounded-circle ms-1" 
+                                                title="Regenerate/Refresh Link"
+                                                disabled={generatingLinkIds.includes(p.id)}
+                                                onClick={(e) => { 
+                                                  e.stopPropagation(); 
+                                                  handleGenerateLink(p); 
+                                                }}
+                                                style={{ backgroundColor: '#f59e0b', borderColor: '#f59e0b' }}
+                                              >
+                                                <Zap size={10} className="text-white" />
                                               </button>
                                               <button 
                                                 className="btn btn-xs btn-secondary p-1 rounded-circle ms-1" 
