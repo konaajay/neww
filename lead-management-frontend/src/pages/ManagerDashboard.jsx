@@ -462,10 +462,10 @@ const ManagerDashboard = () => {
               {[
                 { label: 'New', value: ((statusDistribution?.NEW || 0) + (statusDistribution?.WORKING || 0)), color: 'primary', icon: '✨' },
                 { label: 'Follow Up', value: (Object.entries(statusDistribution || {}).reduce((acc, [k, v]) => {
-                  if (!['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(k.toUpperCase())) return acc + v;
+                  if (!['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(k.toUpperCase())) return acc + v;
                   return acc;
                 }, 0)), color: 'info', icon: '⏳' },
-                { label: 'Converted', value: ((statusDistribution?.CONVERTED || 0) + (statusDistribution?.PAID || 0) + (statusDistribution?.SUCCESS || 0) + (statusDistribution?.EMI || 0)), color: 'success', icon: '✅' },
+                { label: 'Converted', value: ((statusDistribution?.CONVERTED || 0) + (statusDistribution?.PAID || 0) + (statusDistribution?.SUCCESS || 0) + (statusDistribution?.EMI || 0) + (statusDistribution?.PRE_PAYMENT || 0) + (statusDistribution?.['PRE-PAYMENT'] || 0)), color: 'success', icon: '✅' },
                 { label: 'Lost', value: ((statusDistribution?.LOST || 0) + (statusDistribution?.REJECTED || 0) + (statusDistribution?.DEAD || 0) + (statusDistribution?.NOT_INTERESTED || 0)), color: 'danger', icon: '❌' }
               ].map((card, i) => (
                 <div key={i} className="col-6 col-md-3">

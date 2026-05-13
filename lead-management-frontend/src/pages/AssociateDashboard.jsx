@@ -167,9 +167,9 @@ const AssociateDashboard = () => {
     if (leadStatusFilter !== 'ALL') {
       result = result.filter(l => {
         const s = l.status?.toUpperCase() || '';
-        if (leadStatusFilter === 'NEW') return ['NEW', 'WORKING'].includes(s);
+        if (leadStatusFilter === 'NEW') return s === 'NEW' || s === 'WORKING';
         if (leadStatusFilter === 'FOLLOW_UP') {
-          return !['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'CLOSED', 'DEAD', 'NOT_INTERESTED'].includes(s);
+          return !['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(s);
         }
         if (leadStatusFilter === 'CONVERTED') return ['CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(s);
         if (leadStatusFilter === 'LOST') return ['LOST', 'REJECTED', 'CLOSED', 'DEAD', 'NOT_INTERESTED'].includes(s);
@@ -234,7 +234,7 @@ const AssociateDashboard = () => {
               {[
                 { id: 'NEW', label: 'New', value: ((statusDistribution.NEW || 0) + (statusDistribution.WORKING || 0)), color: 'primary', icon: '✨' },
                 { id: 'FOLLOW_UP', label: 'Follow Up', value: (Object.entries(statusDistribution || {}).reduce((acc, [k, v]) => {
-                  if (!['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(k.toUpperCase())) return acc + v;
+                  if (!['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(k.toUpperCase())) return acc + v;
                   return acc;
                 }, 0)), color: 'info', icon: '⏳' },
                 { id: 'CONVERTED', label: 'Converted', value: ((statusDistribution.CONVERTED || 0) + (statusDistribution.PAID || 0) + (statusDistribution.SUCCESS || 0) + (statusDistribution.EMI || 0) + (statusDistribution.PRE_PAYMENT || 0) + (statusDistribution['PRE-PAYMENT'] || 0)), color: 'success', icon: '✅' },
