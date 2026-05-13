@@ -38,7 +38,7 @@ const PaymentInstructionPage = () => {
             const baseURL = import.meta.env.VITE_API_BASE_URL || '';
             
             // 1. Fetch exact session ID for this order
-            const sessionUrl = `${baseURL}/api/payments/session/${orderId}`;
+            const sessionUrl = `${baseURL}/api/public/payments/session/${orderId}`;
             console.log('[Payment] Requesting session from:', sessionUrl);
             
             const sessionRes = await axios.get(sessionUrl);
