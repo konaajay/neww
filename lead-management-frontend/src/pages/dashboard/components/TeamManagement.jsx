@@ -236,33 +236,33 @@ const TeamManagement = ({
                 </div>
                 <div>
                   <h6 className="fw-black mb-0 text-main text-uppercase tracking-widest small">Create New Identity</h6>
-                  <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>INITIALIZING PERSONNEL ONBOARDING PROTOCOL</p>
+                  <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '11px' }}>INITIALIZING PERSONNEL ONBOARDING PROTOCOL</p>
                 </div>
               </div>
               <form onSubmit={handleSubmit} className="p-2 p-sm-4 p-md-5 bg-surface bg-opacity-10">
                 <div className="row g-4">
                   <div className="col-md-6">
-                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Full Name</label>
+                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '12px' }}>Full Name</label>
                     <input className="ui-input py-3 w-100 fw-bold" placeholder="Rahul Sharma" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
                   </div>
                   <div className="col-md-6">
-                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Email ID</label>
+                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '12px' }}>Email ID</label>
                     <input type="email" className="ui-input py-3 w-100 fw-bold font-monospace" placeholder="rahul@example.com" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required />
                   </div>
                   <div className="col-12 col-md-6">
-                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Phone Number</label>
+                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '12px' }}>Phone Number</label>
                     <input type="tel" className="ui-input py-3 w-100 fw-bold" placeholder="910000000000" value={formData.mobile} onChange={e => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, '') })} required />
                   </div>
                   <div className="col-12 col-md-6">
-                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Password</label>
+                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '12px' }}>Password</label>
                     <input type="password" className="ui-input py-3 w-100 fw-bold" placeholder="••••••••" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} required />
                   </div>
                   <div className="col-12 col-md-6">
-                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Joining Date</label>
+                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '12px' }}>Joining Date</label>
                     <input type="date" className="ui-input py-3 w-100 fw-bold" value={formData.joiningDate} onChange={e => setFormData({ ...formData, joiningDate: e.target.value })} required />
                   </div>
                   <div className="col-12 col-md-6">
-                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Access Role</label>
+                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '12px' }}>Access Role</label>
                     <select className="ui-input py-3 w-100 fw-black text-uppercase tracking-widest cursor-pointer" value={formData.role}
                       onChange={e => {
                         const newRole = e.target.value;
@@ -282,7 +282,7 @@ const TeamManagement = ({
 
                   {(formData.role === 'ASSOCIATE' || formData.role === 'TEAM_LEADER' || formData.role === 'MANAGER') && (
                     <div className="col-12 col-md-6">
-                      <label className="form-label small fw-black text-uppercase text-primary mb-2 tracking-widest" style={{ fontSize: '10px' }}>Hierarchy Mapping (Superior ID)</label>
+                      <label className="form-label small fw-black text-uppercase text-primary mb-2 tracking-widest" style={{ fontSize: '12px' }}>Hierarchy Mapping (Superior ID)</label>
                       <select className="ui-input py-3 w-100 border-primary border-opacity-30 fw-black text-uppercase tracking-widest cursor-pointer" 
                         value={formData.supervisorId} onChange={e => setFormData({ ...formData, supervisorId: e.target.value })} required>
                         <option value="">Select Direct Reporting Lead...</option>
@@ -298,7 +298,7 @@ const TeamManagement = ({
                   )}
 
                   <div className="col-12 col-md-6">
-                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Office Location</label>
+                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '12px' }}>Office Location</label>
                     <select className="ui-input py-3 w-100 fw-black text-uppercase tracking-widest cursor-pointer" 
                       value={formData.officeId} onChange={e => setFormData({ ...formData, officeId: e.target.value })} required>
                       <option value="">Select Office...</option>
@@ -307,7 +307,7 @@ const TeamManagement = ({
                   </div>
 
                   <div className="col-12 col-md-6">
-                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Shift Timing</label>
+                    <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '12px' }}>Shift Timing</label>
                     <select className="ui-input py-3 w-100 fw-black text-uppercase tracking-widest cursor-pointer" 
                       value={formData.shiftId} onChange={e => setFormData({ ...formData, shiftId: e.target.value })} required>
                       <option value="">Select Shift...</option>
@@ -329,15 +329,15 @@ const TeamManagement = ({
             <table className="table ui-table align-middle mb-0">
               <thead className="bg-surface bg-opacity-20 border-bottom border-white border-opacity-5">
                 <tr>
-                  <th className="ps-4" style={{ fontSize: '10px', width: '60px' }}>S/NO</th>
-                  <th style={{ fontSize: '10px', width: '100px' }}>SUP ID</th>
-                  <th style={{ fontSize: '10px' }}>NAME</th>
-                  <th style={{ fontSize: '10px' }}>PH</th>
-                  <th style={{ fontSize: '10px' }}>EMAIL</th>
-                  <th style={{ fontSize: '10px' }}>ROLE</th>
-                  <th style={{ fontSize: '10px' }}>DOJ</th>
-                  <th style={{ fontSize: '10px' }}>TARGET</th>
-                  <th className="pe-4 text-end" style={{ fontSize: '10px' }}>ACTIONS</th>
+                  <th className="ps-4" style={{ fontSize: '11px', width: '60px' }}>S/NO</th>
+                  <th style={{ fontSize: '11px', width: '100px' }}>SUP ID</th>
+                  <th style={{ fontSize: '11px' }}>NAME</th>
+                  <th style={{ fontSize: '11px' }}>PH</th>
+                  <th style={{ fontSize: '11px' }}>EMAIL</th>
+                  <th style={{ fontSize: '11px' }}>ROLE</th>
+                  <th style={{ fontSize: '11px' }}>DOJ</th>
+                  <th style={{ fontSize: '11px' }}>TARGET</th>
+                  <th className="pe-4 text-end" style={{ fontSize: '11px' }}>ACTIONS</th>
                 </tr>
               </thead>
               <tbody>

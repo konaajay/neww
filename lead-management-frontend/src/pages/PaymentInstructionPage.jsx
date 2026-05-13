@@ -2,21 +2,27 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { IndianRupee, ShieldCheck, CreditCard, Clock, AlertCircle, Zap, Shield, ChevronRight, Fingerprint } from 'lucide-react';
 import axios from 'axios';
+import { load } from '@cashfreepayments/cashfree-js';
 
 const PaymentInstructionPage = () => {
     const { orderId } = useParams();
     const [orderData, setOrderData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [paymentError, setPaymentError] = useState(null);
+    const [paying, setPaying] = useState(false);
 
     useEffect(() => {
         const fetchOrderDetails = async () => {
             try {
                 const baseURL = import.meta.env.VITE_API_BASE_URL || '';
                 const url = `${baseURL}/api/public/payments/order/${orderId}`;
+                console.log('[Payment] Fetching order from:', url);
                 const res = await axios.get(url);
+                console.log('[Payment] Order data received:', res.data);
                 setOrderData(res.data);
             } catch (err) {
+                console.error('[Payment] Failed to fetch order:', err);
                 setError("Payment details could not be retrieved. Please verify the link or contact support.");
             } finally {
                 setLoading(false);
@@ -25,18 +31,48 @@ const PaymentInstructionPage = () => {
         fetchOrderDetails();
     }, [orderId]);
 
-    const handlePayment = () => {
-        if (!orderData?.paymentSessionId) return;
-        
-        const cashfree = new window.Cashfree({
-            mode: "sandbox" 
-        });
-        
-        cashfree.checkout({
-            paymentSessionId: orderData.paymentSessionId,
-            redirectTarget: "_self" 
-        });
+    const startPayment = async () => {
+        setPaymentError(null);
+        setPaying(true);
+        try {
+            const baseURL = import.meta.env.VITE_API_BASE_URL || '';
+            
+            // 1. Fetch exact session ID for this order
+            const sessionUrl = `${baseURL}/api/payments/session/${orderId}`;
+            console.log('[Payment] Requesting session from:', sessionUrl);
+            
+            const sessionRes = await axios.get(sessionUrl);
+            const paymentSessionId = sessionRes.data.payment_session_id;
+
+            if (!paymentSessionId) {
+                setPaymentError("Payment session missing. Please contact admin to regenerate the link.");
+                setPaying(false);
+                return;
+            }
+
+            // 2. Initialize SDK
+            const isProd = orderData?.cashfreeEnvironment?.toUpperCase() === 'PROD';
+            const mode = isProd ? "production" : "sandbox";
+            console.log('[Payment] Initializing Cashfree checkout | Mode:', mode);
+
+            const cashfree = await load({ mode });
+
+            // 3. Launch Checkout Protocol
+            await cashfree.checkout({
+                paymentSessionId: paymentSessionId,
+                redirectTarget: "_self"
+            });
+
+        } catch (err) {
+            console.error('[Payment] Protocol Exception:', err);
+            const errorMsg = err.response?.data?.message || err.message || "Gateway connection failed.";
+            setPaymentError(`PAYMENT_INIT_ERROR: ${errorMsg}`);
+        } finally {
+            setPaying(false);
+        }
     };
+
+    const handlePayment = () => startPayment();
 
     if (loading) return (
         <div className="min-vh-100 bg-main d-flex align-items-center justify-content-center">
@@ -139,14 +175,34 @@ const PaymentInstructionPage = () => {
                                 </div>
                             ) : (
                                 <div className="d-flex flex-column gap-4">
+                                    {paymentError && (
+                                        <div className="p-4 rounded-4 bg-danger bg-opacity-10 border border-danger border-opacity-20 d-flex gap-3 align-items-start">
+                                            <AlertCircle size={18} className="text-danger mt-1 flex-shrink-0" />
+                                            <div>
+                                                <p className="small fw-black text-danger text-uppercase tracking-widest mb-1" style={{fontSize: '9px'}}>Session Error</p>
+                                                <p className="small text-danger mb-0 fw-semibold" style={{opacity: 0.8}}>{paymentError}</p>
+                                            </div>
+                                        </div>
+                                    )}
                                     <button 
                                         onClick={handlePayment}
+                                        disabled={paying}
                                         className="ui-btn ui-btn-primary btn-lg rounded-pill px-5 py-4 fw-black text-uppercase tracking-widest shadow-glow w-100 d-flex align-items-center justify-content-center gap-3 transition-smooth hover-scale"
-                                        style={{ fontSize: '15px', letterSpacing: '4px' }}
+                                        style={{ fontSize: '15px', letterSpacing: '4px', opacity: paying ? 0.7 : 1 }}
                                     >
-                                        <CreditCard size={22} strokeWidth={2.5} />
-                                        Authorize Payment Now
+                                        {paying ? (
+                                            <>
+                                                <span className="spinner-border spinner-border-sm" role="status" />
+                                                Connecting to Gateway...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CreditCard size={22} strokeWidth={2.5} />
+                                                Authorize Payment Now
+                                            </>
+                                        )}
                                     </button>
+
                                     
                                     <div className="row g-3">
                                         <div className="col-6">

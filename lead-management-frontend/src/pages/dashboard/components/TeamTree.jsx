@@ -3,8 +3,6 @@ import { ChevronDown, ChevronRight, BarChart2, Users, User, Shield, Briefcase } 
 
 const TeamTreeItem = ({ item, level = 0, onFocus, currentFocusId }) => {
   const [expanded, setExpanded] = useState(level < 2); // Show first two levels by default
-  
-  // Deduplicate subordinates by ID to prevent backend Cartesian join issues from causing duplicate rows
   const uniqueSubordinates = React.useMemo(() => {
     if (!item.subordinates) return [];
     return Array.from(new Map(item.subordinates.map(sub => [sub.id, sub])).values());
@@ -14,7 +12,7 @@ const TeamTreeItem = ({ item, level = 0, onFocus, currentFocusId }) => {
   const isFocused = currentFocusId === item.id;
 
   const getRoleIcon = (role) => {
-    switch(role) {
+    switch (role) {
       case 'MANAGER': return <Shield size={12} className="text-warning" />;
       case 'TEAM_LEADER': return <Shield size={12} className="text-info" />;
       case 'ASSOCIATE': return <Briefcase size={12} className="text-primary" />;
@@ -26,41 +24,40 @@ const TeamTreeItem = ({ item, level = 0, onFocus, currentFocusId }) => {
     <div className="team-tree-lead position-relative">
       {/* Connector lines for nested items */}
       {level > 0 && (
-        <div 
-          className="position-absolute border-start border-white border-opacity-10" 
-          style={{ 
-            left: `${(level - 1) * 32 + 16}px`, 
-            top: '-12px', 
+        <div
+          className="position-absolute border-start border-white border-opacity-10"
+          style={{
+            left: `${(level - 1) * 32 + 16}px`,
+            top: '-12px',
             bottom: '12px',
-            width: '1px' 
-          }} 
+            width: '1px'
+          }}
         />
       )}
-      
-      <div 
-        className={`d-flex align-items-center gap-2 py-2 px-3 rounded-3 cursor-pointer transition-all mb-1 ${
-          isFocused 
-          ? 'bg-primary bg-opacity-10 border border-primary border-opacity-30 shadow-sm ring-1 ring-primary ring-opacity-20' 
-          : 'hover-bg-surface border border-transparent'
-        }`}
+
+      <div
+        className={`d-flex align-items-center gap-2 py-2 px-3 rounded-3 cursor-pointer transition-all mb-1 ${isFocused
+            ? 'bg-primary bg-opacity-10 border border-primary border-opacity-30 shadow-sm ring-1 ring-primary ring-opacity-20'
+            : 'hover-bg-surface border border-transparent'
+          }`}
         style={{ marginLeft: `${level * 32}px` }}
         onClick={() => onFocus(item.id)}
       >
         <div className="d-flex align-items-center" style={{ width: '24px' }}>
           {hasSub && (
-            <div 
-              onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }} 
+            <div
+              onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
               className="text-muted hover-text-primary transition-all"
             >
               {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             </div>
           )}
         </div>
-        
+
         <div className={`p-1.5 rounded-circle flex-shrink-0 ${isFocused ? 'bg-primary bg-opacity-20' : 'bg-surface border border-white border-opacity-5'}`}>
           {getRoleIcon(item.role)}
         </div>
-        
+
         <div className="flex-grow-1 d-flex align-items-center justify-content-between overflow-hidden">
           <div className="d-flex flex-column overflow-hidden text-truncate">
             <span className={`fw-bold small mb-0 text-truncate ${isFocused ? 'text-primary' : 'text-main'}`}>{item.name}</span>
@@ -68,10 +65,10 @@ const TeamTreeItem = ({ item, level = 0, onFocus, currentFocusId }) => {
               {item.role?.replace(/_/g, ' ')}
             </span>
           </div>
-          
+
           {isFocused && (
             <div className="bg-primary bg-opacity-20 p-1 rounded-circle flex-shrink-0 ms-2">
-               <BarChart2 size={10} className="text-primary animate-pulse" />
+              <BarChart2 size={10} className="text-primary animate-pulse" />
             </div>
           )}
         </div>
@@ -80,11 +77,11 @@ const TeamTreeItem = ({ item, level = 0, onFocus, currentFocusId }) => {
       {expanded && hasSub && (
         <div className="team-tree-children animate-fade-in">
           {uniqueSubordinates.map(sub => (
-            <TeamTreeItem 
-              key={sub.id} 
-              item={sub} 
-              level={level + 1} 
-              onFocus={onFocus} 
+            <TeamTreeItem
+              key={sub.id}
+              item={sub}
+              level={level + 1}
+              onFocus={onFocus}
               currentFocusId={currentFocusId}
             />
           ))}
@@ -151,19 +148,19 @@ const TeamTree = ({ data, onFocus, currentFocusId, onAddUser }) => {
               <p className="mb-0 text-muted fw-bold" style={{ fontSize: '9px' }}>Real-time Chain of Command</p>
             </div>
           </div>
-          
+
 
         </div>
       </div>
-      
+
       <div className="card-body p-3 overflow-auto custom-scrollbar" style={{ maxHeight: '600px' }}>
         {processedData.length > 0 ? (
           <div className="d-flex flex-column">
             {processedData.map(root => (
-              <TeamTreeItem 
+              <TeamTreeItem
                 key={root.id}
-                item={root} 
-                onFocus={onFocus} 
+                item={root}
+                onFocus={onFocus}
                 currentFocusId={currentFocusId}
               />
             ))}
@@ -171,7 +168,7 @@ const TeamTree = ({ data, onFocus, currentFocusId, onAddUser }) => {
         ) : (
           <div className="text-center py-5 d-flex flex-column align-items-center">
             {data ? (
-               <p className="text-muted small fw-bold text-uppercase" style={{ fontSize: '10px' }}>No hierarchy data available</p>
+              <p className="text-muted small fw-bold text-uppercase" style={{ fontSize: '10px' }}>No hierarchy data available</p>
             ) : (
               <>
                 <div className="spinner-border spinner-border-sm text-primary mb-3"></div>
@@ -180,9 +177,9 @@ const TeamTree = ({ data, onFocus, currentFocusId, onAddUser }) => {
             )}
           </div>
         )}
-        
+
         {currentFocusId && (
-          <button 
+          <button
             className="btn btn-outline-primary btn-sm w-100 mt-4 rounded-pill fw-black text-uppercase py-2 shadow-sm animate-fade-in border-opacity-25"
             style={{ fontSize: '10px' }}
             onClick={() => onFocus(null)}
