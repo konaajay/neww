@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { ShieldHalf, Eye, EyeOff, Lock, Mail, Sparkles } from 'lucide-react';
+import { ShieldHalf, Eye, EyeOff, Lock, User } from 'lucide-react';
 import ForgotPasswordModal from '../components/layout/ForgotPasswordModal';
 
 const LoginPage = () => {
@@ -28,11 +28,11 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) return toast.error('All fields required');
+    if (!email || !password) return toast.error('Please enter your credentials');
     try {
       setLoading(true);
       const user = await login(email, password);
-      toast.success('Access Granted');
+      toast.success('Login Successful');
 
       const role = (user?.role || '').toUpperCase();
       let target = '/associate';
@@ -42,7 +42,7 @@ const LoginPage = () => {
 
       navigate(target, { replace: true });
     } catch (err) {
-      const msg = typeof err === 'string' ? err : (err?.response?.data?.message || 'Authentication Failed');
+      const msg = typeof err === 'string' ? err : (err?.response?.data?.message || 'Invalid Username or Password');
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -50,119 +50,92 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-vh-100 w-100 d-flex align-items-center justify-content-center" style={{
-      background: 'radial-gradient(circle at top right, #1e1b4b 0%, #030712 50%, #020617 100%)',
-      overflow: 'hidden',
-      position: 'relative'
+    <div className="min-vh-100 w-100 d-flex align-items-center justify-content-center bg-light" style={{
+      background: '#f8fafc',
+      fontFamily: "'Outfit', sans-serif"
     }}>
-      {/* Background Decorative Elements */}
-      <div className="position-absolute top-0 start-0 w-100 h-100 opacity-20" style={{ pointerEvents: 'none' }}>
-        <div className="position-absolute top-0 end-0 rounded-circle bg-primary blur-3xl" style={{ width: '400px', height: '400px', transform: 'translate(30%, -30%)', filter: 'blur(100px)' }}></div>
-        <div className="position-absolute bottom-0 start-0 rounded-circle bg-indigo-900 blur-3xl" style={{ width: '300px', height: '300px', transform: 'translate(-30%, 30%)', filter: 'blur(100px)' }}></div>
-      </div>
-
-      <div className="container position-relative z-index-10 animate-fade-in" style={{ maxWidth: '440px' }}>
-        {/* Logo Section */}
-        <div className="text-center mb-5 animate-slide-up">
-          <div className="d-inline-flex p-3 bg-primary bg-opacity-10 rounded-pill border border-primary border-opacity-20 shadow-glow-sm mb-3">
+      <div className="container" style={{ maxWidth: '400px' }}>
+        {/* Simple Branding */}
+        <div className="text-center mb-4">
+          <div className="d-inline-flex p-3 bg-white rounded-circle shadow-sm mb-3">
             <ShieldHalf size={32} className="text-primary" />
           </div>
-          <h2 className="fw-black text-main tracking-widest text-uppercase mb-1" style={{ letterSpacing: '4px' }}>GYANTRIX</h2>
-          <div className="d-inline-flex align-items-center gap-2 px-3 py-1 bg-surface bg-opacity-30 rounded-pill border border-white border-opacity-5">
-            <Sparkles size={10} className="text-warning" />
-          </div>
+          <h2 className="fw-bold text-dark mb-1">GYANTRIX</h2>
+          <p className="text-muted small">Sign in to your account</p>
         </div>
 
-        {/* Login Card */}
-        <div className="glass-morphism rounded-4 p-4 p-md-5 shadow-2xl border border-white border-opacity-10 animate-slide-up hover-scale-sm transition-smooth"
-          style={{
-            animationDelay: '0.1s',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 20px rgba(99, 102, 241, 0.05)'
-          }}>
-
-          <form onSubmit={handleSubmit} className="d-flex flex-column gap-4">
+        {/* Simple White Card */}
+        <div className="bg-white rounded-4 p-4 p-md-5 shadow-sm border border-0">
+          <form onSubmit={handleSubmit} className="d-flex flex-column gap-3">
             <div className="form-group">
-              <label className="text-white text-opacity-60 fw-black text-uppercase mb-2 d-block px-1" style={{ fontSize: '9px', letterSpacing: '1.5px' }}>USERNAME</label>
+              <label className="form-label fw-bold text-secondary small text-uppercase mb-2">Username</label>
               <div className="position-relative">
-                <Mail size={16} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-white text-opacity-30" />
+                <User size={18} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" />
                 <input
                   type="email"
-                  className="form-control ps-5 text-white py-3 transition-all"
-                  style={{ 
-                    background: 'rgba(255, 255, 255, 0.03)', 
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    backdropFilter: 'blur(10px)'
-                  }}
-                  placeholder="admin@gyantrix.io"
+                  className="form-control ps-5 py-3 border-light-subtle bg-light bg-opacity-50"
+                  placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
+                  style={{ fontSize: '14px', borderRadius: '12px' }}
                   required
                 />
               </div>
             </div>
 
             <div className="form-group">
-              <div className="d-flex justify-content-between align-items-center mb-2 px-1">
-                <label className="text-white text-opacity-60 fw-black text-uppercase d-block" style={{ fontSize: '9px', letterSpacing: '1.5px' }}>PASSWORD</label>
+              <div className="d-flex justify-content-between align-items-center mb-2">
+                <label className="form-label fw-bold text-secondary small text-uppercase">Password</label>
                 <button
                   type="button"
                   onClick={() => setIsForgotModalOpen(true)}
-                  className="btn btn-link p-0 text-primary fw-bold text-uppercase text-decoration-none hover-opacity-100"
-                  style={{ fontSize: '9px', opacity: 0.8 }}
+                  className="btn btn-link p-0 text-primary text-decoration-none small fw-bold"
+                  style={{ fontSize: '12px' }}
                 >
-                  FORGET PASSWORD
+                  Forgot?
                 </button>
               </div>
               <div className="position-relative">
-                <Lock size={16} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-white text-opacity-30" />
+                <Lock size={18} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted" />
                 <input
                   type={show ? 'text' : 'password'}
-                  className="form-control ps-5 text-white py-3 transition-all"
-                  style={{ 
-                    background: 'rgba(255, 255, 255, 0.03)', 
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    backdropFilter: 'blur(10px)'
-                  }}
-                  placeholder="••••••••"
+                  className="form-control ps-5 py-3 border-light-subtle bg-light bg-opacity-50"
+                  placeholder="Enter password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
+                  style={{ fontSize: '14px', borderRadius: '12px' }}
                   required
                 />
                 <button
                   type="button"
-                  className="btn btn-link position-absolute top-50 end-0 translate-middle-y me-2 p-1 text-white text-opacity-30 border-0 hover-opacity-80"
+                  className="btn btn-link position-absolute top-50 end-0 translate-middle-y me-2 p-1 text-muted border-0 shadow-none"
                   onClick={() => setShow(!show)}
                 >
-                  {show ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {show ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
 
             <button
               type="submit"
-              className="ui-btn ui-btn-primary w-100 py-3 rounded-3 fw-black text-uppercase tracking-widest mt-2 shadow-glow-sm"
+              className="btn btn-primary w-100 py-3 rounded-3 fw-bold text-uppercase mt-3"
               disabled={loading}
-              style={{ fontSize: '12px', height: '54px' }}
+              style={{ 
+                fontSize: '13px', 
+                letterSpacing: '1px',
+                background: '#6366f1',
+                border: 'none',
+                borderRadius: '12px'
+              }}
             >
-              {loading ? (
-                <div className="d-flex align-items-center justify-content-center gap-2">
-                  <span className="spinner-border spinner-border-sm" role="status"></span>
-                  <span>VERIFYING...</span>
-                </div>
-              ) : 'LOGIN'}
+              {loading ? 'Logging in...' : 'Sign In'}
             </button>
           </form>
         </div>
 
-        {/* Footer Info */}
-        <div className="text-center mt-5 opacity-60 animate-fade-in" style={{ animationDelay: '0.4s' }}>
-          <p className="text-white text-opacity-40 small fw-bold mb-0">© 2026 GYANTRIX INTELLIGENCE SYSTEMS</p>
-          <div className="d-flex align-items-center justify-content-center gap-2 mt-1">
-            <div className="dot bg-success animate-pulse"></div>
-            <p className="text-white text-opacity-20 mb-0" style={{ fontSize: '8px', letterSpacing: '2px' }}>ENCRYPTED SESSION • MULTI-CLUSTER ARCHITECTURE</p>
-          </div>
+        {/* Simple Footer */}
+        <div className="text-center mt-4">
+          <p className="text-muted small">© 2026 Gyantrix Intelligence Systems</p>
         </div>
       </div>
 

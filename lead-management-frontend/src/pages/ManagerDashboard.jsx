@@ -60,6 +60,7 @@ const ManagerDashboard = () => {
   const [taskFilter, setTaskFilter] = useState('ALL');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [bulkAssignTlId, setBulkAssignTlId] = useState('');
+  const [statusFilter, setStatusFilter] = useState(null);
 
   // 1. Stable Filters
   const [filterState, setFilterState] = useState(() => {
@@ -151,6 +152,21 @@ const ManagerDashboard = () => {
   const filteredLeads = useMemo(() => {
     const term = searchTerm.toLowerCase();
     return (leads || []).filter(l => {
+      const status = l.status?.toUpperCase();
+      
+      // Status filtering logic
+      if (statusFilter) {
+        if (statusFilter === 'Converted') {
+          if (!['CONVERTED', 'PAID', 'SUCCESS', 'EMI'].includes(status)) return false;
+        } else if (statusFilter === 'Follow Up') {
+          if (!['FOLLOW_UP', 'FOLLOW-UP', 'FOLLOWUP', 'CONTACTED', 'CALL_BACK', 'WORKING'].includes(status)) return false;
+        } else if (statusFilter === 'Call Back') {
+          if (status !== 'NEW') return false;
+        } else if (statusFilter === 'Lost') {
+          if (!['LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(status)) return false;
+        }
+      }
+
       const matchesSearch = !term ||
         l.name?.toLowerCase().includes(term) ||
         l.mobile?.includes(searchTerm) ||
@@ -164,7 +180,7 @@ const ManagerDashboard = () => {
       const matchesUser = allowedTargetIds ? (allowedTargetIds.includes(l.assignedToId) || (!l.assignedToId && allowedTargetIds.includes(l.createdById))) : true;
       return matchesSearch && matchesUnassigned && matchesDate && matchesUser;
     });
-  }, [leads, searchTerm, filterUnassigned, filterState.from, filterState.to, allowedTargetIds]);
+  }, [leads, searchTerm, filterUnassigned, filterState.from, filterState.to, allowedTargetIds, statusFilter]);
 
   const stats = dashboardData?.stats || {};
   const trend = dashboardData?.trend || [];
@@ -451,12 +467,14 @@ const ManagerDashboard = () => {
               ].map((card, i) => (
                 <div key={i} className="col-6 col-md-3">
                   <div 
-                    className="premium-card p-3 border border-main border-opacity-10 shadow-sm d-flex flex-column gap-1 transition-smooth" 
+                    className={`premium-card p-3 border shadow-sm d-flex flex-column gap-1 transition-smooth ${statusFilter === card.label ? 'border-primary bg-primary bg-opacity-10' : 'border-main border-opacity-10'}`} 
                     style={{ 
                       borderRadius: '20px', 
-                      background: 'var(--bg-card)',
-                      backdropFilter: 'var(--glass-blur)'
+                      background: statusFilter === card.label ? 'rgba(var(--primary-rgb), 0.1)' : 'var(--bg-card)',
+                      backdropFilter: 'var(--glass-blur)',
+                      cursor: 'pointer'
                     }}
+                    onClick={() => setStatusFilter(statusFilter === card.label ? null : card.label)}
                   >
                     <h4 className="mb-0 fw-black text-main" style={{ fontSize: '24px', lineHeight: 1 }}>{card.value}</h4>
                     <small className="text-muted fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '8px' }}>{card.label}</small>

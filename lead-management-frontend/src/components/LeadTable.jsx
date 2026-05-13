@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   History, Edit, FileText, Wallet, Zap, ChevronLeft, ChevronRight, 
   Search, Filter, ArrowUpRight, Clock, CheckCircle2, AlertCircle,
@@ -22,14 +22,19 @@ const StatusDropdown = ({ lead, pipelineStages, onChange, getStatusColorClass, i
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       setCoords({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
+        top: rect.bottom,
+        topUp: rect.top,
+        left: rect.left,
         width: rect.width
       });
     }
   };
 
-  const toggleDropdown = () => {
+  const toggleDropdown = (e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
     if (!isOpen) updateCoords();
     setIsOpen(!isOpen);
   };
@@ -73,7 +78,7 @@ const StatusDropdown = ({ lead, pipelineStages, onChange, getStatusColorClass, i
             onClick={() => setIsOpen(false)}
           ></div>
           <div 
-            className="position-absolute shadow-xl rounded-3 border overflow-hidden custom-scroll animate-fade-in"
+            className="position-fixed shadow-xl rounded-3 border overflow-hidden custom-scroll animate-fade-in"
             style={{ 
               zIndex: 9999999, 
               width: '180px', 
@@ -83,7 +88,7 @@ const StatusDropdown = ({ lead, pipelineStages, onChange, getStatusColorClass, i
               borderColor: 'var(--border-color)',
               left: coords.left,
               top: openUpwards ? 'auto' : coords.top + 5,
-              bottom: openUpwards ? (window.innerHeight - coords.top + 30) : 'auto'
+              bottom: openUpwards ? (window.innerHeight - coords.topUp + 5) : 'auto'
             }}
           >
             {pipelineStages.map((s) => (
@@ -143,7 +148,11 @@ const LeadTable = ({
     return Array.from(map.values());
   }, [teamLeaders]);
 
-  const itemsPerPage = 20;
+  const [itemsPerPage, setItemsPerPage] = useState(50);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [leads.length, itemsPerPage]);
 
   const pipelineStages = (propsPipelineStages && propsPipelineStages.length > 0) ? propsPipelineStages : [
     { label: 'New', statusValue: 'NEW', color: 'primary', isRoot: true },
@@ -416,6 +425,20 @@ const LeadTable = ({
           <small className="text-muted fw-bold text-uppercase tracking-widest" style={{ fontSize: '10px' }}>
             Showing {leads.length > 0 ? indexOfFirstItem + 1 : 0} - {Math.min(indexOfLastItem, leads.length)}
           </small>
+          <span className="text-muted opacity-25">|</span>
+          <select 
+            className="bg-transparent border-0 text-primary fw-black text-uppercase tracking-widest" 
+            style={{ fontSize: '10px', cursor: 'pointer', outline: 'none' }}
+            value={itemsPerPage}
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+          >
+            <option value="20" className="bg-dark">20 Per Page</option>
+            <option value="50" className="bg-dark">50 Per Page</option>
+            <option value="100" className="bg-dark">100 Per Page</option>
+          </select>
           <span className="text-muted opacity-25">|</span>
           <small className="text-primary fw-black text-uppercase tracking-widest" style={{ fontSize: '10px' }}>
             Total {leads.length} Registry Assets

@@ -43,7 +43,7 @@ export const MetricCard = memo(({ title, stats, icon: Icon, color, onClick, badg
           <h6 className="fw-black text-uppercase tracking-widest text-muted mb-0" style={{ fontSize: '8px', letterSpacing: '1px', opacity: 0.6 }}>{title}</h6>
         </div>
         {badge && (
-          <div className={`px-2 py-0.5 bg-${badge.color} bg-opacity-10 text-${badge.color} rounded-pill border border-${badge.color} border-opacity-10`} style={{ fontSize: '7px', fontWeight: '900' }}>
+          <div className={`px-3 py-1 bg-${badge.color} bg-opacity-10 text-${badge.color} rounded-pill border border-${badge.color} border-opacity-10`} style={{ fontSize: '10px', fontWeight: '900' }}>
             {badge.text}
           </div>
         )}
@@ -51,7 +51,7 @@ export const MetricCard = memo(({ title, stats, icon: Icon, color, onClick, badg
 
       <div className="mb-auto">
         <div className="d-flex flex-column align-items-start">
-          <h2 className="fw-black text-main tabular-nums mb-0" style={{ fontSize: '24px', lineHeight: 1, letterSpacing: '-1px' }}>
+          <h2 className="fw-black text-main tabular-nums mb-0" style={{ fontSize: '28px', lineHeight: 1, letterSpacing: '-1px' }}>
             {stats?.primary?.value ?? 0}
           </h2>
           {stats?.primary?.label && (
@@ -63,7 +63,7 @@ export const MetricCard = memo(({ title, stats, icon: Icon, color, onClick, badg
       <div className="d-flex align-items-center justify-content-between pt-2 border-top border-white border-opacity-5 mt-3">
         {(stats?.secondary || []).map((s, idx) => (
           <div key={idx} className="d-flex flex-column align-items-start">
-            <span className="fw-black text-main mb-0.5" style={{ fontSize: '13px', lineHeight: 1 }}>{s?.value ?? 0}</span>
+            <span className="fw-black text-main mb-0.5" style={{ fontSize: '15px', lineHeight: 1 }}>{s?.value ?? 0}</span>
             <div className="d-flex align-items-center gap-1">
               <div className={`rounded-circle bg-${s?.color || color}`} style={{ width: '4px', height: '4px' }}></div>
               <span className="text-muted fw-black text-uppercase" style={{ fontSize: '7px', opacity: 0.4, letterSpacing: '0.2px' }}>{s?.label ?? ''}</span>

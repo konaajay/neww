@@ -449,6 +449,23 @@ h6 {
   box-shadow: 0 0 0 4px var(--primary-glow) !important;
 }
 
+@media (max-width: 575px) {
+  .ui-input, .form-control {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+  }
+  
+  /* Prevent native select overlapping on mobile */
+  select.ui-input {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+    padding-right: 2.5rem !important;
+  }
+}
+
 input[type="date"],
 input[type="datetime-local"],
 input[type="time"] {

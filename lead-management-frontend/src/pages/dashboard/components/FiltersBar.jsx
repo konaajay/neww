@@ -159,19 +159,19 @@ const FiltersBar = ({
   };
 
   return (
-    <div className={`premium-card pt-4 pb-4 px-4 animate-fade-in ${isDarkMode ? 'bg-surface bg-opacity-30 border-white border-opacity-5' : 'bg-white border-dark border-opacity-5 shadow-sm'} rounded-5 mb-4`}>
-      <div className="d-flex align-items-center justify-content-between gap-4 overflow-auto no-scrollbar" style={{ whiteSpace: 'nowrap' }}>
+    <div className={`premium-card pt-2 pb-2 px-3 animate-fade-in ${isDarkMode ? 'bg-surface bg-opacity-30 border-white border-opacity-5' : 'bg-white border-dark border-opacity-5 shadow-sm'} rounded-4 mb-3`}>
+      <div className="d-flex align-items-center gap-3 flex-wrap flex-grow-1">
         {/* Left Section: Title + Hierarchy Dropdowns */}
-        <div className="d-flex align-items-center gap-3">
-          <div className="d-flex align-items-center gap-2 pe-4 border-end border-white border-opacity-10">
+        <div className="d-flex align-items-center gap-2 flex-wrap">
+          <div className="d-flex align-items-center gap-2 pe-2 border-end border-white border-opacity-10">
             <div className="p-2 bg-primary bg-opacity-10 rounded-3 text-primary">
               <Command size={14} strokeWidth={2.5} />
             </div>
-            <h5 className="fw-black mb-0 text-main tracking-widest text-uppercase d-none d-xl-block" style={{ fontSize: '10px', letterSpacing: '2px' }}>{title}</h5>
+            <h5 className="fw-black mb-0 text-main tracking-widest text-uppercase d-none d-lg-block" style={{ fontSize: '9px', letterSpacing: '1px' }}>{title}</h5>
           </div>
 
           {!hideUserFilter && role !== 'ASSOCIATE' && (
-            <div className="d-flex align-items-center gap-2.5">
+            <div className="d-flex align-items-center gap-2">
               {role === 'ADMIN' ? (
                 <>
                   <div className="filter-select-wrapper">
@@ -266,7 +266,7 @@ const FiltersBar = ({
         </div>
 
         {/* Right Section: Date Range + Controls */}
-        <div className="d-flex align-items-center gap-3">
+        <div className="d-flex align-items-center gap-3 ms-lg-auto flex-wrap mt-2 mt-lg-0">
           <div className="d-flex align-items-center gap-2">
             <div 
               className={`d-flex align-items-center gap-2 pt-2.5 pb-2.5 px-4 rounded-pill border cursor-pointer hover-bg-opacity transition-all ${isDarkMode ? 'border-white border-opacity-10 bg-white bg-opacity-5 shadow-inner' : 'border-dark border-opacity-5 bg-light shadow-sm'}`}
@@ -276,7 +276,7 @@ const FiltersBar = ({
                <input
                   type="date"
                   className="bg-transparent border-0 text-main fw-black cursor-pointer"
-                  style={{ fontSize: '10px', outline: 'none', width: '90px', background: 'transparent', color: 'inherit', colorScheme: 'dark' }}
+                  style={{ fontSize: '10px', outline: 'none', width: '80px', background: 'transparent', color: 'inherit', colorScheme: 'dark' }}
                   value={filters.from || ""}
                   onClick={(e) => { e.stopPropagation(); if (e.target.showPicker) e.target.showPicker(); }}
                   onChange={(e) => handleFilterChange('from', e.target.value)}
@@ -294,7 +294,7 @@ const FiltersBar = ({
                 <input
                   type="date"
                   className="bg-transparent border-0 text-main fw-black cursor-pointer"
-                  style={{ fontSize: '10px', outline: 'none', width: '90px', background: 'transparent', color: 'inherit', colorScheme: 'dark' }}
+                  style={{ fontSize: '10px', outline: 'none', width: '80px', background: 'transparent', color: 'inherit', colorScheme: 'dark' }}
                   value={filters.to || ""}
                   onClick={(e) => { e.stopPropagation(); if (e.target.showPicker) e.target.showPicker(); }}
                   onChange={(e) => handleFilterChange('to', e.target.value)}
@@ -326,7 +326,7 @@ const FiltersBar = ({
           background: ${isDarkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)'}; 
           border: 1px solid ${isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'}; 
           border-radius: 50px; 
-          padding: 8px 20px; 
+          padding: 6px 15px; 
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           box-shadow: ${isDarkMode ? 'inset 0 2px 4px rgba(0,0,0,0.2)' : 'none'};
         }
@@ -342,7 +342,7 @@ const FiltersBar = ({
           font-size: 10px; 
           text-transform: uppercase; 
           outline: none; 
-          min-width: 100px; 
+          min-width: 80px; 
           color-scheme: dark;
           letter-spacing: 0.5px;
         }

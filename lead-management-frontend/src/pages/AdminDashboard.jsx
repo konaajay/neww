@@ -56,6 +56,7 @@ const AdminDashboard = () => {
   const [isIngestionModalOpen, setIsIngestionModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [statusFilter, setStatusFilter] = useState(null);
 
   // 1. STABLE FILTERS (Core fix to prevent API spam)
   const [filters, setFilters] = useState(() => {
@@ -227,14 +228,33 @@ const AdminDashboard = () => {
   const statusDistribution = dashboardData?.statusDistribution || {};
 
   const filteredLeads = useMemo(() => {
-    if (!searchTerm) return leads;
+    let result = leads;
+    
+    // Filter by status if a status filter is active
+    if (statusFilter) {
+      result = result.filter(l => {
+        const status = l.status?.toUpperCase();
+        if (statusFilter === 'Converted') {
+          return ['CONVERTED', 'PAID', 'SUCCESS', 'EMI'].includes(status);
+        } else if (statusFilter === 'Follow Up') {
+          if (['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(status)) return false;
+        } else if (statusFilter === 'New') {
+          if (!['NEW', 'WORKING'].includes(status)) return false;
+        } else if (statusFilter === 'Lost') {
+          return ['LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(status);
+        }
+        return true;
+      });
+    }
+
+    if (!searchTerm) return result;
     const term = searchTerm.toLowerCase();
-    return leads.filter(l =>
+    return result.filter(l =>
       l.name?.toLowerCase().includes(term) ||
       l.email?.toLowerCase().includes(term) ||
       l.mobile?.includes(term)
     );
-  }, [leads, searchTerm]);
+  }, [leads, searchTerm, statusFilter]);
 
   return (
     <DashboardLayout activeTab={activeTab} onTabChange={handleTabChange} role="ADMIN">
@@ -284,13 +304,24 @@ const AdminDashboard = () => {
           <div className="d-flex flex-column gap-3">
             <div className="row g-3 mb-2 animate-fade-in">
               {[
+                { label: 'New', value: ((statusDistribution.NEW || 0) + (statusDistribution.WORKING || 0)), color: 'warning', icon: '📞' },
+                { label: 'Follow Up', value: (Object.entries(statusDistribution || {}).reduce((acc, [k, v]) => {
+                  if (!['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(k.toUpperCase())) return acc + v;
+                  return acc;
+                }, 0)), color: 'info', icon: '⏳' },
                 { label: 'Converted', value: ((statusDistribution.CONVERTED || 0) + (statusDistribution.PAID || 0) + (statusDistribution.SUCCESS || 0) + (statusDistribution.EMI || 0)), color: 'success', icon: '✅' },
-                { label: 'Interested', value: (statusDistribution.INTERESTED || 0), color: 'warning', icon: '🔥' },
-                { label: 'Follow-up', value: stats.todayFollowups || 0, color: 'info', icon: '⏳' },
-                { label: 'Lost', value: ((statusDistribution.LOST || 0) + (statusDistribution.REJECTED || 0)), color: 'danger', icon: '❌' }
+                { label: 'Lost', value: ((statusDistribution.LOST || 0) + (statusDistribution.REJECTED || 0) + (statusDistribution.DEAD || 0) + (statusDistribution.NOT_INTERESTED || 0)), color: 'danger', icon: '❌' }
               ].map((card, i) => (
                 <div key={i} className="col-6 col-md-3">
-                  <div className="premium-card p-3 border border-white border-opacity-10 shadow-sm d-flex flex-column gap-1" style={{ borderRadius: '20px', background: 'rgba(255,255,255,0.02)' }}>
+                  <div 
+                    className={`premium-card p-3 border shadow-sm d-flex flex-column gap-1 transition-all ${statusFilter === card.label ? 'border-primary bg-primary bg-opacity-10' : 'border-white border-opacity-10'}`} 
+                    style={{ 
+                      borderRadius: '20px', 
+                      background: statusFilter === card.label ? 'rgba(var(--primary-rgb), 0.1)' : 'rgba(255,255,255,0.02)',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => setStatusFilter(statusFilter === card.label ? null : card.label)}
+                  >
                     <h4 className="mb-0 fw-black text-main" style={{ fontSize: '26px', lineHeight: 1 }}>{card.value}</h4>
                     <small className="text-muted fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '8px' }}>{card.label}</small>
                   </div>
