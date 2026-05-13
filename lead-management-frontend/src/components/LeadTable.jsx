@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
   History, Edit, FileText, Wallet, Zap, ChevronLeft, ChevronRight, 
   Search, Filter, ArrowUpRight, Clock, CheckCircle2, AlertCircle,
