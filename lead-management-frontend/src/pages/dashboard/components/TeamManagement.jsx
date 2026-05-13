@@ -211,10 +211,13 @@ const TeamManagement = ({
               placeholder="Search personnel registry..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="form-control bg-surface border-white border-opacity-10 py-2.5 ps-5 rounded-pill transition-all"
+              className="form-control bg-surface border-white border-opacity-10 py-2 ps-5 rounded-pill transition-all"
               style={{
                 fontSize: '11px',
                 width: '100%',
+                textOverflow: 'ellipsis',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
                 background: 'rgba(255,255,255,0.02)',
                 boxShadow: 'inset 0 1px 1px rgba(0,0,0,0.2)'
               }}
@@ -236,7 +239,7 @@ const TeamManagement = ({
                   <p className="text-muted small mb-0 fw-bold opacity-50" style={{ fontSize: '9px' }}>INITIALIZING PERSONNEL ONBOARDING PROTOCOL</p>
                 </div>
               </div>
-              <form onSubmit={handleSubmit} className="p-3 p-md-5 bg-surface bg-opacity-10">
+              <form onSubmit={handleSubmit} className="p-2 p-sm-4 p-md-5 bg-surface bg-opacity-10">
                 <div className="row g-4">
                   <div className="col-md-6">
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '10px' }}>Full Name</label>

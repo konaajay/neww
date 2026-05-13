@@ -110,6 +110,7 @@ const PipelineStageManagement = () => {
         if (!window.confirm("Initialize strategic sales funnel? This will add standard stages (Interested, Follow-up, Lost, Converted).")) return;
         
         const standardStages = [
+            { label: 'New', requireNote: false, requireDate: false, createTask: false, analyticBucket: 'NEW', color: 'primary' },
             { label: 'Follow-up', requireNote: true, requireDate: true, createTask: true, analyticBucket: 'CONTACTED', color: 'info' },
             { label: 'Interested', requireNote: true, requireDate: false, createTask: false, analyticBucket: 'CONTACTED', color: 'warning' },
             { label: 'Lost', requireNote: true, requireDate: false, createTask: false, analyticBucket: 'LOST', color: 'danger' },

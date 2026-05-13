@@ -157,13 +157,13 @@ const ManagerDashboard = () => {
       // Status filtering logic
       if (statusFilter) {
         if (statusFilter === 'Converted') {
-          if (!['CONVERTED', 'PAID', 'SUCCESS', 'EMI'].includes(status)) return false;
+          return ['CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(status);
         } else if (statusFilter === 'Follow Up') {
-          if (!['FOLLOW_UP', 'FOLLOW-UP', 'FOLLOWUP', 'CONTACTED', 'CALL_BACK', 'WORKING'].includes(status)) return false;
-        } else if (statusFilter === 'Call Back') {
-          if (status !== 'NEW') return false;
+          return !['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(status);
+        } else if (statusFilter === 'New') {
+          return ['NEW', 'WORKING'].includes(status);
         } else if (statusFilter === 'Lost') {
-          if (!['LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(status)) return false;
+          return ['LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(status);
         }
       }
 
@@ -460,10 +460,13 @@ const ManagerDashboard = () => {
           <div className="d-flex flex-column gap-3">
             <div className="row g-3 mb-2 animate-fade-in">
               {[
-                { label: 'Call Back', value: (stats.statusDistribution?.NEW || 0), color: 'warning', icon: '📞' },
-                { label: 'Follow Up', value: ((stats.statusDistribution?.FOLLOW_UP || 0) + (stats.statusDistribution?.FOLLOWUP || 0) + (stats.statusDistribution?.CONTACTED || 0)), color: 'info', icon: '⏳' },
-                { label: 'Converted', value: ((stats.statusDistribution?.CONVERTED || 0) + (stats.statusDistribution?.PAID || 0) + (stats.statusDistribution?.SUCCESS || 0) + (stats.statusDistribution?.EMI || 0)), color: 'success', icon: '✅' },
-                { label: 'Lost', value: ((stats.statusDistribution?.LOST || 0) + (stats.statusDistribution?.REJECTED || 0)), color: 'danger', icon: '❌' }
+                { label: 'New', value: ((statusDistribution?.NEW || 0) + (statusDistribution?.WORKING || 0)), color: 'primary', icon: '✨' },
+                { label: 'Follow Up', value: (Object.entries(statusDistribution || {}).reduce((acc, [k, v]) => {
+                  if (!['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(k.toUpperCase())) return acc + v;
+                  return acc;
+                }, 0)), color: 'info', icon: '⏳' },
+                { label: 'Converted', value: ((statusDistribution?.CONVERTED || 0) + (statusDistribution?.PAID || 0) + (statusDistribution?.SUCCESS || 0) + (statusDistribution?.EMI || 0)), color: 'success', icon: '✅' },
+                { label: 'Lost', value: ((statusDistribution?.LOST || 0) + (statusDistribution?.REJECTED || 0) + (statusDistribution?.DEAD || 0) + (statusDistribution?.NOT_INTERESTED || 0)), color: 'danger', icon: '❌' }
               ].map((card, i) => (
                 <div key={i} className="col-6 col-md-3">
                   <div 

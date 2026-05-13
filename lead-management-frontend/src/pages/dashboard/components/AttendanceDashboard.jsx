@@ -212,16 +212,16 @@ const AttendanceDashboard = ({ filters, role }) => {
 
     return (
         <div className="d-flex flex-column gap-4 animate-fade-in">
-            {/* Summary Stats Row */}
-            <div className="row g-4">
+            {/* Summary Stats Row - Optimized for Mobile Scrolling */}
+            <div className="metric-grid-custom mb-2">
                 {[
                     { id: 'PRESENT', label: 'PRESENT', value: summaryStats.present, icon: ShieldCheck, color: '#10b981', gradient: 'rgba(16, 185, 129, 0.1)' },
                     { id: 'ABSENT', label: 'ABSENT', value: summaryStats.absent, icon: X, color: '#ef4444', gradient: 'rgba(239, 68, 68, 0.1)' },
                     { id: 'LATE', label: 'LATE', value: summaryStats.late, icon: Timer, color: '#f59e0b', gradient: 'rgba(245, 158, 11, 0.1)' }
                 ].map((s, i) => (
-                    <div key={i} className="col-md-4">
+                    <div key={i} className="metric-card-wrapper">
                         <div 
-                            className={`premium-card p-4 d-flex align-items-center justify-content-between transition-smooth border shadow-lg cursor-pointer ${attendanceStatusFilter === s.id ? 'border-primary' : 'border-main border-opacity-5'}`} 
+                            className={`premium-card p-3 p-sm-4 d-flex align-items-center justify-content-between transition-smooth border shadow-lg cursor-pointer ${attendanceStatusFilter === s.id ? 'border-primary' : 'border-main border-opacity-5'}`} 
                             style={{ 
                                 borderRadius: '24px',
                                 background: attendanceStatusFilter === s.id ? 'rgba(var(--primary-rgb), 0.1)' : `linear-gradient(135deg, var(--bg-card) 0%, ${s.gradient} 100%)`,
@@ -231,11 +231,11 @@ const AttendanceDashboard = ({ filters, role }) => {
                             onClick={() => setAttendanceStatusFilter(prev => prev === s.id ? 'ALL' : s.id)}
                         >
                             <div className="d-flex flex-column gap-1">
-                                <h4 className={`fw-black mb-0 tabular-nums ${attendanceStatusFilter === s.id ? 'text-primary' : 'text-main'}`} style={{ fontSize: '36px', lineHeight: 1 }}>{s.value}</h4>
-                                <p className="text-muted small mb-0 fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '10px' }}>{s.label}</p>
+                                <h4 className={`fw-black mb-0 tabular-nums ${attendanceStatusFilter === s.id ? 'text-primary' : 'text-main'}`} style={{ fontSize: window.innerWidth < 576 ? '24px' : '32px', lineHeight: 1 }}>{s.value}</h4>
+                                <p className="text-muted small mb-0 fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '9px' }}>{s.label}</p>
                             </div>
-                            <div className="p-3 rounded-4" style={{ background: 'rgba(255,255,255,0.03)', color: attendanceStatusFilter === s.id ? 'var(--primary)' : s.color }}>
-                                <s.icon size={28} strokeWidth={2.5} />
+                            <div className="p-2 p-sm-3 rounded-4" style={{ background: 'rgba(255,255,255,0.03)', color: attendanceStatusFilter === s.id ? 'var(--primary)' : s.color }}>
+                                <s.icon size={window.innerWidth < 576 ? 20 : 24} strokeWidth={2.5} />
                             </div>
                         </div>
                     </div>
@@ -243,14 +243,14 @@ const AttendanceDashboard = ({ filters, role }) => {
             </div>
 
             <div className={`premium-card border-0 shadow-lg overflow-hidden ${isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-card shadow-sm'}`} style={{ borderRadius: '32px' }}>
-                <div className="p-5 border-bottom border-white border-opacity-5 d-flex justify-content-between align-items-center">
+                <div className="p-3 p-sm-5 border-bottom border-white border-opacity-5 d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3">
                     <div className="d-flex align-items-center gap-4">
                         <div
                             className={`cursor-pointer transition-all ${activeSubTab === 'logs' ? 'opacity-100' : 'opacity-40'}`}
                             onClick={() => setActiveSubTab('logs')}
                         >
-                            <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest">Attendance Logs</h5>
-                            <p className="text-muted small mb-0 opacity-50 fw-bold">{filters?.from} TO {filters?.to}</p>
+                            <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest" style={{ fontSize: 'min(14px, 3.5vw)' }}>Attendance Logs</h5>
+                            <p className="text-muted small mb-0 opacity-50 fw-bold" style={{ fontSize: '9px' }}>{filters?.from} TO {filters?.to}</p>
                         </div>
 
                         {(role === 'ADMIN' || role === 'MANAGER' || role === 'TEAM_LEADER') && (
@@ -258,8 +258,8 @@ const AttendanceDashboard = ({ filters, role }) => {
                                 className={`cursor-pointer transition-all ${activeSubTab === 'wfh' ? 'opacity-100' : 'opacity-40'}`}
                                 onClick={() => setActiveSubTab('wfh')}
                             >
-                                <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest">WFH Requests</h5>
-                                <p className="text-muted small mb-0 opacity-50 fw-bold">Review Approvals</p>
+                                <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest" style={{ fontSize: 'min(14px, 3.5vw)' }}>WFH Requests</h5>
+                                <p className="text-muted small mb-0 opacity-50 fw-bold" style={{ fontSize: '9px' }}>Review Approvals</p>
                             </div>
                         )}
                     </div>

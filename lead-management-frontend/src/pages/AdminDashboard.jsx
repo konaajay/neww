@@ -235,11 +235,11 @@ const AdminDashboard = () => {
       result = result.filter(l => {
         const status = l.status?.toUpperCase();
         if (statusFilter === 'Converted') {
-          return ['CONVERTED', 'PAID', 'SUCCESS', 'EMI'].includes(status);
+          return ['CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(status);
         } else if (statusFilter === 'Follow Up') {
-          if (['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(status)) return false;
+          return !['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(status);
         } else if (statusFilter === 'New') {
-          if (!['NEW', 'WORKING'].includes(status)) return false;
+          return ['NEW', 'WORKING'].includes(status);
         } else if (statusFilter === 'Lost') {
           return ['LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(status);
         }
