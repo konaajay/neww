@@ -18,24 +18,40 @@ const StatusDropdown = ({ lead, pipelineStages, onChange, getStatusColorClass, i
   const buttonRef = React.useRef(null);
   const { isDarkMode } = useTheme();
 
-  const updateCoords = () => {
+  const updateCoords = useCallback(() => {
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
+      const scrollY = window.scrollY;
+      const scrollX = window.scrollX;
+      
       setCoords({
         top: rect.bottom,
         topUp: rect.top,
         left: rect.left,
-        width: rect.width
+        width: rect.width,
+        windowWidth: window.innerWidth,
+        windowHeight: window.innerHeight
       });
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      updateCoords();
+      window.addEventListener('scroll', updateCoords, true);
+      window.addEventListener('resize', updateCoords);
+      return () => {
+        window.removeEventListener('scroll', updateCoords, true);
+        window.removeEventListener('resize', updateCoords);
+      };
+    }
+  }, [isOpen, updateCoords]);
 
   const toggleDropdown = (e) => {
     if (e) {
       e.stopPropagation();
       e.preventDefault();
     }
-    if (!isOpen) updateCoords();
     setIsOpen(!isOpen);
   };
 
@@ -86,9 +102,9 @@ const StatusDropdown = ({ lead, pipelineStages, onChange, getStatusColorClass, i
               overflowY: 'auto',
               background: 'var(--bg-card)', 
               borderColor: 'var(--border-color)',
-              left: coords.left,
+              left: Math.max(10, Math.min(coords.left, (coords.windowWidth || window.innerWidth) - 190)),
               top: openUpwards ? 'auto' : coords.top + 5,
-              bottom: openUpwards ? (window.innerHeight - coords.topUp + 5) : 'auto'
+              bottom: openUpwards ? ((coords.windowHeight || window.innerHeight) - coords.topUp + 5) : 'auto'
             }}
           >
             {pipelineStages.map((s) => (
