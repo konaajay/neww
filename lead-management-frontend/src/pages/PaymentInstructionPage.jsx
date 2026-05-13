@@ -41,7 +41,11 @@ const PaymentInstructionPage = () => {
             const sessionUrl = `${baseURL}/api/public/payments/session/${orderId}`;
             console.log('[Payment] Requesting session from:', sessionUrl);
             
-            const sessionRes = await axios.get(sessionUrl);
+            const sessionRes = await axios.get(sessionUrl, {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem("token")}`
+                }
+            });
             const paymentSessionId = sessionRes.data.payment_session_id;
 
             if (!paymentSessionId) {
