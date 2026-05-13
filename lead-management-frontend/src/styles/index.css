@@ -461,11 +461,17 @@ h6 {
   color: var(--text-main);
   padding: 10px 14px;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   font-weight: 500;
   font-size: 0.85rem;
   outline: none;
   transition: all 0.2s ease;
   transform: none !important; /* Prevent layout shifts on native elements */
+}
+
+.col-12 {
+  overflow: hidden;
 }
 
 /* Custom Select Architecture - Fixed Misalignment */
@@ -479,6 +485,9 @@ select.ui-input {
   background-size: 12px 10px !important;
   padding-right: 2.5rem !important;
   cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 select.ui-input option {
@@ -497,6 +506,11 @@ select.ui-input option {
   .ui-input {
     padding: 8px 12px;
     font-size: 0.8rem;
+  }
+
+  select.ui-input {
+    font-size: 12px;
+    padding-right: 30px !important;
   }
 
   .ui-input:focus {

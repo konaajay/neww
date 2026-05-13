@@ -275,7 +275,7 @@ const TeamManagement = ({
                         }
                         setFormData({ ...formData, role: newRole, supervisorId: defaultSupId });
                       }} required>
-                      <option value="">Select Target Role...</option>
+                      <option value="">Select Role</option>
                       {roles.filter(r => r.name !== 'USER').map(r => <option key={r.id} value={r.name}>{r.name.replace(/_/g, ' ')}</option>)}
                     </select>
                   </div>
@@ -285,7 +285,7 @@ const TeamManagement = ({
                       <label className="form-label small fw-black text-uppercase text-primary mb-2 tracking-widest" style={{ fontSize: '12px' }}>Hierarchy Mapping (Superior ID)</label>
                       <select className="ui-input py-3 w-100 border-primary border-opacity-30 fw-black text-uppercase tracking-widest cursor-pointer" 
                         value={formData.supervisorId} onChange={e => setFormData({ ...formData, supervisorId: e.target.value })} required>
-                        <option value="">Select Direct Reporting Lead...</option>
+                        <option value="">Select Reporting Lead</option>
                         {teamLeaders.filter(u => {
                           if (formData.role === 'ASSOCIATE') return u.role === 'TEAM_LEADER';
                           if (formData.role === 'TEAM_LEADER') return u.role === 'MANAGER';
@@ -301,7 +301,7 @@ const TeamManagement = ({
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '12px' }}>Office Location</label>
                     <select className="ui-input py-3 w-100 fw-black text-uppercase tracking-widest cursor-pointer" 
                       value={formData.officeId} onChange={e => setFormData({ ...formData, officeId: e.target.value })} required>
-                      <option value="">Select Office...</option>
+                      <option value="">Select Office</option>
                       {offices.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
                     </select>
                   </div>
@@ -310,7 +310,7 @@ const TeamManagement = ({
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '12px' }}>Shift Timing</label>
                     <select className="ui-input py-3 w-100 fw-black text-uppercase tracking-widest cursor-pointer" 
                       value={formData.shiftId} onChange={e => setFormData({ ...formData, shiftId: e.target.value })} required>
-                      <option value="">Select Shift...</option>
+                      <option value="">Select Shift</option>
                       {shifts.map(s => <option key={s.id} value={s.id}>{s.name} ({s.startTime}-{s.endTime})</option>)}
                     </select>
                   </div>
