@@ -3,6 +3,7 @@ import { UserPlus, Edit, Trash2, ChevronDown, ChevronRight, BarChart2, Users, Se
 import TargetHistoryModal from './TargetHistoryModal';
 import { useTheme } from '../../../context/ThemeContext';
 import { History } from 'lucide-react';
+import PortalSelect from '../../../components/PortalSelect';
 
 const TeamManagement = ({
   teamLeaders,
@@ -263,7 +264,9 @@ const TeamManagement = ({
                   </div>
                   <div className="col-12 col-md-6">
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '12px' }}>Access Role</label>
-                    <select className="ui-input py-3 w-100 fw-black text-uppercase tracking-widest cursor-pointer" value={formData.role}
+                    <PortalSelect 
+                      options={roles.filter(r => r.name !== 'USER').map(r => ({ value: r.name, label: r.name.replace(/_/g, ' ') }))}
+                      value={formData.role}
                       onChange={e => {
                         const newRole = e.target.value;
                         let defaultSupId = formData.supervisorId;
@@ -274,45 +277,46 @@ const TeamManagement = ({
                           defaultSupId = '';
                         }
                         setFormData({ ...formData, role: newRole, supervisorId: defaultSupId });
-                      }} required>
-                      <option value="">Select Role</option>
-                      {roles.filter(r => r.name !== 'USER').map(r => <option key={r.id} value={r.name}>{r.name.replace(/_/g, ' ')}</option>)}
-                    </select>
+                      }}
+                      placeholder="Select Role"
+                    />
                   </div>
 
                   {(formData.role === 'ASSOCIATE' || formData.role === 'TEAM_LEADER' || formData.role === 'MANAGER') && (
                     <div className="col-12 col-md-6">
                       <label className="form-label small fw-black text-uppercase text-primary mb-2 tracking-widest" style={{ fontSize: '12px' }}>Hierarchy Mapping (Superior ID)</label>
-                      <select className="ui-input py-3 w-100 border-primary border-opacity-30 fw-black text-uppercase tracking-widest cursor-pointer" 
-                        value={formData.supervisorId} onChange={e => setFormData({ ...formData, supervisorId: e.target.value })} required>
-                        <option value="">Select Reporting Lead</option>
-                        {teamLeaders.filter(u => {
+                      <PortalSelect 
+                        options={teamLeaders.filter(u => {
                           if (formData.role === 'ASSOCIATE') return u.role === 'TEAM_LEADER';
                           if (formData.role === 'TEAM_LEADER') return u.role === 'MANAGER';
                           if (formData.role === 'MANAGER') return u.role === 'ADMIN';
                           return false;
-                        })
-                          .map(sup => <option key={sup.id} value={sup.id}>{sup.name} ({sup.role})</option>)}
-                      </select>
+                        }).map(sup => ({ value: sup.id.toString(), label: `${sup.name} (${sup.role})` }))}
+                        value={formData.supervisorId}
+                        onChange={e => setFormData({ ...formData, supervisorId: e.target.value })}
+                        placeholder="Select Reporting Lead"
+                      />
                     </div>
                   )}
 
                   <div className="col-12 col-md-6">
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '12px' }}>Office Location</label>
-                    <select className="ui-input py-3 w-100 fw-black text-uppercase tracking-widest cursor-pointer" 
-                      value={formData.officeId} onChange={e => setFormData({ ...formData, officeId: e.target.value })} required>
-                      <option value="">Select Office</option>
-                      {offices.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                    </select>
+                    <PortalSelect 
+                      options={offices.map(o => ({ value: o.id.toString(), label: o.name }))}
+                      value={formData.officeId}
+                      onChange={e => setFormData({ ...formData, officeId: e.target.value })}
+                      placeholder="Select Office"
+                    />
                   </div>
 
                   <div className="col-12 col-md-6">
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '12px' }}>Shift Timing</label>
-                    <select className="ui-input py-3 w-100 fw-black text-uppercase tracking-widest cursor-pointer" 
-                      value={formData.shiftId} onChange={e => setFormData({ ...formData, shiftId: e.target.value })} required>
-                      <option value="">Select Shift</option>
-                      {shifts.map(s => <option key={s.id} value={s.id}>{s.name} ({s.startTime}-{s.endTime})</option>)}
-                    </select>
+                    <PortalSelect 
+                      options={shifts.map(s => ({ value: s.id.toString(), label: `${s.name} (${s.startTime}-${s.endTime})` }))}
+                      value={formData.shiftId}
+                      onChange={e => setFormData({ ...formData, shiftId: e.target.value })}
+                      placeholder="Select Shift"
+                    />
                   </div>
 
                   <div className="col-12">

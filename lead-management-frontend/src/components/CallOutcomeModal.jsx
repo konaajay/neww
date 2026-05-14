@@ -11,6 +11,7 @@ import adminService from '../services/adminService';
 import api from '../api/api';
 import leadsApi from '../features/leads/api/leadsApi';
 import { useAuth } from '../context/AuthContext';
+import PortalSelect from './PortalSelect';
 
 const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistory }) => {
   const { clearCall } = useAuth();
@@ -285,8 +286,28 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
   };
 
   const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    toast.success('Payment link copied to clipboard!');
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text);
+      toast.success('Payment link copied to clipboard!');
+    } else {
+      // Fallback for non-HTTPS environments
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      textArea.style.top = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        toast.success('Payment link copied to clipboard! (Fallback)');
+      } catch (err) {
+        console.error('Fallback copy failed', err);
+        toast.error('Failed to copy. Please copy manually.');
+      }
+      document.body.removeChild(textArea);
+    }
   };
 
   const handleGenerateLink = async (installment) => {
@@ -587,33 +608,24 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                         <div className="row g-3">
                           <div className="col-12 col-md-6">
                             <label className="form-label small fw-bold text-uppercase text-muted mb-2 tracking-wider">Status Override</label>
-                            <select
-                              className={`form-select fw-bold shadow-sm text-capitalize ${isDarkMode ? 'bg-secondary bg-opacity-25 text-white border-secondary border-opacity-50' : 'bg-light text-dark'}`}
-                              value={outcome}
-                              onChange={(e) => setOutcome(e.target.value)}
-                              style={{ cursor: 'pointer' }}
-                            >
-                              {allStatuses
+                            <PortalSelect 
+                              options={allStatuses
                                 .filter(s => {
                                   const stageIdx = getStageIndex(s.id);
                                   const currIdx = getStageIndex(lead.status);
-
-                                  // Rule 1: No regression (Hide past stages, but allow switching within same stage cluster)
                                   if (stageIdx < currIdx) return false;
-
-                                  // Rule 2: Interested Bottleneck
                                   if (lead.status === 'INTERESTED') {
                                     return ['CONVERTED', 'EMI', 'LOST', 'NOT_INTERESTED', 'PAYMENT_LINK_SENT', 'DEMO', 'INTERESTED'].includes(s.id);
                                   }
-
-                                  // If already terminal, don't allow change
                                   if (currIdx >= 4 && stageIdx !== currIdx) return false;
-
                                   return true;
                                 })
-                                .map(s => <option key={s.id} value={s.id}>{s.label}</option>)
+                                .map(s => ({ value: s.id, label: s.label.toUpperCase() }))
                               }
-                            </select>
+                              value={outcome}
+                              onChange={(e) => setOutcome(e.target.value)}
+                              placeholder="Status Override"
+                            />
                           </div>
 
                           <div className="col-12 mt-4">
@@ -651,9 +663,12 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                                 <div className="row g-3">
                                   <div className="col-12">
                                     <label className="form-label small fw-bold text-uppercase text-muted mb-2 tracking-wider">Course Protocol (Mapping)</label>
-                                    <select
-                                      className={`form-select fw-bold ${isDarkMode ? 'bg-dark bg-opacity-50 text-white border-secondary border-opacity-50' : 'bg-light text-dark border-light'}`}
-                                      value={selectedCourseId || lead.courseId || ''}
+                                    <PortalSelect 
+                                      options={[
+                                        { value: "", label: "Select Course..." },
+                                        ...courses.map(c => ({ value: c.id.toString(), label: `${c.name.toUpperCase()} (₹${c.baseFee})` }))
+                                      ]}
+                                      value={selectedCourseId?.toString() || lead.courseId?.toString() || ''}
                                       onChange={(e) => {
                                         const cid = e.target.value;
                                         setSelectedCourseId(cid);
@@ -663,12 +678,8 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                                           setInitialAmount(course.minTokenAmount?.toString() || '500');
                                         }
                                       }}
-                                    >
-                                      <option value="">Select Course...</option>
-                                      {courses.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name.toUpperCase()} (₹{c.baseFee})</option>
-                                      ))}
-                                    </select>
+                                      placeholder="Course Protocol"
+                                    />
                                   </div>
 
                                   <div className="col-12 col-md-6">
@@ -703,16 +714,17 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
 
                                   <div className="col-12">
                                     <label className="form-label small fw-bold text-uppercase text-muted mb-2 tracking-wider">Settlement Protocol</label>
-                                    <select
-                                      className={`form-select fw-bold ${isDarkMode ? 'bg-dark bg-opacity-50 text-white border-secondary border-opacity-50' : 'bg-light text-dark border-light'}`}
+                                    <PortalSelect 
+                                      options={[
+                                        { value: "UPI", label: "UPI TRANSFERS" },
+                                        { value: "CASH", label: "CASH SETTLEMENT" },
+                                        { value: "BANK_TRANSFER", label: "IMPS / NEFT / RTGS" },
+                                        { value: "CARD", label: "POS / ONLINE CARD" }
+                                      ]}
                                       value={paymentMethod}
                                       onChange={(e) => setPaymentMethod(e.target.value)}
-                                    >
-                                      <option value="UPI">UPI TRANSFERS</option>
-                                      <option value="CASH">CASH SETTLEMENT</option>
-                                      <option value="BANK_TRANSFER">IMPS / NEFT / RTGS</option>
-                                      <option value="CARD">POS / ONLINE CARD</option>
-                                    </select>
+                                      placeholder="Settlement Protocol"
+                                    />
                                   </div>
 
                                   {outcome === 'EMI' && (

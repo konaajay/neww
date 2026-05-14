@@ -26,6 +26,7 @@ import StatCard from '../../../components/StatCard';
 import { MetricCard } from './MetricCommandCenter';
 import { useAuth } from '../../../context/AuthContext';
 import adminService from '../../../services/adminService';
+import PortalSelect from '../../../components/PortalSelect';
 
 const ManagerDashboardFilterHub = ({
   teamTree,
@@ -265,9 +266,11 @@ const ManagerDashboardFilterHub = ({
                 {!isManager && (
                   <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-25 p-1 px-3 rounded-pill border border-white border-opacity-10 animate-fade-in">
                     <Users size={12} className="text-primary opacity-50" />
-                    <select
-                      className="bg-transparent border-0 text-main fw-black small text-uppercase tracking-wider outline-none py-1"
-                      style={{ fontSize: '9px', minWidth: '130px' }}
+                    <PortalSelect 
+                      options={[
+                        { value: "", label: "CHOOSE MANAGER" },
+                        ...managers.map(m => ({ value: m.id.toString(), label: m.name.toUpperCase() }))
+                      ]}
                       value={selectedMgrId}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -279,20 +282,18 @@ const ManagerDashboardFilterHub = ({
                           userId: val || (isManager ? user.id : null)
                         }));
                       }}
-                    >
-                      <option value="" className={isDarkMode ? 'bg-dark text-white' : 'bg-white text-dark'}>CHOOSE MANAGER</option>
-                      {managers.map(m => (
-                        <option key={m.id} value={m.id} className={isDarkMode ? 'bg-dark text-white' : 'bg-white text-dark'}>{m.name}</option>
-                      ))}
-                    </select>
+                      style={{ width: '150px' }}
+                    />
                   </div>
                 )}
 
                 <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-25 p-1 px-3 rounded-pill border border-white border-opacity-10 animate-fade-in">
                   <ShieldHalf size={12} className="text-warning opacity-50" />
-                  <select
-                    className="bg-transparent border-0 text-main fw-black small text-uppercase tracking-wider outline-none py-1"
-                    style={{ fontSize: '9px', minWidth: '130px' }}
+                  <PortalSelect 
+                    options={[
+                      { value: "", label: (isManager || selectedMgrId) ? 'ALL TEAMS' : '---' },
+                      ...tls.map(tl => ({ value: tl.id.toString(), label: tl.name.toUpperCase() }))
+                    ]}
                     value={selectedTlId}
                     onChange={(e) => {
                       const val = e.target.value;
@@ -304,19 +305,18 @@ const ManagerDashboardFilterHub = ({
                       }));
                     }}
                     disabled={!isManager && !selectedMgrId}
-                  >
-                    <option value="" className={isDarkMode ? 'bg-dark text-white' : 'bg-white text-dark'}>{(isManager || selectedMgrId) ? 'ALL TEAMS' : '---'}</option>
-                    {tls.map(tl => (
-                      <option key={tl.id} value={tl.id} className={isDarkMode ? 'bg-dark text-white' : 'bg-white text-dark'}>{tl.name}</option>
-                    ))}
-                  </select>
+                    style={{ width: '150px' }}
+                  />
                 </div>
 
                 <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-25 p-1 px-3 rounded-pill border border-white border-opacity-10 animate-fade-in">
                   <User size={12} className="text-info opacity-50" />
-                  <select
-                    className="bg-transparent border-0 text-main fw-black small text-uppercase tracking-wider outline-none py-1"
-                    style={{ fontSize: '9px', minWidth: '130px' }}
+                  <PortalSelect 
+                    options={[
+                      { value: "", label: effectiveMgr ? 'ALL ASSOCIATES' : '---' },
+                      ...(effectiveMgr ? [{ value: "-1", label: "⚠️ UNASSIGNED LEADS" }] : []),
+                      ...associates.map(member => ({ value: member.id.toString(), label: member.name.toUpperCase() }))
+                    ]}
                     value={selectedAssocId}
                     onChange={(e) => {
                       const val = e.target.value;
@@ -327,17 +327,8 @@ const ManagerDashboardFilterHub = ({
                       }));
                     }}
                     disabled={!effectiveMgr}
-                  >
-                    <option value="" className={isDarkMode ? 'bg-dark text-white' : 'bg-white text-dark'}>{effectiveMgr ? 'ALL ASSOCIATES' : '---'}</option>
-                    {effectiveMgr && (
-                      <option value="-1" className={isDarkMode ? 'bg-dark text-danger fw-black' : 'bg-white text-danger fw-black'}>
-                        ⚠️ UNASSIGNED LEADS
-                      </option>
-                    )}
-                    {associates.map(member => (
-                      <option key={member.id} value={member.id} className={isDarkMode ? 'bg-dark text-white' : 'bg-white text-dark'}>{member.name}</option>
-                    ))}
-                  </select>
+                    style={{ width: '150px' }}
+                  />
                 </div>
               </div>
             </div>

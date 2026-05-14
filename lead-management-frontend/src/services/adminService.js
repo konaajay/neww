@@ -53,6 +53,7 @@ const adminService = {
   createPipelineStage: (data) => safeRequest(api.post('/admin/pipeline-stages', data)),
   updatePipelineStage: (id, data) => safeRequest(api.put(`/admin/pipeline-stages/${id}`, data)),
   deletePipelineStage: (id) => safeRequest(api.delete(`/admin/pipeline-stages/${id}`)),
+  reorderPipelineStage: (id, direction) => safeRequest(api.patch(`/admin/pipeline-stages/${id}/reorder`, null, { params: { direction } })),
 
   // Call Records Audit
   fetchCallLogsAdmin: (filters) => safeRequest(api.get('/call-records/admin/all', { params: filters })),

@@ -10,7 +10,9 @@ import {
   MessageSquare,
   Calendar,
   CheckSquare,
-  Settings
+  Settings,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import adminService from '../../../services/adminService';
@@ -27,7 +29,8 @@ const PipelineStageManagement = () => {
         label: '',
         requireNote: false,
         requireDate: false,
-        createTask: false
+        createTask: false,
+        orderIndex: 0
     });
 
     useEffect(() => {
@@ -69,7 +72,7 @@ const PipelineStageManagement = () => {
                 statusValue: formData.label.trim().toUpperCase().replace(/\s+/g, '_'),
                 analyticBucket: 'CONTACTED', 
                 color: 'primary',           
-                orderIndex: editingStage ? editingStage.orderIndex : stages.length + 1,
+                orderIndex: formData.orderIndex || (editingStage ? editingStage.orderIndex : stages.length + 1),
                 active: true
             };
 
@@ -90,7 +93,7 @@ const PipelineStageManagement = () => {
     };
 
     const resetForm = () => {
-        setFormData({ label: '', requireNote: false, requireDate: false, createTask: false });
+        setFormData({ label: '', requireNote: false, requireDate: false, createTask: false, orderIndex: 0 });
         setIsAdding(false);
         setEditingStage(null);
     };
@@ -101,7 +104,8 @@ const PipelineStageManagement = () => {
             label: stage.label,
             requireNote: stage.requireNote,
             requireDate: stage.requireDate,
-            createTask: stage.createTask
+            createTask: stage.createTask,
+            orderIndex: stage.orderIndex
         });
         setIsAdding(true);
     };
@@ -139,6 +143,15 @@ const PipelineStageManagement = () => {
         }
     };
 
+    const handleReorder = async (id, direction) => {
+        try {
+            await adminService.reorderPipelineStage(id, direction);
+            fetchStages();
+        } catch (err) {
+            toast.error("Reorder synchronization failed");
+        }
+    };
+
     const handleDelete = async (id) => {
         if (!window.confirm("PURGE WARNING: Permanently decommission this status lead?")) return;
         try {
@@ -151,9 +164,9 @@ const PipelineStageManagement = () => {
     };
 
     return (
-        <div className="d-flex flex-column gap-4 animate-fade-in">
+        <div className="d-flex flex-column gap-3 animate-fade-in">
             {/* Header / Command Panel */}
-            <div className={`premium-card p-4 border-0 shadow-lg ${isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-white shadow-sm'}`} style={{ borderRadius: '24px' }}>
+            <div className={`premium-card p-3 border-0 shadow-lg ${isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-white shadow-sm'}`} style={{ borderRadius: '20px' }}>
                 <div className="d-flex align-items-center justify-content-between">
                     <div className="d-flex align-items-center gap-3">
                         <div className="p-3 bg-primary bg-opacity-10 text-primary rounded-pill shadow-glow">
@@ -184,16 +197,26 @@ const PipelineStageManagement = () => {
                 </div>
 
                 {isAdding && (
-                    <div className="mt-4 pt-4 border-top border-white border-opacity-5 animate-scale-in">
-                        <form onSubmit={handleSave} className="row g-4 align-items-end">
-                            <div className="col-md-12 col-lg-4">
+                    <div className="mt-2 pt-3 border-top border-white border-opacity-5 animate-scale-in">
+                        <form onSubmit={handleSave} className="row g-2 align-items-end">
+                            <div className="col-md-12 col-lg-3">
                                 <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block ps-2" style={{ fontSize: '9px' }}>Status Label</label>
                                 <input 
                                     className="ui-input py-3 px-4 rounded-4 fw-bold"
-                                    placeholder="e.g., FOLLOW-UP, INTERESTED..."
+                                    placeholder="e.g., FOLLOW-UP..."
                                     value={formData.label}
                                     onChange={e => setFormData({...formData, label: e.target.value})}
                                     autoFocus
+                                />
+                            </div>
+
+                            <div className="col-md-12 col-lg-1">
+                                <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block ps-2" style={{ fontSize: '9px' }}>Order</label>
+                                <input 
+                                    type="number"
+                                    className="ui-input py-3 px-2 rounded-4 fw-bold text-center"
+                                    value={formData.orderIndex}
+                                    onChange={e => setFormData({...formData, orderIndex: parseInt(e.target.value) || 0})}
                                 />
                             </div>
                             
@@ -229,7 +252,7 @@ const PipelineStageManagement = () => {
                                         </div>
                                     </label>
 
-                                    <button type="submit" className="ui-btn ui-btn-primary ms-auto px-4 py-3 rounded-4 shadow-glow fw-black text-uppercase tracking-widest d-flex align-items-center gap-2" style={{ fontSize: '10px' }}>
+                                    <button type="submit" className="ui-btn ui-btn-primary ms-auto px-4 py-2 rounded-4 shadow-glow fw-black text-uppercase tracking-widest d-flex align-items-center gap-2" style={{ fontSize: '10px' }}>
                                         <Save size={14} /> {editingStage ? 'SYNC LEAD' : 'INITIALIZE'}
                                     </button>
                                 </div>
@@ -253,60 +276,60 @@ const PipelineStageManagement = () => {
             </div>
 
             {/* Status Table */}
-            <div className={`premium-card overflow-hidden border-0 shadow-lg ${isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-white shadow-sm'}`} style={{ borderRadius: '24px' }}>
+            <div className={`premium-card overflow-hidden border-0 shadow-lg ${isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-white shadow-sm'}`} style={{ borderRadius: '20px' }}>
                 <div className="table-responsive">
                     <table className="table table-hover align-middle mb-0 text-nowrap">
                         <thead>
                             <tr className={isDarkMode ? 'border-bottom border-white border-opacity-5' : 'border-bottom'}>
-                                <th className="ps-4 text-muted small fw-black text-uppercase tracking-widest py-4" style={{ fontSize: '9px', width: '80px' }}># ID</th>
-                                <th className="text-muted small fw-black text-uppercase tracking-widest py-4" style={{ fontSize: '9px' }}>Status Lead</th>
-                                <th className="text-muted small fw-black text-uppercase tracking-widest py-4 text-center" style={{ fontSize: '9px' }}>Note Req.</th>
-                                <th className="text-muted small fw-black text-uppercase tracking-widest py-4 text-center" style={{ fontSize: '9px' }}>Date Req.</th>
-                                <th className="text-muted small fw-black text-uppercase tracking-widest py-4 text-center" style={{ fontSize: '9px' }}>Task</th>
-                                <th className="pe-4 text-end text-muted small fw-black text-uppercase tracking-widest py-4" style={{ fontSize: '9px', width: '120px' }}>Actions</th>
+                                <th className="ps-4 text-muted small fw-black text-uppercase tracking-widest py-3" style={{ fontSize: '9px', width: '60px' }}>#</th>
+                                <th className="text-muted small fw-black text-uppercase tracking-widest py-3" style={{ fontSize: '9px' }}>Status Lead</th>
+                                <th className="text-muted small fw-black text-uppercase tracking-widest py-3 text-center" style={{ fontSize: '9px' }}>Note Req.</th>
+                                <th className="text-muted small fw-black text-uppercase tracking-widest py-3 text-center" style={{ fontSize: '9px' }}>Date Req.</th>
+                                <th className="text-muted small fw-black text-uppercase tracking-widest py-3 text-center" style={{ fontSize: '9px' }}>Task</th>
+                                <th className="pe-4 text-end text-muted small fw-black text-uppercase tracking-widest py-3" style={{ fontSize: '9px', width: '120px' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan="4" className="text-center py-5">
+                                    <td colSpan="6" className="text-center py-5">
                                         <div className="spinner-border text-primary spinner-border-sm opacity-25"></div>
                                     </td>
                                 </tr>
                             ) : stages.length === 0 ? (
                                 <tr>
-                                  <td colSpan="4" className="text-center py-5 text-muted small fw-bold opacity-50">NO STATUS LEADS FOUND</td>
+                                  <td colSpan="6" className="text-center py-5 text-muted small fw-bold opacity-50">NO STATUS LEADS FOUND</td>
                                 </tr>
-                            ) : stages.map(stage => (
+                            ) : stages.map((stage, idx) => (
                                 <tr key={stage.id} className="transition-all hover:bg-white hover:bg-opacity-5">
                                     <td className="ps-4">
-                                        <span className="text-muted fw-bold font-monospace small">#{stage.id}</span>
+                                        <span className="text-muted fw-bold font-monospace extra-small opacity-50">#{idx + 1}</span>
                                     </td>
                                     <td>
                                         <div className="d-flex align-items-center gap-3">
-                                            <div className={`p-2 rounded-3 bg-${stage.color || 'primary'} bg-opacity-10 text-${stage.color || 'primary'}`}>
+                                            <div className={`p-2 rounded-3 bg-${stage.color || 'primary'} bg-opacity-10 text-${stage.color || 'primary'} shadow-sm`}>
                                                 <Zap size={14} />
                                             </div>
                                             <span className="fw-black text-main text-uppercase tracking-tighter" style={{ fontSize: '13px' }}>
                                                 {stage.label}
                                             </span>
                                             {stage.statusValue === 'NEW' && (
-                                                <span className="px-2 py-0.5 rounded-pill bg-success bg-opacity-10 text-success fw-black" style={{ fontSize: '7px' }}>ROOT</span>
+                                                <span className="px-2 py-0.5 rounded-pill bg-success bg-opacity-10 text-success fw-black" style={{ fontSize: '7px', letterSpacing: '0.5px' }}>ROOT PROTOCOL</span>
                                             )}
                                         </div>
                                     </td>
                                     <td className="text-center">
-                                        <div className={`d-inline-flex p-1 rounded-circle ${stage.requireNote ? 'bg-primary bg-opacity-10 text-primary' : 'bg-surface bg-opacity-20 text-muted opacity-25'}`}>
+                                        <div className={`d-inline-flex p-1 rounded-circle ${stage.requireNote ? 'bg-primary bg-opacity-10 text-primary shadow-glow-sm' : 'bg-surface bg-opacity-20 text-muted opacity-25'}`}>
                                             <ShieldCheck size={14} />
                                         </div>
                                     </td>
                                     <td className="text-center">
-                                        <div className={`d-inline-flex p-1 rounded-circle ${stage.requireDate ? 'bg-primary bg-opacity-10 text-primary' : 'bg-surface bg-opacity-20 text-muted opacity-25'}`}>
+                                        <div className={`d-inline-flex p-1 rounded-circle ${stage.requireDate ? 'bg-primary bg-opacity-10 text-primary shadow-glow-sm' : 'bg-surface bg-opacity-20 text-muted opacity-25'}`}>
                                             <Calendar size={14} />
                                         </div>
                                     </td>
                                     <td className="text-center">
-                                        <div className={`d-inline-flex p-1 rounded-circle ${stage.createTask ? 'bg-primary bg-opacity-10 text-primary' : 'bg-surface bg-opacity-20 text-muted opacity-25'}`}>
+                                        <div className={`d-inline-flex p-1 rounded-circle ${stage.createTask ? 'bg-primary bg-opacity-10 text-primary shadow-glow-sm' : 'bg-surface bg-opacity-20 text-muted opacity-25'}`}>
                                             <CheckSquare size={14} />
                                         </div>
                                     </td>
@@ -315,14 +338,16 @@ const PipelineStageManagement = () => {
                                         <div className="d-flex justify-content-end gap-2">
                                             <button 
                                                 onClick={() => startEdit(stage)}
-                                                className="ui-btn-icon bg-surface text-muted border-0 p-2 rounded-circle hover-scale"
+                                                className="ui-btn-icon bg-surface text-muted border-0 p-2 rounded-circle hover-scale shadow-sm"
+                                                title="Edit Protocol"
                                             >
                                                 <Settings size={14} />
                                             </button>
                                             {stage.statusValue !== 'NEW' && (
                                                 <button 
                                                     onClick={() => handleDelete(stage.id)}
-                                                    className="ui-btn-icon bg-danger bg-opacity-10 text-danger border-0 p-2 rounded-circle hover-scale"
+                                                    className="ui-btn-icon bg-danger bg-opacity-10 text-danger border-0 p-2 rounded-circle hover-scale shadow-sm"
+                                                    title="Purge"
                                                 >
                                                     <Trash2 size={14} />
                                                 </button>

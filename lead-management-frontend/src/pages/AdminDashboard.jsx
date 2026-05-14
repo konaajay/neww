@@ -36,6 +36,7 @@ import PipelineStageManagement from './dashboard/components/PipelineStageManagem
 import { StatSkeleton, ChartSkeleton } from './dashboard/components/DashboardSkeletons';
 import PaymentHistory from '../components/PaymentHistory';
 import SystemSettings from './dashboard/components/SystemSettings';
+import { SystemStatGrid, SystemStatCard } from '../components/SystemStatCard';
 import UserEditModal from './dashboard/components/UserEditModal';
 import InvoiceModal from './dashboard/components/InvoiceModal';
 import CourseManagementPage from './CourseManagementPage';
@@ -62,7 +63,7 @@ const AdminDashboard = () => {
   const [filters, setFilters] = useState(() => {
     const d = new Date();
     const f = new Date(d.getFullYear(), d.getMonth(), 1);
-    const l = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    const l = d; // Today
     const fmt = (date) => {
       const y = date.getFullYear();
       const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -227,6 +228,14 @@ const AdminDashboard = () => {
   const performance = dashboardData?.performance || [];
   const statusDistribution = dashboardData?.statusDistribution || {};
 
+  const statsWithPerf = useMemo(() => ({
+    ...stats,
+    performance,
+    presentCount: stats?.presentCount || 0,
+    absentCount: stats?.absentCount || 0,
+    lateCount: stats?.lateCount || 0
+  }), [stats, performance]);
+
   const filteredLeads = useMemo(() => {
     let result = leads;
     
@@ -275,7 +284,7 @@ const AdminDashboard = () => {
         {(activeTab === 'overview' || activeTab === 'team-dashboard') && (
           <div className="d-flex flex-column gap-3 animate-fade-in">
             {dashboardLoading ? <StatSkeleton /> : (
-              <MetricCommandCenter stats={stats} role={user?.role} filters={debouncedFilters} onNavigate={handleTabChange} leads={leads} />
+              <MetricCommandCenter stats={statsWithPerf} role={user?.role} filters={debouncedFilters} onNavigate={handleTabChange} leads={leads} />
             )}
             <div className="row g-4 animate-fade-in">
               <div className="col-12 col-xl-8">
@@ -302,32 +311,26 @@ const AdminDashboard = () => {
 
         {activeTab === 'leads' && (
           <div className="d-flex flex-column gap-3">
-            <div className="row g-3 mb-2 animate-fade-in">
+            <SystemStatGrid>
               {[
-                { label: 'New', value: ((statusDistribution.NEW || 0) + (statusDistribution.WORKING || 0)), color: 'warning', icon: '📞' },
+                { label: 'New', value: ((statusDistribution.NEW || 0) + (statusDistribution.WORKING || 0)), color: 'text-primary' },
                 { label: 'Follow Up', value: (Object.entries(statusDistribution || {}).reduce((acc, [k, v]) => {
                   if (!['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(k.toUpperCase())) return acc + v;
                   return acc;
-                }, 0)), color: 'info', icon: '⏳' },
-                { label: 'Converted', value: ((statusDistribution.CONVERTED || 0) + (statusDistribution.PAID || 0) + (statusDistribution.SUCCESS || 0) + (statusDistribution.EMI || 0) + (statusDistribution.PRE_PAYMENT || 0) + (statusDistribution['PRE-PAYMENT'] || 0)), color: 'success', icon: '✅' },
-                { label: 'Lost', value: ((statusDistribution.LOST || 0) + (statusDistribution.REJECTED || 0) + (statusDistribution.DEAD || 0) + (statusDistribution.NOT_INTERESTED || 0)), color: 'danger', icon: '❌' }
+                }, 0)), color: 'text-info' },
+                { label: 'Converted', value: ((statusDistribution.CONVERTED || 0) + (statusDistribution.PAID || 0) + (statusDistribution.SUCCESS || 0) + (statusDistribution.EMI || 0) + (statusDistribution.PRE_PAYMENT || 0) + (statusDistribution['PRE-PAYMENT'] || 0)), color: 'text-success' },
+                { label: 'Lost', value: ((statusDistribution.LOST || 0) + (statusDistribution.REJECTED || 0) + (statusDistribution.DEAD || 0) + (statusDistribution.NOT_INTERESTED || 0)), color: 'text-danger' }
               ].map((card, i) => (
-                <div key={i} className="col-6 col-md-3">
-                  <div 
-                    className={`premium-card p-3 border shadow-sm d-flex flex-column gap-1 transition-all ${statusFilter === card.label ? 'border-primary bg-primary bg-opacity-10' : 'border-white border-opacity-10'}`} 
-                    style={{ 
-                      borderRadius: '20px', 
-                      background: statusFilter === card.label ? 'rgba(var(--primary-rgb), 0.1)' : 'rgba(255,255,255,0.02)',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() => setStatusFilter(statusFilter === card.label ? null : card.label)}
-                  >
-                    <h4 className="mb-0 fw-black text-main" style={{ fontSize: '26px', lineHeight: 1 }}>{card.value}</h4>
-                    <small className="text-muted fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '8px' }}>{card.label}</small>
-                  </div>
-                </div>
+                <SystemStatCard
+                  key={i}
+                  label={card.label}
+                  value={card.value}
+                  colorClass={card.color}
+                  isActive={statusFilter === card.label}
+                  onClick={() => setStatusFilter(statusFilter === card.label ? null : card.label)}
+                />
               ))}
-            </div>
+            </SystemStatGrid>
 
             <div className="premium-card overflow-hidden shadow-lg border-0">
               <div className="card-header bg-transparent p-4 border-0 border-bottom border-white border-opacity-5 d-flex justify-content-between align-items-center">

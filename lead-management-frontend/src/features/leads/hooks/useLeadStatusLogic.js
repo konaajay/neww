@@ -31,7 +31,11 @@ export const useLeadStatusLogic = (initialTotal = '', initialPaid = 0) => {
   const handleInstallmentChange = useCallback((index, field, value) => {
     setInstallments(prev => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
+      let sanitizedValue = value;
+      if (field === 'amount') {
+        sanitizedValue = Math.max(0, parseFloat(value) || 0);
+      }
+      updated[index] = { ...updated[index], [field]: sanitizedValue };
       return updated;
     });
   }, []);

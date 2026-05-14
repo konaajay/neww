@@ -3,7 +3,8 @@ import taskService from '../../../services/taskService';
 import { toast } from 'react-toastify';
 import { useMemo } from 'react';
 
-export const useTasks = (filters = {}) => {
+export const useTasks = (filters = {}, options = {}) => {
+  const { enabled = true } = options;
   const queryClient = useQueryClient();
 
   const memoizedFilters = useMemo(() => ({
@@ -21,6 +22,7 @@ export const useTasks = (filters = {}) => {
     select: (res) => (res?.data || []),
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true,
+    enabled,
     placeholderData: (previousData) => previousData
   });
 

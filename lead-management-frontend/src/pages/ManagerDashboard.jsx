@@ -66,7 +66,7 @@ const ManagerDashboard = () => {
   const [filterState, setFilterState] = useState(() => {
     const d = new Date();
     const f = new Date(d.getFullYear(), d.getMonth(), 1);
-    const l = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    const l = d; // Today
     const fmt = (date) => {
       const y = date.getFullYear();
       const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -102,7 +102,9 @@ const ManagerDashboard = () => {
     leads, loading: leadsLoading, refetch: refreshLeads,
     updateLead, updateStatus, assignLead, deleteLead, recordCallOutcome,
     selectedLeadIds, toggleSelection, bulkAssignLeads
-  } = useLeads(debouncedFilters, 'MANAGER');
+  } = useLeads(debouncedFilters, 'MANAGER', { 
+    enabled: activeTab === 'leads' || (activeTab === 'my-stats' && myDashboardSubTab === 'leads') || activeTab === 'overview'
+  });
 
   const {
     teamLeaders, subordinates, roles, offices, shifts, permissions, teamTree, pipelineStages, loading: lookupLoading
@@ -334,7 +336,7 @@ const ManagerDashboard = () => {
             {myDashboardSubTab === 'dashboard' && (
               <>
                 <ManagerProfile manager={null} />
-                {dashboardLoading && !dashboardData ? <MetricSkeletonRow /> : (
+                {dashboardLoading && !dashboardData ? <MetricSkeletonRow count={4} /> : (
                   <MetricCommandCenter
                     stats={personalStats}
                     role="MANAGER"
@@ -399,7 +401,7 @@ const ManagerDashboard = () => {
               <div className="row g-4 animate-fade-in">
                 <div className="col-12 col-xl-8">
                   <Card title="Individual Performance Trend" className="h-100">
-                    <div className="py-3" style={{ height: '360px' }}>
+                    <div style={{ height: '360px' }}>
                       <React.Suspense fallback={<ChartSkeleton />}>
                         <RevenueTrendChart data={trend} theme={theme} filters={debouncedFilters} />
                       </React.Suspense>
@@ -408,7 +410,7 @@ const ManagerDashboard = () => {
                 </div>
                 <div className="col-12 col-xl-4">
                   <Card title="Pipeline Distribution" className="h-100">
-                    <div className="py-2" style={{ height: '360px' }}>
+                    <div style={{ height: '360px' }}>
                       <React.Suspense fallback={<ChartSkeleton />}>
                         <LeadStatusPieChart distribution={stats?.statusDistribution} leads={leads.filter(l => l.assignedToId === user?.id)} isDarkMode={isDarkMode} />
                       </React.Suspense>
@@ -437,7 +439,7 @@ const ManagerDashboard = () => {
             <div className="row g-4 animate-fade-in">
               <div className="col-12 col-xl-8">
                 <Card title="Strategic Performance Trend" className="h-100">
-                  <div className="py-3" style={{ height: '360px' }}>
+                  <div style={{ height: '360px' }}>
                     <React.Suspense fallback={<ChartSkeleton />}>
                       <RevenueTrendChart data={trend} theme={theme} filters={debouncedFilters} />
                     </React.Suspense>
@@ -446,7 +448,7 @@ const ManagerDashboard = () => {
               </div>
               <div className="col-12 col-xl-4">
                 <Card title="Squad Pipeline Distribution" className="h-100">
-                  <div className="py-2" style={{ height: '360px' }}>
+                  <div style={{ height: '360px' }}>
                     <React.Suspense fallback={<ChartSkeleton />}>
                       <LeadStatusPieChart distribution={stats?.statusDistribution} leads={filteredLeads} isDarkMode={isDarkMode} />
                     </React.Suspense>
@@ -459,31 +461,33 @@ const ManagerDashboard = () => {
         {activeTab === 'leads' && (
           <div className="d-flex flex-column gap-3">
             <div className="row g-3 mb-2 animate-fade-in">
-              {[
-                { label: 'New', value: ((statusDistribution?.NEW || 0) + (statusDistribution?.WORKING || 0)), color: 'primary', icon: '✨' },
-                { label: 'Follow Up', value: (Object.entries(statusDistribution || {}).reduce((acc, [k, v]) => {
-                  if (!['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(k.toUpperCase())) return acc + v;
-                  return acc;
-                }, 0)), color: 'info', icon: '⏳' },
-                { label: 'Converted', value: ((statusDistribution?.CONVERTED || 0) + (statusDistribution?.PAID || 0) + (statusDistribution?.SUCCESS || 0) + (statusDistribution?.EMI || 0) + (statusDistribution?.PRE_PAYMENT || 0) + (statusDistribution?.['PRE-PAYMENT'] || 0)), color: 'success', icon: '✅' },
-                { label: 'Lost', value: ((statusDistribution?.LOST || 0) + (statusDistribution?.REJECTED || 0) + (statusDistribution?.DEAD || 0) + (statusDistribution?.NOT_INTERESTED || 0)), color: 'danger', icon: '❌' }
-              ].map((card, i) => (
-                <div key={i} className="col-6 col-md-3">
-                  <div 
-                    className={`premium-card p-3 border shadow-sm d-flex flex-column gap-1 transition-smooth ${statusFilter === card.label ? 'border-primary bg-primary bg-opacity-10' : 'border-main border-opacity-10'}`} 
-                    style={{ 
-                      borderRadius: '20px', 
-                      background: statusFilter === card.label ? 'rgba(var(--primary-rgb), 0.1)' : 'var(--bg-card)',
-                      backdropFilter: 'var(--glass-blur)',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() => setStatusFilter(statusFilter === card.label ? null : card.label)}
-                  >
-                    <h4 className="mb-0 fw-black text-main" style={{ fontSize: '24px', lineHeight: 1 }}>{card.value}</h4>
-                    <small className="text-muted fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '8px' }}>{card.label}</small>
+                {/* Lead Summary Cards */}
+                {[
+                  { label: 'New', value: ((statusDistribution?.NEW || 0) + (statusDistribution?.WORKING || 0)), color: 'primary', icon: '✨' },
+                  { label: 'Follow Up', value: (Object.entries(statusDistribution || {}).reduce((acc, [k, v]) => {
+                    if (!['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(k.toUpperCase())) return acc + v;
+                    return acc;
+                  }, 0)), color: 'info', icon: '⏳' },
+                  { label: 'Converted', value: ((statusDistribution?.CONVERTED || 0) + (statusDistribution?.PAID || 0) + (statusDistribution?.SUCCESS || 0) + (statusDistribution?.EMI || 0) + (statusDistribution?.PRE_PAYMENT || 0) + (statusDistribution?.['PRE-PAYMENT'] || 0)), color: 'success', icon: '✅' },
+                  { label: 'Lost', value: ((statusDistribution?.LOST || 0) + (statusDistribution?.REJECTED || 0) + (statusDistribution?.DEAD || 0) + (statusDistribution?.NOT_INTERESTED || 0)), color: 'danger', icon: '❌' }
+                ].map((card, i) => (
+                  <div key={i} className="col-6 col-md-3">
+                    <div 
+                      className={`p-3 d-flex flex-column gap-1 transition-smooth cursor-pointer ${statusFilter === card.label ? 'shadow-glow' : 'shadow-sm'}`} 
+                      style={{ 
+                        borderRadius: '20px', 
+                        background: statusFilter === card.label ? (isDarkMode ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.08)') : (isDarkMode ? 'rgba(255, 255, 255, 0.03)' : '#ffffff'),
+                        border: `1px solid ${statusFilter === card.label ? 'var(--primary)' : 'var(--border-color)'}`,
+                        backdropFilter: 'var(--glass-blur)',
+                        transform: statusFilter === card.label ? 'translateY(-2px)' : 'none'
+                      }}
+                      onClick={() => setStatusFilter(statusFilter === card.label ? null : card.label)}
+                    >
+                      <h4 className={`mb-0 fw-black ${statusFilter === card.label ? 'text-primary' : 'text-main'}`} style={{ fontSize: '24px', lineHeight: 1 }}>{card.value}</h4>
+                      <small className="text-muted fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '8px' }}>{card.label}</small>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
 
             <div className="premium-card overflow-hidden shadow-lg border-0">
@@ -553,7 +557,7 @@ const ManagerDashboard = () => {
             <div className="row g-4">
               <div className="col-12 col-xl-8">
                 <Card title="Revenue & Pipeline Trend">
-                  <div className="py-3" style={{ height: '360px' }}>
+                  <div style={{ height: '360px' }}>
                     <React.Suspense fallback={<ChartSkeleton />}>
                       <RevenueTrendChart data={trend} theme={theme} filters={debouncedFilters} />
                     </React.Suspense>
@@ -562,7 +566,7 @@ const ManagerDashboard = () => {
               </div>
               <div className="col-12 col-xl-4">
                 <Card title="Pipeline Status Map">
-                  <div className="py-2" style={{ height: '360px' }}>
+                  <div style={{ height: '360px' }}>
                     <React.Suspense fallback={<ChartSkeleton />}>
                       <LeadStatusPieChart distribution={statusDistribution} leads={filteredLeads} isDarkMode={isDarkMode} />
                     </React.Suspense>

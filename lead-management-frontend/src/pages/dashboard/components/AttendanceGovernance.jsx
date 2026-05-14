@@ -17,6 +17,7 @@ import {
 import { toast } from 'react-toastify';
 import adminService from '../../../services/adminService';
 import { useTheme } from '../../../context/ThemeContext';
+import PortalSelect from '../../../components/PortalSelect';
 
 const AttendanceGovernance = ({ offices = [] }) => {
     const { isDarkMode } = useTheme();
@@ -26,6 +27,10 @@ const AttendanceGovernance = ({ offices = [] }) => {
     const [editingId, setEditingId] = useState(null);
     const [editingShiftId, setEditingShiftId] = useState(null);
     
+    const officeOptions = useMemo(() => 
+        offices.map(o => ({ value: o.id.toString(), label: o.name })),
+    [offices]);
+
     // Unified Governance State
     const [govData, setGovData] = useState({
         officeId: '',
@@ -219,15 +224,15 @@ const AttendanceGovernance = ({ offices = [] }) => {
     return (
         <div className="d-flex flex-column gap-4 animate-fade-in">
             {/* Unified Governance Form */}
-            <div className={`premium-card p-5 border-0 shadow-lg ${isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-white shadow-sm'}`} style={{ borderRadius: '32px' }}>
-                <div className="d-flex align-items-center justify-content-between mb-5">
+            <div className={`premium-card p-4 p-lg-5 border-0 shadow-lg ${isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-white shadow-sm'}`} style={{ borderRadius: '32px', backdropFilter: 'var(--glass-blur)' }}>
+                <div className="d-flex align-items-center justify-content-between mb-4 mb-lg-5">
                     <div className="d-flex align-items-center gap-3">
-                        <div className="p-3 bg-primary bg-opacity-10 text-primary rounded-pill shadow-glow">
+                        <div className="p-3 bg-primary bg-opacity-10 text-primary rounded-pill shadow-glow animate-pulse-slow">
                             <Settings2 size={24} />
                         </div>
                         <div>
-                            <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest">Unified Governance Protocol</h5>
-                            <p className="text-muted small mb-0 opacity-50 fw-bold">ONE-STOP ATTENDANCE & SHIFT CONFIGURATION</p>
+                            <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest">Governance Protocol</h5>
+                            <p className="text-muted small mb-0 opacity-50 fw-bold">OPERATIONAL ARCHITECTURE ENFORCEMENT</p>
                         </div>
                     </div>
                 </div>
@@ -235,75 +240,81 @@ const AttendanceGovernance = ({ offices = [] }) => {
                 <form onSubmit={handleSubmit} className="row g-4">
                     {/* Header: Office & Nomenclature */}
                     <div className="col-md-6">
-                        <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block ps-2" style={{ fontSize: '9px' }}>Target Office Node</label>
-                        <select className="ui-input py-3 px-4 rounded-4 fw-bold w-100" value={govData.officeId || ''} onChange={e => setGovData({...govData, officeId: e.target.value})}>
-                            <option value="">Select location hub...</option>
-                            {offices.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                        </select>
+                        <div className="form-group">
+                            <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block ps-2" style={{ fontSize: '9px' }}>Target Office Node</label>
+                            <PortalSelect 
+                                options={officeOptions}
+                                value={govData.officeId}
+                                onChange={(e) => setGovData({...govData, officeId: e.target.value})}
+                                placeholder="Select location hub..."
+                            />
+                        </div>
                     </div>
                     <div className="col-md-6">
-                        <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block ps-2" style={{ fontSize: '9px' }}>Shift Nomenclature</label>
-                        <input className="ui-input py-3 px-4 rounded-4 fw-bold w-100" value={govData.shiftName || ''} onChange={e => setGovData({...govData, shiftName: e.target.value})} />
+                        <div className="form-group">
+                            <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block ps-2" style={{ fontSize: '9px' }}>Shift Nomenclature</label>
+                            <input className="ui-input py-3 px-4 rounded-4 fw-black w-100 text-uppercase tracking-wider" style={{ fontSize: '12px' }} value={govData.shiftName || ''} onChange={e => setGovData({...govData, shiftName: e.target.value})} />
+                        </div>
                     </div>
 
                     {/* Section 1: Shift Timing & Grace */}
-                    <div className="col-12 mt-4">
+                    <div className="col-12 mt-5">
                         <h6 className="text-primary fw-black text-uppercase tracking-widest mb-4 d-flex align-items-center gap-2" style={{ fontSize: '11px' }}>
-                            <Clock size={14} /> Operational Timing
+                            <Clock size={14} className="animate-spin-slow" style={{ animationDuration: '8s' }} /> Operational Timing
                         </h6>
                         <div className="row g-4">
                             <div className="col-md-4">
-                                <div className="p-4 rounded-4 border border-white border-opacity-5" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                                <div className="p-4 rounded-4 border border-white border-opacity-5 shadow-inner" style={{ background: isDarkMode ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)' }}>
                                     <div className="row g-3">
                                         <div className="col-6 text-center">
-                                            <label className="text-muted small fw-black mb-1 d-block" style={{ fontSize: '8px' }}>START</label>
-                                            <input type="time" className="ui-input w-100 py-2 rounded-3 fw-bold text-center" value={govData.shiftStartTime || ''} onChange={e => setGovData({...govData, shiftStartTime: e.target.value})} />
+                                            <label className="text-muted small fw-black mb-2 d-block tracking-widest" style={{ fontSize: '8px' }}>START</label>
+                                            <input type="time" className="ui-input w-100 py-2 rounded-3 fw-black text-center text-primary" style={{ fontSize: '13px' }} value={govData.shiftStartTime || ''} onChange={e => setGovData({...govData, shiftStartTime: e.target.value})} />
                                         </div>
                                         <div className="col-6 text-center">
-                                            <label className="text-muted small fw-black mb-1 d-block" style={{ fontSize: '8px' }}>END</label>
-                                            <input type="time" className="ui-input w-100 py-2 rounded-3 fw-bold text-center" value={govData.shiftEndTime || ''} onChange={e => setGovData({...govData, shiftEndTime: e.target.value})} />
+                                            <label className="text-muted small fw-black mb-2 d-block tracking-widest" style={{ fontSize: '8px' }}>END</label>
+                                            <input type="time" className="ui-input w-100 py-2 rounded-3 fw-black text-center text-primary" style={{ fontSize: '13px' }} value={govData.shiftEndTime || ''} onChange={e => setGovData({...govData, shiftEndTime: e.target.value})} />
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             <div className="col-md-2">
                                 <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block" style={{ fontSize: '9px' }}>Grace (Min)</label>
-                                <input type="number" className="ui-input py-3 px-4 rounded-4 fw-bold w-100 text-center" value={govData.gracePeriodMinutes || 0} onChange={e => setGovData({...govData, gracePeriodMinutes: e.target.value})} />
+                                <input type="number" className="ui-input py-3 px-4 rounded-4 fw-black w-100 text-center" value={govData.gracePeriodMinutes || 0} onChange={e => setGovData({...govData, gracePeriodMinutes: e.target.value})} />
                             </div>
                             <div className="col-md-3">
                                 <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block" style={{ fontSize: '9px' }}>Full Day (Min)</label>
-                                <input type="number" className="ui-input py-3 px-4 rounded-4 fw-bold w-100 text-center text-success" value={govData.minimumWorkMinutes || 0} onChange={e => setGovData({...govData, minimumWorkMinutes: e.target.value})} />
+                                <input type="number" className="ui-input py-3 px-4 rounded-4 fw-black w-100 text-center text-success" value={govData.minimumWorkMinutes || 0} onChange={e => setGovData({...govData, minimumWorkMinutes: e.target.value})} />
                             </div>
                             <div className="col-md-3">
                                 <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block" style={{ fontSize: '9px' }}>Half Day (Min)</label>
-                                <input type="number" className="ui-input py-3 px-4 rounded-4 fw-bold w-100 text-center text-warning" value={govData.halfDayMinutes || 0} onChange={e => setGovData({...govData, halfDayMinutes: e.target.value})} />
+                                <input type="number" className="ui-input py-3 px-4 rounded-4 fw-black w-100 text-center text-warning" value={govData.halfDayMinutes || 0} onChange={e => setGovData({...govData, halfDayMinutes: e.target.value})} />
                             </div>
                         </div>
                     </div>
 
                     {/* Section 2: Break Windows */}
-                    <div className="col-12 mt-2">
+                    <div className="col-12 mt-4">
                         <h6 className="text-primary fw-black text-uppercase tracking-widest mb-4 d-flex align-items-center gap-2" style={{ fontSize: '11px' }}>
                             <Timer size={14} /> Break Windows
                         </h6>
                         <div className="row g-4">
                             <div className="col-md-6">
-                                <div className="p-4 rounded-4 border border-white border-opacity-5" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                                    <span className="text-muted small fw-black text-uppercase mb-3 d-block" style={{ fontSize: '9px' }}>Short Break</span>
+                                <div className="p-4 rounded-4 border border-white border-opacity-5 shadow-inner" style={{ background: isDarkMode ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)' }}>
+                                    <span className="text-muted small fw-black text-uppercase mb-3 d-block tracking-widest" style={{ fontSize: '9px', opacity: 0.6 }}>Short Break Protocol</span>
                                     <div className="d-flex gap-3 align-items-center">
-                                        <input type="time" className="ui-input flex-fill py-2 rounded-3 fw-bold text-center" value={govData.shortBreakStartTime || ''} onChange={e => setGovData({...govData, shortBreakStartTime: e.target.value})} />
-                                        <div className="text-muted opacity-30">→</div>
-                                        <input type="time" className="ui-input flex-fill py-2 rounded-3 fw-bold text-center" value={govData.shortBreakEndTime || ''} onChange={e => setGovData({...govData, shortBreakEndTime: e.target.value})} />
+                                        <input type="time" className="ui-input flex-fill py-2 rounded-3 fw-black text-center" value={govData.shortBreakStartTime || ''} onChange={e => setGovData({...govData, shortBreakStartTime: e.target.value})} />
+                                        <div className="text-muted opacity-30 fw-black">→</div>
+                                        <input type="time" className="ui-input flex-fill py-2 rounded-3 fw-black text-center" value={govData.shortBreakEndTime || ''} onChange={e => setGovData({...govData, shortBreakEndTime: e.target.value})} />
                                     </div>
                                 </div>
                             </div>
                             <div className="col-md-6">
-                                <div className="p-4 rounded-4 border border-white border-opacity-5" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                                    <span className="text-muted small fw-black text-uppercase mb-3 d-block" style={{ fontSize: '9px' }}>Long Break / Lunch</span>
+                                <div className="p-4 rounded-4 border border-white border-opacity-5 shadow-inner" style={{ background: isDarkMode ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)' }}>
+                                    <span className="text-muted small fw-black text-uppercase mb-3 d-block tracking-widest" style={{ fontSize: '9px', opacity: 0.6 }}>Long Break / Lunch Protocol</span>
                                     <div className="d-flex gap-3 align-items-center">
-                                        <input type="time" className="ui-input flex-fill py-2 rounded-3 fw-bold text-center" value={govData.longBreakStartTime || ''} onChange={e => setGovData({...govData, longBreakStartTime: e.target.value})} />
-                                        <div className="text-muted opacity-30">→</div>
-                                        <input type="time" className="ui-input flex-fill py-2 rounded-3 fw-bold text-center" value={govData.longBreakEndTime || ''} onChange={e => setGovData({...govData, longBreakEndTime: e.target.value})} />
+                                        <input type="time" className="ui-input flex-fill py-2 rounded-3 fw-black text-center" value={govData.longBreakStartTime || ''} onChange={e => setGovData({...govData, longBreakStartTime: e.target.value})} />
+                                        <div className="text-muted opacity-30 fw-black">→</div>
+                                        <input type="time" className="ui-input flex-fill py-2 rounded-3 fw-black text-center" value={govData.longBreakEndTime || ''} onChange={e => setGovData({...govData, longBreakEndTime: e.target.value})} />
                                     </div>
                                 </div>
                             </div>
@@ -311,76 +322,78 @@ const AttendanceGovernance = ({ offices = [] }) => {
                     </div>
 
                     {/* Section 3: Advanced Tracking Matrix */}
-                    <div className="col-12 mt-2">
+                    <div className="col-12 mt-4">
                         <h6 className="text-primary fw-black text-uppercase tracking-widest mb-4 d-flex align-items-center gap-2" style={{ fontSize: '11px' }}>
                             <Activity size={14} /> Tracking Precision
                         </h6>
                         <div className="row g-4">
                             <div className="col-md-4">
                                 <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block" style={{ fontSize: '9px' }}>Accuracy Threshold (Meters)</label>
-                                <input type="number" className="ui-input py-3 px-4 rounded-4 fw-bold w-100 text-center" value={govData.maxAccuracyMeters || 0} onChange={e => setGovData({...govData, maxAccuracyMeters: e.target.value})} />
+                                <input type="number" className="ui-input py-3 px-4 rounded-4 fw-black w-100 text-center" value={govData.maxAccuracyMeters || 0} onChange={e => setGovData({...govData, maxAccuracyMeters: e.target.value})} />
                             </div>
                             <div className="col-md-4">
                                 <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block" style={{ fontSize: '9px' }}>Sync Interval (Seconds)</label>
-                                <input type="number" className="ui-input py-3 px-4 rounded-4 fw-bold w-100 text-center" value={govData.trackingIntervalSec || 0} onChange={e => setGovData({...govData, trackingIntervalSec: e.target.value})} />
+                                <input type="number" className="ui-input py-3 px-4 rounded-4 fw-black w-100 text-center" value={govData.trackingIntervalSec || 0} onChange={e => setGovData({...govData, trackingIntervalSec: e.target.value})} />
                             </div>
                             <div className="col-md-4">
                                 <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block" style={{ fontSize: '9px' }}>Max Idle (Minutes)</label>
-                                <input type="number" className="ui-input py-3 px-4 rounded-4 fw-bold w-100 text-center" value={govData.maxIdleMinutes || 0} onChange={e => setGovData({...govData, maxIdleMinutes: e.target.value})} />
+                                <input type="number" className="ui-input py-3 px-4 rounded-4 fw-black w-100 text-center text-danger" value={govData.maxIdleMinutes || 0} onChange={e => setGovData({...govData, maxIdleMinutes: e.target.value})} />
                             </div>
                         </div>
                     </div>
 
                     {/* Section 4: Summary & Submission */}
-                    <div className="col-12 mt-5">
-                        <div className="p-4 rounded-4 d-flex flex-wrap gap-4 align-items-center justify-content-between" style={{ background: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.1)' }}>
-                            <div className="d-flex gap-5">
+                    <div className="col-12 mt-5 pt-2">
+                        <div className="p-4 rounded-4 d-flex flex-wrap gap-4 align-items-center justify-content-between glass-morphism shadow-glow-sm" style={{ background: isDarkMode ? 'rgba(99, 102, 241, 0.08)' : 'rgba(99, 102, 241, 0.04)', border: '1px solid rgba(99, 102, 241, 0.15)' }}>
+                            <div className="d-flex gap-5 flex-wrap">
                                 <div>
-                                    <span className="text-muted small fw-black text-uppercase d-block mb-1" style={{ fontSize: '8px' }}>Total Shift</span>
-                                    <span className="fw-black text-main">{Math.floor(stats.totalShiftMins / 60)}h {Math.round(stats.totalShiftMins % 60)}m</span>
+                                    <span className="text-muted small fw-black text-uppercase d-block mb-1 tracking-widest" style={{ fontSize: '8px', opacity: 0.6 }}>Total Shift</span>
+                                    <span className="fw-black text-main" style={{ fontSize: '15px' }}>{Math.floor(stats.totalShiftMins / 60)}h {Math.round(stats.totalShiftMins % 60)}m</span>
                                 </div>
                                 <div>
-                                    <span className="text-muted small fw-black text-uppercase d-block mb-1" style={{ fontSize: '8px' }}>Total Breaks</span>
-                                    <span className="fw-black text-danger">{Math.floor(stats.totalBreakMins / 60)}h {Math.round(stats.totalBreakMins % 60)}m</span>
+                                    <span className="text-muted small fw-black text-uppercase d-block mb-1 tracking-widest" style={{ fontSize: '8px', opacity: 0.6 }}>Total Breaks</span>
+                                    <span className="fw-black text-danger" style={{ fontSize: '15px' }}>{Math.floor(stats.totalBreakMins / 60)}h {Math.round(stats.totalBreakMins % 60)}m</span>
                                 </div>
                                 <div className="border-start border-white border-opacity-10 ps-4">
-                                    <span className="text-muted small fw-black text-uppercase d-block mb-1" style={{ fontSize: '8px' }}>Net Working Time</span>
-                                    <span className="fw-black text-success" style={{ fontSize: '18px' }}>{Math.floor(stats.workingMins / 60)}h {Math.round(stats.workingMins % 60)}m</span>
+                                    <span className="text-muted small fw-black text-uppercase d-block mb-1 tracking-widest" style={{ fontSize: '8px', opacity: 0.6 }}>Net Working Load</span>
+                                    <span className="fw-black text-success" style={{ fontSize: '20px' }}>{Math.floor(stats.workingMins / 60)}h {Math.round(stats.workingMins % 60)}m</span>
                                 </div>
                             </div>
-                            <button type="submit" className="ui-btn ui-btn-primary px-5 py-3 rounded-4 shadow-glow fw-black text-uppercase tracking-widest d-flex align-items-center gap-2">
-                                <Save size={18} /> {editingId ? 'UPDATE PROTOCOL' : 'SYNC PROTOCOL'}
-                            </button>
-                            {editingId && (
-                                <button type="button" className="ui-btn ui-btn-outline px-4 py-3 rounded-4 fw-black text-uppercase tracking-widest" onClick={() => {
-                                    setEditingId(null);
-                                    setEditingShiftId(null);
-                                    setGovData({
-                                        officeId: '',
-                                        shiftName: 'STANDARD SHIFT',
-                                        shiftStartTime: '11:00',
-                                        shiftEndTime: '20:00',
-                                        gracePeriodMinutes: 15,
-                                        minimumWorkMinutes: 480,
-                                        halfDayMinutes: 240,
-                                        shortBreakStartTime: '17:00',
-                                        shortBreakEndTime: '17:10',
-                                        longBreakStartTime: '13:00',
-                                        longBreakEndTime: '14:00',
-                                        trackingIntervalSec: 300,
-                                        maxAccuracyMeters: 100,
-                                        maxIdleMinutes: 30
-                                    });
-                                }}>CANCEL</button>
-                            )}
+                            <div className="d-flex gap-2">
+                                {editingId && (
+                                    <button type="button" className="ui-btn ui-btn-outline px-4 py-3 rounded-pill fw-black text-uppercase tracking-widest" onClick={() => {
+                                        setEditingId(null);
+                                        setEditingShiftId(null);
+                                        setGovData({
+                                            officeId: '',
+                                            shiftName: 'STANDARD SHIFT',
+                                            shiftStartTime: '11:00',
+                                            shiftEndTime: '20:00',
+                                            gracePeriodMinutes: 15,
+                                            minimumWorkMinutes: 480,
+                                            halfDayMinutes: 240,
+                                            shortBreakStartTime: '17:00',
+                                            shortBreakEndTime: '17:10',
+                                            longBreakStartTime: '13:00',
+                                            longBreakEndTime: '14:00',
+                                            trackingIntervalSec: 300,
+                                            maxAccuracyMeters: 100,
+                                            maxIdleMinutes: 30
+                                        });
+                                    }}>CANCEL</button>
+                                )}
+                                <button type="submit" className="ui-btn ui-btn-primary px-5 py-3 rounded-pill shadow-glow fw-black text-uppercase tracking-widest d-flex align-items-center gap-2 transition-all hover-scale">
+                                    <Save size={18} /> {editingId ? 'UPDATE PROTOCOL' : 'SYNC PROTOCOL'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </form>
             </div>
 
             {/* List of Registered Protocols */}
-            <div className={`premium-card p-5 border-0 shadow-lg ${isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-white shadow-sm'}`} style={{ borderRadius: '32px' }}>
-                <div className="d-flex align-items-center gap-3 mb-5">
+            <div className={`premium-card p-3 p-lg-5 border-0 shadow-lg ${isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-white shadow-sm'}`} style={{ borderRadius: '32px' }}>
+                <div className="d-flex align-items-center gap-3 mb-4 mb-lg-5">
                     <div className="p-3 bg-info bg-opacity-10 text-info rounded-pill shadow-glow">
                         <ShieldCheck size={24} />
                     </div>

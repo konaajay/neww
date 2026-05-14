@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Calendar, MessageSquare, Phone, Mail, MessageCircle } from 'lucide-react';
+import PortalSelect from './PortalSelect';
 
 const RejectionModal = ({ isOpen, onClose, onSubmit, leadName, theme }) => {
   const [reason, setReason] = useState('');
@@ -47,16 +48,15 @@ const RejectionModal = ({ isOpen, onClose, onSubmit, leadName, theme }) => {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
             <label style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Reason (Required)</label>
-            <select 
-              required
-              className="input glass border-0" 
+            <PortalSelect 
+              options={[
+                { value: "", label: "Select a reason" },
+                ...reasons.map(r => ({ value: r, label: r }))
+              ]}
               value={reason} 
               onChange={(e) => setReason(e.target.value)}
-              style={{ background: 'var(--input-bg)', color: 'var(--text)' }}
-            >
-              <option value="">Select a reason</option>
-              {reasons.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
+              placeholder="Reason (Required)"
+            />
           </div>
 
           <div className="flex flex-col gap-1">

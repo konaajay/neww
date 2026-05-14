@@ -85,7 +85,9 @@ const TeamLeaderDashboard = () => {
     selectedLeadIds,
     toggleSelection,
     bulkAssignLeads
-  } = useLeads(debouncedFilters, 'TEAM_LEADER');
+  } = useLeads(debouncedFilters, 'TEAM_LEADER', {
+    enabled: activeTab === 'leads' || (activeTab === 'my-stats' && myDashboardSubTab === 'leads') || activeTab === 'overview'
+  });
 
   const {
     subordinates, roles, offices, shifts
@@ -227,7 +229,7 @@ const TeamLeaderDashboard = () => {
 
             {myDashboardSubTab === 'dashboard' && (
               <>
-                {dashboardLoading ? <StatSkeleton /> : (
+                {dashboardLoading ? <MetricSkeletonRow count={4} /> : (
                   <MetricCommandCenter
                     stats={statsWithPerf}
                     role={filters.userId ? 'ASSOCIATE' : 'TEAM_LEADER'}
@@ -294,12 +296,12 @@ const TeamLeaderDashboard = () => {
         {activeTab === 'overview' && (
           <div className="d-flex flex-column gap-4 animate-fade-in">
             {dashboardLoading ? <StatSkeleton /> : (
-              <MetricCommandCenter stats={stats} role={filters.userId ? 'ASSOCIATE' : 'TEAM_LEADER'} filters={debouncedFilters} onNavigate={handleTabChange} leads={leads} />
+              <MetricCommandCenter stats={statsWithPerf} role={filters.userId ? 'ASSOCIATE' : 'TEAM_LEADER'} filters={debouncedFilters} onNavigate={handleTabChange} leads={leads} />
             )}
             <div className="row g-4 animate-fade-in">
               <div className="col-12 col-xl-8">
                 <Card title="Team Performance Trend">
-                  <div className="py-3" style={{ height: '360px' }}>
+                  <div style={{ height: '360px' }}>
                     <React.Suspense fallback={<ChartSkeleton />}>
                       <RevenueTrendChart data={trend} theme={theme} />
                     </React.Suspense>
@@ -308,7 +310,7 @@ const TeamLeaderDashboard = () => {
               </div>
               <div className="col-12 col-xl-4">
                 <Card title="Team Lead Distribution">
-                  <div className="py-2" style={{ height: '360px' }}>
+                  <div style={{ height: '360px' }}>
                     <React.Suspense fallback={<ChartSkeleton />}>
                       <LeadStatusPieChart distribution={statusDistribution} leads={leads} isDarkMode={theme === 'dark'} />
                     </React.Suspense>
@@ -335,16 +337,17 @@ const TeamLeaderDashboard = () => {
               ].map((card, i) => (
                 <div key={i} className="col-6 col-md-3">
                   <div 
-                    className={`premium-card p-3 border shadow-sm d-flex flex-column gap-1 transition-smooth ${statusFilter === card.label ? 'border-primary bg-primary bg-opacity-10' : 'border-main border-opacity-10'}`} 
+                    className={`p-3 d-flex flex-column gap-1 transition-smooth cursor-pointer ${statusFilter === card.label ? 'shadow-glow' : 'shadow-sm'}`} 
                     style={{ 
                       borderRadius: '20px', 
-                      background: statusFilter === card.label ? 'rgba(var(--primary-rgb), 0.1)' : 'var(--bg-card)',
+                      background: statusFilter === card.label ? (isDarkMode ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.08)') : (isDarkMode ? 'rgba(255, 255, 255, 0.03)' : '#ffffff'),
+                      border: `1px solid ${statusFilter === card.label ? 'var(--primary)' : 'var(--border-color)'}`,
                       backdropFilter: 'var(--glass-blur)',
-                      cursor: 'pointer'
+                      transform: statusFilter === card.label ? 'translateY(-2px)' : 'none'
                     }}
                     onClick={() => setStatusFilter(statusFilter === card.label ? null : card.label)}
                   >
-                    <h4 className="mb-0 fw-black text-main" style={{ fontSize: '24px', lineHeight: 1 }}>{card.value}</h4>
+                    <h4 className={`mb-0 fw-black ${statusFilter === card.label ? 'text-primary' : 'text-main'}`} style={{ fontSize: '24px', lineHeight: 1 }}>{card.value}</h4>
                     <small className="text-muted fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '8px' }}>{card.label}</small>
                   </div>
                 </div>
@@ -410,7 +413,7 @@ const TeamLeaderDashboard = () => {
             <div className="row g-4">
               <div className="col-12 col-xl-8">
                 <Card title="Team Performance Trend">
-                  <div className="py-3" style={{ height: '360px' }}>
+                  <div style={{ height: '360px' }}>
                     <React.Suspense fallback={<ChartSkeleton />}>
                       <RevenueTrendChart data={trend} theme={theme} />
                     </React.Suspense>
@@ -419,7 +422,7 @@ const TeamLeaderDashboard = () => {
               </div>
               <div className="col-12 col-xl-4">
                 <Card title="Team Pipeline Map">
-                  <div className="py-2" style={{ height: '360px' }}>
+                  <div style={{ height: '360px' }}>
                     <React.Suspense fallback={<ChartSkeleton />}>
                       <LeadStatusPieChart distribution={statusDistribution} leads={leads} isDarkMode={theme === 'dark'} />
                     </React.Suspense>

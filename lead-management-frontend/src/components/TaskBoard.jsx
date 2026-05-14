@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 import { useTasks } from '../features/leads/hooks/useTasks';
 import callApi from '../features/calls/api/callApi';
+import { SystemStatGrid, SystemStatCard } from './SystemStatCard';
 
 const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, userId, managerId, teamId, startDate, endDate, initialFilter = 'ALL' }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -154,10 +155,8 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
   const filteredTasks = useMemo(() => {
     return processedTasks.filter(task => {
       // 1. Core Filter Logic
-      // If we are NOT specifically looking for COMPLETED tasks, hide them by default
-      if (statusFilter !== 'COMPLETED' && task.status === 'COMPLETED') return false;
-      // If we ARE looking for COMPLETED tasks, hide anything that isn't completed
-      if (statusFilter === 'COMPLETED' && task.status !== 'COMPLETED') return false;
+      // If a specific status filter is selected, we enforce it. 
+      // If 'ALL' is selected, we show everything (including completed).
 
       const s = searchTerm.toLowerCase();
       const matchesSearch =
@@ -176,11 +175,13 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
       let matchesStatus = true;
       if (statusFilter !== 'ALL') {
         if (statusFilter === 'TODAY') {
-          matchesStatus = task.dueDate && isToday(task.dueDate);
+          matchesStatus = task.status !== 'COMPLETED' && task.status !== 'CANCELLED' && !task.isOverdue && isToday(task.dueDate);
         } else if (statusFilter === 'OVERDUE') {
-          matchesStatus = task.dueDate && isOverdue(task.dueDate) && task.status !== 'COMPLETED';
+          matchesStatus = task.isOverdue && task.status !== 'COMPLETED' && task.status !== 'CANCELLED';
+        } else if (statusFilter === 'FUTURE') {
+          matchesStatus = task.status !== 'COMPLETED' && task.status !== 'CANCELLED' && !task.isOverdue && !isToday(task.dueDate);
         } else if (statusFilter === 'COMPLETED') {
-          matchesStatus = task.status?.toUpperCase() === 'COMPLETED' && isToday(task.updatedAt);
+          matchesStatus = task.status?.toUpperCase() === 'COMPLETED';
         } else {
           matchesStatus = task.priority && task.priority.toUpperCase() === statusFilter.toUpperCase();
         }
@@ -216,30 +217,22 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
 
   return (
     <div className="d-flex flex-column gap-3 animate-fade-in pb-5">
-      {/* Analytics Summary */}
-      <div className="row g-3 mb-1">
+      <SystemStatGrid>
         {[
-          { id: 'TODAY', label: "Pending (Today)", color: "primary", value: processedTasks.filter(t => t.status !== 'COMPLETED' && isToday(t.dueDate) && !t.isOverdue).length },
-          { id: 'OVERDUE', label: "Overdue Tasks", color: "danger", value: processedTasks.filter(t => t.isOverdue && t.status !== 'COMPLETED').length },
-          { id: 'COMPLETED', label: "Completed Today", color: "success", value: processedTasks.filter(t => t.status?.toUpperCase() === 'COMPLETED' && isToday(t.updatedAt)).length }
+          { id: 'TODAY', label: "Pending (Today)", value: processedTasks.filter(t => t.status !== 'COMPLETED' && t.status !== 'CANCELLED' && !t.isOverdue && isToday(t.dueDate)).length, color: 'text-primary' },
+          { id: 'OVERDUE', label: "Overdue Tasks", value: processedTasks.filter(t => t.isOverdue && t.status !== 'COMPLETED' && t.status !== 'CANCELLED').length, color: 'text-danger' },
+          { id: 'FUTURE', label: "Future Tasks", value: processedTasks.filter(t => t.status !== 'COMPLETED' && t.status !== 'CANCELLED' && !t.isOverdue && !isToday(t.dueDate)).length, color: 'text-info' }
         ].map((stat, i) => (
-          <div key={i} className="col-12 col-md-4">
-            <div 
-              className={`premium-card p-3 shadow-lg border d-flex flex-column gap-1 cursor-pointer transition-all ${statusFilter === stat.id ? 'border-primary' : 'border-white border-opacity-5'}`}
-              style={{ 
-                background: statusFilter === stat.id ? 'rgba(var(--primary-rgb), 0.1)' : 'var(--bg-card)', 
-                backdropFilter: 'blur(10px)', 
-                borderRadius: '20px',
-                transform: statusFilter === stat.id ? 'scale(1.02)' : 'none'
-              }}
-              onClick={() => setStatusFilter(prev => prev === stat.id ? 'ALL' : stat.id)}
-            >
-              <h3 className={`fw-black mb-0 tabular-nums ${statusFilter === stat.id ? 'text-primary' : 'text-main'}`} style={{ fontSize: '32px', lineHeight: 1 }}>{stat.value}</h3>
-              <div className="text-muted extra-small fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '9px' }}>{stat.label}</div>
-            </div>
-          </div>
+          <SystemStatCard
+            key={i}
+            label={stat.label}
+            value={stat.value}
+            colorClass={stat.color}
+            isActive={statusFilter === stat.id}
+            onClick={() => setStatusFilter(prev => prev === stat.id ? 'ALL' : stat.id)}
+          />
         ))}
-      </div>
+      </SystemStatGrid>
 
       {/* Search & Actions */}
       <div className="px-1 d-flex justify-content-between align-items-center mb-1 mt-2">
@@ -299,9 +292,20 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
                       </div>
                     </td>
                     <td>
-                      <span className={`fw-black text-uppercase text-${task.lead?.status === 'CONVERTED' ? 'success' : 'primary'}`} style={{ fontSize: '10px', letterSpacing: '0.5px' }}>
-                        {task.lead?.status?.toUpperCase() === 'CONVERTED' ? 'EMI' : (task.lead?.status || 'N/A')}
-                      </span>
+                      {(() => {
+                        const s = task.lead?.status?.toUpperCase() || 'N/A';
+                        let colorClass = 'primary';
+                        if (['CONVERTED', 'PAID', 'SUCCESS'].includes(s)) colorClass = 'success';
+                        else if (['LOST', 'REJECTED', 'NOT_INTERESTED'].includes(s)) colorClass = 'danger';
+                        else if (['FOLLOW_UP', 'EMI', 'BUSY'].includes(s)) colorClass = 'warning';
+                        else if (['NEW', 'CONTACTED'].includes(s)) colorClass = 'info';
+                        
+                        return (
+                          <span className={`fw-black text-uppercase text-${colorClass}`} style={{ fontSize: '10px', letterSpacing: '0.5px' }}>
+                            {s === 'CONVERTED' ? 'EMI' : s}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td>
                       <span className="text-dark fw-bold small">{task.title || 'Follow-up'}</span>

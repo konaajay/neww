@@ -11,121 +11,28 @@ import LeadHistoryModal from './LeadHistoryModal';
 import { useTheme } from '../context/ThemeContext';
 import ReactDOM from 'react-dom';
 import leadsApi from '../features/leads/api/leadsApi';
+import PortalSelect from './PortalSelect';
 
-const StatusDropdown = ({ lead, pipelineStages, onChange, getStatusColorClass, index, totalItems }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
-  const buttonRef = React.useRef(null);
+const StatusDropdown = ({ lead, pipelineStages, onChange, getStatusColorClass }) => {
   const { isDarkMode } = useTheme();
 
-  const updateCoords = useCallback(() => {
-    if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      const scrollY = window.scrollY;
-      const scrollX = window.scrollX;
-      
-      setCoords({
-        top: rect.bottom,
-        topUp: rect.top,
-        left: rect.left,
-        width: rect.width,
-        windowWidth: window.innerWidth,
-        windowHeight: window.innerHeight
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isOpen) {
-      updateCoords();
-      window.addEventListener('scroll', updateCoords, true);
-      window.addEventListener('resize', updateCoords);
-      return () => {
-        window.removeEventListener('scroll', updateCoords, true);
-        window.removeEventListener('resize', updateCoords);
-      };
-    }
-  }, [isOpen, updateCoords]);
-
-  const toggleDropdown = (e) => {
-    if (e) {
-      e.stopPropagation();
-      e.preventDefault();
-    }
-    setIsOpen(!isOpen);
-  };
-
-  const handleSelect = (status) => {
-    onChange(lead, status);
-    setIsOpen(false);
-  };
-
   const currentStage = pipelineStages.find(s => s.statusValue === (lead.status || 'NEW')) || pipelineStages[0];
-  
-  // Open upwards only for the very last row to prevent clipping if not using Portal
-  // But with Portal, we can just check if we are near the bottom of the viewport
-  const openUpwards = buttonRef.current && (buttonRef.current.getBoundingClientRect().bottom + 250 > window.innerHeight);
+  const label = (lead.status === 'CONVERTED' || lead.paymentStatus) 
+    ? (lead.paymentStatus?.replace('_', ' ') || 'CONVERTED') 
+    : currentStage.label;
 
   return (
-    <div className="position-relative" style={{ width: '130px' }}>
-      <button
-        ref={buttonRef}
-        className={`w-100 d-flex align-items-center justify-content-between py-1 px-0 border-0 bg-transparent fw-black text-uppercase ${getStatusColorClass(lead.status)}`}
-        style={{ 
-          fontSize: '10px', 
-          cursor: 'pointer',
-          height: '24px'
-        }}
-        onClick={toggleDropdown}
-      >
-        <span className="text-truncate">
-          {(lead.status === 'CONVERTED' || lead.paymentStatus) 
-            ? (lead.paymentStatus?.replace('_', ' ') || 'CONVERTED') 
-            : currentStage.label}
-        </span>
-        <ChevronDown size={10} className="ms-1 opacity-50" />
-      </button>
-
-      {isOpen && ReactDOM.createPortal(
-        <>
-          <div 
-            className="position-fixed top-0 start-0 w-100 h-100" 
-            style={{ zIndex: 9999998 }} 
-            onClick={() => setIsOpen(false)}
-          ></div>
-          <div 
-            className="position-fixed shadow-xl rounded-3 border overflow-hidden custom-scroll animate-fade-in"
-            style={{ 
-              zIndex: 9999999, 
-              width: '180px', 
-              maxHeight: '300px',
-              overflowY: 'auto',
-              background: 'var(--bg-card)', 
-              borderColor: 'var(--border-color)',
-              left: Math.max(10, Math.min(coords.left, (coords.windowWidth || window.innerWidth) - 190)),
-              top: openUpwards ? 'auto' : coords.top + 5,
-              bottom: openUpwards ? ((coords.windowHeight || window.innerHeight) - coords.topUp + 5) : 'auto'
-            }}
-          >
-            {pipelineStages.map((s) => (
-              <div
-                key={s.statusValue}
-                className={`px-3 py-2 text-main hover-bg-primary transition-all cursor-pointer d-flex align-items-center gap-2 border-bottom border-main border-opacity-5`}
-                style={{ fontSize: '10px', fontWeight: '800' }}
-                onClick={() => handleSelect(s.statusValue)}
-              >
-                <div className={`rounded-circle ${getStatusColorClass(s.statusValue)}`} style={{ width: '6px', height: '6px' }}></div>
-                {s.label.toUpperCase()}
-                {s.isRoot && (
-                  <span className="ms-auto px-1 rounded-pill bg-success bg-opacity-10 text-success fw-black" style={{ fontSize: '6px' }}>ROOT</span>
-                )}
-              </div>
-            ))}
-          </div>
-        </>,
-        document.body
-      )}
-    </div>
+    <PortalSelect 
+      options={pipelineStages.map(s => ({
+        value: s.statusValue,
+        label: s.label.toUpperCase()
+      }))}
+      value={lead.status}
+      onChange={(e) => onChange(lead, e.target.value)}
+      placeholder={label.toUpperCase()}
+      style={{ width: '130px' }}
+      triggerClassName={`fw-black text-uppercase ${getStatusColorClass(lead.status)}`}
+    />
   );
 };
 
@@ -228,18 +135,16 @@ const LeadTable = ({
             <span className="fw-black text-primary small text-uppercase tracking-widest">{selectedLeadIds.length} assets selected for redistribution</span>
           </div>
           <div className="d-flex align-items-center gap-2">
-            <select 
-              className="form-select form-select-sm bg-surface border-white border-opacity-20 text-main fw-black text-uppercase"
-              style={{ width: '200px', fontSize: '10px', height: '32px' }}
+            <PortalSelect 
+              options={[
+                { value: "", label: "Select Target..." },
+                { value: "0", label: "UNASSIGN ALL" },
+                ...uniqueTeamLeaders.filter(u => (role === 'ADMIN' || u.role !== 'ADMIN')).map(u => ({ value: u.id.toString(), label: u.name.toUpperCase() }))
+              ]}
               value={bulkAssignTlId}
               onChange={(e) => setBulkAssignTlId(e.target.value)}
-            >
-              <option value="">Select Target...</option>
-              <option value="0" className="text-danger">UNASSIGN ALL</option>
-              {uniqueTeamLeaders.filter(u => (role === 'ADMIN' || u.role !== 'ADMIN')).map(u => (
-                <option key={u.id} value={u.id}>{u.name.toUpperCase()}</option>
-              ))}
-            </select>
+              style={{ width: '200px' }}
+            />
             <button 
               className="btn btn-primary btn-sm px-4 rounded-pill fw-black text-uppercase tracking-widest shadow-glow"
               style={{ fontSize: '10px', height: '32px' }}
@@ -343,20 +248,16 @@ const LeadTable = ({
                   </td>
                   {role !== 'ASSOCIATE' && (
                     <td onClick={(e) => e.stopPropagation()}>
-                      <select
-                        className={`form-select bg-surface bg-opacity-20 border-0 ${!lead.assignedToId ? 'text-danger fw-black' : 'text-main'} py-1 px-2 fw-black text-uppercase`}
-                        style={{ width: '130px', fontSize: '10px', borderRadius: '8px' }}
+                      <PortalSelect 
+                        options={[
+                          { value: "", label: "UNASSIGNED" },
+                          ...uniqueTeamLeaders.filter(u => (u.active || u.id === lead.assignedToId) && u.role !== 'ADMIN').map(u => ({ value: u.id.toString(), label: `${u.name.toUpperCase()} ${u.id === lead.assignedToId ? '✓' : ''}` }))
+                        ]}
+                        value={lead.assignedToId?.toString() || ''}
                         onChange={(e) => handleAssignLeadInternal(lead.id, e.target.value)}
-                        value={lead.assignedToId || ''}
                         disabled={role !== 'ADMIN' && ((['PAID', 'SUCCESS'].includes(lead.status?.toUpperCase())) || (role === 'TEAM_LEADER' && lead.assignedToId && lead.assignedToId != currentUserId))}
-                      >
-                        <option value="" className="text-danger">UNASSIGNED</option>
-                        {uniqueTeamLeaders.filter(u => (u.active || u.id === lead.assignedToId) && u.role !== 'ADMIN').map(u => (
-                          <option key={u.id} value={u.id}>
-                            {u.name.toUpperCase()} {u.id === lead.assignedToId ? '✓' : ''}
-                          </option>
-                        ))}
-                      </select>
+                        style={{ width: '140px' }}
+                      />
                       {(role !== 'ADMIN' && (['PAID', 'SUCCESS'].includes(lead.status?.toUpperCase()) || (role === 'TEAM_LEADER' && lead.assignedToId && lead.assignedToId != currentUserId))) && (
                         <div className="text-muted fw-bold opacity-30 mt-1 px-1" style={{ fontSize: '7px' }}>PROTOCOL LOCKED</div>
                       )}
@@ -442,19 +343,19 @@ const LeadTable = ({
             Showing {leads.length > 0 ? indexOfFirstItem + 1 : 0} - {Math.min(indexOfLastItem, leads.length)}
           </small>
           <span className="text-muted opacity-25">|</span>
-          <select 
-            className="bg-transparent border-0 text-primary fw-black text-uppercase tracking-widest" 
-            style={{ fontSize: '10px', cursor: 'pointer', outline: 'none' }}
-            value={itemsPerPage}
+          <PortalSelect 
+            options={[
+              { value: "20", label: "20 Per Page" },
+              { value: "50", label: "50 Per Page" },
+              { value: "100", label: "100 Per Page" }
+            ]}
+            value={itemsPerPage.toString()}
             onChange={(e) => {
               setItemsPerPage(Number(e.target.value));
               setCurrentPage(1);
             }}
-          >
-            <option value="20" className="bg-dark">20 Per Page</option>
-            <option value="50" className="bg-dark">50 Per Page</option>
-            <option value="100" className="bg-dark">100 Per Page</option>
-          </select>
+            style={{ width: '120px' }}
+          />
           <span className="text-muted opacity-25">|</span>
           <small className="text-primary fw-black text-uppercase tracking-widest" style={{ fontSize: '10px' }}>
             Total {leads.length} Registry Assets

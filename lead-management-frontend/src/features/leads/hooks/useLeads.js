@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import leadsApi from '../api/leadsApi';
 import { toast } from 'react-toastify';
 
-export const useLeads = (filters, role) => {
+export const useLeads = (filters, role, options = {}) => {
+  const { enabled = true } = options;
   const queryClient = useQueryClient();
   const [selectedLeadIds, setSelectedLeadIds] = useState([]);
 
@@ -23,6 +24,7 @@ export const useLeads = (filters, role) => {
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
+    enabled,
     // Extract leads from different response formats (ApiResponse.data, content array, or direct array)
     select: (res) => {
       if (!res) return [];

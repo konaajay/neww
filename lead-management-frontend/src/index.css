@@ -142,21 +142,22 @@ select option {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow-y: auto !important; /* Allow vertical scrolling */
+  overflow-x: visible !important; /* CRITICAL: Prevent horizontal clipping of dropdowns */
   min-height: 0;
   width: 100%;
   background: rgba(0, 0, 0, 0.02); /* Subtle depth */
+  position: relative;
+  z-index: 1;
 }
 
-.layout-body > .animate-fade-in {
-  flex: 1;
+/* Ensure the main area doesn't trap portaled elements */
+.app-main-area {
   display: flex;
-  flex-direction: column;
-}
-
-[data-bs-theme="dark"] .layout-body {
-  background: rgba(0, 0, 0, 0.2);
+  flex: 1;
+  overflow: visible !important; /* Allow portaled menus to stick out */
+  height: calc(100vh - 72px);
+  background: var(--bg-body);
 }
 .bg-input {
   background-color: var(--bg-input) !important;
@@ -186,7 +187,8 @@ body,
   height: 100% !important;
   min-height: 100% !important;
   max-height: 100% !important;
-  overflow: hidden !important;
+  overflow-x: hidden !important; /* Block horizontal jitter */
+  overflow-y: hidden !important; /* Locked viewport */
   margin: 0;
   padding: 0;
   width: 100% !important;
@@ -259,11 +261,11 @@ img {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  margin-left: 0; /* No margin needed with flex flow */
+  margin-left: 0; 
   width: auto;
-  min-width: 0; /* Prevent flex blowout */
+  min-width: 0; 
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
+  overflow: visible !important; /* Prevent clipping of navigation dropdowns */
   position: relative;
 }
 
@@ -345,12 +347,26 @@ img {
   padding: 24px;
 }
 
-.premium-card {
+.premium-card,
+.form-card,
+.table-card,
+.ui-card {
   background: var(--bg-card);
   backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-sm); 
+  overflow: visible !important; /* Force visibility for dropdowns */
+  position: relative;
+}
+
+/* Specific Dropdown Menu Hardening */
+.dropdown-menu,
+.react-select__menu,
+.custom-dropdown-portal {
+  z-index: 9999 !important;
+  position: absolute !important;
+  overflow: visible !important;
 }
 
 /* Typography Refinement */
@@ -412,9 +428,17 @@ h6 {
 }
 
 .ui-btn-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%);
+  color: white !important;
+  box-shadow: 0 4px 15px -5px rgba(99, 102, 241, 0.5);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-bs-theme="light"] .ui-btn-primary {
   background: var(--primary);
-  color: white;
-  box-shadow: 0 4px 12px var(--primary-glow);
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 .ui-btn-primary:hover {
@@ -426,6 +450,35 @@ h6 {
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-main);
   border: 1px solid var(--border-color);
+}
+
+.ui-btn-outline {
+  background: transparent;
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+[data-bs-theme="light"] .ui-btn-outline {
+  border-color: rgba(0, 0, 0, 0.2); /* Darker border for visibility */
+  font-weight: 800;
+}
+
+.ui-btn-outline:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.ui-btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+}
+
+.ui-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-main);
 }
 
 /* Inputs Restored */
@@ -440,10 +493,13 @@ h6 {
   font-weight: 500;
   font-size: 0.95rem;
   outline: none;
-  transition: all 0.2s ease;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-bs-theme="dark"] .ui-input,
+[data-bs-theme="dark"] .form-control {
+  background: rgba(0, 0, 0, 0.3) !important;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .ui-input:focus,
@@ -451,6 +507,12 @@ h6 {
   border-color: var(--primary) !important;
   background: var(--bg-card) !important;
   box-shadow: 0 0 0 4px var(--primary-glow) !important;
+  transform: translateY(-1px);
+}
+
+[data-bs-theme="dark"] .ui-input:focus,
+[data-bs-theme="dark"] .form-control:focus {
+  background: rgba(0, 0, 0, 0.4) !important;
 }
 
 @media (max-width: 575px) {
@@ -984,4 +1046,45 @@ select option {
   100% {
     box-shadow: 0 0 0 0 rgba(244, 63, 94, 0);
   }
+}
+
+/* GLOBAL DROPDOWN & CLIPPING PROTOCOL */
+.dropdown-menu,
+.react-select__menu,
+.react-datepicker-popper,
+.flatpickr-calendar {
+  z-index: 9999 !important;
+  position: absolute !important;
+}
+
+.react-select__menu-portal {
+  z-index: 9999 !important;
+}
+
+.premium-card,
+.form-card,
+.table-card,
+.ui-card {
+  overflow: visible !important;
+}
+
+.modal,
+.modal-content,
+.modal-body {
+  overflow: visible !important;
+}
+
+.table-responsive {
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  padding-bottom: 80px; /* Safety buffer for action menus */
+  margin-bottom: -80px;
+}
+
+.form-floating {
+  overflow: visible !important;
+}
+
+.react-select__control {
+  z-index: 2 !important;
 }

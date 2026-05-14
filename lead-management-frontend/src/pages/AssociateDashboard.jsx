@@ -55,7 +55,7 @@ const AssociateDashboard = () => {
   const [filters, setFilters] = useState(() => {
     const d = new Date();
     const f = new Date(d.getFullYear(), d.getMonth(), 1);
-    const l = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    const l = d; // Today
     const fmt = (date) => {
       const y = date.getFullYear();
       const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -89,9 +89,13 @@ const AssociateDashboard = () => {
     updateLead,
     updateStatus,
     recordCallOutcome
-  } = useLeads(debouncedFilters, 'ASSOCIATE');
+  } = useLeads(debouncedFilters, 'ASSOCIATE', {
+    enabled: activeTab === 'leads' || activeTab === 'overview'
+  });
 
-  const { tasks, loading: tasksLoading } = useTasks(debouncedFilters);
+  const { tasks, loading: tasksLoading } = useTasks(debouncedFilters, {
+    enabled: activeTab === 'tasks'
+  });
 
   // Profile hook for manager info
   const { data: profile } = useQuery({
@@ -160,6 +164,14 @@ const AssociateDashboard = () => {
   const performance = dashboardData?.performance || [];
   const statusDistribution = dashboardData?.statusDistribution || {};
 
+  const statsWithPerf = useMemo(() => ({
+    ...stats,
+    performance,
+    presentCount: stats?.presentCount || 0,
+    absentCount: stats?.absentCount || 0,
+    lateCount: stats?.lateCount || 0
+  }), [stats, performance]);
+
   const filteredLeads = useMemo(() => {
     let result = leads;
 
@@ -204,11 +216,11 @@ const AssociateDashboard = () => {
         {activeTab === 'overview' && (
           <div className="d-flex flex-column gap-4 animate-fade-in">
             <ManagerProfile manager={manager} />
-            {dashboardLoading ? <StatSkeleton /> : (
+            {dashboardLoading ? <MetricSkeletonRow count={4} /> : (
               <div className="row g-4 align-items-start">
                 <div className="col-12 col-xl-6">
                   <MetricCommandCenter
-                    stats={stats}
+                    stats={statsWithPerf}
                     role="ASSOCIATE"
                     filters={debouncedFilters}
                     onNavigate={handleTabChange}
@@ -242,12 +254,13 @@ const AssociateDashboard = () => {
               ].map((card, i) => (
                 <div key={i} className="col-6 col-md-3">
                   <div
-                    className={`premium-card p-3 border shadow-sm d-flex flex-column gap-1 transition-smooth cursor-pointer ${leadStatusFilter === card.id ? 'border-primary shadow-glow' : 'border-main border-opacity-10'}`}
+                    className={`p-3 d-flex flex-column gap-1 transition-smooth cursor-pointer ${leadStatusFilter === card.id ? 'shadow-glow' : 'shadow-sm'}`}
                     style={{
                       borderRadius: '20px',
-                      background: leadStatusFilter === card.id ? 'rgba(var(--primary-rgb), 0.1)' : 'var(--bg-card)',
+                      background: leadStatusFilter === card.id ? (isDarkMode ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.08)') : (isDarkMode ? 'rgba(255, 255, 255, 0.03)' : '#ffffff'),
+                      border: `1px solid ${leadStatusFilter === card.id ? 'var(--primary)' : 'var(--border-color)'}`,
                       backdropFilter: 'var(--glass-blur)',
-                      transform: leadStatusFilter === card.id ? 'scale(1.05)' : 'none'
+                      transform: leadStatusFilter === card.id ? 'translateY(-2px)' : 'none'
                     }}
                     onClick={() => setLeadStatusFilter(prev => prev === card.id ? 'ALL' : card.id)}
                   >

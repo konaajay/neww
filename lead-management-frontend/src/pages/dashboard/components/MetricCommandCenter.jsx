@@ -12,9 +12,13 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-export const MetricCard = memo(({ title, stats, icon: Icon, color, onClick, badge }) => (
+import { useTheme } from '../../../context/ThemeContext';
+
+export const MetricCard = memo(({ title, stats, icon: Icon, color, onClick, badge }) => {
+  const { isDarkMode } = useTheme();
+  return (
   <div
-    className="premium-card h-100 cursor-pointer border-0 shadow-sm transition-all hover-translate-y-1 hover-shadow-glow"
+    className={`p-3 d-flex flex-column h-100 cursor-pointer transition-smooth ${onClick ? (isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-light') : ''} ${badge ? 'shadow-glow' : 'shadow-sm'}`}
     onClick={onClick}
     style={{
       borderRadius: '24px',
@@ -23,9 +27,7 @@ export const MetricCard = memo(({ title, stats, icon: Icon, color, onClick, badg
       position: 'relative',
       overflow: 'hidden',
       minHeight: '120px',
-      display: 'flex',
-      flexDirection: 'column',
-      border: '1px solid rgba(255,255,255,0.05)'
+      border: '1px solid var(--border-color)'
     }}
   >
     {/* Subtle Background Glow */}
@@ -34,7 +36,7 @@ export const MetricCard = memo(({ title, stats, icon: Icon, color, onClick, badg
       style={{ width: '80px', height: '80px', filter: 'blur(40px)', borderRadius: '50%', transform: 'translate(30%, -30%)' }}
     />
 
-    <div className="p-3 d-flex flex-column h-100 position-relative z-1">
+    <div className="d-flex flex-column h-100 position-relative z-1">
       <div className="d-flex align-items-center justify-content-between mb-2">
         <div className="d-flex align-items-center gap-2">
           <div className={`p-1.5 bg-${color} bg-opacity-10 rounded-3 text-${color} d-flex align-items-center justify-content-center`} style={{ width: '24px', height: '24px' }}>
@@ -73,7 +75,8 @@ export const MetricCard = memo(({ title, stats, icon: Icon, color, onClick, badg
       </div>
     </div>
   </div>
-));
+  );
+});
 
 const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = [], hideUsers = false, vertical = false, columns }) => {
   const navigate = useNavigate();
@@ -105,10 +108,18 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
       return statsToUse.userBreakdown?.[target] || statsToUse.userBreakdown?.[k.toUpperCase()] || 0;
     };
 
+    if (stats) {
+      console.log(">>> [METRIC COMMAND CENTER] Received Stats:", stats);
+      console.log(">>> [METRIC COMMAND CENTER] Performance List Length:", stats.performance?.length || 0);
+      if (stats.performance?.length > 0) {
+          console.log(">>> [METRIC COMMAND CENTER] First record:", stats.performance[0]);
+      }
+    }
+
     return {
       displayToday: statsToUse.todayFollowups || 0,
       displayOverdue: statsToUse.pendingFollowups || 0,
-      totalActiveTasks: (statsToUse.todayFollowups || 0) + (statsToUse.pendingFollowups || 0),
+      totalActiveTasks: (statsToUse.todayFollowups || 0) + (statsToUse.pendingFollowups || 0) + (statsToUse.todayPaymentsCount || 0) + (statsToUse.pendingPaymentsCount || 0),
       totalUsers: statsToUse.totalUsers || (getCount('ADMIN') + getCount('MANAGER') + getCount('TEAM_LEADER') + getCount('ASSOCIATE')),
       getCount
     };
@@ -133,20 +144,52 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
       }}
     >
       {/* 1. ATTENDANCE */}
-      <MetricCard
-        title="ATTENDANCE"
-        icon={Users}
-        color="primary"
-        onClick={() => handleNav('attendance', `/attendance`)}
-        stats={{
-          primary: { value: stats.presentCount || 0, label: 'WORKING TODAY' },
-          secondary: [
-            { label: 'Absent', value: stats.absentCount || 0, color: 'danger' },
-            { label: 'Present', value: stats.presentCount || 0, color: 'success' },
-            { label: 'Late', value: stats.lateCount || 0, color: 'warning' }
-          ]
-        }}
-      />
+      {(() => {
+        const isRange = filters?.from && filters?.to && filters.from !== filters.to;
+        
+        // Helper to get aggregated attendance for the range or today
+        const getAttendance = () => {
+          if (!isRange) {
+            return {
+              primary: filters?.userId ? (stats.performance?.find(p => p.userId == filters.userId)?.presentCount ?? stats.presentCount) : stats.presentCount,
+              absent: filters?.userId ? (stats.performance?.find(p => p.userId == filters.userId)?.absentCount ?? stats.absentCount) : stats.absentCount,
+              present: filters?.userId ? (stats.performance?.find(p => p.userId == filters.userId)?.presentCount ?? stats.presentCount) : stats.presentCount,
+              late: filters?.userId ? (stats.performance?.find(p => p.userId == filters.userId)?.lateCount ?? stats.lateCount) : stats.lateCount
+            };
+          }
+
+          // Sum performance records for the range total
+          const relevantPerf = filters?.userId ? stats.performance?.filter(p => p.userId == filters.userId) : stats.performance;
+          return (relevantPerf || []).reduce((acc, p) => ({
+            primary: acc.primary + (p.presentCount || 0),
+            absent: acc.absent + (p.absentCount || 0),
+            present: acc.present + (p.presentCount || 0),
+            late: acc.late + (p.lateCount || 0)
+          }), { primary: 0, absent: 0, present: 0, late: 0 });
+        };
+
+        const att = getAttendance();
+
+        return (
+          <MetricCard
+            title="ATTENDANCE"
+            icon={Users}
+            color="primary"
+            onClick={() => handleNav('attendance', `/attendance`)}
+            stats={{
+              primary: { 
+                value: att.primary || 0, 
+                label: isRange ? 'RANGE PRESENTS' : 'WORKING TODAY' 
+              },
+              secondary: [
+                { label: 'Absent', value: att.absent || 0, color: 'danger' },
+                { label: 'Present', value: att.present || 0, color: 'success' },
+                { label: 'Late', value: att.late || 0, color: 'warning' }
+              ]
+            }}
+          />
+        );
+      })()}
 
       {/* 2. USERS / STAFF */}
       { (role === 'ADMIN' || role === 'MANAGER') && (

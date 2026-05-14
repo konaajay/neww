@@ -91,12 +91,12 @@ const CallAnalyticsGrid = ({ stats, loading, isDarkMode }) => {
         <div className="row g-2 animate-fade-in px-1">
             {cards.map((card, idx) => (
                 <div key={idx} className="col-6 col-md-4 col-lg-3">
-                    <div className="premium-card p-3 p-md-4 transition-all hover-lift h-100 position-relative border-0 shadow-lg"
+                    <div className={`p-3 p-md-4 transition-all hover-lift h-100 position-relative shadow-sm`}
                         style={{
-                            backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : '#ffffff',
+                            backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : '#ffffff',
                             color: isDarkMode ? '#ffffff' : '#1a1a25',
                             borderRadius: '1.25rem',
-                            border: isDarkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.05)'
+                            border: `1px solid var(--border-color)`
                         }}>
 
                         {card.isPremium && (

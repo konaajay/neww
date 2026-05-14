@@ -3,6 +3,7 @@ import { X, Calendar, AlignLeft, User, Target, Clock, CheckCircle, RefreshCw } f
 import { toast } from 'react-toastify';
 import taskService from '../services/taskService';
 import { useTheme } from '../context/ThemeContext';
+import PortalSelect from './PortalSelect';
 
 const ManualTaskModal = ({ show, onClose, onTaskCreated, leads, initialData }) => {
   const { isDarkMode } = useTheme();
@@ -123,10 +124,10 @@ const ManualTaskModal = ({ show, onClose, onTaskCreated, leads, initialData }) =
 
                 {showDropdown && (
                   <div 
-                    className="position-absolute w-100 mt-2 shadow-2xl rounded-4 overflow-hidden animate-slide-down"
+                    className="position-absolute w-100 mt-2 shadow-2xl rounded-4 animate-slide-down"
                     style={{ 
                         zIndex: 1000, 
-                        maxHeight: '250px', 
+                        maxHeight: '350px', 
                         overflowY: 'auto',
                         background: isDarkMode ? 'rgba(17, 24, 39, 0.98)' : '#ffffff',
                         backdropFilter: 'blur(10px)',
@@ -183,17 +184,18 @@ const ManualTaskModal = ({ show, onClose, onTaskCreated, leads, initialData }) =
                 </div>
                 <div className="col-12 col-md-5">
                   <div className="form-floating">
-                    <select
-                      className={`form-select ${isDarkMode ? 'bg-dark bg-opacity-40 border-white border-opacity-10 text-main' : 'bg-light border-dark border-opacity-10 text-dark'} py-4 px-4 shadow-none rounded-4 focus:border-primary transition-all custom-input fw-bold`}
+                    <PortalSelect 
+                      options={[
+                        { value: "FOLLOW_UP", label: "Follow-up" },
+                        { value: "EMI_COLLECTION", label: "EMI Collection" },
+                        { value: "INVITATION", label: "Invitation" },
+                        { value: "CLOSING", label: "Closing" }
+                      ]}
                       value={formData.taskType}
                       onChange={(e) => setFormData({ ...formData, taskType: e.target.value })}
+                      placeholder="Classification"
                       style={{ minHeight: '75px' }}
-                    >
-                      <option value="FOLLOW_UP" className="bg-card">Follow-up</option>
-                      <option value="EMI_COLLECTION" className="bg-card">EMI Collection</option>
-                      <option value="INVITATION" className="bg-card">Invitation</option>
-                      <option value="CLOSING" className="bg-card">Closing</option>
-                    </select>
+                    />
                     <label className={`${isDarkMode ? 'text-muted' : 'text-slate-500'} fw-bold small text-uppercase tracking-widest opacity-50 ps-4 pt-4`} style={{ fontSize: '10px' }}>Classification</label>
                   </div>
                 </div>

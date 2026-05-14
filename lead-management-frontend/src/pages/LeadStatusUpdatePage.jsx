@@ -6,6 +6,7 @@ import {
   Info, Zap, AlertCircle, IndianRupee, Plus, X, Shield, Copy
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import PortalSelect from '../components/PortalSelect';
 
 // Clean Architecture Services
 import adminService from '../services/adminService';
@@ -225,107 +226,74 @@ const LeadStatusUpdatePage = () => {
         background: isDarkMode ? '#0a0a0a' : '#f8f9fa' 
       }}
     >
-      <div className="container py-2" style={{ maxWidth: '720px' }}>
-        <button onClick={() => navigate(-1)} className="btn btn-link text-decoration-none text-muted fw-bold small p-0 mb-4 d-flex align-items-center gap-2">
-          <ArrowLeft size={16} /> BACK TO COMMAND CENTER
+      <div className="container py-1" style={{ maxWidth: '900px' }}>
+        <button onClick={() => navigate(-1)} className="btn btn-link text-decoration-none text-muted fw-bold small p-0 mb-2 d-flex align-items-center gap-2">
+          <ArrowLeft size={14} /> BACK TO COMMAND CENTER
         </button>
 
         <div className={`premium-card border-0 shadow-lg rounded-4 animate-fade-in ${isDarkMode ? 'bg-surface' : 'bg-white'}`}>
-          <div className={`px-4 py-4 border-bottom border-secondary border-opacity-10 d-flex align-items-center justify-content-between ${isDarkMode ? 'bg-surface bg-opacity-50' : 'bg-white'}`}>
-            <div className="d-flex align-items-center gap-3">
-              <div className="p-2 bg-primary bg-opacity-10 text-primary rounded-3 shadow-glow-sm">
-                <ShieldCheck size={20} />
+          <div className={`px-4 py-2 border-bottom border-secondary border-opacity-10 d-flex align-items-center justify-content-between ${isDarkMode ? 'bg-surface bg-opacity-50' : 'bg-white'}`}>
+            <div className="d-flex align-items-center gap-2">
+              <div className="p-1.5 bg-primary bg-opacity-10 text-primary rounded-3 shadow-glow-sm">
+                <ShieldCheck size={16} />
               </div>
               <div>
-                <h4 className="mb-0 fw-bold text-main text-uppercase tracking-tight">Lead Status Update</h4>
-                <small className="text-muted fw-semibold tracking-wider text-uppercase" style={{ fontSize: '11px', opacity: 0.8 }}>LEAD: {lead?.name}</small>
+                <h5 className="mb-0 fw-bold text-main text-uppercase tracking-tight" style={{ fontSize: '14px' }}>Lead Status Update</h5>
+                <small className="text-muted fw-semibold tracking-wider text-uppercase" style={{ fontSize: '9px', opacity: 0.8 }}>LEAD: {lead?.name}</small>
               </div>
             </div>
           </div>
 
-          <div className="p-4">
+          <div className="p-3">
             <form onSubmit={handleSubmit}>
-              <div className="d-flex flex-column gap-4">
-                {/* Simplified Status & Date Row */}
-                <div className="row g-4 align-items-stretch">
-                  <div className={['LOST', 'NOT_INTERESTED', 'REJECTED', 'PAID'].includes(selectedStatus?.toUpperCase()) && lead?.status?.toUpperCase() !== 'CONVERTED' ? "col-12" : "col-12 col-md-6"}>
-                    <label className="form-label small fw-bold text-uppercase text-muted tracking-wider mb-2 d-block">System Status</label>
-                    <div className={`d-flex align-items-center gap-3 p-3 rounded-4 border border-secondary border-opacity-10 h-100 ${isDarkMode ? 'bg-surface bg-opacity-80' : 'bg-light'}`}>
-                      <Activity size={22} className="text-primary" />
-                      <div>
-                        <span className="fw-bold text-main text-uppercase tracking-normal d-block fs-5">
-                          {selectedStatus?.toUpperCase() === 'CONVERTED' 
-                            ? (totalPaidSoFar >= totalAmount && totalAmount > 0 ? 'PAID' : 'PREPAYMENT') 
-                            : (selectedStatus || 'SELECT STATUS')}
-                        </span>
-                        <small className="text-muted fw-bold text-uppercase" style={{ fontSize: '10px' }}>UPDATING LEAD PIPELINE</small>
-                      </div>
-                      {!initialStatus && lead?.status?.toUpperCase() !== 'CONVERTED' && (
-                        <button type="button" onClick={() => setShowStatusList(!showStatusList)} className="ms-auto btn btn-sm p-0 text-primary fw-black text-uppercase tracking-widest" style={{ fontSize: '9px' }}>
-                          {showStatusList ? 'CLOSE' : 'CHANGE'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {lead?.status?.toUpperCase() === 'CONVERTED' && (
-                    <div className="col-12 col-md-6 d-flex flex-column">
-                      <label className="form-label small fw-bold text-uppercase text-muted tracking-wider mb-2 d-block opacity-0">Protocol Status</label>
-                      <div className="p-3 rounded-4 bg-success bg-opacity-10 border border-success border-opacity-20 d-flex align-items-center gap-3 h-100 animate-fade-in">
-                        <ShieldCheck size={20} className="text-success" />
+              <div className="d-flex flex-column gap-3">
+                {/* Integrated Status Command Center */}
+                <div className={`p-3 rounded-4 border ${isDarkMode ? 'bg-surface bg-opacity-40 border-white border-opacity-5' : 'bg-light border-secondary border-opacity-10'} animate-fade-in`}>
+                  <div className="row g-4 align-items-center">
+                    <div className="col-12 col-lg-7">
+                      <div className="d-flex align-items-center gap-3">
+                        <div className="p-3 bg-primary bg-opacity-10 text-primary rounded-circle shadow-glow-sm">
+                          <Activity size={24} strokeWidth={2.5} />
+                        </div>
                         <div>
-                          <h6 className="mb-0 fw-black text-uppercase tracking-wider small text-success">Lead Protocol Finalized</h6>
-                          <small className="text-success opacity-75 fw-bold" style={{ fontSize: '9px' }}>Active tracking mode for EMI protocol.</small>
+                          <label className="text-muted small fw-black text-uppercase tracking-widest mb-0 d-block" style={{ fontSize: '9px' }}>Current Protocol</label>
+                          <h4 className="fw-black text-main text-uppercase mb-0 tracking-tight" style={{ fontSize: '24px' }}>
+                            {selectedStatus?.replace('_', ' ') || 'Select Protocol'}
+                          </h4>
                         </div>
                       </div>
                     </div>
-                  )}
 
-                  {!['LOST', 'NOT_INTERESTED', 'REJECTED', 'CONVERTED', 'PAID'].includes(selectedStatus?.toUpperCase()) && (
-                    <div className="col-12 col-md-6">
-                      <label className="form-label small fw-black text-uppercase text-main tracking-widest mb-2 d-block">Follow-up Calendar</label>
-                      <div
-                        className={`d-flex align-items-center gap-3 p-3 rounded-4 border border-secondary border-opacity-10 cursor-pointer transition-all hover:border-primary ${isDarkMode ? 'bg-surface bg-opacity-80' : 'bg-white'}`}
-                        onClick={(e) => {
-                          const input = e.currentTarget.querySelector('input');
-                          if (input && input.showPicker) input.showPicker();
-                          else if (input) input.focus();
-                        }}
-                      >
-                        <div className="p-2 bg-primary bg-opacity-10 rounded-2 text-primary d-flex align-items-center justify-content-center" style={{ width: '32px', height: '32px' }}>
-                          <Calendar size={16} />
+                    {currentStatusConfig?.requireDate && selectedStatus !== 'CONTACTED' && (
+                      <div className="col-12 col-lg-5">
+                        <div className="ps-lg-4 border-start border-white border-opacity-5">
+                          <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block" style={{ fontSize: '9px' }}>Next Synchronization</label>
+                          <div
+                            className={`d-flex align-items-center gap-2 p-2 rounded-3 border border-secondary border-opacity-10 cursor-pointer transition-all hover-border-primary ${isDarkMode ? 'bg-black bg-opacity-20' : 'bg-white'}`}
+                            onClick={(e) => {
+                              const input = e.currentTarget.querySelector('input');
+                              if (input && input.showPicker) input.showPicker();
+                            }}
+                          >
+                            <Calendar size={14} className="text-primary opacity-50" />
+                            <input
+                              type="datetime-local"
+                              className="bg-transparent border-0 fw-bold text-main flex-grow-1 cursor-pointer"
+                              style={{ outline: 'none', fontSize: '11px' }}
+                              value={followUpDate}
+                              onChange={(e) => setFollowUpDate(e.target.value)}
+                            />
+                          </div>
                         </div>
-                        <input
-                          type="datetime-local"
-                          className="bg-transparent border-0 fw-bold text-main flex-grow-1 cursor-pointer"
-                          style={{ outline: 'none', fontSize: '13px', color: 'inherit' }}
-                          value={followUpDate}
-                          onChange={(e) => setFollowUpDate(e.target.value)}
-                        />
-                        <button 
-                          type="button"
-                          className="btn btn-primary btn-sm rounded-pill fw-black tracking-widest flex-shrink-0 border-0 shadow-sm"
-                          style={{ fontSize: '9px', padding: '6px 14px' }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const input = e.currentTarget.parentElement.querySelector('input');
-                            if (input) input.blur();
-                          }}
-                        >
-                          CONFIRM
-                        </button>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
 
 
                 {/* Status List (Collapsible if not initial) */}
                 {(!initialStatus || showStatusList) && (
                   <div className="animate-fade-in mt-2">
-                    <div className="mb-3">
-                      <label className="form-label small fw-black text-uppercase text-muted tracking-widest mb-0 d-block">Full Pipeline Map</label>
-                    </div>
                     <div className="row g-2">
                       {['CONVERTED', 'EMI', 'PAID'].includes(lead?.status?.toUpperCase()) ? (
                         <>
@@ -384,7 +352,7 @@ const LeadStatusUpdatePage = () => {
 
                 {/* Cashfree Payment Link Generation */}
                 {selectedStatus?.toUpperCase() === 'INTERESTED' && lead?.status?.toUpperCase() !== 'CONVERTED' && (
-                  <div className={`p-4 rounded-4 border border-secondary border-opacity-10 animate-fade-in shadow-sm ${isDarkMode ? 'bg-surface bg-opacity-80' : 'bg-white'}`}>
+                  <div className={`p-3 rounded-4 border border-secondary border-opacity-10 animate-fade-in shadow-sm ${isDarkMode ? 'bg-surface bg-opacity-80' : 'bg-white'}`}>
                     <div className="d-flex align-items-center justify-content-between mb-3">
                       <div className="d-flex align-items-center gap-2">
                         <IndianRupee size={16} className="text-primary" />
@@ -406,16 +374,12 @@ const LeadStatusUpdatePage = () => {
                     <div className="row g-3 mb-4">
                       <div className="col-12">
                         <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '9px' }}>1. Select Program Protocol</label>
-                        <select
-                          className={`form-select border border-secondary border-opacity-10 rounded-3 fw-bold ${isDarkMode ? 'bg-surface text-white' : 'bg-white text-dark'}`}
+                        <PortalSelect 
+                          options={[{ value: "", label: "-- SELECT COURSE --" }, ...courses.map(c => ({ value: c.id.toString(), label: `${c.name.toUpperCase()} (₹${c.baseFee})` }))]}
+                          value={selectedCourse?.id?.toString() || ''}
                           onChange={(e) => handleCourseChange(e.target.value)}
-                          value={selectedCourse?.id || ''}
-                        >
-                          <option value="">-- SELECT COURSE --</option>
-                          {courses.map(c => (
-                            <option key={c.id} value={c.id}>{c.name.toUpperCase()} (₹{c.baseFee})</option>
-                          ))}
-                        </select>
+                          placeholder="Select Program Protocol"
+                        />
                         {feeStructureExists && (
                           <div className="mt-2 p-2 rounded-3 bg-warning bg-opacity-10 border border-warning border-opacity-20 d-flex align-items-center gap-2">
                              <AlertCircle size={14} className="text-warning" />
@@ -444,10 +408,11 @@ const LeadStatusUpdatePage = () => {
                         <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '9px' }}>3. Applying Discount</label>
                         <input
                           type="number"
+                          min="0"
                           className={`form-control border border-secondary border-opacity-10 rounded-3 fw-bold ${isDarkMode ? 'bg-surface text-white' : 'bg-white text-dark'}`}
                           placeholder="Amount to deduct"
                           value={discount}
-                          onChange={(e) => setDiscount(e.target.value)}
+                          onChange={(e) => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
                         />
                       </div>
 
@@ -461,10 +426,11 @@ const LeadStatusUpdatePage = () => {
                         <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '9px' }}>4. Commitment (Min ₹500)</label>
                         <input
                           type="number"
+                          min="0"
                           className={`form-control border border-primary border-opacity-20 rounded-3 fw-black text-primary ${isDarkMode ? 'bg-surface' : 'bg-white'}`}
                           placeholder="Amount for link generation"
                           value={initialAmount}
-                          onChange={(e) => setInitialAmount(e.target.value)}
+                          onChange={(e) => setInitialAmount(Math.max(0, parseFloat(e.target.value) || 0))}
                         />
                         {initialAmount > 0 && initialAmount < 500 && (
                           <small className="text-danger fw-bold mt-1 d-block" style={{ fontSize: '9px' }}>Minimum ₹500 required for protocol initiation.</small>
@@ -517,6 +483,7 @@ const LeadStatusUpdatePage = () => {
                             <div key={idx} className="d-flex align-items-center gap-2 animate-fade-in">
                               <input
                                 type="number"
+                                min="0"
                                 className={`form-control border-0 rounded-3 fw-bold ${isDarkMode ? 'bg-surface bg-opacity-50 text-white' : 'bg-light text-dark'}`}
                                 style={{ fontSize: '12px' }}
                                 placeholder="Amount"
@@ -628,43 +595,38 @@ const LeadStatusUpdatePage = () => {
                   </div>
                 )}
 
+                {/* Interaction Notes - Responsive to custom architecture settings */}
+                {currentStatusConfig?.requireNote && (
+                  <div className="animate-fade-in mt-2">
+                    <label className="form-label small fw-bold text-uppercase text-muted tracking-wider mb-2 d-block px-1">Interaction Notes</label>
+                    <textarea
+                      className={`form-control border border-secondary border-opacity-10 rounded-4 p-4 shadow-sm fw-bold transition-all focus-border-primary ${isDarkMode ? 'bg-surface bg-opacity-50 text-white' : 'bg-white text-dark'}`}
+                      rows="3"
+                      placeholder="Input interaction context here..."
+                      style={{ outline: 'none' }}
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                    ></textarea>
+                  </div>
+                )}
 
-
-
-                {/* Interaction Notes - Visible for all except when generating payment links */}
                 {selectedStatus?.toUpperCase() !== 'INTERESTED' && (
-                  <div className="animate-fade-in">
-                    <div className="mt-2">
-                      <label className="form-label small fw-bold text-uppercase text-muted tracking-wider mb-2 d-block px-1">Interaction Notes</label>
-                      <textarea
-                        className={`form-control border border-secondary border-opacity-10 rounded-4 p-4 shadow-sm fw-bold transition-all focus-border-primary ${isDarkMode ? 'bg-surface bg-opacity-50 text-white' : 'bg-white text-dark'}`}
-                        rows="3"
-                        placeholder="Input interaction context here..."
-                        style={{ outline: 'none' }}
-                        value={note}
-                        onChange={(e) => setNote(e.target.value)}
-                      ></textarea>
-                    </div>
-
-                    <div className="pt-4 text-center">
-                      {(!['EMI', 'PAID', 'CONVERTED'].includes(selectedStatus?.toUpperCase()) || ['CONVERTED', 'EMI', 'PAID'].includes(lead?.status?.toUpperCase())) && (
-                        <button
-                          type="submit"
-                          disabled={isSubmitting}
-                          className="w-100 py-3 ui-btn ui-btn-primary rounded-pill fw-black text-uppercase tracking-widest shadow-glow mb-3 transition-all hover-scale"
-                        >
-                          {isSubmitting ? (
-                            <>
-                              <div className="spinner-border spinner-border-sm me-2"></div>
-                              UPDATING SYSTEM...
-                            </>
-                          ) : (
-                            'Commit Status Update'
-                          )}
-                        </button>
+                  <div className="pt-2 text-center">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-100 py-3 ui-btn ui-btn-primary rounded-pill fw-black text-uppercase tracking-widest shadow-glow mb-3 transition-all hover-scale"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <div className="spinner-border spinner-border-sm me-2"></div>
+                          UPDATING SYSTEM...
+                        </>
+                      ) : (
+                        'Commit Status Update'
                       )}
-                      <small className="text-muted fw-bold text-uppercase d-block" style={{ fontSize: '8px', opacity: 0.5 }}>Protocol Security Enforcement Active</small>
-                    </div>
+                    </button>
+                    <small className="text-muted fw-bold text-uppercase d-block" style={{ fontSize: '8px', opacity: 0.5 }}>Protocol Security Enforcement Active</small>
                   </div>
                 )}
               </div>
@@ -737,8 +699,27 @@ const LeadStatusUpdatePage = () => {
                   />
                   <button 
                     onClick={() => {
-                      navigator.clipboard.writeText(generatedLink);
-                      toast.success("Link copied to clipboard!");
+                      if (navigator.clipboard && window.isSecureContext) {
+                        navigator.clipboard.writeText(generatedLink);
+                        toast.success("Link copied to clipboard!");
+                      } else {
+                        // Fallback
+                        const textArea = document.createElement("textarea");
+                        textArea.value = generatedLink;
+                        textArea.style.position = "fixed";
+                        textArea.style.left = "-9999px";
+                        textArea.style.top = "-9999px";
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+                        try {
+                          document.execCommand('copy');
+                          toast.success("Link copied to clipboard! (Fallback)");
+                        } catch (err) {
+                          toast.error("Failed to copy. Please copy manually.");
+                        }
+                        document.body.removeChild(textArea);
+                      }
                     }}
                     className="btn btn-primary btn-sm rounded-3 p-2 d-flex align-items-center justify-content-center"
                     style={{ minWidth: '36px', height: '36px' }}

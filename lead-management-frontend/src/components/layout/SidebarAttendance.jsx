@@ -320,8 +320,12 @@ const SidebarAttendance = ({ isCollapsed }) => {
                                 id="punchIn"
                                 onClick={handleClockIn}
                                 disabled={distanceToOffice !== null && distanceToOffice > (status?.officeRadius || 150) && !(status?.isWfhApproved || status?.wfhStatus === 'APPROVED')}
-                                className={`ui-btn w-100 py-2 rounded-3 fw-black text-uppercase tracking-widest d-flex align-items-center justify-content-center gap-2 ${ (distanceToOffice !== null && distanceToOffice > (status?.officeRadius || 150) && !(status?.isWfhApproved || status?.wfhStatus === 'APPROVED')) ? 'btn-secondary opacity-50' : 'ui-btn-primary shadow-glow'}`}
-                                style={{ fontSize: '12px' }}
+                                className={`ui-btn w-100 py-2 rounded-3 fw-black text-uppercase tracking-widest d-flex align-items-center justify-content-center gap-2 transition-all ${ 
+                                    (distanceToOffice !== null && distanceToOffice > (status?.officeRadius || 150) && !(status?.isWfhApproved || status?.wfhStatus === 'APPROVED')) 
+                                    ? (isDarkMode ? 'bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20' : 'bg-danger bg-opacity-10 text-danger border border-danger border-opacity-50') 
+                                    : 'ui-btn-primary shadow-glow'
+                                }`}
+                                style={{ fontSize: '11px' }}
                             >
                                 <LogIn size={14} /> 
                                 {status?.isWfhApproved || status?.wfhStatus === 'APPROVED' 

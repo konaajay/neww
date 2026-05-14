@@ -13,10 +13,10 @@ const TeamTreeItem = ({ item, level = 0, onFocus, currentFocusId }) => {
 
   const getRoleIcon = (role) => {
     switch (role) {
-      case 'MANAGER': return <Shield size={12} className="text-warning" />;
-      case 'TEAM_LEADER': return <Shield size={12} className="text-info" />;
-      case 'ASSOCIATE': return <Briefcase size={12} className="text-primary" />;
-      default: return <User size={12} className="text-muted" />;
+      case 'MANAGER': return <Shield size={14} strokeWidth={2.5} className="text-warning" />;
+      case 'TEAM_LEADER': return <Shield size={14} strokeWidth={2.5} className="text-info" />;
+      case 'ASSOCIATE': return <Briefcase size={14} strokeWidth={2.5} className="text-primary" />;
+      default: return <User size={14} strokeWidth={2.5} className="text-muted" />;
     }
   };
 
@@ -54,7 +54,7 @@ const TeamTreeItem = ({ item, level = 0, onFocus, currentFocusId }) => {
           )}
         </div>
 
-        <div className={`p-1.5 rounded-circle flex-shrink-0 ${isFocused ? 'bg-primary bg-opacity-20' : 'bg-surface border border-white border-opacity-5'}`}>
+        <div className={`p-2 rounded-circle flex-shrink-0 d-flex align-items-center justify-content-center transition-all ${isFocused ? 'bg-primary bg-opacity-20 shadow-glow' : 'bg-opacity-10 border border-white border-opacity-5'}`} style={{ backgroundColor: isFocused ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.03)' }}>
           {getRoleIcon(item.role)}
         </div>
 

@@ -151,7 +151,7 @@ const RevenueTrendChart = ({ data, filters }) => {
         </ResponsiveContainer>
       </div>
 
-      <div className="d-flex justify-content-center flex-wrap gap-4 mt-3 py-3 border-top border-white border-opacity-5">
+      <div className="d-flex justify-content-center flex-wrap gap-4 mt-2">
         <div className="d-flex align-items-center gap-2">
           <div className="rounded-circle shadow-glow-sm" style={{ width: 8, height: 8, background: '#6366f1' }}></div>
           <span className="small fw-black text-muted text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Leads</span>

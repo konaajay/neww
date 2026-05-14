@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Clock,
     MapPin,
@@ -14,13 +14,18 @@ import {
     Timer,
     Calendar,
     ChevronRight,
-    ShieldCheck
+    ShieldCheck,
+    RefreshCcw
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import attendanceService from '../../../services/attendanceService';
 import adminService from '../../../services/adminService';
+import { useAuth } from '../../../context/AuthContext';
 import WfhApprovalPanel from './WfhApprovalPanel';
 import { useTheme } from '../../../context/ThemeContext';
+import { MetricSkeletonRow, TableSkeleton } from './DashboardSkeletons';
+import { SystemStatGrid, SystemStatCard } from '../../../components/SystemStatCard';
+import { cleanParams } from '../../../api/api';
 
 const AttendanceDashboard = ({ filters, role }) => {
     const { isDarkMode } = useTheme();
@@ -60,13 +65,13 @@ const AttendanceDashboard = ({ filters, role }) => {
             const isAdminOrManagerOrTL = role === 'ADMIN' || role === 'MANAGER' || role === 'TEAM_LEADER';
 
             if (isAdminOrManagerOrTL) {
-                const params = {
+                const params = cleanParams({
                     from: filters.from,
                     to: filters.to,
-                    userId: filters.userId ? Number(filters.userId) : 0,
-                    teamId: filters.teamId ? Number(filters.teamId) : 0,
-                    managerId: filters.managerId ? Number(filters.managerId) : 0
-                };
+                    userId: filters.userId,
+                    teamId: filters.teamId,
+                    managerId: filters.managerId
+                });
                 console.log(">>> [ATTENDANCE FETCH] ADMIN/MGR/TL PARAMS:", params);
                 const res = await attendanceService.getDailySummaries(params);
                 const data = res.data || res || [];
@@ -188,19 +193,29 @@ const AttendanceDashboard = ({ filters, role }) => {
         }
     };
 
+    const summaryStats = useMemo(() => {
+        const p = logs.filter(l => l.status && !l.status.toUpperCase().includes('ABSENT')).length;
+        const a = logs.filter(l => l.status && l.status.toUpperCase().includes('ABSENT')).length;
+        const l = logs.filter(l => l.lateMinutes > 0 || l.isLate).length;
+        
+        console.log(`>>> [SUMMARY STATS] Total: ${logs.length}, Present: ${p}, Absent: ${a}, Late: ${l}`);
+        if (logs.length > (p + a)) {
+            console.log(">>> [STATUSES]", logs.map(log => log.status));
+        }
+
+        return { present: p, absent: a, late: l };
+    }, [logs]);
+
     if (loading) {
         return (
-            <div className="d-flex align-items-center justify-content-center py-5">
-                <div className="spinner-border text-primary" role="status"></div>
+            <div className="animate-fade-in d-flex flex-column gap-4">
+                <MetricSkeletonRow count={3} />
+                <div className="mt-4">
+                    <TableSkeleton rows={8} />
+                </div>
             </div>
         );
     }
-
-    const summaryStats = {
-        present: logs.filter(l => l.status === 'PRESENT' || l.status === 'WORKING' || l.status === 'PUNCHED_OUT').length,
-        absent: logs.filter(l => l.status === 'ABSENT').length,
-        late: logs.filter(l => l.lateMinutes > 0).length
-    };
 
     const filteredLogs = logs.filter(log => {
         if (attendanceStatusFilter === 'ALL') return true;
@@ -212,35 +227,23 @@ const AttendanceDashboard = ({ filters, role }) => {
 
     return (
         <div className="d-flex flex-column gap-4 animate-fade-in">
-            {/* Summary Stats Row - Optimized for Mobile Scrolling */}
-            <div className="metric-grid-custom mb-2">
+            {/* Summary Stats Row - Optimized Stable Grid */}
+            <SystemStatGrid>
                 {[
-                    { id: 'PRESENT', label: 'PRESENT', value: summaryStats.present, icon: ShieldCheck, color: '#10b981', gradient: 'rgba(16, 185, 129, 0.1)' },
-                    { id: 'ABSENT', label: 'ABSENT', value: summaryStats.absent, icon: X, color: '#ef4444', gradient: 'rgba(239, 68, 68, 0.1)' },
-                    { id: 'LATE', label: 'LATE', value: summaryStats.late, icon: Timer, color: '#f59e0b', gradient: 'rgba(245, 158, 11, 0.1)' }
+                    { id: 'PRESENT', label: 'PRESENT', value: summaryStats.present, color: 'text-success' },
+                    { id: 'ABSENT', label: 'ABSENT', value: summaryStats.absent, color: 'text-danger' },
+                    { id: 'LATE', label: 'LATE', value: summaryStats.late, color: 'text-warning' }
                 ].map((s, i) => (
-                    <div key={i} className="metric-card-wrapper">
-                        <div 
-                            className={`premium-card p-3 p-sm-4 d-flex align-items-center justify-content-between transition-smooth border shadow-lg cursor-pointer ${attendanceStatusFilter === s.id ? 'border-primary' : 'border-main border-opacity-5'}`} 
-                            style={{ 
-                                borderRadius: '24px',
-                                background: attendanceStatusFilter === s.id ? 'rgba(var(--primary-rgb), 0.1)' : `linear-gradient(135deg, var(--bg-card) 0%, ${s.gradient} 100%)`,
-                                backdropFilter: 'var(--glass-blur)',
-                                transform: attendanceStatusFilter === s.id ? 'scale(1.02)' : 'none'
-                            }}
-                            onClick={() => setAttendanceStatusFilter(prev => prev === s.id ? 'ALL' : s.id)}
-                        >
-                            <div className="d-flex flex-column gap-1">
-                                <h4 className={`fw-black mb-0 tabular-nums ${attendanceStatusFilter === s.id ? 'text-primary' : 'text-main'}`} style={{ fontSize: window.innerWidth < 576 ? '24px' : '32px', lineHeight: 1 }}>{s.value}</h4>
-                                <p className="text-muted small mb-0 fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '9px' }}>{s.label}</p>
-                            </div>
-                            <div className="p-2 p-sm-3 rounded-4" style={{ background: 'rgba(255,255,255,0.03)', color: attendanceStatusFilter === s.id ? 'var(--primary)' : s.color }}>
-                                <s.icon size={window.innerWidth < 576 ? 20 : 24} strokeWidth={2.5} />
-                            </div>
-                        </div>
-                    </div>
+                    <SystemStatCard 
+                        key={i}
+                        label={s.label}
+                        value={s.value}
+                        colorClass={s.color}
+                        isActive={attendanceStatusFilter === s.id}
+                        onClick={() => setAttendanceStatusFilter(prev => prev === s.id ? 'ALL' : s.id)}
+                    />
                 ))}
-            </div>
+            </SystemStatGrid>
 
             <div className={`premium-card border-0 shadow-lg overflow-hidden ${isDarkMode ? 'bg-surface bg-opacity-20' : 'bg-card shadow-sm'}`} style={{ borderRadius: '32px' }}>
                 <div className="p-3 p-sm-5 border-bottom border-white border-opacity-5 d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3">
@@ -265,7 +268,18 @@ const AttendanceDashboard = ({ filters, role }) => {
                     </div>
                     <div className="d-flex gap-2">
                         {activeSubTab === 'logs' && (
-                            <button className="ui-btn ui-btn-outline rounded-pill px-4 btn-sm" onClick={fetchLogs}>UPDATE</button>
+                            <button 
+                                className="ui-btn ui-btn-primary rounded-pill px-4 btn-sm shadow-glow-sm" 
+                                style={{ 
+                                    background: 'linear-gradient(135deg, var(--primary) 0%, #4338ca 100%)',
+                                    fontSize: '10px',
+                                    height: '36px'
+                                }}
+                                onClick={fetchLogs}
+                            >
+                                <RefreshCcw size={12} className="me-2" />
+                                UPDATE
+                            </button>
                         )}
                     </div>
                 </div>

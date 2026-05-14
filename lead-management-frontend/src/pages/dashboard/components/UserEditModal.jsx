@@ -3,6 +3,7 @@ import { ShieldHalf, X, ShieldCheck, Key, RefreshCw, Send } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 import { toast } from 'react-toastify';
 import adminService from '../../../services/adminService';
+import PortalSelect from '../../../components/PortalSelect';
 
 const UserEditModal = ({ 
   isOpen, 
@@ -143,16 +144,15 @@ const UserEditModal = ({
                 </div>
                 <div className="col-12 col-md-3">
                   <label className="form-label small fw-black text-uppercase text-muted mb-1 tracking-widest" style={{ fontSize: '9px' }}>Role</label>
-                  <select 
-                    className="form-select border border-white border-opacity-10 shadow-none fw-bold bg-surface text-main py-2 rounded-3"
+                  <PortalSelect 
+                    options={safeRoles.map(role => ({
+                      value: role.name,
+                      label: role.name.replace(/_/g, ' ')
+                    }))}
                     value={user.role || ''}
                     onChange={(e) => setUser(prev => ({...prev, role: e.target.value}))}
-                    required
-                  >
-                    {safeRoles.map(role => (
-                      <option key={role.id} value={role.name}>{role.name.replace(/_/g, ' ')}</option>
-                    ))}
-                  </select>
+                    placeholder="Role"
+                  />
                 </div>
 
                 <div className="col-12 col-md-6">
@@ -167,23 +167,25 @@ const UserEditModal = ({
                 </div>
                 <div className="col-12 col-md-6">
                   <label className="form-label small fw-black text-uppercase text-muted mb-1 tracking-widest" style={{ fontSize: '9px' }}>Reports To</label>
-                  <select 
-                    className="form-select border border-white border-opacity-10 shadow-none fw-bold bg-surface text-main py-2 rounded-3"
-                    value={user.supervisorId || ''}
+                  <PortalSelect 
+                    options={[
+                      { value: "", label: "Independent Operator" },
+                      ...safeTeamLeaders.filter(tl => {
+                        if (user.role === 'ASSOCIATE') return tl.role === 'TEAM_LEADER';
+                        if (user.role === 'TEAM_LEADER') return tl.role === 'MANAGER';
+                        if (user.role === 'MANAGER') return tl.role === 'ADMIN' || tl.role === 'MANAGER';
+                        return false;
+                      })
+                      .filter(tl => tl.id !== user.id)
+                      .map(tl => ({
+                        value: tl.id.toString(),
+                        label: `${tl.name} (${tl.role})`
+                      }))
+                    ]}
+                    value={user.supervisorId?.toString() || ''}
                     onChange={(e) => setUser(prev => ({...prev, supervisorId: e.target.value ? parseInt(e.target.value) : null}))}
-                  >
-                    <option value="">Independent Operator</option>
-                    {safeTeamLeaders.filter(tl => {
-                      if (user.role === 'ASSOCIATE') return tl.role === 'TEAM_LEADER';
-                      if (user.role === 'TEAM_LEADER') return tl.role === 'MANAGER';
-                      if (user.role === 'MANAGER') return tl.role === 'ADMIN' || tl.role === 'MANAGER';
-                      return false;
-                    })
-                    .filter(tl => tl.id !== user.id)
-                    .map(tl => (
-                      <option key={tl.id} value={tl.id}>{tl.name} ({tl.role})</option>
-                    ))}
-                  </select>
+                    placeholder="Reports To"
+                  />
                 </div>
 
                 <div className="col-12 col-md-4">
@@ -199,29 +201,33 @@ const UserEditModal = ({
                 </div>
                 <div className="col-12 col-md-4">
                   <label className="form-label small fw-black text-uppercase text-muted mb-1 tracking-widest" style={{ fontSize: '9px' }}>Office Location</label>
-                  <select 
-                    className="form-select border border-white border-opacity-10 shadow-none fw-bold bg-surface text-main py-2 rounded-3"
-                    value={user.officeId || ''}
+                  <PortalSelect 
+                    options={[
+                      { value: "", label: "No Office Assigned" },
+                      ...offices.map(off => ({
+                        value: off.id.toString(),
+                        label: off.name
+                      }))
+                    ]}
+                    value={user.officeId?.toString() || ''}
                     onChange={(e) => setUser(prev => ({...prev, officeId: e.target.value ? parseInt(e.target.value) : null}))}
-                  >
-                    <option value="">No Office Assigned</option>
-                    {offices.map(off => (
-                      <option key={off.id} value={off.id}>{off.name}</option>
-                    ))}
-                  </select>
+                    placeholder="Office Location"
+                  />
                 </div>
                 <div className="col-12 col-md-4">
                   <label className="form-label small fw-black text-uppercase text-muted mb-1 tracking-widest" style={{ fontSize: '9px' }}>Shift Timing</label>
-                  <select 
-                    className="form-select border border-white border-opacity-10 shadow-none fw-bold bg-surface text-main py-2 rounded-3"
-                    value={user.shiftId || ''}
+                  <PortalSelect 
+                    options={[
+                      { value: "", label: "No Shift Assigned" },
+                      ...shifts.map(sh => ({
+                        value: sh.id.toString(),
+                        label: `${sh.name} (${sh.startTime} - ${sh.endTime})`
+                      }))
+                    ]}
+                    value={user.shiftId?.toString() || ''}
                     onChange={(e) => setUser(prev => ({...prev, shiftId: e.target.value ? parseInt(e.target.value) : null}))}
-                  >
-                    <option value="">No Shift Assigned</option>
-                    {shifts.map(sh => (
-                      <option key={sh.id} value={sh.id}>{sh.name} ({sh.startTime} - {sh.endTime})</option>
-                    ))}
-                  </select>
+                    placeholder="Shift Timing"
+                  />
                 </div>
 
                 <div className="col-12 mt-2">

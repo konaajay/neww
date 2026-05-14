@@ -5,13 +5,16 @@ import managerService from '../services/managerService';
 import tlService from '../services/tlService';
 import { toast } from 'react-toastify';
 import { IndianRupee, CheckCircle, Scissors, PlusCircle, Clock, FileText, AlertCircle } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 import SplitInstallmentModal from './SplitInstallmentModal';
 import RecordPaymentModal from './RecordPaymentModal';
 import ManualPaymentModal from './ManualPaymentModal';
 import InvoiceModal from '../pages/dashboard/components/InvoiceModal';
 import { TableSkeleton, MetricSkeletonRow } from '../pages/dashboard/components/DashboardSkeletons';
+import { SystemStatGrid, SystemStatCard } from './SystemStatCard';
 
 const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManagerId, teamId: externalTeamId, from: externalFrom, to: externalTo, hideHeader = false, hideFilters = false, refreshTrigger, externalStats }) => {
+  const { isDarkMode } = useTheme();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [teamLeaders, setTeamLeaders] = useState([]);
@@ -101,7 +104,7 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
       setPayments(Array.isArray(payload) ? payload : (payload?.content || []));
     } catch (err) {
       console.error('Failed to sync financial history', err);
-      setPayments([]); // Ensure we don't hang in loading
+      // Removed setPayments([]) to preserve stale data
     } finally {
       setLoading(false);
     }
@@ -164,8 +167,7 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
     debouncedFilters.userId, 
     debouncedFilters.status,
     externalUserId, 
-    refreshTrigger,
-    debouncedFilters.tlId // Ensure associate fetch trigger is separate if needed
+    refreshTrigger
   ]);
 
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('ALL');
@@ -211,7 +213,7 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
       const isAnyOverdue = isExplicitOverdue || isOverdueByDate;
 
       if (paymentStatusFilter === 'PAID' && !isPaid) return false;
-      if (paymentStatusFilter === 'PENDING' && (!isPending || isOverdueByDate)) return false;
+      if (paymentStatusFilter === 'PENDING' && !isPending) return false;
       if (paymentStatusFilter === 'OVERDUE' && !isAnyOverdue) return false;
     }
 
@@ -232,27 +234,20 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredPayments.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Only show skeletons on initial load (when no payments exist yet)
-  if (loading && (!payments || payments.length === 0)) return (
-    <div className="animate-fade-in mt-2">
-      <MetricSkeletonRow />
-      <div className="mt-4">
-        <TableSkeleton rows={8} />
-      </div>
-    </div>
-  );
+  // Evaluate initial load state without early returning
+  const isInitialLoading = loading && (!payments || payments.length === 0);
 
   const successfulPayments = (payments || []).filter(p => ['PAID', 'SUCCESS', 'APPROVED', 'PARTIAL', 'COMPLETED'].includes(p.status?.toUpperCase()));
   const paymentStats = {
     totalRevenue: externalStats ? (externalStats.monthlyRevenue || externalStats.totalRevenue || externalStats.revenue || 0) : successfulPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0),
-    pendingRevenue: externalStats ? (externalStats.pendingPaymentsAmount || externalStats.totalPending || externalStats.pendingRevenue || 0) : (payments || [])
+    pendingRevenue: externalStats ? (externalStats.pendingPaymentsAmount || externalStats.pendingRevenue || 0) : (payments || [])
       .filter(p => {
         const s = p.status?.toUpperCase();
         return s === 'PENDING' || s === 'FAILED' || s === 'INITIATED' || s === 'PARTIAL_PENDING';
       })
       .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0),
     totalInvoiced: (payments || []).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0),
-    overdueCount: externalStats ? (externalStats.overdueCount || 0) : (payments || []).filter(p => {
+    overdueCount: externalStats ? (externalStats.overduePaymentsCount || externalStats.overdueCount || 0) : (payments || []).filter(p => {
         const status = p.status?.toUpperCase();
         const isOverdue = status === 'FAILED' || status === 'OVERDUE';
         const isPending = status === 'PENDING' || status === 'INITIATED' || status === 'PARTIAL';
@@ -263,30 +258,53 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
   };
 
   return (
-    <div className="animate-fade-in mt-2 pb-5">
-      {/* Financial Analytics Workspace */}
-      <div className="row g-3 mb-4 animate-fade-in">
-        {[
-          { id: 'PAID', label: 'Collected', value: `₹${paymentStats.totalRevenue.toLocaleString()}`, color: 'text-success' },
-          { id: 'PENDING', label: 'Pending', value: `₹${paymentStats.pendingRevenue.toLocaleString()}`, color: 'text-dark' },
-          { id: 'OVERDUE', label: 'Overdue', value: paymentStats.overdueCount, color: 'text-danger' }
-        ].map((stat, i) => (
-          <div key={i} className="col-12 col-md-4">
-            <div 
-              className={`premium-card p-4 border shadow-lg h-100 d-flex flex-column gap-1 overflow-hidden cursor-pointer transition-all ${paymentStatusFilter === stat.id ? 'border-primary' : 'border-0'}`} 
-              style={{ 
-                borderRadius: '24px', 
-                background: paymentStatusFilter === stat.id ? 'rgba(var(--primary-rgb), 0.1)' : 'rgba(255, 255, 255, 0.03)',
-                transform: paymentStatusFilter === stat.id ? 'scale(1.02)' : 'none'
-              }}
-              onClick={() => setPaymentStatusFilter(prev => prev === stat.id ? 'ALL' : stat.id)}
-            >
-                <h3 className={`fw-black mb-0 ${paymentStatusFilter === stat.id ? 'text-primary' : stat.color}`} style={{ fontSize: '38px', lineHeight: 1 }}>{stat.value}</h3>
-                <div className="text-muted small fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '10px' }}>{stat.label}</div>
-            </div>
+    <>
+      <style>{`
+        .dashboard-loading-overlay {
+          position: absolute;
+          top: 0;
+          right: 0;
+          padding: 8px 16px;
+          z-index: 20;
+          font-size: 12px;
+          font-weight: 600;
+          border-radius: 0 0 0 12px;
+          background: var(--primary);
+          color: white;
+        }
+      `}</style>
+      
+      {isInitialLoading ? (
+        <div className="animate-fade-in mt-2">
+          <MetricSkeletonRow />
+          <div className="mt-4">
+            <TableSkeleton rows={8} />
           </div>
+        </div>
+      ) : (
+        <div className="animate-fade-in mt-2 pb-5 position-relative">
+          {loading && payments.length > 0 && (
+            <div className="dashboard-loading-overlay shadow-sm animate-pulse">
+              Updating data...
+            </div>
+          )}
+          {/* Financial Analytics Workspace */}
+      <SystemStatGrid>
+        {[
+          { id: 'PAID', label: 'Collected', value: `₹${(paymentStats.totalRevenue || 0).toLocaleString()}`, color: 'text-success' },
+          { id: 'PENDING', label: 'Pending', value: `₹${(paymentStats.pendingRevenue || 0).toLocaleString()}`, color: 'text-main' },
+          { id: 'OVERDUE', label: 'Overdue', value: (paymentStats.overdueCount || 0), color: 'text-danger' }
+        ].map((stat) => (
+          <SystemStatCard 
+            key={stat.id}
+            label={stat.label}
+            value={stat.value}
+            colorClass={stat.color}
+            isActive={paymentStatusFilter === stat.id}
+            onClick={() => setPaymentStatusFilter(prev => prev === stat.id ? 'ALL' : stat.id)}
+          />
         ))}
-      </div>
+      </SystemStatGrid>
 
       <div className="mt-1"></div>
 
@@ -518,7 +536,9 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
         onClose={() => setIsInvoiceModalOpen(false)} 
         invoiceData={selectedInvoiceData} 
       />
-    </div>
+        </div>
+      )}
+    </>
   );
 };
 
