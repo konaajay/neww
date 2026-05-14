@@ -23,7 +23,7 @@ export const cleanParams = (params) => {
 export const safeRequest = async (req) => {
   try {
     const res = await req;
-    return res.data; 
+    return res.data;
   } catch (err) {
     if (axios.isCancel(err)) {
       // Suppress noise for canceled requests (likely React Query refetches)
@@ -40,10 +40,10 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  
+
   // TRAFFIC MONITOR: Log every request
   console.log(`%c[API-REQUEST] ${config.method.toUpperCase()} ${config.url}`, 'color: #3b82f6; font-weight: bold;');
-  
+
   // Support for AbortSignal -> Axios CancelToken bridge
   if (config.signal) {
     const source = axios.CancelToken.source();
@@ -52,7 +52,7 @@ api.interceptors.request.use((config) => {
       source.cancel('Operation canceled by the user.');
     });
   }
-  
+
   return config;
 });
 
