@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const getBaseURL = () => {
-  const url = import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:8080`;
+  const url = import.meta.env.VITE_API_BASE_URL || 'http://54.84.148.176:8080';
   return url.endsWith('/api') ? url : `${url}/api`;
 };
 
