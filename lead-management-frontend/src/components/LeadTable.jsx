@@ -248,18 +248,30 @@ const LeadTable = ({
                   </td>
                   {role !== 'ASSOCIATE' && (
                     <td onClick={(e) => e.stopPropagation()}>
-                      <PortalSelect 
-                        options={[
-                          { value: "", label: "UNASSIGNED" },
-                          ...uniqueTeamLeaders.filter(u => (u.active || u.id === lead.assignedToId) && u.role !== 'ADMIN').map(u => ({ value: u.id.toString(), label: `${u.name.toUpperCase()} ${u.id === lead.assignedToId ? '✓' : ''}` }))
-                        ]}
-                        value={lead.assignedToId?.toString() || ''}
-                        onChange={(e) => handleAssignLeadInternal(lead.id, e.target.value)}
-                        disabled={role !== 'ADMIN' && ((['PAID', 'SUCCESS'].includes(lead.status?.toUpperCase())) || (role === 'TEAM_LEADER' && lead.assignedToId && lead.assignedToId != currentUserId))}
-                        style={{ width: '140px' }}
-                      />
-                      {(role !== 'ADMIN' && (['PAID', 'SUCCESS'].includes(lead.status?.toUpperCase()) || (role === 'TEAM_LEADER' && lead.assignedToId && lead.assignedToId != currentUserId))) && (
-                        <div className="text-muted fw-bold opacity-30 mt-1 px-1" style={{ fontSize: '7px' }}>PROTOCOL LOCKED</div>
+                      {(['PAID', 'SUCCESS', 'CONVERTED'].includes(lead.status?.toUpperCase()) && 
+                        (uniqueTeamLeaders.find(u => u.id === lead.assignedToId)?.active !== false)) ? (
+                        <div className="d-flex flex-column px-1">
+                          <span className="fw-black text-success text-uppercase" style={{ fontSize: '11px', letterSpacing: '1px' }}>
+                            {uniqueTeamLeaders.find(u => u.id === lead.assignedToId)?.name.toUpperCase() || 'UNASSIGNED'}
+                          </span>
+                          <div className="text-muted fw-bold opacity-30 mt-1" style={{ fontSize: '7px' }}>PROTOCOL LOCKED</div>
+                        </div>
+                      ) : (
+                        <>
+                          <PortalSelect 
+                            options={[
+                              { value: "", label: "UNASSIGNED" },
+                              ...uniqueTeamLeaders.filter(u => (u.active || u.id === lead.assignedToId) && u.role !== 'ADMIN').map(u => ({ value: u.id.toString(), label: `${u.name.toUpperCase()} ${u.id === lead.assignedToId ? '✓' : ''}` }))
+                            ]}
+                            value={lead.assignedToId?.toString() || ''}
+                            onChange={(e) => handleAssignLeadInternal(lead.id, e.target.value)}
+                            disabled={role !== 'ADMIN' && (role === 'TEAM_LEADER' && lead.assignedToId && lead.assignedToId != currentUserId)}
+                            style={{ width: '140px' }}
+                          />
+                          {(role !== 'ADMIN' && (role === 'TEAM_LEADER' && lead.assignedToId && lead.assignedToId != currentUserId)) && (
+                            <div className="text-muted fw-bold opacity-30 mt-1 px-1" style={{ fontSize: '7px' }}>ROLE RESTRICTED</div>
+                          )}
+                        </>
                       )}
                     </td>
                   )}

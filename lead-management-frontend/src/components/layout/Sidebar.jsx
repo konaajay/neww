@@ -105,19 +105,17 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
         className={`glass-sidebar ${isCollapsed ? 'closed' : ''} ${isOpen ? 'show' : ''}`}
       >
         <div className="d-flex flex-column h-100">
-          {/* Sidebar Header - Synced with Main Header for consistency */}
-          {!hideHeader && (
+          {/* Sidebar Header - Hidden on desktop as it's in the main header */}
+          {!hideHeader && !isCollapsed && (
             <div
-              className="sidebar-header px-3 border-bottom border-white border-opacity-5 cursor-pointer"
+              className="sidebar-header px-3 border-bottom border-white border-opacity-5 cursor-pointer d-lg-none"
               onClick={onClose}
             >
               <div className="d-flex align-items-center gap-3 overflow-hidden py-2">
                 <div style={{ width: '42px', height: '42px' }}>
                   <img src="/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </div>
-                {(!isCollapsed || isOpen) && (
-                  <span className="fw-black tracking-widest text-main text-truncate" style={{ fontSize: '18px', letterSpacing: '0.1em' }}>GYANTRIX</span>
-                )}
+                <span className="fw-black tracking-widest text-main text-truncate" style={{ fontSize: '18px', letterSpacing: '0.1em' }}>GYANTRIX</span>
               </div>
             </div>
           )}

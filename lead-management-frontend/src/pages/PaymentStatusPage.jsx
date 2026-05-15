@@ -51,8 +51,8 @@ const PaymentStatusPage = () => {
                 return (
                     <div className="text-center py-5">
                         <div className="spinner-border text-primary mb-5" style={{ width: '4rem', height: '4rem', borderWidth: '0.25em' }}></div>
-                        <h4 className="text-white fw-black text-uppercase tracking-widest mb-3" style={{ fontSize: '1.1rem' }}>Verifying Transaction</h4>
-                        <p className="text-white text-opacity-30 extra-small fw-bold tracking-widest px-5">SYNCING WITH GLOBAL BANKING GATEWAY...</p>
+                        <h4 className="text-dark fw-black text-uppercase tracking-widest mb-3" style={{ fontSize: '1.1rem' }}>Verifying Transaction</h4>
+                        <p className="text-muted extra-small fw-bold tracking-widest px-5">SYNCING WITH GLOBAL BANKING GATEWAY...</p>
                     </div>
                 );
             case 'success':
@@ -61,35 +61,35 @@ const PaymentStatusPage = () => {
                         <div className="text-success mb-4 animate-zoom-in">
                             <CheckCircle2 size={72} strokeWidth={1.5} />
                         </div>
-                        <h2 className="text-white fw-black mb-2 tracking-widest text-uppercase" style={{ fontSize: '1.8rem' }}>Payment Successful</h2>
-                        <p className="text-white text-opacity-40 mb-5 small fw-medium px-4">Your admission has been confirmed and enrollment credentials have been secured.</p>
+                        <h2 className="text-dark fw-black mb-2 tracking-widest text-uppercase" style={{ fontSize: '1.8rem' }}>Payment Successful</h2>
+                        <p className="text-muted mb-5 small fw-medium px-4">Your admission has been confirmed and enrollment credentials have been secured.</p>
 
-                        <div className="glass-inner p-4 rounded-4 mb-5 text-start" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div className="bg-light p-4 rounded-4 mb-5 text-start border border-light">
                             <div className="d-flex justify-content-between align-items-center mb-3">
-                                <div className="d-flex align-items-center gap-2 opacity-40">
-                                    <Hash size={14} className="text-white" />
-                                    <span className="text-white extra-small fw-black tracking-widest">ORDER REFERENCE</span>
+                                <div className="d-flex align-items-center gap-2 opacity-60">
+                                    <Hash size={14} className="text-dark" />
+                                    <span className="text-dark extra-small fw-black tracking-widest">ORDER REFERENCE</span>
                                 </div>
                                 <code className="text-primary fw-bold small">{orderId}</code>
                             </div>
                             <div className="d-flex justify-content-between align-items-center mb-3">
-                                <div className="d-flex align-items-center gap-2 opacity-40">
-                                    <User size={14} className="text-white" />
-                                    <span className="text-white extra-small fw-black tracking-widest">STUDENT NAME</span>
+                                <div className="d-flex align-items-center gap-2 opacity-60">
+                                    <User size={14} className="text-dark" />
+                                    <span className="text-dark extra-small fw-black tracking-widest">STUDENT NAME</span>
                                 </div>
-                                <span className="text-white fw-black small text-uppercase">{orderData?.studentName || 'VERIFIED'}</span>
+                                <span className="text-dark fw-black small text-uppercase">{orderData?.studentName || 'VERIFIED'}</span>
                             </div>
-                            <div className="d-flex justify-content-between align-items-center pt-3 border-top border-white border-opacity-5">
-                                <div className="d-flex align-items-center gap-2 opacity-40">
-                                    <ShieldCheck size={14} className="text-white" />
-                                    <span className="text-white extra-small fw-black tracking-widest">VERIFICATION</span>
+                            <div className="d-flex justify-content-between align-items-center pt-3 border-top border-dark border-opacity-10">
+                                <div className="d-flex align-items-center gap-2 opacity-60">
+                                    <ShieldCheck size={14} className="text-dark" />
+                                    <span className="text-dark extra-small fw-black tracking-widest">VERIFICATION</span>
                                 </div>
                                 <span className="badge bg-success bg-opacity-20 text-success rounded-pill px-3 py-2 fw-black tracking-widest" style={{ fontSize: '9px' }}>CERTIFIED</span>
                             </div>
                         </div>
 
                         <div className="d-flex flex-column gap-3">
-                            <button onClick={() => window.close()} className="btn btn-primary w-100 py-3 rounded-4 fw-black text-uppercase tracking-widest shadow-glow d-flex align-items-center justify-content-center gap-2">
+                            <button onClick={() => window.close()} className="btn btn-primary w-100 py-3 rounded-4 fw-black text-uppercase tracking-widest d-flex align-items-center justify-content-center gap-2 shadow-sm">
                                 Close Secure Session <LogOut size={18} />
                             </button>
                         </div>
@@ -101,10 +101,10 @@ const PaymentStatusPage = () => {
                         <div className="text-danger mb-4">
                             <XCircle size={72} strokeWidth={1.5} />
                         </div>
-                        <h2 className="text-white fw-black mb-2 tracking-widest text-uppercase" style={{ fontSize: '1.8rem' }}>Payment Failed</h2>
-                        <p className="text-white text-opacity-40 mb-5 small fw-medium">The transaction was declined by your bank. Please try again or use a different method.</p>
+                        <h2 className="text-dark fw-black mb-2 tracking-widest text-uppercase" style={{ fontSize: '1.8rem' }}>Payment Failed</h2>
+                        <p className="text-muted mb-5 small fw-medium">The transaction was declined by your bank. Please try again or use a different method.</p>
 
-                        <button onClick={() => navigate(`/payment-instruction/${orderId}`)} className="btn btn-primary w-100 py-3 rounded-4 fw-black text-uppercase tracking-widest shadow-glow">
+                        <button onClick={() => navigate(`/payment-instruction/${orderId}`)} className="btn btn-primary w-100 py-3 rounded-4 fw-black text-uppercase tracking-widest">
                             Retry Registration
                         </button>
                     </div>
@@ -115,11 +115,11 @@ const PaymentStatusPage = () => {
                         <div className="text-warning mb-4 animate-pulse">
                             <Clock size={72} strokeWidth={1.5} />
                         </div>
-                        <h2 className="text-white fw-black mb-2 tracking-widest text-uppercase" style={{ fontSize: '1.8rem' }}>Processing...</h2>
-                        <p className="text-white text-opacity-40 mb-5 small fw-medium px-4">Awaiting confirmation from your bank. This typically takes a few moments.</p>
+                        <h2 className="text-dark fw-black mb-2 tracking-widest text-uppercase" style={{ fontSize: '1.8rem' }}>Processing...</h2>
+                        <p className="text-muted mb-5 small fw-medium px-4">Awaiting confirmation from your bank. This typically takes a few moments.</p>
 
                         <div className="d-flex flex-column gap-3">
-                            <button onClick={() => window.location.reload()} className="btn btn-primary w-100 py-3 rounded-4 fw-black text-uppercase tracking-widest shadow-glow d-flex align-items-center justify-content-center gap-2">
+                            <button onClick={() => window.location.reload()} className="btn btn-primary w-100 py-3 rounded-4 fw-black text-uppercase tracking-widest d-flex align-items-center justify-content-center gap-2">
                                 Refresh Status <RefreshCw size={18} />
                             </button>
                         </div>
@@ -132,7 +132,7 @@ const PaymentStatusPage = () => {
 
     return (
         <div className="min-vh-100 d-flex align-items-center justify-content-center p-4 position-relative overflow-hidden" style={{ background: '#f8fafc', fontFamily: "'Outfit', sans-serif" }}>
-            {/* Ambient Background Glows */}
+            {/* Ambient Background Elements */}
             <div className="position-absolute" style={{ width: '800px', height: '800px', background: 'radial-gradient(circle, rgba(99, 102, 241, 0.03) 0%, transparent 70%)', top: '-10%', left: '-10%' }} />
             <div className="position-absolute" style={{ width: '800px', height: '800px', background: 'radial-gradient(circle, rgba(139, 92, 246, 0.03) 0%, transparent 70%)', bottom: '-10%', right: '-10%' }} />
 
@@ -146,16 +146,14 @@ const PaymentStatusPage = () => {
                     <p className="text-muted small fw-bold tracking-widest text-uppercase opacity-50" style={{ fontSize: '8px', letterSpacing: '0.4em' }}>Admissions Ecosystem</p>
                 </div>
 
-                <div className="premium-card w-100 p-4 p-md-5 animate-slide-up" style={{ 
-                    background: '#ffffff', 
+                <div className="bg-white w-100 p-4 p-md-5 animate-slide-up shadow-lg" style={{ 
                     borderRadius: '40px',
                     border: '1px solid rgba(0, 0, 0, 0.05)',
-                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.08)'
                 }}>
                     {renderContent()}
                 </div>
 
-                <div className="text-center mt-4 opacity-20">
+                <div className="text-center mt-4 opacity-30">
                     <p className="extra-small fw-black tracking-widest text-uppercase mb-0" style={{ color: '#1e293b' }}>
                         GYANTRIX INTELLIGENCE &copy; 2026
                     </p>
@@ -173,13 +171,7 @@ const PaymentStatusPage = () => {
                 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
                 @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
                 
-                /* Custom light mode overrides for content */
-                .text-white { color: #1e293b !important; }
-                .text-opacity-40 { opacity: 0.6 !important; }
-                .text-opacity-30 { opacity: 0.4 !important; }
-                .glass-inner { background: #f8fafc !important; border: 1px solid #f1f5f9 !important; }
-                .btn-primary { background: #1e293b !important; border: none !important; }
-                .shadow-glow { box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1); }
+                .btn-primary { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important; border: none !important; }
             `}</style>
         </div>
     );

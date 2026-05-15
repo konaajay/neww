@@ -30,18 +30,18 @@ const PortalSelect = ({
                     const menuWidth = rect.width;
                     const menuHeight = 250; // Estimated max height
                     
-                    // Horizontal Boundary check: If menu would overflow right, shift it left
-                    let left = rect.left + window.scrollX;
+                    // Horizontal Boundary check
+                    let left = rect.left;
                     if (left + menuWidth > windowWidth - 20) {
                         left = windowWidth - menuWidth - 20;
                     }
-
-                    // Vertical Flip Logic: Check if it overflows bottom
-                    const overflowsBottom = rect.bottom + menuHeight > windowHeight;
+ 
+                    // Vertical Flip Logic - Only flip if space below is less than 160px
+                    const overflowsBottom = rect.bottom + 160 > windowHeight;
                     const top = overflowsBottom 
-                        ? rect.top + window.scrollY - menuHeight - 10 
-                        : rect.bottom + window.scrollY;
-
+                        ? rect.top - (options.length * 40 > 250 ? 250 : options.length * 40 + 10)
+                        : rect.bottom;
+ 
                     setCoords({
                         top,
                         left: Math.max(20, left),
@@ -87,16 +87,17 @@ const PortalSelect = ({
             ref={menuRef}
             className={`custom-portal-dropdown shadow-2xl animate-zoom-in ${isDarkMode ? 'bg-surface border-white border-opacity-10 text-white' : 'bg-white border-dark border-opacity-10 text-dark'}`}
             style={{
-                position: 'absolute',
-                top: `${coords.top + (coords.flipped ? 0 : 5)}px`,
+                position: 'fixed',
+                top: `${coords.top + (coords.flipped ? -5 : 5)}px`,
                 left: `${coords.left}px`,
                 width: `${coords.width}px`,
-                zIndex: 2000000,
+                zIndex: 9999999,
                 borderRadius: '16px',
                 border: '1px solid',
                 overflow: 'hidden',
                 maxHeight: '250px',
-                overflowY: 'auto'
+                overflowY: 'auto',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)'
             }}
         >
             {options.map((opt, i) => (

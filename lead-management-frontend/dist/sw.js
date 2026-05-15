@@ -27,9 +27,16 @@ self.addEventListener('activate', (event) => {
 
 // Fetch Event
 self.addEventListener('fetch', (event) => {
+  // Skip cross-origin requests or non-GET requests if needed
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
     caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
+      return response || fetch(event.request).catch((err) => {
+        console.warn('[SW] Fetch failed for:', event.request.url, err);
+        // You could return a custom offline page here if desired
+        return null; 
+      });
     })
   );
 });

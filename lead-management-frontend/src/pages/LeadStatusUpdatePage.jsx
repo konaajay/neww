@@ -160,6 +160,15 @@ const LeadStatusUpdatePage = () => {
     e.preventDefault();
     if (!selectedStatus) return toast.warning("Please select a status");
 
+    // Strict Enforcement of Pipeline Architecture Rules
+    if (currentStatusConfig?.requireNote && !note.trim()) {
+        return toast.error(`Strategic Protocol: Note required for ${selectedStatus} status.`);
+    }
+
+    if (currentStatusConfig?.requireDate && !followUpDate) {
+        return toast.error(`Strategic Protocol: Synchronization date required for ${selectedStatus}.`);
+    }
+
     setIsSubmitting(true);
     try {
       await leadsApi.updateStatus(id, selectedStatus, note, {
@@ -169,7 +178,7 @@ const LeadStatusUpdatePage = () => {
         paymentMethod,
         discount: discount || 0,
         installments: paymentType === 'EMI' ? installments.map(i => ({ ...i, amount: i.amount || "0" })) : [],
-        dueDate: followUpDate,
+        dueDate: (currentStatusConfig?.requireDate || ['EMI', 'EMI_FOLLOWUP'].includes(selectedStatus?.toUpperCase())) ? followUpDate : null,
         courseId: selectedCourse?.id
       });
 
@@ -305,9 +314,14 @@ const LeadStatusUpdatePage = () => {
                                 setPaymentSkipped(false);
                                 if (!initialStatus) setShowStatusList(false); 
                               }}
-                              className={`p-3 rounded-4 border cursor-pointer transition-all ${selectedStatus === 'PAID' ? 'bg-success bg-opacity-10 border-success shadow-glow-sm' : isDarkMode ? 'bg-surface bg-opacity-50 border-white border-opacity-10 opacity-60 hover:opacity-100 hover:border-success' : 'bg-white border-secondary border-opacity-10 opacity-60 hover:opacity-100 hover:border-success'}`}
+                              className={`p-3 rounded-4 border cursor-pointer transition-all d-flex flex-column justify-content-between ${selectedStatus === 'PAID' ? 'bg-success bg-opacity-10 border-success shadow-glow-sm' : isDarkMode ? 'bg-surface bg-opacity-50 border-white border-opacity-10 opacity-60 hover:opacity-100 hover:border-success' : 'bg-white border-secondary border-opacity-10 opacity-60 hover:opacity-100 hover:border-success'}`}
                             >
                               <span className={`fw-black small text-uppercase tracking-wider ${selectedStatus === 'PAID' ? 'text-success' : 'text-muted'}`}>Payment Complete</span>
+                              <div className="d-flex gap-2 mt-2">
+                                <div className="text-success opacity-50" title="Note Encouraged">
+                                  <MessageSquare size={12} />
+                                </div>
+                              </div>
                             </div>
                           </div>
                           <div className="col-12 col-sm-6">
@@ -318,9 +332,17 @@ const LeadStatusUpdatePage = () => {
                                 setNote('Payment not complete. Rescheduled for follow-up.');
                                 if (!initialStatus) setShowStatusList(false); 
                               }}
-                              className={`p-3 rounded-4 border cursor-pointer transition-all ${selectedStatus === 'EMI_FOLLOWUP' ? 'bg-danger bg-opacity-10 border-danger shadow-glow-sm' : isDarkMode ? 'bg-surface bg-opacity-50 border-white border-opacity-10 opacity-60 hover:opacity-100 hover:border-danger' : 'bg-white border-secondary border-opacity-10 opacity-60 hover:opacity-100 hover:border-danger'}`}
+                              className={`p-3 rounded-4 border cursor-pointer transition-all d-flex flex-column justify-content-between ${selectedStatus === 'EMI_FOLLOWUP' ? 'bg-danger bg-opacity-10 border-danger shadow-glow-sm' : isDarkMode ? 'bg-surface bg-opacity-50 border-white border-opacity-10 opacity-60 hover:opacity-100 hover:border-danger' : 'bg-white border-secondary border-opacity-10 opacity-60 hover:opacity-100 hover:border-danger'}`}
                             >
                               <span className={`fw-black small text-uppercase tracking-wider ${selectedStatus === 'EMI_FOLLOWUP' ? 'text-danger' : 'text-muted'}`}>Payment Not Complete</span>
+                              <div className="d-flex gap-2 mt-2">
+                                <div className="text-danger opacity-50" title="Note Required">
+                                  <MessageSquare size={12} />
+                                </div>
+                                <div className="text-danger opacity-50" title="Date Required">
+                                  <Calendar size={12} />
+                                </div>
+                              </div>
                             </div>
                           </div>
 
@@ -335,9 +357,27 @@ const LeadStatusUpdatePage = () => {
                                 setPaymentSkipped(false);
                                 if (!initialStatus) setShowStatusList(false);
                               }}
-                              className={`p-3 rounded-4 border cursor-pointer transition-all ${selectedStatus === stage.statusValue ? 'bg-primary bg-opacity-10 border-primary shadow-glow-sm' : isDarkMode ? 'bg-surface bg-opacity-50 border-white border-opacity-10 opacity-60 hover:opacity-100 hover:border-primary' : 'bg-white border-secondary border-opacity-10 opacity-60 hover:opacity-100 hover:border-primary'}`}
+                              className={`p-3 rounded-4 border cursor-pointer transition-all h-100 d-flex flex-column justify-content-between ${selectedStatus === stage.statusValue ? 'bg-primary bg-opacity-10 border-primary shadow-glow-sm' : isDarkMode ? 'bg-surface bg-opacity-50 border-white border-opacity-10 opacity-60 hover:opacity-100 hover:border-primary' : 'bg-white border-secondary border-opacity-10 opacity-60 hover:opacity-100 hover:border-primary'}`}
                             >
                               <span className={`fw-black small text-uppercase tracking-wider ${selectedStatus === stage.statusValue ? 'text-primary' : 'text-muted'}`}>{stage.label}</span>
+                              
+                              <div className="d-flex gap-2 mt-2">
+                                {stage.requireNote && (
+                                  <div className="text-primary opacity-50" title="Note Required">
+                                    <MessageSquare size={12} />
+                                  </div>
+                                )}
+                                {stage.requireDate && (
+                                  <div className="text-primary opacity-50" title="Date Required">
+                                    <Calendar size={12} />
+                                  </div>
+                                )}
+                                {stage.createTask && (
+                                  <div className="text-primary opacity-50" title="Auto Task Creation">
+                                    <Zap size={12} fill="currentColor" />
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))
