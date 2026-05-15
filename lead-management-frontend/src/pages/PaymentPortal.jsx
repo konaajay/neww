@@ -84,7 +84,7 @@ const PaymentPortal = () => {
                 <p className="opacity-75 mb-0 fw-bold tracking-widest text-uppercase">Official Acknowledgment</p>
              </div>
              <div className="text-md-end">
-                <h4 className="fw-black mb-1">GYNATRIX CRM</h4>
+                <h4 className="fw-black mb-1">GYANTRIX CRM</h4>
                 <p className="opacity-75 small mb-0 fw-bold">Admission & Fee Management System</p>
                 <div className="mt-3 badge bg-white text-primary px-3 py-2 fw-black">ID: {payment.paymentGatewayId || payment.id}</div>
              </div>

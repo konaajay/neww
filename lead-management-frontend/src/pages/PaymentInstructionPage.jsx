@@ -15,7 +15,8 @@ const PaymentInstructionPage = () => {
     useEffect(() => {
         const fetchOrderDetails = async () => {
             try {
-                const baseURL = import.meta.env.VITE_API_BASE_URL || '';
+                const baseURL = import.meta.env.VITE_API_BASE_URL || 
+                    (window.location.hostname === 'localhost' ? 'http://localhost:8080' : 'http://52.87.168.111:8080');
                 const url = `${baseURL}/api/public/payments/order/${orderId}`;
                 console.log('[Payment] Fetching order from:', url);
                 const res = await axios.get(url);
@@ -35,7 +36,8 @@ const PaymentInstructionPage = () => {
         setPaymentError(null);
         setPaying(true);
         try {
-            const baseURL = import.meta.env.VITE_API_BASE_URL || '';
+            const baseURL = import.meta.env.VITE_API_BASE_URL || 
+                (window.location.hostname === 'localhost' ? 'http://localhost:8080' : 'http://52.87.168.111:8080');
             
             // 1. Fetch exact session ID for this order
             const sessionUrl = `${baseURL}/api/public/payments/session/${orderId}`;
@@ -235,7 +237,7 @@ const PaymentInstructionPage = () => {
                 <div className="d-flex align-items-center justify-content-center gap-3 mt-5 opacity-40">
                     <div className="h-1px bg-white bg-opacity-10 flex-grow-1"></div>
                     <p className="text-muted small fw-black tracking-widest text-uppercase mb-0" style={{fontSize: '8px'}}>
-                        GYNATRIX OS &copy; 2026 | Automated Financial Protocol
+                        GYANTRIX OS &copy; 2026 | Automated Financial Protocol
                     </p>
                     <div className="h-1px bg-white bg-opacity-10 flex-grow-1"></div>
                 </div>

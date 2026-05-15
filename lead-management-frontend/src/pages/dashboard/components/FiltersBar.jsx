@@ -160,10 +160,10 @@ const FiltersBar = ({
   };
 
   return (
-    <div className={`px-3 py-2 animate-fade-in ${isDarkMode ? 'bg-surface bg-opacity-30 border border-white border-opacity-5' : 'bg-white border border-dark border-opacity-5 shadow-sm'} rounded-4 mb-2 d-flex flex-wrap align-items-center justify-content-between gap-2 w-100`} style={{ position: 'relative', zIndex: 10, minHeight: '52px' }}>
-      <div className="d-flex flex-wrap align-items-center gap-1.5 gap-lg-2">
+    <div className={`px-3 py-2 animate-fade-in ${isDarkMode ? 'bg-surface bg-opacity-30 border border-white border-opacity-5' : 'bg-white border border-dark border-opacity-5 shadow-sm'} rounded-4 mb-2 d-flex flex-wrap align-items-center gap-2 w-100`} style={{ position: 'relative', zIndex: 10, minHeight: '52px' }}>
+      <div className="d-flex flex-wrap align-items-center justify-content-between gap-1.5 gap-lg-2 w-100">
         {/* Left Section: Title + Hierarchy Dropdowns */}
-        <div className="d-flex align-items-center gap-2 flex-grow-1">
+        <div className="d-flex align-items-center gap-2">
           <div className="d-flex align-items-center gap-2 pe-2 border-end border-white border-opacity-10">
             <div className="p-1.5 bg-primary bg-opacity-10 rounded-2 text-primary">
               <Command size={12} strokeWidth={2.5} />

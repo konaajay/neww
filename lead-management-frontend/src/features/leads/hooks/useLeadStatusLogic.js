@@ -33,7 +33,7 @@ export const useLeadStatusLogic = (initialTotal = '', initialPaid = 0) => {
       const updated = [...prev];
       let sanitizedValue = value;
       if (field === 'amount') {
-        sanitizedValue = Math.max(0, parseFloat(value) || 0);
+        sanitizedValue = value === '' ? '' : Math.max(0, parseFloat(value) || 0);
       }
       updated[index] = { ...updated[index], [field]: sanitizedValue };
       return updated;

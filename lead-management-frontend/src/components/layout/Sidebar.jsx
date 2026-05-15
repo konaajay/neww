@@ -112,11 +112,11 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
               onClick={onClose}
             >
               <div className="d-flex align-items-center gap-3 overflow-hidden py-2">
-                <div className="p-2 bg-primary rounded-circle shadow-glow">
-                  <ShieldHalf size={26} className="text-white" />
+                <div style={{ width: '42px', height: '42px' }}>
+                  <img src="/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </div>
                 {(!isCollapsed || isOpen) && (
-                  <span className="fw-black tracking-widest text-main text-truncate" style={{ fontSize: '18px', letterSpacing: '0.1em' }}>GYNATRIX</span>
+                  <span className="fw-black tracking-widest text-main text-truncate" style={{ fontSize: '18px', letterSpacing: '0.1em' }}>GYANTRIX</span>
                 )}
               </div>
             </div>

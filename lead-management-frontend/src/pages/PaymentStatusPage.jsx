@@ -11,14 +11,15 @@ const PaymentStatusPage = () => {
 
     useEffect(() => {
         let pollInterval;
-        
+
         const checkStatus = async () => {
             try {
-                const baseURL = import.meta.env.VITE_API_BASE_URL || '';
+                const baseURL = import.meta.env.VITE_API_BASE_URL ||
+                    (window.location.hostname === 'localhost' ? 'http://localhost:8080' : 'http://52.87.168.111:8080');
                 const url = `${baseURL}/api/public/payments/order/${orderId}`;
                 const res = await axios.get(url);
                 setOrderData(res.data);
-                
+
                 const backendStatus = res.data.status?.toUpperCase();
                 if (backendStatus === 'PAID' || backendStatus === 'SUCCESS' || backendStatus === 'COMPLETED') {
                     setStatus('success');
@@ -36,7 +37,7 @@ const PaymentStatusPage = () => {
         };
 
         checkStatus();
-        
+
         // Polling logic for pending status
         pollInterval = setInterval(checkStatus, 3000);
 
@@ -63,7 +64,7 @@ const PaymentStatusPage = () => {
                         </div>
                         <h2 className="fw-black text-main mb-2 tracking-widest text-uppercase" style={{ fontSize: '2rem' }}>Protocol Authorized</h2>
                         <p className="text-muted mb-5 small fw-semibold opacity-70">Enrollment credentials secured. Your strategic seat has been reserved in the master database.</p>
-                        
+
                         <div className="p-4 rounded-4 bg-white bg-opacity-5 border border-white border-opacity-5 mb-5 text-start transition-smooth hover-bg-surface">
                             <div className="d-flex justify-content-between align-items-center mb-3">
                                 <span className="text-muted small fw-black tracking-widest opacity-40">PROTOCOL ID</span>
@@ -75,7 +76,7 @@ const PaymentStatusPage = () => {
                             </div>
                             <div className="d-flex justify-content-between align-items-center pt-3 border-top border-white border-opacity-5">
                                 <span className="text-muted small fw-black tracking-widest opacity-40">STATUS</span>
-                                <span className="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 fw-black tracking-widest" style={{fontSize: '9px'}}>VERIFIED</span>
+                                <span className="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 fw-black tracking-widest" style={{ fontSize: '9px' }}>VERIFIED</span>
                             </div>
                         </div>
 
@@ -95,7 +96,7 @@ const PaymentStatusPage = () => {
                         </div>
                         <h2 className="fw-black text-main mb-2 tracking-widest text-uppercase" style={{ fontSize: '2rem' }}>Protocol Denied</h2>
                         <p className="text-muted mb-5 small fw-semibold opacity-70">Authorization was rejected by the banking vector. Error Code: BANK_REJECTION_01</p>
-                        
+
                         <button onClick={() => navigate(`/payment-instruction/${orderId}`)} className="ui-btn ui-btn-primary rounded-pill px-5 py-3 w-100 fw-black text-uppercase tracking-widest shadow-glow transition-smooth hover-scale">
                             Re-Initiate Protocol
                         </button>
@@ -109,7 +110,7 @@ const PaymentStatusPage = () => {
                         </div>
                         <h2 className="fw-black text-main mb-2 tracking-widest text-uppercase" style={{ fontSize: '2rem' }}>Pending Sync</h2>
                         <p className="text-muted mb-5 small fw-semibold opacity-70">Awaiting confirmation from the banking vector. This usually resolves within 180 seconds.</p>
-                        
+
                         <div className="d-flex flex-column gap-3">
                             <div className="d-flex align-items-center justify-content-center gap-2 mb-3 opacity-50">
                                 <span className="dot bg-primary animate-pulse"></span>
@@ -135,14 +136,14 @@ const PaymentStatusPage = () => {
                 <div className="premium-card border-0 shadow-2xl rounded-5 p-4 p-md-5 overflow-hidden position-relative animate-fade-in">
                     {/* Top Accent Bar */}
                     <div className={`position-absolute top-0 start-0 w-100 h-1px ${status === 'success' ? 'bg-success' : status === 'failed' ? 'bg-danger' : 'bg-primary'} opacity-50 shadow-glow`}></div>
-                    
+
                     {renderContent()}
                 </div>
-                
+
                 <div className="d-flex align-items-center justify-content-center gap-3 mt-5 opacity-40">
                     <div className="h-1px bg-white bg-opacity-10 flex-grow-1"></div>
-                    <p className="text-muted small fw-black tracking-widest text-uppercase mb-0" style={{fontSize: '8px'}}>
-                        GYNATRIX OS &copy; 2026 | Automated Financial Gateway
+                    <p className="text-muted small fw-black tracking-widest text-uppercase mb-0" style={{ fontSize: '8px' }}>
+                        GYANTRIX &copy; 2025 | Automated Financial Gateway
                     </p>
                     <div className="h-1px bg-white bg-opacity-10 flex-grow-1"></div>
                 </div>

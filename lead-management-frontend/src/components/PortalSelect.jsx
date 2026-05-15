@@ -26,18 +26,27 @@ const PortalSelect = ({
                 if (containerRef.current) {
                     const rect = containerRef.current.getBoundingClientRect();
                     const windowWidth = window.innerWidth;
+                    const windowHeight = window.innerHeight;
                     const menuWidth = rect.width;
+                    const menuHeight = 250; // Estimated max height
                     
-                    // Boundary check: If menu would overflow right, shift it left
+                    // Horizontal Boundary check: If menu would overflow right, shift it left
                     let left = rect.left + window.scrollX;
                     if (left + menuWidth > windowWidth - 20) {
                         left = windowWidth - menuWidth - 20;
                     }
 
+                    // Vertical Flip Logic: Check if it overflows bottom
+                    const overflowsBottom = rect.bottom + menuHeight > windowHeight;
+                    const top = overflowsBottom 
+                        ? rect.top + window.scrollY - menuHeight - 10 
+                        : rect.bottom + window.scrollY;
+
                     setCoords({
-                        top: rect.bottom + window.scrollY,
-                        left: Math.max(20, left), // Ensure it doesn't overflow left either
-                        width: rect.width
+                        top,
+                        left: Math.max(20, left),
+                        width: rect.width,
+                        flipped: overflowsBottom
                     });
                 }
             };
@@ -79,14 +88,14 @@ const PortalSelect = ({
             className={`custom-portal-dropdown shadow-2xl animate-zoom-in ${isDarkMode ? 'bg-surface border-white border-opacity-10 text-white' : 'bg-white border-dark border-opacity-10 text-dark'}`}
             style={{
                 position: 'absolute',
-                top: `${coords.top + 5}px`,
+                top: `${coords.top + (coords.flipped ? 0 : 5)}px`,
                 left: `${coords.left}px`,
                 width: `${coords.width}px`,
                 zIndex: 2000000,
                 borderRadius: '16px',
                 border: '1px solid',
                 overflow: 'hidden',
-                maxHeight: '300px',
+                maxHeight: '250px',
                 overflowY: 'auto'
             }}
         >

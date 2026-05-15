@@ -173,7 +173,10 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
       }
 
       let matchesStatus = true;
-      if (statusFilter !== 'ALL') {
+      if (statusFilter === 'ALL') {
+        // Default: Show all pending/overdue/future, hide terminal states
+        matchesStatus = task.status !== 'COMPLETED' && task.status !== 'CANCELLED';
+      } else {
         if (statusFilter === 'TODAY') {
           matchesStatus = task.status !== 'COMPLETED' && task.status !== 'CANCELLED' && !task.isOverdue && isToday(task.dueDate);
         } else if (statusFilter === 'OVERDUE') {

@@ -33,17 +33,17 @@ const DashboardLayout = ({ children, activeTab, onTabChange, role, navbarExtras,
             {/* Desktop Expanded Branding */}
             {!isCollapsed && (
               <div className="d-none d-lg-flex align-items-center gap-3 overflow-hidden px-3">
-                <div className="p-2 bg-primary rounded-circle shadow-glow animate-pulse-slow">
-                  <ShieldHalf size={26} className="text-white" />
+                <div style={{ width: '42px', height: '42px' }}>
+                  <img src="/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </div>
-                <span className="fw-black tracking-widest text-main text-truncate" style={{ fontSize: '20px', letterSpacing: '0.15em' }}>GYNATRIX</span>
+                <span className="fw-black tracking-widest text-main text-truncate" style={{ fontSize: '20px', letterSpacing: '0.15em' }}>GYANTRIX</span>
               </div>
             )}
 
             {/* Mobile/Collapsed Symbolic Toggle */}
             <div className={`d-flex align-items-center justify-content-center w-100 ${!isCollapsed ? 'd-lg-none' : ''}`}>
-               <div className="p-2 bg-primary rounded-circle shadow-glow transition-all hover-scale">
-                 <ShieldHalf size={28} className="text-white" />
+               <div className="transition-all hover-scale" style={{ width: '46px', height: '46px' }}>
+                 <img src="/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                </div>
             </div>
         </div>

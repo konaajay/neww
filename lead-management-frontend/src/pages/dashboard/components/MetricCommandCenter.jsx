@@ -64,7 +64,12 @@ export const MetricCard = memo(({ title, stats, icon: Icon, color, onClick, badg
 
       <div className="d-flex align-items-center justify-content-between pt-2 border-top border-white border-opacity-5 mt-3">
         {(stats?.secondary || []).map((s, idx) => (
-          <div key={idx} className="d-flex flex-column align-items-start">
+          <div 
+            key={idx} 
+            className={`d-flex flex-column align-items-start ${s?.onClick ? 'cursor-pointer hover-opacity-100 transition-all' : ''}`}
+            onClick={(e) => { if (s?.onClick) { e.stopPropagation(); s.onClick(); } }}
+            style={{ opacity: s?.onClick ? 1 : 0.8 }}
+          >
             <span className="fw-black text-main mb-0.5" style={{ fontSize: '15px', lineHeight: 1 }}>{s?.value ?? 0}</span>
             <div className="d-flex align-items-center gap-1">
               <div className={`rounded-circle bg-${s?.color || color}`} style={{ width: '4px', height: '4px' }}></div>
@@ -117,8 +122,8 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
     }
 
     return {
-      displayToday: statsToUse.todayFollowups || 0,
-      displayOverdue: statsToUse.pendingFollowups || 0,
+      displayToday: (statsToUse.todayFollowups || 0) + (statsToUse.todayPaymentsCount || 0),
+      displayOverdue: (statsToUse.pendingFollowups || 0) + (statsToUse.pendingPaymentsCount || 0),
       totalActiveTasks: (statsToUse.todayFollowups || 0) + (statsToUse.pendingFollowups || 0) + (statsToUse.todayPaymentsCount || 0) + (statsToUse.pendingPaymentsCount || 0),
       totalUsers: statsToUse.totalUsers || (getCount('ADMIN') + getCount('MANAGER') + getCount('TEAM_LEADER') + getCount('ASSOCIATE')),
       getCount
@@ -258,8 +263,8 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
         stats={{
           primary: { value: statsMemo.totalActiveTasks, label: 'Active Tasks' },
           secondary: [
-            { label: 'Today', value: statsMemo.displayToday, color: 'primary' },
-            { label: 'Overdue', value: statsMemo.displayOverdue, color: 'danger' },
+            { label: 'Today', value: statsMemo.displayToday, color: 'primary', onClick: () => handleNav('tasks', '/tasks', { filter: 'TODAY' }) },
+            { label: 'Overdue', value: statsMemo.displayOverdue, color: 'danger', onClick: () => handleNav('tasks', '/tasks', { filter: 'OVERDUE' }) },
             { label: 'EMI/Pay', value: (stats.todayPaymentsCount || 0) + (stats.pendingPaymentsCount || 0), color: 'success' },
           ]
         }}

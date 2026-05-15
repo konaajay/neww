@@ -32,7 +32,7 @@ const InvoicePage = () => {
         const text = `Receipt for ${invoiceData.leadName}\nAmount: ₹${invoiceData.amount}\nRef: ${invoiceData.paymentGatewayId || invoiceData.id}`;
         try {
             if (navigator.share) {
-                await navigator.share({ title: 'GYNATRIX RECEIPT', text });
+                await navigator.share({ title: 'GYANTRIX RECEIPT', text });
             } else {
                 window.open(`https://web.whatsapp.com/send?text=${encodeURIComponent(text)}`);
             }
@@ -90,7 +90,7 @@ const InvoicePage = () => {
 
                 {/* Title Section */}
                 <div className="invoice-header mb-4 mb-md-5 border-bottom border-secondary border-opacity-10 pb-4">
-                    <h1 className="brand-title fw-black mb-1 letter-spacing-tight">GYNATRIX</h1>
+                    <h1 className="brand-title fw-black mb-1 letter-spacing-tight">GYANTRIX</h1>
                     <p className="text-muted text-uppercase tracking-widest small mb-0 fw-bold opacity-75">Official Core Ecosystem Receipt</p>
                 </div>
 

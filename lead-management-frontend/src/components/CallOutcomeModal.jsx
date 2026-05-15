@@ -615,7 +615,7 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                                   const currIdx = getStageIndex(lead.status);
                                   if (stageIdx < currIdx) return false;
                                   if (lead.status === 'INTERESTED') {
-                                    return ['CONVERTED', 'EMI', 'LOST', 'NOT_INTERESTED', 'PAYMENT_LINK_SENT', 'DEMO', 'INTERESTED'].includes(s.id);
+                                    return ['CONVERTED', 'EMI', 'EMI_FOLLOWUP', 'LOST', 'NOT_INTERESTED', 'PAYMENT_LINK_SENT', 'DEMO', 'INTERESTED'].includes(s.id);
                                   }
                                   if (currIdx >= 4 && stageIdx !== currIdx) return false;
                                   return true;
@@ -633,6 +633,7 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                               {[
                                 { id: 'CALL_BACK', label: 'Call Back', color: 'warning' },
                                 { id: 'FOLLOW_UP', label: 'Follow Up', color: 'info' },
+                                { id: 'EMI_FOLLOWUP', label: 'EMI Delayed', color: 'danger' },
                                 { id: 'CONVERTED', label: 'Converted', color: 'success' },
                                 { id: 'LOST', label: 'Lost', color: 'danger' }
                               ].map(btn => (
@@ -706,7 +707,7 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                                         type="number"
                                         className={`form-control fw-black ${isDarkMode ? 'bg-dark bg-opacity-50 text-white border-secondary border-opacity-50' : 'bg-light text-dark border-light'}`}
                                         placeholder="0.00"
-                                        value={outcome === 'EMI' ? initialAmount : totalAmount}
+                                        value={(outcome === 'EMI' ? initialAmount : totalAmount) || ''}
                                         onChange={(e) => outcome === 'EMI' ? setInitialAmount(e.target.value) : setTotalAmount(e.target.value)}
                                       />
                                     </div>
@@ -748,7 +749,7 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                                                 type="number"
                                                 className={`form-control form-control-sm fw-bold ${isDarkMode ? 'bg-dark text-white border-secondary border-opacity-50' : 'bg-light text-dark border-light'}`}
                                                 placeholder="Amount"
-                                                value={inst.amount}
+                                                value={inst.amount || ''}
                                                 onChange={(e) => handleInstallmentChange(idx, 'amount', e.target.value)}
                                               />
                                             </div>

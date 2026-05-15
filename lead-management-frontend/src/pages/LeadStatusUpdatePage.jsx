@@ -24,6 +24,7 @@ const LeadStatusUpdatePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [note, setNote] = useState('');
+  const [paymentSkipped, setPaymentSkipped] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pipelineStages, setPipelineStages] = useState([]);
   const [courses, setCourses] = useState([]);
@@ -164,7 +165,7 @@ const LeadStatusUpdatePage = () => {
       await leadsApi.updateStatus(id, selectedStatus, note, {
         paymentType,
         totalAmount: totalAmount || "0",
-        paidAmount: paymentType === 'EMI' ? (initialAmount || "0") : (totalAmount || "0"),
+        paidAmount: paymentSkipped ? "0" : (paymentType === 'EMI' ? (initialAmount || "0") : (totalAmount || "0")),
         paymentMethod,
         discount: discount || 0,
         installments: paymentType === 'EMI' ? installments.map(i => ({ ...i, amount: i.amount || "0" })) : [],
@@ -264,7 +265,7 @@ const LeadStatusUpdatePage = () => {
                       </div>
                     </div>
 
-                    {currentStatusConfig?.requireDate && selectedStatus !== 'CONTACTED' && (
+                    {(currentStatusConfig?.requireDate || selectedStatus === 'EMI' || selectedStatus === 'EMI_FOLLOWUP') && (
                       <div className="col-12 col-lg-5">
                         <div className="ps-lg-4 border-start border-white border-opacity-5">
                           <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block" style={{ fontSize: '9px' }}>Next Synchronization</label>
@@ -297,38 +298,32 @@ const LeadStatusUpdatePage = () => {
                     <div className="row g-2">
                       {['CONVERTED', 'EMI', 'PAID'].includes(lead?.status?.toUpperCase()) ? (
                         <>
-                          <div className="col-12 col-sm-6 col-md-4">
+                          <div className="col-12 col-sm-6">
                             <div
-                              onClick={() => { setSelectedStatus('PAID'); if (!initialStatus) setShowStatusList(false); }}
+                              onClick={() => { 
+                                setSelectedStatus('PAID'); 
+                                setPaymentSkipped(false);
+                                if (!initialStatus) setShowStatusList(false); 
+                              }}
                               className={`p-3 rounded-4 border cursor-pointer transition-all ${selectedStatus === 'PAID' ? 'bg-success bg-opacity-10 border-success shadow-glow-sm' : isDarkMode ? 'bg-surface bg-opacity-50 border-white border-opacity-10 opacity-60 hover:opacity-100 hover:border-success' : 'bg-white border-secondary border-opacity-10 opacity-60 hover:opacity-100 hover:border-success'}`}
                             >
                               <span className={`fw-black small text-uppercase tracking-wider ${selectedStatus === 'PAID' ? 'text-success' : 'text-muted'}`}>Payment Complete</span>
                             </div>
                           </div>
-                          <div className="col-12 col-sm-6 col-md-4">
+                          <div className="col-12 col-sm-6">
                             <div
                               onClick={() => { 
-                                setSelectedStatus('EMI'); 
+                                setSelectedStatus('EMI_FOLLOWUP'); 
+                                setPaymentSkipped(true);
                                 setNote('Payment not complete. Rescheduled for follow-up.');
                                 if (!initialStatus) setShowStatusList(false); 
                               }}
-                              className={`p-3 rounded-4 border cursor-pointer transition-all ${selectedStatus === 'EMI' && note.includes('Payment not complete') ? 'bg-danger bg-opacity-10 border-danger shadow-glow-sm' : isDarkMode ? 'bg-surface bg-opacity-50 border-white border-opacity-10 opacity-60 hover:opacity-100 hover:border-danger' : 'bg-white border-secondary border-opacity-10 opacity-60 hover:opacity-100 hover:border-danger'}`}
+                              className={`p-3 rounded-4 border cursor-pointer transition-all ${selectedStatus === 'EMI_FOLLOWUP' ? 'bg-danger bg-opacity-10 border-danger shadow-glow-sm' : isDarkMode ? 'bg-surface bg-opacity-50 border-white border-opacity-10 opacity-60 hover:opacity-100 hover:border-danger' : 'bg-white border-secondary border-opacity-10 opacity-60 hover:opacity-100 hover:border-danger'}`}
                             >
-                              <span className={`fw-black small text-uppercase tracking-wider ${selectedStatus === 'EMI' && note.includes('Payment not complete') ? 'text-danger' : 'text-muted'}`}>Payment Not Complete</span>
+                              <span className={`fw-black small text-uppercase tracking-wider ${selectedStatus === 'EMI_FOLLOWUP' ? 'text-danger' : 'text-muted'}`}>Payment Not Complete</span>
                             </div>
                           </div>
-                          <div className="col-12 col-sm-6 col-md-4">
-                            <div
-                              onClick={() => { 
-                                setSelectedStatus('EMI'); 
-                                if (note.includes('Payment not complete')) setNote('');
-                                if (!initialStatus) setShowStatusList(false); 
-                              }}
-                              className={`p-3 rounded-4 border cursor-pointer transition-all ${selectedStatus === 'EMI' && !note.includes('Payment not complete') ? 'bg-warning bg-opacity-10 border-warning shadow-glow-sm' : isDarkMode ? 'bg-surface bg-opacity-50 border-white border-opacity-10 opacity-60 hover:opacity-100 hover:border-warning' : 'bg-white border-secondary border-opacity-10 opacity-60 hover:opacity-100 hover:border-warning'}`}
-                            >
-                              <span className={`fw-black small text-uppercase tracking-wider ${selectedStatus === 'EMI' && !note.includes('Payment not complete') ? 'text-warning' : 'text-muted'}`}>Reschedule Follow-up</span>
-                            </div>
-                          </div>
+
 
                         </>
                       ) : (
@@ -337,6 +332,7 @@ const LeadStatusUpdatePage = () => {
                             <div
                               onClick={() => {
                                 setSelectedStatus(stage.statusValue);
+                                setPaymentSkipped(false);
                                 if (!initialStatus) setShowStatusList(false);
                               }}
                               className={`p-3 rounded-4 border cursor-pointer transition-all ${selectedStatus === stage.statusValue ? 'bg-primary bg-opacity-10 border-primary shadow-glow-sm' : isDarkMode ? 'bg-surface bg-opacity-50 border-white border-opacity-10 opacity-60 hover:opacity-100 hover:border-primary' : 'bg-white border-secondary border-opacity-10 opacity-60 hover:opacity-100 hover:border-primary'}`}
@@ -411,7 +407,7 @@ const LeadStatusUpdatePage = () => {
                           min="0"
                           className={`form-control border border-secondary border-opacity-10 rounded-3 fw-bold ${isDarkMode ? 'bg-surface text-white' : 'bg-white text-dark'}`}
                           placeholder="Amount to deduct"
-                          value={discount}
+                          value={discount || ''}
                           onChange={(e) => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
                         />
                       </div>
@@ -429,7 +425,7 @@ const LeadStatusUpdatePage = () => {
                           min="0"
                           className={`form-control border border-primary border-opacity-20 rounded-3 fw-black text-primary ${isDarkMode ? 'bg-surface' : 'bg-white'}`}
                           placeholder="Amount for link generation"
-                          value={initialAmount}
+                          value={initialAmount || ''}
                           onChange={(e) => setInitialAmount(Math.max(0, parseFloat(e.target.value) || 0))}
                         />
                         {initialAmount > 0 && initialAmount < 500 && (
@@ -487,7 +483,7 @@ const LeadStatusUpdatePage = () => {
                                 className={`form-control border-0 rounded-3 fw-bold ${isDarkMode ? 'bg-surface bg-opacity-50 text-white' : 'bg-light text-dark'}`}
                                 style={{ fontSize: '12px' }}
                                 placeholder="Amount"
-                                value={inst.amount}
+                                value={inst.amount || ''}
                                 onChange={(e) => handleInstallmentChange(idx, 'amount', e.target.value)}
                               />
                               <input
@@ -596,7 +592,7 @@ const LeadStatusUpdatePage = () => {
                 )}
 
                 {/* Interaction Notes - Responsive to custom architecture settings */}
-                {currentStatusConfig?.requireNote && (
+                {(currentStatusConfig?.requireNote || selectedStatus === 'EMI') && (
                   <div className="animate-fade-in mt-2">
                     <label className="form-label small fw-bold text-uppercase text-muted tracking-wider mb-2 d-block px-1">Interaction Notes</label>
                     <textarea

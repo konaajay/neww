@@ -264,7 +264,7 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
                       </h6>
                       <p className="text-muted small mb-1 text-truncate fw-bold" style={{ fontSize: '10px' }}>{user?.email}</p>
                       <div className="badge bg-primary bg-opacity-10 text-primary fw-black border-0 px-2 py-1" style={{ fontSize: '8px', letterSpacing: '0.5px' }}>
-                        {user?.role?.toUpperCase() === 'SYSTEM ADMIN' ? 'ADMIN' : user?.role}
+                        GYANTRIX {user?.role?.toUpperCase() === 'SYSTEM ADMIN' ? 'ADMIN' : user?.role}
                       </div>
                     </div>
                   </div>
@@ -351,11 +351,15 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
 
                     <button 
                       onClick={() => { onLogout(); setIsProfileOpen(false); }}
-                      className="btn btn-link text-danger d-flex align-items-center gap-3 p-3 rounded-4 border-0 text-decoration-none hover-bg-danger hover-bg-opacity-5 transition-all"
+                      className="btn btn-link text-danger d-flex align-items-center gap-3 p-3 rounded-4 border-0 text-decoration-none hover-bg-danger hover-bg-opacity-5 transition-all mb-3"
                     >
                       <LogOut size={14} className="opacity-70" />
                       <span className="fw-black text-uppercase tracking-widest" style={{ fontSize: '10px' }}>Sign Out Account</span>
                     </button>
+
+                    <div className="text-center opacity-20 py-2 border-top border-light">
+                      <p className="extra-small fw-black tracking-widest text-uppercase mb-0" style={{ fontSize: '7px' }}>GYANTRIX Intelligence</p>
+                    </div>
                   </div>
                 </div>
               </div>
