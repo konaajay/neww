@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { IndianRupee, ShieldCheck, CreditCard, Clock, AlertCircle, Zap, Shield, ChevronRight, Fingerprint } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { IndianRupee, CheckCircle2, CreditCard, ShieldCheck, Info, ChevronRight, Lock, User, Mail, Hash } from 'lucide-react';
 import axios from 'axios';
 import { load } from '@cashfreepayments/cashfree-js';
 
 const PaymentInstructionPage = () => {
     const { orderId } = useParams();
+    const navigate = useNavigate();
     const [orderData, setOrderData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -15,15 +16,15 @@ const PaymentInstructionPage = () => {
     useEffect(() => {
         const fetchOrderDetails = async () => {
             try {
-                const baseURL = import.meta.env.VITE_API_BASE_URL || 
-                    (window.location.hostname === 'localhost' ? 'http://localhost:8080' : 'http://52.87.168.111:8080');
+                // Prioritize local environment during development
+                const baseURL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                    ? 'http://localhost:8080'
+                    : (import.meta.env.VITE_API_BASE_URL || 'http://54.84.148.176:8080');
+
                 const url = `${baseURL}/api/public/payments/order/${orderId}`;
-                console.log('[Payment] Fetching order from:', url);
                 const res = await axios.get(url);
-                console.log('[Payment] Order data received:', res.data);
                 setOrderData(res.data);
             } catch (err) {
-                console.error('[Payment] Failed to fetch order:', err);
                 setError("Payment details could not be retrieved. Please verify the link or contact support.");
             } finally {
                 setLoading(false);
@@ -36,69 +37,53 @@ const PaymentInstructionPage = () => {
         setPaymentError(null);
         setPaying(true);
         try {
-            const baseURL = import.meta.env.VITE_API_BASE_URL || 
-                (window.location.hostname === 'localhost' ? 'http://localhost:8080' : 'http://52.87.168.111:8080');
+            const baseURL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                ? 'http://localhost:8080'
+                : (import.meta.env.VITE_API_BASE_URL || 'http://52.87.168.111:8080');
             
-            // 1. Fetch exact session ID for this order
             const sessionUrl = `${baseURL}/api/public/payments/session/${orderId}`;
-            console.log('[Payment] Requesting session from:', sessionUrl);
-            
-            const sessionRes = await axios.get(sessionUrl, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem("token")}`
-                }
-            });
+            const sessionRes = await axios.get(sessionUrl);
             const paymentSessionId = sessionRes.data.payment_session_id;
 
             if (!paymentSessionId) {
-                setPaymentError("Payment session missing. Please contact admin to regenerate the link.");
+                setPaymentError("Payment session missing. Please contact support.");
                 setPaying(false);
                 return;
             }
 
-            // 2. Initialize SDK
             const isProd = orderData?.cashfreeEnvironment?.toUpperCase() === 'PROD';
             const mode = isProd ? "production" : "sandbox";
-            console.log('[Payment] Initializing Cashfree checkout | Mode:', mode);
-
             const cashfree = await load({ mode });
 
-            // 3. Launch Checkout Protocol
             await cashfree.checkout({
                 paymentSessionId: paymentSessionId,
                 redirectTarget: "_self"
             });
 
         } catch (err) {
-            console.error('[Payment] Protocol Exception:', err);
             const errorMsg = err.response?.data?.message || err.message || "Gateway connection failed.";
-            setPaymentError(`PAYMENT_INIT_ERROR: ${errorMsg}`);
+            setPaymentError(`Gateway Error: ${errorMsg}`);
         } finally {
             setPaying(false);
         }
     };
 
-    const handlePayment = () => startPayment();
-
     if (loading) return (
-        <div className="min-vh-100 bg-main d-flex align-items-center justify-content-center">
-            <div className="p-5 rounded-4 bg-surface bg-opacity-20 border border-white border-opacity-5 shadow-lg animate-pulse text-center" style={{maxWidth: '400px'}}>
-                 <div className="spinner-border text-primary mb-4" role="status" style={{width: '3rem', height: '3rem'}}></div>
-                 <h6 className="fw-black text-main text-uppercase tracking-widest mb-2">Synchronizing Protocol</h6>
-                 <p className="text-muted small fw-bold mb-0 opacity-50 px-4" style={{fontSize: '10px'}}>ESTABLISHING SECURE GATEWAY CONNECTION...</p>
+        <div className="min-vh-100 d-flex align-items-center justify-content-center" style={{ background: '#030712' }}>
+            <div className="text-center">
+                <div className="spinner-border text-primary mb-4" role="status" style={{ width: '3rem', height: '3rem' }}></div>
+                <p className="text-white small fw-black tracking-widest text-uppercase opacity-50">Initializing Secure Gateway</p>
             </div>
         </div>
     );
 
     if (error) return (
-        <div className="min-vh-100 bg-main d-flex align-items-center justify-content-center p-4">
-            <div className="premium-card p-5 text-center animate-fade-in" style={{ maxWidth: '500px' }}>
-                <div className="p-4 bg-danger bg-opacity-10 text-danger rounded-circle d-inline-block mb-4 shadow-glow-sm">
-                    <AlertCircle size={48} />
-                </div>
-                <h3 className="fw-black text-main mb-3 text-uppercase tracking-widest">Protocol Invalid</h3>
-                <p className="text-muted mb-4 small fw-semibold px-4">{error}</p>
-                <button onClick={() => window.location.reload()} className="ui-btn ui-btn-primary rounded-pill px-5 py-3 w-100 fw-black text-uppercase tracking-widest">Retry Verification</button>
+        <div className="min-vh-100 d-flex align-items-center justify-content-center p-4" style={{ background: '#030712' }}>
+            <div className="glass-card p-5 text-center" style={{ maxWidth: '440px', background: 'rgba(255,255,255,0.03)', borderRadius: '32px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div className="mb-4 text-danger opacity-80"><Info size={48} /></div>
+                <h3 className="text-white fw-black mb-3 text-uppercase tracking-widest">Link Expired</h3>
+                <p className="text-white text-opacity-50 mb-4 small fw-medium">{error}</p>
+                <button onClick={() => window.location.reload()} className="btn btn-primary w-100 py-3 rounded-4 fw-black text-uppercase tracking-widest">Retry Connection</button>
             </div>
         </div>
     );
@@ -106,153 +91,145 @@ const PaymentInstructionPage = () => {
     const isPaid = ['PAID', 'SUCCESS'].includes(orderData.status?.toUpperCase());
 
     return (
-        <div className="min-vh-100 bg-main py-5 px-3 d-flex align-items-center justify-content-center position-relative overflow-hidden">
-        <div className="container position-relative z-index-1" style={{ maxWidth: '800px' }}>
-                <div className="premium-card border-0 overflow-hidden shadow-2xl animate-fade-in">
-                    {/* Header Protocol Area */}
-                    <div className="p-3 p-md-4 border-bottom border-white border-opacity-5 d-flex flex-column align-items-center text-center">
-                        <div className="p-2 bg-primary bg-opacity-10 rounded-3 text-primary mb-3 shadow-glow animate-zoom-in">
-                            <Shield size={24} strokeWidth={2} />
-                        </div>
-                        <h2 className="fw-black text-main mb-1 tracking-widest text-uppercase" style={{ fontSize: '1.25rem' }}>Secure Enrollment Protocol</h2>
-                        <div className="d-flex align-items-center gap-3 opacity-50">
-                            <span className="dot bg-success animate-pulse"></span>
-                            <p className="small mb-0 fw-black tracking-widest text-uppercase text-muted" style={{ fontSize: '8px' }}>Automated Billing System v4.0</p>
-                        </div>
+        <div className="min-vh-100 py-4 px-3 d-flex align-items-center justify-content-center position-relative overflow-hidden" style={{ background: '#030712', fontFamily: "'Outfit', sans-serif" }}>
+            {/* Ambient Background Glows */}
+            <div className="position-absolute" style={{ width: '800px', height: '800px', background: 'radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, transparent 70%)', top: '-10%', left: '-10%' }} />
+            <div className="position-absolute" style={{ width: '800px', height: '800px', background: 'radial-gradient(circle, rgba(139, 92, 246, 0.05) 0%, transparent 70%)', bottom: '-10%', right: '-10%' }} />
+
+            <div className="container position-relative d-flex flex-column align-items-center" style={{ maxWidth: '440px', zIndex: 1 }}>
+                {/* Integrated Branding Header */}
+                <div className="text-center mb-4 animate-fade-in d-flex flex-column align-items-center">
+                    <div className="d-flex align-items-center gap-3 mb-1">
+                        <img src="/logo.png" alt="GYANTRIX" style={{ height: '42px', width: 'auto', objectFit: 'contain' }} />
+                        <h2 className="text-white fw-black tracking-widest text-uppercase mb-0" style={{ fontSize: '1.4rem', letterSpacing: '0.2em' }}>GYANTRIX</h2>
+                    </div>
+                    <p className="text-white text-opacity-30 small fw-bold tracking-widest text-uppercase" style={{ fontSize: '8px', letterSpacing: '0.4em' }}>Admissions Ecosystem</p>
+                </div>
+
+                <div className="glass-card w-100 overflow-hidden animate-slide-up" style={{ 
+                    background: 'rgba(255, 255, 255, 0.02)', 
+                    backdropFilter: 'blur(20px)',
+                    borderRadius: '32px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                }}>
+                    {/* Status Header */}
+                    <div className="p-4 text-center border-bottom border-white border-opacity-5">
+                        {isPaid ? (
+                            <div className="animate-zoom-in">
+                                <div className="text-success mb-2"><CheckCircle2 size={32} strokeWidth={2} /></div>
+                                <h3 className="text-white fw-black mb-0 text-uppercase tracking-widest" style={{ fontSize: '0.9rem' }}>Admission Confirmed</h3>
+                            </div>
+                        ) : (
+                            <div>
+                                <h3 className="text-white fw-black mb-0 text-uppercase tracking-widest" style={{ fontSize: '0.9rem' }}>Secure Checkout</h3>
+                                <p className="text-white text-opacity-30 extra-small fw-bold text-uppercase tracking-widest mb-0 mt-1" style={{ fontSize: '7px' }}>Finalize Your Enrollment</p>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="p-3 p-md-4 bg-surface bg-opacity-10">
-                        <div className="row g-3 mb-3">
-                            <div className="col-12 col-md-6">
-                                <div className="p-3 rounded-4 bg-white bg-opacity-5 border border-white border-opacity-5 h-100 transition-smooth hover-bg-surface">
-                                    <div className="d-flex align-items-center gap-2 mb-3 opacity-40">
-                                        <p className="small fw-black text-muted text-uppercase tracking-widest mb-0" style={{fontSize: '8px'}}>Personnel Identity</p>
-                                    </div>
-                                    <h5 className="fw-black text-main mb-0 text-uppercase" style={{ fontSize: '1.1rem' }}>{orderData?.studentName || 'Protocol Subject Unidentified'}</h5>
-                                    <p className="text-muted small mb-0 fw-bold opacity-60" style={{ fontSize: '10px' }}>{orderData?.studentEmail || 'Contact Protocol Missing'}</p>
-                                    
-                                    <div className="mt-3 pt-3 border-top border-white border-opacity-5">
-                                        <div className="d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <p className="small mb-0 text-muted fw-black text-uppercase tracking-widest" style={{fontSize: '7px'}}>Protocol Reference</p>
-                                                <code className="text-primary fw-bold small opacity-80" style={{ fontSize: '10px' }}>{orderId}</code>
-                                            </div>
-                                        </div>
+                    <div className="p-4">
+                        {/* Student Details Card */}
+                        <div className="p-3 rounded-4 bg-white bg-opacity-5 border border-white border-opacity-5 mb-3">
+                            <div className="d-flex flex-column gap-3">
+                                <div className="d-flex align-items-center gap-3">
+                                    <div className="p-2 bg-primary bg-opacity-10 text-primary rounded-3"><User size={14} /></div>
+                                    <div className="text-truncate">
+                                        <p className="text-white text-opacity-30 extra-small fw-black text-uppercase tracking-widest mb-0">Student Identity</p>
+                                        <p className="text-white fw-bold mb-0 text-truncate" style={{ fontSize: '0.9rem' }}>{orderData?.studentName || 'Unidentified'}</p>
                                     </div>
                                 </div>
-                            </div>
-                            <div className="col-12 col-md-6">
-                                <div className="p-3 rounded-4 bg-white bg-opacity-5 border border-white border-opacity-5 h-100 d-flex flex-column justify-content-center text-center transition-smooth">
-                                    <p className="small fw-black text-primary text-uppercase tracking-widest mb-2" style={{fontSize: '8px'}}>Strategic Commitment</p>
-                                    <div className="d-flex align-items-center justify-content-center gap-2 text-primary">
-                                        <IndianRupee size={22} strokeWidth={3} className="opacity-80" />
-                                        <h1 className="fw-black mb-0 tracking-tighter" style={{ fontSize: '2.5rem' }}>
-                                            {Number(String(orderData?.amount || '0').replace(/[^0-9.-]+/g,"")).toLocaleString('en-IN')}
-                                        </h1>
+                                <div className="d-flex align-items-center gap-3 pt-2 border-top border-white border-opacity-5">
+                                    <div className="p-2 bg-primary bg-opacity-10 text-primary rounded-3"><Mail size={14} /></div>
+                                    <div className="text-truncate">
+                                        <p className="text-white text-opacity-30 extra-small fw-black text-uppercase tracking-widest mb-0">Email Address</p>
+                                        <p className="text-white fw-bold mb-0 text-truncate" style={{ fontSize: '0.9rem' }}>{orderData?.studentEmail || 'N/A'}</p>
                                     </div>
-                                    <div className="mt-2 d-flex align-items-center justify-content-center gap-2">
-                                        <span className="p-1 bg-primary rounded-circle" style={{width: '3px', height: '3px'}}></span>
-                                        <p className="text-primary small mb-0 fw-black text-uppercase tracking-widest opacity-60" style={{fontSize: '7px'}}>Certified Inclusive of Taxes</p>
+                                </div>
+                                <div className="d-flex align-items-center gap-3 pt-2 border-top border-white border-opacity-5">
+                                    <div className="p-2 bg-white bg-opacity-5 text-white text-opacity-40 rounded-3"><Hash size={14} /></div>
+                                    <div className="text-truncate">
+                                        <p className="text-white text-opacity-30 extra-small fw-black text-uppercase tracking-widest mb-0">Reference ID</p>
+                                        <p className="text-white text-opacity-50 small fw-bold mb-0 font-monospace text-truncate" style={{ fontSize: '0.75rem' }}>{orderId}</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Status Aware Interaction Zone */}
-                        <div className="mb-3 animate-slide-up">
-                            {isPaid ? (
-                                <div className="p-4 rounded-4 bg-success bg-opacity-5 border border-success border-opacity-20 text-center glass-morphism">
-                                    <div className="p-3 bg-success bg-opacity-10 text-success rounded-circle d-inline-block mb-3 shadow-glow-sm">
-                                        <ShieldCheck size={32} />
+                        {/* Amount Section */}
+                        <div className="text-center py-3 mb-4 rounded-4" style={{ background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                            <p className="text-primary extra-small fw-black text-uppercase tracking-widest mb-1">Total Enrollment Fee</p>
+                            <div className="d-flex align-items-center justify-content-center gap-1 text-white">
+                                <IndianRupee size={18} strokeWidth={3} className="text-primary opacity-80" />
+                                <h1 className="fw-black mb-0 tracking-tighter" style={{ fontSize: '2.5rem' }}>
+                                    {Number(orderData?.amount || 0).toLocaleString('en-IN')}
+                                </h1>
+                            </div>
+                            <p className="text-white text-opacity-20 extra-small fw-bold text-uppercase mt-1">Certified Inclusive of Taxes</p>
+                        </div>
+
+                        {/* Action Area */}
+                        {isPaid ? (
+                            <div className="text-center">
+                                <button 
+                                    onClick={() => navigate(`/pay/${orderId}`)}
+                                    className="btn btn-primary w-100 py-3 rounded-4 fw-black text-uppercase tracking-widest shadow-glow d-flex align-items-center justify-content-center gap-2"
+                                >
+                                    View Digital Receipt <ChevronRight size={18} />
+                                </button>
+                                <p className="text-white text-opacity-20 extra-small fw-bold mt-4 tracking-widest text-uppercase">Payment successfully verified via Cashfree</p>
+                            </div>
+                        ) : (
+                            <div className="d-flex flex-column gap-3">
+                                {paymentError && (
+                                    <div className="p-3 rounded-3 bg-danger bg-opacity-10 border border-danger border-opacity-10 d-flex gap-2 align-items-center text-danger">
+                                        <Info size={12} />
+                                        <p className="extra-small fw-bold mb-0">{paymentError}</p>
                                     </div>
-                                    <h4 className="fw-black text-main mb-1 text-uppercase tracking-widest" style={{ fontSize: '1.2rem' }}>Protocol Authorized</h4>
-                                    <p className="text-muted small fw-bold text-uppercase tracking-widest mb-4 opacity-50" style={{fontSize: '8px'}}>Reference Hash: {orderData.paymentGatewayId || orderId}</p>
-                                    
-                                    <button 
-                                        onClick={() => window.location.href = `/pay/${orderId}`}
-                                        className="ui-btn ui-btn-primary rounded-pill px-5 py-3 w-100 fw-black text-uppercase tracking-widest shadow-glow"
-                                    >
-                                        Access Digital Credential <ChevronRight size={18} className="ms-2" />
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="d-flex flex-column gap-3">
-                                    {paymentError && (
-                                        <div className="p-3 rounded-4 bg-danger bg-opacity-10 border border-danger border-opacity-20 d-flex gap-3 align-items-start">
-                                            <AlertCircle size={16} className="text-danger mt-1 flex-shrink-0" />
-                                            <div>
-                                                <p className="small fw-black text-danger text-uppercase tracking-widest mb-0" style={{fontSize: '8px'}}>Session Error</p>
-                                                <p className="small text-danger mb-0 fw-semibold" style={{opacity: 0.8, fontSize: '10px'}}>{paymentError}</p>
-                                            </div>
-                                        </div>
-                                    )}
-                                    <button 
-                                        onClick={handlePayment}
-                                        disabled={paying}
-                                        className="ui-btn ui-btn-primary btn-lg rounded-pill px-5 py-3 fw-black text-uppercase tracking-widest shadow-glow w-100 d-flex align-items-center justify-content-center gap-2 transition-smooth hover-scale"
-                                        style={{ fontSize: '13px', letterSpacing: '3px', opacity: paying ? 0.7 : 1 }}
-                                    >
-                                        {paying ? (
-                                            <>
-                                                <span className="spinner-border spinner-border-sm" role="status" />
-                                                Connecting...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <CreditCard size={18} strokeWidth={2.5} />
-                                                Authorize Payment Now
-                                            </>
-                                        )}
-                                    </button>
- 
-                                    <div className="row g-2">
-                                        <div className="col-6">
-                                            <div className="p-2 rounded-3 bg-white bg-opacity-5 border border-white border-opacity-5 d-flex align-items-center justify-content-center gap-2">
-                                                <ShieldCheck size={12} className="text-success" />
-                                                <span className="small fw-black text-muted text-uppercase tracking-widest" style={{fontSize: '7px'}}>256-BIT SSL SECURE</span>
-                                            </div>
-                                        </div>
-                                        <div className="col-6">
-                                            <div className="p-2 rounded-3 bg-white bg-opacity-5 border border-white border-opacity-5 d-flex align-items-center justify-content-center gap-2">
-                                                <Clock size={12} className="text-warning" />
-                                                <span className="small fw-black text-muted text-uppercase tracking-widest" style={{fontSize: '7px'}}>EXPIRES IN 48H</span>
-                                            </div>
-                                        </div>
+                                )}
+                                <button 
+                                    onClick={startPayment}
+                                    disabled={paying}
+                                    className="btn btn-primary w-100 py-3 rounded-4 fw-black text-uppercase tracking-widest shadow-glow d-flex align-items-center justify-content-center gap-2 hover-scale transition-all"
+                                    style={{ background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', border: 'none', height: '56px' }}
+                                >
+                                    {paying ? <span className="spinner-border spinner-border-sm" /> : <CreditCard size={18} />}
+                                    {paying ? 'Connecting...' : 'Pay with Cashfree'}
+                                </button>
+                                <div className="d-flex justify-content-center gap-4 opacity-30">
+                                    <div className="d-flex align-items-center gap-2">
+                                        <ShieldCheck size={12} className="text-white" />
+                                        <span className="extra-small fw-black text-white text-uppercase tracking-widest">Secure Checkout</span>
+                                    </div>
+                                    <div className="d-flex align-items-center gap-2">
+                                        <Lock size={12} className="text-white" />
+                                        <span className="extra-small fw-black text-white text-uppercase tracking-widest">PCI-DSS Level 1</span>
                                     </div>
                                 </div>
-                            )}
-                        </div>
- 
-                        {/* System Disclaimer */}
-                        <div className="p-3 rounded-4 bg-white bg-opacity-5 border border-white border-opacity-5 d-flex gap-2">
-                            <Zap size={14} className="text-primary opacity-50 flex-shrink-0 mt-1" />
-                            <p className="text-muted mb-0 fw-semibold opacity-70" style={{lineHeight: '1.4', fontSize: '10px'}}>
-                                <strong className="text-main fw-black text-uppercase tracking-widest me-1" style={{fontSize: '8px'}}>NOTICE:</strong> 
-                                Secure routing to Cashfree gateway enabled. UPI, Cards, and Net Banking supported.
-                            </p>
-                        </div>
+                            </div>
+                        )}
                     </div>
                 </div>
-                
-                <div className="d-flex align-items-center justify-content-center gap-3 mt-5 opacity-40">
-                    <div className="h-1px bg-white bg-opacity-10 flex-grow-1"></div>
-                    <p className="text-muted small fw-black tracking-widest text-uppercase mb-0" style={{fontSize: '8px'}}>
-                        GYANTRIX OS &copy; 2026 | Automated Financial Protocol
-                    </p>
-                    <div className="h-1px bg-white bg-opacity-10 flex-grow-1"></div>
+
+                <div className="text-center mt-4 opacity-20">
+                    <p className="extra-small fw-black text-white text-uppercase tracking-widest mb-0">GYANTRIX INTELLIGENCE &copy; 2026</p>
                 </div>
             </div>
 
             <style>{`
-                .z-index-1 { z-index: 1; }
-                .tracking-widest { letter-spacing: 0.15em !important; }
-                .tracking-tighter { letter-spacing: -0.05em !important; }
-                .dot { width: 8px; height: 8px; border-radius: 50%; }
-                .animate-zoom-in { animation: zoomIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
-                @keyframes zoomIn {
-                    from { transform: scale(0.8); opacity: 0; }
-                    to { transform: scale(1); opacity: 1; }
-                }
+                .extra-small { font-size: 8px; }
+                .tracking-widest { letter-spacing: 0.15em; }
+                .tracking-tighter { letter-spacing: -0.05em; }
+                .shadow-glow { box-shadow: 0 0 20px rgba(99, 102, 241, 0.4); }
+                .animate-fade-in { animation: fadeIn 0.8s ease-out forwards; }
+                .animate-slide-up { animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+                .animate-zoom-in { animation: zoomIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+                
+                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+                
+                .hover-scale:hover:not(:disabled) { transform: scale(1.02); }
             `}</style>
         </div>
     );

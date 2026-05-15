@@ -227,7 +227,7 @@ const LeadStatusUpdatePage = () => {
         background: isDarkMode ? '#0a0a0a' : '#f8f9fa' 
       }}
     >
-      <div className="container py-1" style={{ maxWidth: '900px' }}>
+      <div className="container py-1" style={{ maxWidth: '720px' }}>
         <button onClick={() => navigate(-1)} className="btn btn-link text-decoration-none text-muted fw-bold small p-0 mb-2 d-flex align-items-center gap-2">
           <ArrowLeft size={14} /> BACK TO COMMAND CENTER
         </button>
@@ -419,7 +419,7 @@ const LeadStatusUpdatePage = () => {
                       </div>
 
                       <div className="col-12 mt-2">
-                        <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '9px' }}>4. Commitment (Min ₹500)</label>
+                        <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '9px' }}>4. Commitment (Min ₹{selectedCourse?.minTokenAmount || 500})</label>
                         <input
                           type="number"
                           min="0"
@@ -428,8 +428,8 @@ const LeadStatusUpdatePage = () => {
                           value={initialAmount || ''}
                           onChange={(e) => setInitialAmount(Math.max(0, parseFloat(e.target.value) || 0))}
                         />
-                        {initialAmount > 0 && initialAmount < 500 && (
-                          <small className="text-danger fw-bold mt-1 d-block" style={{ fontSize: '9px' }}>Minimum ₹500 required for protocol initiation.</small>
+                        {initialAmount > 0 && initialAmount < (selectedCourse?.minTokenAmount || 500) && (
+                          <small className="text-danger fw-bold mt-1 d-block" style={{ fontSize: '9px' }}>Minimum ₹{selectedCourse?.minTokenAmount || 500} required for protocol initiation.</small>
                         )}
                         {Number(initialAmount) > Number(discountedTotal) && (
                           <small className="text-danger fw-bold mt-1 d-block" style={{ fontSize: '9px' }}>Commitment cannot exceed the total settlement amount (₹{discountedTotal}).</small>
@@ -523,7 +523,7 @@ const LeadStatusUpdatePage = () => {
 
                     <button
                       type="button"
-                      disabled={isGeneratingLink || !initialAmount || initialAmount < 500 || !totalAmount || !isMatch}
+                      disabled={isGeneratingLink || !initialAmount || initialAmount < (selectedCourse?.minTokenAmount || 500) || !totalAmount || !isMatch}
                       onClick={async () => {
                         if (!isMatch) {
                           toast.error("Accounting Protocol Violation: Amounts must match exactly");
