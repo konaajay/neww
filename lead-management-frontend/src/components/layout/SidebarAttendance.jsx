@@ -141,29 +141,68 @@ const SidebarAttendance = ({ isCollapsed }) => {
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     };
 
-    useEffect(() => {
-        if (!status?.officeLat) {
-            setDistanceToOffice(null);
-            return;
-        }
+    const [offices, setOffices] = useState([]);
 
+    useEffect(() => {
+        const fetchOffices = async () => {
+            try {
+                const res = await attendanceService.getAllOffices();
+                setOffices(res?.data || res || []);
+            } catch (err) {
+                console.warn('Failed to fetch office locations');
+            }
+        };
+        fetchOffices();
+    }, []);
+
+    useEffect(() => {
         const checkDistance = () => {
-            if (!navigator.geolocation) return;
+            if (!navigator.geolocation || (!status?.officeLat && offices.length === 0)) return;
+            
             navigator.geolocation.getCurrentPosition((pos) => {
-                const dist = calculateDistance(
-                    pos.coords.latitude,
-                    pos.coords.longitude,
-                    status.officeLat,
-                    status.officeLng
-                );
-                setDistanceToOffice(dist);
-            }, null, { enableHighAccuracy: false, timeout: 5000 });
+                const userLat = pos.coords.latitude;
+                const userLng = pos.coords.longitude;
+
+                // If we have a list of all offices, find the closest one
+                if (offices.length > 0) {
+                    const sortedOffices = [...offices].sort((a, b) => {
+                        const distA = calculateDistance(userLat, userLng, a.latitude, a.longitude);
+                        const distB = calculateDistance(userLat, userLng, b.latitude, b.longitude);
+                        return distA - distB;
+                    });
+
+                    const closest = sortedOffices[0];
+                    const dist = calculateDistance(userLat, userLng, closest.latitude, closest.longitude);
+                    
+                    // Update status locally to reflect the closest office info
+                    if (!isPunchedIn) {
+                        setStatus(prev => ({
+                            ...prev,
+                            officeLat: closest.latitude,
+                            officeLng: closest.longitude,
+                            officeRadius: closest.radius,
+                            officeName: closest.name
+                        }));
+                    }
+                    setDistanceToOffice(dist);
+                } else if (status?.officeLat) {
+                    // Fallback to the single office provided by status
+                    const dist = calculateDistance(userLat, userLng, status.officeLat, status.officeLng);
+                    setDistanceToOffice(dist);
+                }
+            }, (err) => {
+                console.warn("Distance check failed:", err.message);
+            }, { 
+                enableHighAccuracy: true, 
+                timeout: 10000, 
+                maximumAge: 0 
+            });
         };
 
         checkDistance();
-        const interval = setInterval(checkDistance, 10000);
+        const interval = setInterval(checkDistance, 15000);
         return () => clearInterval(interval);
-    }, [isPunchedIn, status?.officeLat, status?.officeLng]);
+    }, [isPunchedIn, status?.officeLat, status?.officeLng, offices]);
 
     const handleClockIn = () => {
         const radius = status?.officeRadius || 150; 
