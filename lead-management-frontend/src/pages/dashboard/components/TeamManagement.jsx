@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Edit, Trash2, ChevronDown, ChevronRight, BarChart2, Users, Search, Phone, Zap, FileText, TrendingUp, AlertCircle, CheckCircle, MessageCircle, Power, Target } from 'lucide-react';
+import { UserPlus, Edit, Trash2, ChevronDown, ChevronRight, BarChart2, Users, Search, Phone, Zap, FileText, TrendingUp, AlertCircle, CheckCircle, MessageCircle, Power, Target, ShieldCheck, ShieldAlert, Check, History } from 'lucide-react';
 import TargetHistoryModal from './TargetHistoryModal';
 import { useTheme } from '../../../context/ThemeContext';
-import { History } from 'lucide-react';
 import PortalSelect from '../../../components/PortalSelect';
+import { toast } from 'react-toastify';
 
 const TeamManagement = ({
   teamLeaders,
@@ -150,7 +150,7 @@ const TeamManagement = ({
 
     // Mobile Validation
     if (!/^[0-9]{10}$/.test(formData.mobile)) {
-      alert("CRITICAL ERROR: Mobile number must be exactly 10 digits.");
+      toast.error("Mobile number must be exactly 10 digits");
       return;
     }
 
@@ -161,7 +161,7 @@ const TeamManagement = ({
     const hasSpecial = /[@#$%^&+=!]/.test(pass);
     
     if (pass.length < 8 || !hasUpper || !hasNumber || !hasSpecial) {
-      alert("SECURITY PROTOCOL VIOLATION: Password must be at least 8 characters long and contain at least one uppercase letter, one number, and one special character (@#$%^&+=!).");
+      toast.error("Password does not meet security requirements");
       return;
     }
 
@@ -270,11 +270,57 @@ const TeamManagement = ({
                   </div>
                   <div className="col-12 col-md-6">
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '12px' }}>Phone Number</label>
-                    <input type="tel" className="ui-input py-3 w-100 fw-bold" placeholder="910000000000" value={formData.mobile} onChange={e => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, '') })} required />
+                    <input 
+                      type="tel" 
+                      className={`ui-input py-3 w-100 fw-bold ${formData.mobile && !/^[0-9]{10}$/.test(formData.mobile) ? 'border-danger text-danger' : ''}`} 
+                      placeholder="9100000000" 
+                      maxLength="10"
+                      value={formData.mobile} 
+                      onChange={e => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, '') })} 
+                      required 
+                    />
+                    {formData.mobile && !/^[0-9]{10}$/.test(formData.mobile) && (
+                      <small className="text-danger fw-bold mt-1 d-block animate-fade-in" style={{ fontSize: '9px' }}>* MUST BE EXACTLY 10 DIGITS</small>
+                    )}
                   </div>
                   <div className="col-12 col-md-6">
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '12px' }}>Password</label>
-                    <input type="password" className="ui-input py-3 w-100 fw-bold" placeholder="••••••••" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} required />
+                    <div className="position-relative">
+                      <input 
+                        type="password" 
+                        className={`ui-input py-3 w-100 fw-bold ${formData.password && (formData.password.length < 8 || !/[A-Z]/.test(formData.password) || !/[0-9]/.test(formData.password) || !/[@#$%^&+=!]/.test(formData.password)) ? 'border-warning' : formData.password ? 'border-success' : ''}`} 
+                        placeholder="••••••••" 
+                        value={formData.password} 
+                        onChange={e => setFormData({ ...formData, password: e.target.value })} 
+                        required 
+                      />
+                      <div className="position-absolute end-0 top-50 translate-middle-y me-3 opacity-30">
+                        {formData.password && (formData.password.length >= 8 && /[A-Z]/.test(formData.password) && /[0-9]/.test(formData.password) && /[@#$%^&+=!]/.test(formData.password)) ? 
+                          <ShieldCheck size={18} className="text-primary" /> : 
+                          <ShieldAlert size={18} className={formData.password ? 'text-warning' : 'text-muted'} />
+                        }
+                      </div>
+                    </div>
+                    
+                    {formData.password && (
+                      <div className="mt-3 p-3 rounded-4 border border-primary border-opacity-10 animate-slide-up" style={{ background: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
+                        <div className="row g-2">
+                          {[
+                            { label: '8+ Characters', met: formData.password.length >= 8 },
+                            { label: 'Uppercase Letter', met: /[A-Z]/.test(formData.password) },
+                            { label: 'Number', met: /[0-9]/.test(formData.password) },
+                            { label: 'Special Symbol', met: /[@#$%^&+=!]/.test(formData.password) }
+                          ].map((req, i) => (
+                            <div key={i} className="col-6 d-flex align-items-center gap-2">
+                              <div className={`p-1 rounded-circle transition-all ${req.met ? 'bg-primary shadow-glow' : 'bg-white bg-opacity-10'}`}>
+                                <Check size={8} className={req.met ? 'text-white' : 'text-transparent'} />
+                              </div>
+                              <span className={`fw-bold transition-all ${req.met ? 'text-main' : 'text-muted opacity-50'}`} style={{ fontSize: '10px', letterSpacing: '0.2px' }}>{req.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="col-12 col-md-6">
                     <label className="form-label small fw-black text-uppercase text-muted mb-2 tracking-widest" style={{ fontSize: '12px' }}>Joining Date</label>

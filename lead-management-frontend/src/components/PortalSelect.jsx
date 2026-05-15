@@ -92,12 +92,27 @@ const PortalSelect = ({
                 zIndex: 9999999,
                 borderRadius: '16px',
                 border: '1px solid',
-                overflow: 'hidden',
-                maxHeight: '250px',
+                maxHeight: '220px', 
                 overflowY: 'auto',
+                overflowX: 'hidden',
                 boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)'
             }}
         >
+            <style>{`
+                .custom-portal-dropdown::-webkit-scrollbar {
+                    width: 6px;
+                }
+                .custom-portal-dropdown::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-portal-dropdown::-webkit-scrollbar-thumb {
+                    background: ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'};
+                    border-radius: 10px;
+                }
+                .custom-portal-dropdown::-webkit-scrollbar-thumb:hover {
+                    background: var(--primary);
+                }
+            `}</style>
             {options.map((opt, i) => (
                 <div 
                     key={i}

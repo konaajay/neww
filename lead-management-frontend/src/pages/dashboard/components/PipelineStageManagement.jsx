@@ -111,12 +111,13 @@ const PipelineStageManagement = () => {
     };
 
     const handleAutoSetup = async () => {
-        if (!window.confirm("Initialize strategic sales funnel? This will add standard stages (Interested, Follow-up, Lost, Converted).")) return;
+        if (!window.confirm("Initialize strategic sales funnel? This will add standard stages (New, Contacted, Interested, Follow-up, Lost, Converted).")) return;
         
         const standardStages = [
             { label: 'New', requireNote: false, requireDate: false, createTask: false, analyticBucket: 'NEW', color: 'primary' },
-            { label: 'Follow-up', requireNote: true, requireDate: true, createTask: true, analyticBucket: 'CONTACTED', color: 'info' },
+            { label: 'Contacted', requireNote: true, requireDate: false, createTask: false, analyticBucket: 'CONTACTED', color: 'secondary' },
             { label: 'Interested', requireNote: true, requireDate: false, createTask: false, analyticBucket: 'CONTACTED', color: 'warning' },
+            { label: 'Follow-up', requireNote: true, requireDate: true, createTask: true, analyticBucket: 'CONTACTED', color: 'info' },
             { label: 'Lost', requireNote: true, requireDate: false, createTask: false, analyticBucket: 'LOST', color: 'danger' },
             { label: 'Converted', requireNote: true, requireDate: false, createTask: false, analyticBucket: 'CONVERTED', color: 'success' },
         ];

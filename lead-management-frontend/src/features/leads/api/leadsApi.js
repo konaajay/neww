@@ -70,6 +70,12 @@ const leadsApi = {
     // Note: Do NOT set Content-Type header manually for FormData. 
     // The browser will set it automatically with the correct boundary.
     return safeRequest(api.post('/payments/manual-record', formData));
+  },
+
+  extractPaymentOcr: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return safeRequest(api.post('/payments/ocr', formData));
   }
 };
 

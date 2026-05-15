@@ -7,6 +7,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import PortalSelect from '../components/PortalSelect';
+import { QRCodeCanvas } from 'qrcode.react';
+import { QrCode, Link as LinkIcon, Wallet, Search } from 'lucide-react';
+import PaymentOcrUpload from '../components/PaymentOcrUpload';
 
 // Clean Architecture Services
 import adminService from '../services/adminService';
@@ -35,6 +38,7 @@ const LeadStatusUpdatePage = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [receiptFile, setReceiptFile] = useState(null);
   const [isManualPayment, setIsManualPayment] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
   
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const canDoManual = ['ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER'].includes(user.role?.toUpperCase());
@@ -160,6 +164,75 @@ const LeadStatusUpdatePage = () => {
   const currentStatusConfig = useMemo(() => {
     return pipelineStages.find(s => s.statusValue === selectedStatus) || {};
   }, [pipelineStages, selectedStatus]);
+
+  const handleOcrData = (data) => {
+    if (data.amount) {
+      // Strip currency symbols and commas for numeric input
+      const numericAmount = data.amount.replace(/[^\d.]/g, '');
+      setInitialAmount(numericAmount);
+    }
+    if (data.utrNumber) {
+      setNote(prev => `UTR: ${data.utrNumber}${prev ? ' | ' + prev : ''}`);
+    }
+    if (data.paymentApp) {
+      const app = data.paymentApp.toUpperCase();
+      if (app.includes('PHONEPE')) setPaymentMethod('UPI');
+      else if (app.includes('GPAY')) setPaymentMethod('UPI');
+      else if (app.includes('PAYTM')) setPaymentMethod('UPI');
+    }
+    if (data.paymentDate && data.paymentTime) {
+       // Optional: Parse date/time into followUpDate format if needed
+    }
+  };
+
+  const handleGeneratePaymentLink = async () => {
+    if (!isMatch) {
+      toast.error("Accounting Protocol Violation: Amounts must match exactly");
+      return null;
+    }
+
+    if (paymentType === 'EMI') {
+      const invalidInst = installments.find(i => !i.amount || !i.dueDate);
+      if (invalidInst) {
+        toast.warning("Protocol Incomplete: Every installment requires an amount and a due date.");
+        return null;
+      }
+    }
+    
+    setIsGeneratingLink(true);
+    try {
+      await leadsApi.updateStatus(id, selectedStatus, note, {
+        paymentType,
+        totalAmount: totalAmount || "0",
+        paidAmount: paymentType === 'EMI' ? (initialAmount || "0") : (totalAmount || "0"),
+        paymentMethod,
+        discount: discount || 0,
+        installments: paymentType === 'EMI' ? installments.map(i => ({ ...i, amount: i.amount || "0" })) : [],
+        dueDate: followUpDate,
+        courseId: selectedCourse?.id
+      });
+
+      const res = await leadsApi.createCashfreeOrder(
+        id, 
+        initialAmount || "0", 
+        paymentType, 
+        paymentType === 'EMI' ? installments : [], 
+        totalAmount || null, 
+        discount || null
+      );
+      if (res && res.order_id) {
+        const paymentUrl = `${window.location.origin}/payment-instruction/${res.order_id}`;
+        setGeneratedLink(paymentUrl);
+        return paymentUrl;
+      }
+      return null;
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to generate payment link");
+      return null;
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -291,7 +364,7 @@ const LeadStatusUpdatePage = () => {
                       </div>
                     </div>
 
-                    {(currentStatusConfig?.requireDate || selectedStatus === 'EMI' || selectedStatus === 'EMI_FOLLOWUP') && (
+                    {(currentStatusConfig?.requireDate || selectedStatus === 'EMI' || selectedStatus === 'EMI_FOLLOWUP') && selectedStatus !== 'INTERESTED' && (
                       <div className="col-12 col-lg-5">
                         <div className="ps-lg-4 border-start border-white border-opacity-5">
                           <label className="text-muted small fw-black text-uppercase tracking-widest mb-2 d-block" style={{ fontSize: '9px' }}>Next Synchronization</label>
@@ -414,15 +487,7 @@ const LeadStatusUpdatePage = () => {
                       <div className="text-muted fw-bold text-uppercase" style={{ fontSize: '8px', opacity: 0.6 }}>Enrollment Roadmap Protocol</div>
                     </div>
 
-                    <div className="alert alert-primary bg-primary bg-opacity-10 border-0 rounded-4 p-3 mb-4 animate-fade-in">
-                      <div className="d-flex gap-3">
-                        <Info size={18} className="text-primary flex-shrink-0" />
-                        <div>
-                          <h6 className="small fw-black text-uppercase mb-1">Fee Structure Protocol</h6>
-                          <p className="small mb-0 opacity-75">Define the base package, applicable discounts, and the installment roadmap for this student.</p>
-                        </div>
-                      </div>
-                    </div>
+
 
                     <div className="row g-3 mb-4">
                       <div className="col-12">
@@ -579,71 +644,53 @@ const LeadStatusUpdatePage = () => {
                     )}
 
                     {!isManualPayment && (
-                      <button
-                        type="button"
-                        disabled={isGeneratingLink || !initialAmount || initialAmount < (selectedCourse?.minTokenAmount || 500) || !totalAmount || !isMatch}
-                        onClick={async () => {
-                          if (!isMatch) {
-                            toast.error("Accounting Protocol Violation: Amounts must match exactly");
-                            return;
-                          }
-
-                          // Validation: Ensure all EMI installments have dates
-                          if (paymentType === 'EMI') {
-                            const invalidInst = installments.find(i => !i.amount || !i.dueDate);
-                            if (invalidInst) {
-                              toast.warning("Protocol Incomplete: Every installment requires an amount and a due date.");
-                              return;
-                            }
-                          }
-                          setIsGeneratingLink(true);
-                          try {
-                            // 1. First, automatically save the lead status (e.g., INTERESTED) and note
-                            await leadsApi.updateStatus(id, selectedStatus, note, {
-                              paymentType,
-                              totalAmount: totalAmount || "0",
-                              paidAmount: paymentType === 'EMI' ? (initialAmount || "0") : (totalAmount || "0"),
-                              paymentMethod,
-                              discount: discount || 0,
-                              installments: paymentType === 'EMI' ? installments.map(i => ({ ...i, amount: i.amount || "0" })) : [],
-                              dueDate: followUpDate,
-                              courseId: selectedCourse?.id
-                            });
-
-                            // 2. Generate the Cashfree Link
-                            const res = await leadsApi.createCashfreeOrder(
-                              id, 
-                              initialAmount || "0", 
-                              paymentType, 
-                              paymentType === 'EMI' ? installments : [], 
-                              totalAmount || null, 
-                              discount || null
-                            );
-                            if (res && res.payment_session_id) {
-                              const paymentUrl = `${window.location.origin}/payment-instruction/${res.order_id}`;
-                              setGeneratedLink(paymentUrl);
-                              setShowSuccessModal(true);
-                            }
-                          } catch (err) {
-                            toast.error(err.response?.data?.message || "Failed to generate payment link or update status");
-                          } finally {
-                            setIsGeneratingLink(false);
-                          }
-                        }}
-                        className="w-100 py-3 ui-btn ui-btn-primary rounded-3 fw-black text-uppercase tracking-widest shadow-glow-sm"
-                        style={{ fontSize: '11px' }}
-                      >
-                        {isGeneratingLink ? (
-                          <>
-                            <div className="spinner-border spinner-border-sm me-2"></div>
-                            INITIATING PROTOCOL...
-                          </>
-                        ) : (
-                          <>
-                            <Zap size={14} className="me-2" /> GENERATE SECURE PAYMENT LINK
-                          </>
-                        )}
-                      </button>
+                      <div className="row g-2">
+                        <div className="col-12 col-md-6">
+                          <button
+                            type="button"
+                            disabled={isGeneratingLink || !initialAmount || initialAmount < (selectedCourse?.minTokenAmount || 500) || !totalAmount || !isMatch}
+                            onClick={async () => {
+                              const link = await handleGeneratePaymentLink();
+                              if (link) {
+                                setShowSuccessModal(true);
+                              }
+                            }}
+                            className="w-100 py-3 ui-btn ui-btn-primary rounded-3 fw-black text-uppercase tracking-widest shadow-glow-sm d-flex align-items-center justify-content-center gap-2"
+                            style={{ fontSize: '10px' }}
+                          >
+                            {isGeneratingLink ? <div className="spinner-border spinner-border-sm"></div> : <LinkIcon size={14} />}
+                            GENERATE LINK
+                          </button>
+                        </div>
+                        <div className="col-12 col-md-6">
+                          <button
+                            type="button"
+                            disabled={isGeneratingLink || !initialAmount || initialAmount < (selectedCourse?.minTokenAmount || 500) || !totalAmount || !isMatch}
+                            onClick={async () => {
+                              const link = await handleGeneratePaymentLink();
+                              if (link) {
+                                setShowQRModal(true);
+                              }
+                            }}
+                            className="w-100 py-3 ui-btn ui-btn-outline rounded-3 fw-black text-uppercase tracking-widest d-flex align-items-center justify-content-center gap-2"
+                            style={{ fontSize: '10px', borderColor: 'rgba(var(--primary-rgb), 0.2)' }}
+                          >
+                            <QrCode size={14} />
+                            GENERATE QR
+                          </button>
+                        </div>
+                        <div className="col-12">
+                           <button
+                            type="button"
+                            onClick={() => setIsManualPayment(true)}
+                            className="w-100 py-3 ui-btn ui-btn-secondary bg-opacity-10 text-muted rounded-3 fw-black text-uppercase tracking-widest d-flex align-items-center justify-content-center gap-2"
+                            style={{ fontSize: '10px' }}
+                          >
+                            <Wallet size={14} />
+                            MANUAL PAYMENT RECORD
+                          </button>
+                        </div>
+                      </div>
                     )}
                     {!isManualPayment && (
                       <small className="d-block text-center mt-2 text-muted fw-bold" style={{ fontSize: '9px' }}>* AUTOMATICALLY CONVERTS ON SUCCESSFUL PAYMENT</small>
@@ -659,14 +706,9 @@ const LeadStatusUpdatePage = () => {
                         <Shield size={16} className="text-warning" />
                         <h6 className="mb-0 fw-bold text-uppercase tracking-wider text-main">Manual Payment Verification</h6>
                       </div>
-                      <div className="form-check form-switch">
-                        <input 
-                          className="form-check-input cursor-pointer" 
-                          type="checkbox" 
-                          checked={isManualPayment}
-                          onChange={(e) => setIsManualPayment(e.target.checked)}
-                        />
-                      </div>
+                      <button type="button" className="btn btn-link text-warning p-0" onClick={() => setIsManualPayment(false)}>
+                         <X size={16} />
+                      </button>
                     </div>
 
                     {isManualPayment && (
@@ -677,19 +719,15 @@ const LeadStatusUpdatePage = () => {
                           </p>
                         </div>
 
-                        <div className="row g-3 mb-3">
-                          <div className="col-12">
-                            <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '9px' }}>Proof of Payment (Required)</label>
-                            <input 
-                              type="file" 
-                              required={isManualPayment}
-                              accept="image/*,application/pdf"
-                              className={`form-control border-dashed border-2 rounded-4 p-4 text-center ${isDarkMode ? 'bg-black bg-opacity-20 border-white border-opacity-10 text-white' : 'bg-white border-secondary border-opacity-10 text-dark'}`}
-                              onChange={(e) => setReceiptFile(e.target.files[0])}
-                            />
-                            <small className="text-muted mt-2 d-block px-1" style={{ fontSize: '9px' }}>Upload screenshot or PDF receipt of the offline transaction.</small>
-                          </div>
-
+                        <div className="mb-4">
+                          <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '9px' }}>Payment Verification Protocol</label>
+                          <PaymentOcrUpload 
+                            onDataExtracted={handleOcrData} 
+                            currentFile={receiptFile} 
+                            setCurrentFile={setReceiptFile} 
+                          />
+                        </div>
+                        <div className="row g-3">
                           <div className="col-md-6">
                             <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '9px' }}>Payment Method</label>
                             <PortalSelect 
@@ -759,6 +797,53 @@ const LeadStatusUpdatePage = () => {
           </div>
         </div>
       </div>
+
+      {showQRModal && (
+        <div 
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center animate-fade-in" 
+          style={{ 
+            zIndex: 10000, 
+            background: 'rgba(0,0,0,0.7)', 
+            backdropFilter: 'blur(8px)' 
+          }}
+        >
+          <div 
+            className={`p-4 rounded-4 shadow-2xl animate-scale-in border border-secondary border-opacity-10 text-center`}
+            style={{ 
+              width: '90%', 
+              maxWidth: '400px', 
+              background: isDarkMode ? '#1a1c24' : '#ffffff',
+            }}
+          >
+            <h5 className="fw-black text-uppercase tracking-wider mb-4">Scan for Payment</h5>
+            <div className="bg-white p-3 rounded-4 d-inline-block mb-4 shadow-sm">
+               <QRCodeCanvas value={generatedLink} size={256} />
+            </div>
+            <div className="d-flex flex-column gap-3">
+              <div className={`p-3 rounded-3 small fw-bold break-all ${isDarkMode ? 'bg-black bg-opacity-20 text-primary' : 'bg-light text-primary'}`}>
+                {generatedLink}
+              </div>
+              <button 
+                type="button"
+                onClick={() => {
+                   navigator.clipboard.writeText(generatedLink);
+                   toast.success("Link Copied");
+                }}
+                className="btn btn-link text-decoration-none text-muted fw-bold small"
+              >
+                <Copy size={14} className="me-2" /> COPY PAYMENT LINK
+              </button>
+              <button 
+                type="button"
+                onClick={() => setShowQRModal(false)}
+                className="ui-btn ui-btn-primary w-100 rounded-pill py-3 fw-black text-uppercase tracking-widest"
+              >
+                DONE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Success Modal */}
       {showSuccessModal && (
