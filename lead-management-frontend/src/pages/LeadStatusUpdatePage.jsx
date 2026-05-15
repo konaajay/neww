@@ -33,6 +33,11 @@ const LeadStatusUpdatePage = () => {
   const [feeStructureExists, setFeeStructureExists] = useState(false);
   const [generatedLink, setGeneratedLink] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [receiptFile, setReceiptFile] = useState(null);
+  const [isManualPayment, setIsManualPayment] = useState(false);
+  
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const canDoManual = ['ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER'].includes(user.role?.toUpperCase());
 
   const getDefaultFollowUp = useCallback(() => {
     const tomorrow = new Date();
@@ -171,16 +176,28 @@ const LeadStatusUpdatePage = () => {
 
     setIsSubmitting(true);
     try {
-      await leadsApi.updateStatus(id, selectedStatus, note, {
-        paymentType,
-        totalAmount: totalAmount || "0",
-        paidAmount: paymentSkipped ? "0" : (paymentType === 'EMI' ? (initialAmount || "0") : (totalAmount || "0")),
-        paymentMethod,
-        discount: discount || 0,
-        installments: paymentType === 'EMI' ? installments.map(i => ({ ...i, amount: i.amount || "0" })) : [],
-        dueDate: (currentStatusConfig?.requireDate || ['EMI', 'EMI_FOLLOWUP'].includes(selectedStatus?.toUpperCase())) ? followUpDate : null,
-        courseId: selectedCourse?.id
-      });
+      if (isManualPayment) {
+        await leadsApi.recordManualPayment({
+          leadId: id,
+          amount: paymentType === 'EMI' ? (initialAmount || "0") : (totalAmount || "0"),
+          totalAmount: totalAmount || "0",
+          paymentMethod,
+          note: note || "Manual Payment Recorded",
+          paymentType: paymentType === 'EMI' ? 'EMI_INSTALLMENT' : 'FULL',
+          nextDueDate: paymentType === 'EMI' ? followUpDate : null
+        }, receiptFile);
+      } else {
+        await leadsApi.updateStatus(id, selectedStatus, note, {
+          paymentType,
+          totalAmount: totalAmount || "0",
+          paidAmount: paymentSkipped ? "0" : (paymentType === 'EMI' ? (initialAmount || "0") : (totalAmount || "0")),
+          paymentMethod,
+          discount: discount || 0,
+          installments: paymentType === 'EMI' ? installments.map(i => ({ ...i, amount: i.amount || "0" })) : [],
+          dueDate: (currentStatusConfig?.requireDate || ['EMI', 'EMI_FOLLOWUP'].includes(selectedStatus?.toUpperCase())) ? followUpDate : null,
+          courseId: selectedCourse?.id
+        });
+      }
 
       toast.success('System Status Propagated Successfully');
       navigate(-1);
@@ -386,8 +403,8 @@ const LeadStatusUpdatePage = () => {
                   </div>
                 )}
 
-                {/* Cashfree Payment Link Generation */}
-                {selectedStatus?.toUpperCase() === 'INTERESTED' && lead?.status?.toUpperCase() !== 'CONVERTED' && (
+                {/* Fee Structure Form - Now available for INTERESTED, PAID, and CONVERTED */}
+                {['INTERESTED', 'PAID', 'CONVERTED'].includes(selectedStatus?.toUpperCase()) && lead?.status?.toUpperCase() !== 'CONVERTED' && (
                   <div className={`p-3 rounded-4 border border-secondary border-opacity-10 animate-fade-in shadow-sm ${isDarkMode ? 'bg-surface bg-opacity-80' : 'bg-white'}`}>
                     <div className="d-flex align-items-center justify-content-between mb-3">
                       <div className="d-flex align-items-center gap-2">
@@ -561,73 +578,145 @@ const LeadStatusUpdatePage = () => {
                       </div>
                     )}
 
-                    <button
-                      type="button"
-                      disabled={isGeneratingLink || !initialAmount || initialAmount < (selectedCourse?.minTokenAmount || 500) || !totalAmount || !isMatch}
-                      onClick={async () => {
-                        if (!isMatch) {
-                          toast.error("Accounting Protocol Violation: Amounts must match exactly");
-                          return;
-                        }
-
-                        // Validation: Ensure all EMI installments have dates
-                        if (paymentType === 'EMI') {
-                          const invalidInst = installments.find(i => !i.amount || !i.dueDate);
-                          if (invalidInst) {
-                            toast.warning("Protocol Incomplete: Every installment requires an amount and a due date.");
+                    {!isManualPayment && (
+                      <button
+                        type="button"
+                        disabled={isGeneratingLink || !initialAmount || initialAmount < (selectedCourse?.minTokenAmount || 500) || !totalAmount || !isMatch}
+                        onClick={async () => {
+                          if (!isMatch) {
+                            toast.error("Accounting Protocol Violation: Amounts must match exactly");
                             return;
                           }
-                        }
-                        setIsGeneratingLink(true);
-                        try {
-                          // 1. First, automatically save the lead status (e.g., INTERESTED) and note
-                          await leadsApi.updateStatus(id, selectedStatus, note, {
-                            paymentType,
-                            totalAmount: totalAmount || "0",
-                            paidAmount: paymentType === 'EMI' ? (initialAmount || "0") : (totalAmount || "0"),
-                            paymentMethod,
-                            discount: discount || 0,
-                            installments: paymentType === 'EMI' ? installments.map(i => ({ ...i, amount: i.amount || "0" })) : [],
-                            dueDate: followUpDate,
-                            courseId: selectedCourse?.id
-                          });
 
-                          // 2. Generate the Cashfree Link
-                          const res = await leadsApi.createCashfreeOrder(
-                            id, 
-                            initialAmount || "0", 
-                            paymentType, 
-                            paymentType === 'EMI' ? installments : [], 
-                            totalAmount || null, 
-                            discount || null
-                          );
-                          if (res && res.payment_session_id) {
-                            const paymentUrl = `${window.location.origin}/payment-instruction/${res.order_id}`;
-                            setGeneratedLink(paymentUrl);
-                            setShowSuccessModal(true);
-                            // navigate(-1); // No longer auto-navigate, let user copy link first
+                          // Validation: Ensure all EMI installments have dates
+                          if (paymentType === 'EMI') {
+                            const invalidInst = installments.find(i => !i.amount || !i.dueDate);
+                            if (invalidInst) {
+                              toast.warning("Protocol Incomplete: Every installment requires an amount and a due date.");
+                              return;
+                            }
                           }
-                        } catch (err) {
-                          toast.error(err.response?.data?.message || "Failed to generate payment link or update status");
-                        } finally {
-                          setIsGeneratingLink(false);
-                        }
-                      }}
-                      className="w-100 py-3 ui-btn ui-btn-primary rounded-3 fw-black text-uppercase tracking-widest shadow-glow-sm"
-                      style={{ fontSize: '11px' }}
-                    >
-                      {isGeneratingLink ? (
-                        <>
-                          <div className="spinner-border spinner-border-sm me-2"></div>
-                          INITIATING PROTOCOL...
-                        </>
-                      ) : (
-                        <>
-                          <Zap size={14} className="me-2" /> GENERATE SECURE PAYMENT LINK
-                        </>
-                      )}
-                    </button>
-                    <small className="d-block text-center mt-2 text-muted fw-bold" style={{ fontSize: '9px' }}>* AUTOMATICALLY CONVERTS ON SUCCESSFUL PAYMENT</small>
+                          setIsGeneratingLink(true);
+                          try {
+                            // 1. First, automatically save the lead status (e.g., INTERESTED) and note
+                            await leadsApi.updateStatus(id, selectedStatus, note, {
+                              paymentType,
+                              totalAmount: totalAmount || "0",
+                              paidAmount: paymentType === 'EMI' ? (initialAmount || "0") : (totalAmount || "0"),
+                              paymentMethod,
+                              discount: discount || 0,
+                              installments: paymentType === 'EMI' ? installments.map(i => ({ ...i, amount: i.amount || "0" })) : [],
+                              dueDate: followUpDate,
+                              courseId: selectedCourse?.id
+                            });
+
+                            // 2. Generate the Cashfree Link
+                            const res = await leadsApi.createCashfreeOrder(
+                              id, 
+                              initialAmount || "0", 
+                              paymentType, 
+                              paymentType === 'EMI' ? installments : [], 
+                              totalAmount || null, 
+                              discount || null
+                            );
+                            if (res && res.payment_session_id) {
+                              const paymentUrl = `${window.location.origin}/payment-instruction/${res.order_id}`;
+                              setGeneratedLink(paymentUrl);
+                              setShowSuccessModal(true);
+                            }
+                          } catch (err) {
+                            toast.error(err.response?.data?.message || "Failed to generate payment link or update status");
+                          } finally {
+                            setIsGeneratingLink(false);
+                          }
+                        }}
+                        className="w-100 py-3 ui-btn ui-btn-primary rounded-3 fw-black text-uppercase tracking-widest shadow-glow-sm"
+                        style={{ fontSize: '11px' }}
+                      >
+                        {isGeneratingLink ? (
+                          <>
+                            <div className="spinner-border spinner-border-sm me-2"></div>
+                            INITIATING PROTOCOL...
+                          </>
+                        ) : (
+                          <>
+                            <Zap size={14} className="me-2" /> GENERATE SECURE PAYMENT LINK
+                          </>
+                        )}
+                      </button>
+                    )}
+                    {!isManualPayment && (
+                      <small className="d-block text-center mt-2 text-muted fw-bold" style={{ fontSize: '9px' }}>* AUTOMATICALLY CONVERTS ON SUCCESSFUL PAYMENT</small>
+                    )}
+                  </div>
+                )}
+
+                {/* Manual Payment Section for Admin/Manager */}
+                {canDoManual && (['PAID', 'CONVERTED', 'INTERESTED'].includes(selectedStatus?.toUpperCase())) && (
+                  <div className={`p-3 rounded-4 border border-warning border-opacity-20 animate-fade-in ${isDarkMode ? 'bg-warning bg-opacity-5' : 'bg-warning bg-opacity-10'}`}>
+                    <div className="d-flex align-items-center justify-content-between mb-3">
+                      <div className="d-flex align-items-center gap-2">
+                        <Shield size={16} className="text-warning" />
+                        <h6 className="mb-0 fw-bold text-uppercase tracking-wider text-main">Manual Payment Verification</h6>
+                      </div>
+                      <div className="form-check form-switch">
+                        <input 
+                          className="form-check-input cursor-pointer" 
+                          type="checkbox" 
+                          checked={isManualPayment}
+                          onChange={(e) => setIsManualPayment(e.target.checked)}
+                        />
+                      </div>
+                    </div>
+
+                    {isManualPayment && (
+                      <div className="animate-slide-up">
+                        <div className="alert alert-warning bg-warning bg-opacity-10 border-0 rounded-4 p-3 mb-4">
+                          <p className="small mb-0 fw-bold text-warning">
+                            STRATEGIC OVERRIDE: You are bypassing the secure gateway link. Recording this will mark the lead as PAID immediately.
+                          </p>
+                        </div>
+
+                        <div className="row g-3 mb-3">
+                          <div className="col-12">
+                            <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '9px' }}>Proof of Payment (Required)</label>
+                            <input 
+                              type="file" 
+                              required={isManualPayment}
+                              accept="image/*,application/pdf"
+                              className={`form-control border-dashed border-2 rounded-4 p-4 text-center ${isDarkMode ? 'bg-black bg-opacity-20 border-white border-opacity-10 text-white' : 'bg-white border-secondary border-opacity-10 text-dark'}`}
+                              onChange={(e) => setReceiptFile(e.target.files[0])}
+                            />
+                            <small className="text-muted mt-2 d-block px-1" style={{ fontSize: '9px' }}>Upload screenshot or PDF receipt of the offline transaction.</small>
+                          </div>
+
+                          <div className="col-md-6">
+                            <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '9px' }}>Payment Method</label>
+                            <PortalSelect 
+                              options={[
+                                { value: 'CASH', label: 'Cash' },
+                                { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+                                { value: 'UPI', label: 'UPI (Direct)' },
+                                { value: 'CARD', label: 'Card Swipe' }
+                              ]}
+                              value={paymentMethod}
+                              onChange={(e) => setPaymentMethod(e.target.value)}
+                            />
+                          </div>
+                          
+                          <div className="col-md-6">
+                            <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '9px' }}>Verification Note</label>
+                            <input 
+                              type="text" 
+                              className={`form-control rounded-3 ${isDarkMode ? 'bg-surface text-white' : 'bg-white'}`}
+                              placeholder="Ref ID, Cash Collector, etc."
+                              value={note}
+                              onChange={(e) => setNote(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -646,7 +735,7 @@ const LeadStatusUpdatePage = () => {
                   </div>
                 )}
 
-                {selectedStatus?.toUpperCase() !== 'INTERESTED' && (
+                {(selectedStatus?.toUpperCase() !== 'INTERESTED' || isManualPayment) && (
                   <div className="pt-2 text-center">
                     <button
                       type="submit"

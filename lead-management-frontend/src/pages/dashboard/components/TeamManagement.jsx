@@ -147,6 +147,24 @@ const TeamManagement = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    // Mobile Validation
+    if (!/^[0-9]{10}$/.test(formData.mobile)) {
+      alert("CRITICAL ERROR: Mobile number must be exactly 10 digits.");
+      return;
+    }
+
+    // Password Validation
+    const pass = formData.password;
+    const hasUpper = /[A-Z]/.test(pass);
+    const hasNumber = /[0-9]/.test(pass);
+    const hasSpecial = /[@#$%^&+=!]/.test(pass);
+    
+    if (pass.length < 8 || !hasUpper || !hasNumber || !hasSpecial) {
+      alert("SECURITY PROTOCOL VIOLATION: Password must be at least 8 characters long and contain at least one uppercase letter, one number, and one special character (@#$%^&+=!).");
+      return;
+    }
+
     handleCreateUser(formData);
     setFormData({
       name: '',

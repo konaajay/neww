@@ -36,11 +36,9 @@ const PortalSelect = ({
                         left = windowWidth - menuWidth - 20;
                     }
  
-                    // Vertical Flip Logic - Only flip if space below is less than 160px
-                    const overflowsBottom = rect.bottom + 160 > windowHeight;
-                    const top = overflowsBottom 
-                        ? rect.top - (options.length * 40 > 250 ? 250 : options.length * 40 + 10)
-                        : rect.bottom;
+                    // Force open downwards as per user request
+                    const overflowsBottom = false;
+                    const top = rect.bottom;
  
                     setCoords({
                         top,

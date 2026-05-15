@@ -59,7 +59,18 @@ const leadsApi = {
   sendPaymentLink: (leadId, data) => safeRequest(api.post(`/leads/${leadId}/send-payment-link`, data)),
   
   createCashfreeOrder: (leadId, amount, type, installments = [], totalAmount, discount, installmentId) => 
-    safeRequest(api.post('/payments/cashfree/create-order', { leadId, amount, type: type || 'FULL', installments, totalAmount, discount, installmentId }))
+    safeRequest(api.post('/payments/cashfree/create-order', { leadId, amount, type: type || 'FULL', installments, totalAmount, discount, installmentId })),
+
+  recordManualPayment: (data, receiptFile) => {
+    const formData = new FormData();
+    formData.append('data', JSON.stringify(data));
+    if (receiptFile) {
+      formData.append('receipt', receiptFile);
+    }
+    // Note: Do NOT set Content-Type header manually for FormData. 
+    // The browser will set it automatically with the correct boundary.
+    return safeRequest(api.post('/payments/manual-record', formData));
+  }
 };
 
 export default leadsApi;
