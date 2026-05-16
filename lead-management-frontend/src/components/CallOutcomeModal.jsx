@@ -170,18 +170,23 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
   }, [feeStructure]);
 
   if (!isOpen || !lead) return null;
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log("Submitting interaction logic...", { outcome, note, callId });
-    // Strict Validations
-    if (!outcome) {
-      console.warn("Validation failed: Missing outcome");
-      return toast.error('Status is mandatory');
+    // Normalization helper to match status variants (e.g., FOLLOW_UP vs FOLLOW-UP)
+    const normalize = (s) => s?.toUpperCase().replace(/[-_ ]/g, '') || '';
+    const normOutcome = normalize(outcome);
+    
+    // Dynamic Validation based on Global Pipeline Architecture
+    const currentStage = pipelineStages.find(s => normalize(s.statusValue) === normOutcome);
+    if (currentStage) {
+      if (currentStage.requireNote && (!note || note.trim().length < 3)) {
+        return toast.error(`Detailed note is required for ${currentStage.label} status.`);
+      }
+      if (currentStage.requireDate && !followUpDate) {
+        return toast.error(`Follow-up schedule is mandatory for ${currentStage.label} status.`);
+      }
     }
-    // Note is now optional. Validation removed.
-
 
     setIsSubmitting(true);
 
@@ -224,7 +229,6 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
         installments: outcome === 'EMI' ? installments : [],
         courseId: selectedCourseId || lead.courseId
       });
-
 
       setShowAddNote(false);
       setNote('');
@@ -782,23 +786,31 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                           </div>
 
                           {/* Manual Follow-up Selection */}
-                          <div className="col-12 mt-3 animate-fade-in">
-                            <label className="form-label small fw-bold text-uppercase text-muted mb-2 tracking-wider">Schedule Next Action (Follow-up)</label>
-                            <div className={`rounded-3 overflow-hidden d-flex shadow-sm ${isDarkMode ? 'bg-secondary bg-opacity-25 border border-secondary border-opacity-50' : 'bg-light border'}`}>
-                              <span className={`p-3 border-end ${isDarkMode ? 'text-white border-secondary border-opacity-50 text-opacity-50' : 'text-muted border-light'}`}>
-                                <Calendar size={18} />
-                              </span>
-                              <input
-                                type="datetime-local"
-                                className={`form-control border-0 bg-transparent shadow-none py-3 ${isDarkMode ? 'text-white' : 'text-dark'}`}
-                                value={followUpDate}
-                                onChange={(e) => setFollowUpDate(e.target.value)}
-                              />
+                          {(() => {
+                            const normalize = (s) => s?.toUpperCase().replace(/[-_ ]/g, '') || '';
+                            const stage = pipelineStages.find(s => normalize(s.statusValue) === normalize(outcome));
+                            return stage?.requireDate;
+                          })() && (
+                            <div className="col-12 mt-3 animate-fade-in">
+                              <label className="form-label small fw-bold text-uppercase text-muted mb-2 tracking-wider d-flex align-items-center gap-2">
+                                <Calendar size={14} className="text-primary" /> Schedule Next Action (Follow-up)
+                              </label>
+                              <div className={`rounded-3 overflow-hidden d-flex shadow-sm ${isDarkMode ? 'bg-secondary bg-opacity-25 border border-secondary border-opacity-50' : 'bg-light border'}`}>
+                                <span className={`p-3 border-end ${isDarkMode ? 'text-white border-secondary border-opacity-50 text-opacity-50' : 'text-muted border-light'}`}>
+                                  <Calendar size={18} />
+                                </span>
+                                <input
+                                  type="datetime-local"
+                                  className={`form-control border-0 bg-transparent shadow-none py-3 ${isDarkMode ? 'text-white' : 'text-dark'}`}
+                                  value={followUpDate}
+                                  onChange={(e) => setFollowUpDate(e.target.value)}
+                                />
+                              </div>
+                              <small className="text-muted mt-2 d-block small" style={{ fontSize: '10px' }}>
+                                * A task will be automatically synchronized to your dashboard for this time.
+                              </small>
                             </div>
-                            <small className="text-muted mt-2 d-block small" style={{ fontSize: '10px' }}>
-                              * Leave blank if no future follow-up lead is required at this stage.
-                            </small>
-                          </div>
+                          )}
                         </div>
 
                         <div className="d-flex justify-content-end align-items-center gap-3 mt-4 pt-3 border-top border-secondary border-opacity-10">
@@ -1012,12 +1024,15 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                                           <span className={`badge rounded-pill ${p.status === 'PAID' || p.status === 'SUCCESS' ? 'bg-success bg-opacity-10 text-success' : 'bg-warning bg-opacity-10 text-warning'}`} style={{ fontSize: '9px' }}>
                                             {p.status}
                                           </span>
-                                          {p.receiptUrl && (
+                                          {/* Receipt Visibility Logic - Check both camelCase and snake_case + fallbacks */}
+                                          {(p.receiptUrl || p.receipt_url || p.screenshotUrl || p.proofUrl) && (
                                             <a 
-                                              href={p.receiptUrl.startsWith('http') ? p.receiptUrl : `${(import.meta.env.VITE_API_BASE_URL || (window.location.hostname === 'localhost' ? 'http://localhost:8080' : '')).replace('/api', '')}${p.receiptUrl}`} 
+                                              href={(p.receiptUrl || p.receipt_url || p.screenshotUrl || p.proofUrl).startsWith('http') 
+                                                ? (p.receiptUrl || p.receipt_url || p.screenshotUrl || p.proofUrl) 
+                                                : `${(import.meta.env.VITE_API_BASE_URL || (window.location.hostname === 'localhost' ? 'http://localhost:8080' : '')).replace('/api', '')}${(p.receiptUrl || p.receipt_url || p.screenshotUrl || p.proofUrl)}`} 
                                               target="_blank" 
                                               rel="noopener noreferrer"
-                                              className="btn btn-link p-0 border-0 ms-1"
+                                              className="btn btn-link p-0 border-0 ms-1 d-flex align-items-center"
                                               title="View Receipt Screenshot"
                                               onClick={(e) => e.stopPropagation()}
                                             >

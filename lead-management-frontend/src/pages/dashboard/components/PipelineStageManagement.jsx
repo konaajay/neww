@@ -69,6 +69,9 @@ const PipelineStageManagement = () => {
         try {
             const payload = {
                 ...formData,
+                require_note: formData.requireNote,
+                require_date: formData.requireDate,
+                create_task: formData.createTask,
                 statusValue: formData.label.trim().toUpperCase().replace(/\s+/g, '_'),
                 analyticBucket: 'CONTACTED', 
                 color: 'primary',           
@@ -115,11 +118,11 @@ const PipelineStageManagement = () => {
         
         const standardStages = [
             { label: 'New', requireNote: false, requireDate: false, createTask: false, analyticBucket: 'NEW', color: 'primary' },
-            { label: 'Contacted', requireNote: true, requireDate: false, createTask: false, analyticBucket: 'CONTACTED', color: 'secondary' },
-            { label: 'Interested', requireNote: true, requireDate: false, createTask: false, analyticBucket: 'CONTACTED', color: 'warning' },
-            { label: 'Follow-up', requireNote: true, requireDate: true, createTask: true, analyticBucket: 'CONTACTED', color: 'info' },
-            { label: 'Lost', requireNote: true, requireDate: false, createTask: false, analyticBucket: 'LOST', color: 'danger' },
-            { label: 'Converted', requireNote: true, requireDate: false, createTask: false, analyticBucket: 'CONVERTED', color: 'success' },
+            { label: 'Contacted', requireNote: false, requireDate: true, createTask: true, analyticBucket: 'CONTACTED', color: 'info' },
+            { label: 'Interested', requireNote: false, requireDate: true, createTask: true, analyticBucket: 'CONTACTED', color: 'primary' },
+            { label: 'Follow-up', requireNote: true, requireDate: true, createTask: true, analyticBucket: 'CONTACTED', color: 'warning' },
+            { label: 'Lost', requireNote: false, requireDate: false, createTask: false, analyticBucket: 'LOST', color: 'danger' },
+            { label: 'Converted', requireNote: false, requireDate: true, createTask: true, analyticBucket: 'CONVERTED', color: 'success' },
         ];
 
         setLoading(true);

@@ -26,7 +26,9 @@ const StatusDropdown = ({ lead, pipelineStages, onChange, getStatusColorClass })
 
   return (
     <PortalSelect 
-      options={pipelineStages.map(s => ({
+      options={pipelineStages
+        .filter(s => !s.hideInDropdown)
+        .map(s => ({
         value: s.statusValue,
         label: s.label.toUpperCase()
       }))}

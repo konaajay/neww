@@ -98,6 +98,8 @@ const AssociateDashboard = () => {
   });
 
   // Profile hook for manager info
+  const { pipelineStages } = useLookupData('ASSOCIATE');
+  
   const { data: profile } = useQuery({
     queryKey: ['profile'],
     queryFn: () => userApi.getProfile(),
@@ -298,6 +300,7 @@ const AssociateDashboard = () => {
                   role="ASSOCIATE"
                   loading={leadsLoading}
                   loadLeads={handleSync}
+                  pipelineStages={pipelineStages}
                 />
               </div>
             </div>

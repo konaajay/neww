@@ -38,7 +38,7 @@ const leadsApi = {
 
   getFeeStructure: (id) => safeRequest(api.get(`/leads/${id}/fee-structure`)),
 
-  getCourses: () => safeRequest(api.get('/admin/attendance/courses')),
+  getCourses: () => safeRequest(api.get('/leads/program-protocols')),
 
   addLead: (role, data) => {
     let prefix = '/leads';

@@ -31,7 +31,7 @@ import MetricCommandCenter from './dashboard/components/MetricCommandCenter';
 import paymentService from '../services/paymentService';
 import FiltersBar from './dashboard/components/FiltersBar';
 import AttendanceDashboard from './dashboard/components/AttendanceDashboard';
-import { StatSkeleton, ChartSkeleton } from './dashboard/components/DashboardSkeletons';
+import { StatSkeleton, ChartSkeleton, MetricSkeletonRow } from './dashboard/components/DashboardSkeletons';
 
 const RevenueTrendChart = React.lazy(() => import('./dashboard/components/RevenueTrendChart'));
 const LeadStatusPieChart = React.lazy(() => import('./dashboard/components/LeadStatusPieChart'));
@@ -90,9 +90,9 @@ const TeamLeaderDashboard = () => {
     enabled: activeTab === 'leads' || (activeTab === 'my-stats' && myDashboardSubTab === 'leads') || activeTab === 'overview'
   });
 
-  const {
-    subordinates, roles, offices, shifts
-  } = useLookupData('TEAM_LEADER');
+   const {
+    subordinates, roles, offices, shifts, pipelineStages
+   } = useLookupData('TEAM_LEADER');
 
   // 3. HANDLERS
   const handleSync = useCallback(() => {
@@ -388,9 +388,10 @@ const TeamLeaderDashboard = () => {
                     bulkAssignTlId={bulkAssignTlId}
                     setBulkAssignTlId={setBulkAssignTlId}
                     handleBulkAssign={(targetId) => bulkAssignLeads({ leadIds: selectedLeadIds, targetId })}
-                    currentUserId={user?.id}
-                    loadLeads={handleSync}
-                  />
+                     currentUserId={user?.id}
+                     loadLeads={handleSync}
+                     pipelineStages={pipelineStages}
+                   />
               </div>
             </div>
           </div>

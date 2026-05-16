@@ -226,17 +226,21 @@ img {
 
 /* Scrollbars */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(0, 0, 0, 0.05);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(99, 102, 241, 0.3);
   border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.5);
 }
 
 /* Layout Core - Fixed SaaS Layout */
@@ -817,7 +821,7 @@ input:-webkit-autofill:active {
 
 /* Scrollbar Enhancement */
 .custom-scroll::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
 }
 
 .custom-scroll::-webkit-scrollbar-thumb {
@@ -1075,10 +1079,17 @@ input:-webkit-autofill:active {
   overflow: visible !important;
 }
 
-.modal,
-.modal-content,
+.modal {
+  overflow-y: auto !important;
+}
+
+.modal-content {
+  overflow: hidden !important;
+}
+
 .modal-body {
-  overflow: visible !important;
+  overflow-y: auto !important;
+  max-height: calc(100vh - 200px);
 }
 
 .table-responsive {

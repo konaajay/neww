@@ -64,14 +64,61 @@ export const useLookupData = (role) => {
     queryKey: ['pipelineStages'],
     queryFn: () => adminService.fetchPipelineStages(),
     select: (res) => {
-      const stages = (res.data || []).filter(s => s.active);
-      // Deduplicate by statusValue to prevent React key warnings
-      const seen = new Set();
-      return stages.filter(s => {
-        if (seen.has(s.statusValue)) return false;
-        seen.add(s.statusValue);
-        return true;
+      const backendStages = (res.data || []).filter(s => s.active).map(s => ({
+        ...s,
+        requireNote: s.requireNote ?? s.require_note,
+        requireDate: s.requireDate ?? s.require_date,
+        createTask: s.createTask ?? s.create_task
+      }));
+      
+      // Standard Hardcoded Stages (Strict Order and Config from Pipeline Architecture screenshot)
+      const standardStages = [
+        { label: 'New', statusValue: 'NEW', requireNote: false, requireDate: false, createTask: false, orderIndex: 1, color: 'primary' },
+        { label: 'Contacted', statusValue: 'CONTACTED', requireNote: false, requireDate: true, createTask: true, orderIndex: 2, color: 'info' },
+        { label: 'Interested', statusValue: 'INTERESTED', requireNote: false, requireDate: true, createTask: true, orderIndex: 3, color: 'primary' },
+        { label: 'Follow-up', statusValue: 'FOLLOW_UP', requireNote: true, requireDate: true, createTask: true, orderIndex: 4, color: 'warning' },
+        { label: 'Lost', statusValue: 'LOST', requireNote: false, requireDate: false, createTask: false, orderIndex: 5, color: 'danger' },
+        { label: 'Converted', statusValue: 'CONVERTED', requireNote: false, requireDate: true, createTask: true, orderIndex: 6, color: 'success' },
+        
+        // Mandatory Operational Stages (Already Hard Logic - Hidden from main dropdown)
+        { label: 'EMI', statusValue: 'EMI', requireNote: true, requireDate: true, createTask: true, orderIndex: 7, color: 'info', hideInDropdown: true },
+        { label: 'Paid', statusValue: 'PAID', requireNote: true, requireDate: false, createTask: false, orderIndex: 8, color: 'success', hideInDropdown: true },
+        { label: 'Pre-Payment', statusValue: 'PRE_PAYMENT', requireNote: false, requireDate: true, createTask: true, orderIndex: 9, color: 'primary', hideInDropdown: true },
+        { label: 'EMI Follow-up', statusValue: 'EMI_FOLLOWUP', requireNote: true, requireDate: true, createTask: true, orderIndex: 10, color: 'danger', hideInDropdown: true }
+      ];
+
+      // Normalize comparison to prevent duplicates (e.g., "FOLLOW_UP" vs "FOLLOW-UP")
+      const normalize = (s) => s?.toUpperCase().replace(/[-_ ]/g, '') || '';
+      
+      // 1. Start with Standard Funnel Architecture
+      const merged = standardStages.map(ss => {
+        const normSs = normalize(ss.statusValue);
+        // Find matching backend configuration
+        const backendMatch = backendStages.find(bs => normalize(bs.statusValue) === normSs);
+        
+        if (backendMatch) {
+          // USER OVERRIDE: If user edited the stage in dashboard, use their flags
+          return {
+            ...ss,
+            requireNote: backendMatch.requireNote ?? ss.requireNote,
+            requireDate: backendMatch.requireDate ?? ss.requireDate,
+            createTask: backendMatch.createTask ?? ss.createTask,
+            label: backendMatch.label || ss.label // Allow label polish but keep statusValue constant
+          };
+        }
+        return ss;
       });
+
+      // 2. Add any custom stages from backend that aren't in standard
+      const standardNormalized = standardStages.map(s => normalize(s.statusValue));
+      backendStages.forEach(bs => {
+        const normBs = normalize(bs.statusValue);
+        if (!standardNormalized.includes(normBs)) {
+          merged.push(bs);
+        }
+      });
+
+      return merged.sort((a, b) => (a.orderIndex || 99) - (b.orderIndex || 99));
     },
     staleTime: 30 * 1000,
     refetchInterval: 30000 // Poll every 30 seconds for global config changes

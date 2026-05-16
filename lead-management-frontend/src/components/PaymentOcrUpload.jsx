@@ -26,7 +26,9 @@ const PaymentOcrUpload = ({ onDataExtracted, currentFile, setCurrentFile }) => {
             return;
         }
 
-        setCurrentFile(file);
+        if (typeof setCurrentFile === 'function') {
+            setCurrentFile(file);
+        }
         setPreviewUrl(URL.createObjectURL(file));
         processOcr(file);
     };
@@ -62,7 +64,9 @@ const PaymentOcrUpload = ({ onDataExtracted, currentFile, setCurrentFile }) => {
     const reset = () => {
         setExtractedData(null);
         setPreviewUrl(null);
-        setCurrentFile(null);
+        if (typeof setCurrentFile === 'function') {
+            setCurrentFile(null);
+        }
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
