@@ -53,6 +53,12 @@ const PaymentOcrUpload = ({ onDataExtracted, currentFile, setCurrentFile }) => {
         }
     };
 
+    const handleFieldChange = (field, value) => {
+        const newData = { ...extractedData, [field]: value };
+        setExtractedData(newData);
+        onDataExtracted(newData);
+    };
+
     const reset = () => {
         setExtractedData(null);
         setPreviewUrl(null);
@@ -128,12 +134,49 @@ const PaymentOcrUpload = ({ onDataExtracted, currentFile, setCurrentFile }) => {
                                 </div>
 
                                 <div className="row g-2">
-                                    <DataField icon={<IndianRupee size={12}/>} label="Amount" value={extractedData.amount} isDarkMode={isDarkMode} />
-                                    <DataField icon={<FileText size={12}/>} label="UTR Number" value={extractedData.utrNumber} isDarkMode={isDarkMode} />
-                                    <DataField icon={<User size={12}/>} label="Payer Name" value={extractedData.payerName} isDarkMode={isDarkMode} />
-                                    <DataField icon={<Calendar size={12}/>} label="Date" value={extractedData.paymentDate} isDarkMode={isDarkMode} />
-                                    <DataField icon={<Clock size={12}/>} label="Time" value={extractedData.paymentTime} isDarkMode={isDarkMode} />
-                                    <DataField icon={<Smartphone size={12}/>} label="Payment App" value={extractedData.paymentApp} isDarkMode={isDarkMode} />
+                                    <DataField 
+                                        icon={<IndianRupee size={12}/>} 
+                                        label="Amount" 
+                                        value={extractedData.amount} 
+                                        onChange={(val) => handleFieldChange('amount', val)}
+                                        isDarkMode={isDarkMode} 
+                                    />
+                                    <DataField 
+                                        icon={<FileText size={12}/>} 
+                                        label="UTR Number" 
+                                        value={extractedData.utrNumber} 
+                                        onChange={(val) => handleFieldChange('utrNumber', val)}
+                                        isDarkMode={isDarkMode} 
+                                    />
+                                    <DataField 
+                                        icon={<User size={12}/>} 
+                                        label="Payer Name" 
+                                        value={extractedData.payerName} 
+                                        onChange={(val) => handleFieldChange('payerName', val)}
+                                        isDarkMode={isDarkMode} 
+                                    />
+                                    <DataField 
+                                        icon={<Calendar size={12}/>} 
+                                        label="Date" 
+                                        type="date"
+                                        value={extractedData.paymentDate} 
+                                        onChange={(val) => handleFieldChange('paymentDate', val)}
+                                        isDarkMode={isDarkMode} 
+                                    />
+                                    <DataField 
+                                        icon={<Clock size={12}/>} 
+                                        label="Time" 
+                                        value={extractedData.paymentTime} 
+                                        onChange={(val) => handleFieldChange('paymentTime', val)}
+                                        isDarkMode={isDarkMode} 
+                                    />
+                                    <DataField 
+                                        icon={<Smartphone size={12}/>} 
+                                        label="Payment App" 
+                                        value={extractedData.paymentApp} 
+                                        onChange={(val) => handleFieldChange('paymentApp', val)}
+                                        isDarkMode={isDarkMode} 
+                                    />
                                 </div>
 
                                 <details className="mt-3">
@@ -164,17 +207,63 @@ const PaymentOcrUpload = ({ onDataExtracted, currentFile, setCurrentFile }) => {
     );
 };
 
-const DataField = ({ icon, label, value, isDarkMode }) => (
-    <div className="col-6">
-        <div className={`p-2 rounded-3 border transition-all ${value ? 'border-primary border-opacity-20' : 'border-dashed border-white border-opacity-10 opacity-60'}`}>
-            <label className="text-muted fw-black text-uppercase tracking-widest d-block mb-1" style={{ fontSize: '8px' }}>
-                <span className="me-1">{icon}</span> {label}
-            </label>
-            <div className={`fw-black text-uppercase tracking-tight truncate ${value ? 'text-primary' : 'text-muted italic small'}`} style={{ fontSize: '11px' }}>
-                {value || 'Not found'}
+const DataField = ({ icon, label, value, onChange, isDarkMode, type = "text" }) => {
+    const inputRef = useRef(null);
+    const isMissing = !value || value === 'NOT FOUND';
+    
+    // Helper to ensure date inputs get YYYY-MM-DD
+    const formatDateForInput = (val) => {
+        if (!val || val === 'NOT FOUND') return '';
+        if (type !== 'date') return val;
+        
+        // If it's already YYYY-MM-DD, return as is
+        if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+        
+        try {
+            const date = new Date(val);
+            if (isNaN(date.getTime())) return ''; // Invalid date
+            return date.toISOString().split('T')[0];
+        } catch (e) {
+            return '';
+        }
+    };
+
+    const displayValue = value === 'NOT FOUND' ? '' : (value || '');
+    const finalValue = type === 'date' ? formatDateForInput(displayValue) : displayValue;
+
+    return (
+        <div className="col-6">
+            <div 
+                className={`p-2 rounded-3 border transition-all cursor-text d-flex flex-column justify-content-center ${!isMissing ? 'border-primary' : 'border-dashed border-secondary border-opacity-30'}`}
+                style={{ 
+                    minHeight: '52px',
+                    background: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.01)'
+                }}
+                onClick={() => inputRef.current?.focus()}
+            >
+                <div className="d-flex align-items-center justify-content-between mb-1" style={{ opacity: 0.6, pointerEvents: 'none' }}>
+                    <label className="text-muted fw-black text-uppercase tracking-widest mb-0" style={{ fontSize: '7px' }}>
+                        <span className="me-1">{icon}</span> {label}
+                    </label>
+                    {isMissing && <Edit3 size={8} className="text-muted" />}
+                </div>
+                <input 
+                    ref={inputRef}
+                    type={type}
+                    className={`bg-transparent border-0 p-0 w-100 fw-black text-uppercase tracking-tight transition-all ${!isMissing ? 'text-primary' : 'text-muted small italic font-monospace'}`}
+                    style={{ 
+                        fontSize: '11px', 
+                        outline: 'none', 
+                        lineHeight: '1.2',
+                        colorScheme: isDarkMode ? 'dark' : 'light'
+                    }}
+                    value={finalValue}
+                    placeholder="CLICK TO EDIT"
+                    onChange={(e) => onChange(e.target.value)}
+                />
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 export default PaymentOcrUpload;

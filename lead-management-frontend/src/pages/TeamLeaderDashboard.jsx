@@ -84,7 +84,8 @@ const TeamLeaderDashboard = () => {
     recordCallOutcome,
     selectedLeadIds,
     toggleSelection,
-    bulkAssignLeads
+    bulkAssignLeads,
+    refetch: refreshLeads
   } = useLeads(debouncedFilters, 'TEAM_LEADER', {
     enabled: activeTab === 'leads' || (activeTab === 'my-stats' && myDashboardSubTab === 'leads') || activeTab === 'overview'
   });
@@ -388,6 +389,7 @@ const TeamLeaderDashboard = () => {
                     setBulkAssignTlId={setBulkAssignTlId}
                     handleBulkAssign={(targetId) => bulkAssignLeads({ leadIds: selectedLeadIds, targetId })}
                     currentUserId={user?.id}
+                    loadLeads={handleSync}
                   />
               </div>
             </div>

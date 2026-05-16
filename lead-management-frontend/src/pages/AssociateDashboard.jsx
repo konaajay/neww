@@ -297,6 +297,7 @@ const AssociateDashboard = () => {
                   onViewInvoice={handleViewInvoice}
                   role="ASSOCIATE"
                   loading={leadsLoading}
+                  loadLeads={handleSync}
                 />
               </div>
             </div>

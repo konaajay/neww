@@ -374,6 +374,7 @@ const AdminDashboard = () => {
                   handleBulkAssign={(targetId) => bulkAssignLeads({ leadIds: selectedLeadIds, targetId })}
                   pipelineStages={pipelineStages}
                   currentUserId={user?.id}
+                  loadLeads={handleSync}
                 />
               </div>
             </div>

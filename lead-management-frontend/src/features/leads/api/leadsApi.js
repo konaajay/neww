@@ -20,6 +20,19 @@ const leadsApi = {
 
   fetchLeadById: (id) => safeRequest(api.get(`/leads/${id}`)),
 
+  getLeadPayments: async (leadId) => {
+    const res = await safeRequest(api.get(`/leads/${leadId}/fee-structure`));
+    return res?.installments || res?.payments || [];
+  },
+
+  approvePayment: async (paymentId) => {
+    return await safeRequest(api.post(`/payments/${paymentId}/approve`));
+  },
+
+  rejectPayment: async (paymentId, reason) => {
+    return await safeRequest(api.post(`/payments/${paymentId}/reject`, null, { params: { reason } }));
+  },
+
   updateStatus: (id, status, note, extraData = {}) => 
     safeRequest(api.put(`/leads/${id}/status`, { status, note, ...extraData })),
 

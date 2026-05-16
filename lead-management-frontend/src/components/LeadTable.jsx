@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
   History, Edit, FileText, Wallet, Zap, ChevronLeft, ChevronRight, 
   Search, Filter, ArrowUpRight, Clock, CheckCircle2, AlertCircle,
-  MoreVertical, ChevronDown, IndianRupee, MessageSquare
+  MoreVertical, ChevronDown, IndianRupee, MessageSquare, XCircle, Eye, ShieldCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import LeadEditModal from './LeadEditModal';
@@ -12,6 +12,7 @@ import { useTheme } from '../context/ThemeContext';
 import ReactDOM from 'react-dom';
 import leadsApi from '../features/leads/api/leadsApi';
 import PortalSelect from './PortalSelect';
+import { toast } from 'react-toastify';
 
 const StatusDropdown = ({ lead, pipelineStages, onChange, getStatusColorClass }) => {
   const { isDarkMode } = useTheme();
@@ -21,17 +22,19 @@ const StatusDropdown = ({ lead, pipelineStages, onChange, getStatusColorClass })
     ? (lead.paymentStatus?.replace('_', ' ') || 'CONVERTED') 
     : currentStage.label;
 
+  const displayStatus = lead.paymentStatus || lead.status;
+
   return (
     <PortalSelect 
       options={pipelineStages.map(s => ({
         value: s.statusValue,
         label: s.label.toUpperCase()
       }))}
-      value={lead.status}
+      value={lead.paymentStatus ? null : lead.status}
       onChange={(e) => onChange(lead, e.target.value)}
       placeholder={label.toUpperCase()}
       style={{ width: '130px' }}
-      triggerClassName={`fw-black text-uppercase ${getStatusColorClass(lead.status)}`}
+      triggerClassName={`fw-black text-uppercase ${getStatusColorClass(displayStatus)}`}
     />
   );
 };
@@ -53,7 +56,9 @@ const LeadTable = ({
   setBulkAssignTlId,
   handleBulkAssign,
   pipelineStages: propsPipelineStages = [],
-  currentUserId
+  currentUserId,
+  loadLeads,
+  onSendPaymentLink
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedEditLead, setSelectedEditLead] = useState(null);
@@ -87,15 +92,24 @@ const LeadTable = ({
   ];
 
   const getStatusColorClass = (status) => {
-    switch(status?.toUpperCase()) {
+    const s = status?.toUpperCase() || '';
+    if (s.startsWith('REJECTED')) return 'bg-danger text-white px-3 py-1 rounded-pill shadow-danger';
+    if (s.includes('PAID_INSTALLMENT') || s === 'FULL_PAID' || s === 'CONVERTED' || s === 'PAID' || s === 'SUCCESS') return 'bg-success text-white px-3 py-1 rounded-pill shadow-success';
+    
+    switch(s) {
       case 'NEW': return 'text-primary';
       case 'CONTACTED': return 'text-info';
       case 'FOLLOW_UP': return 'text-warning';
       case 'INTERESTED': return 'text-primary';
       case 'LOST': return 'text-danger';
-      case 'CONVERTED': return 'text-success';
-      case 'PAID': return 'text-success';
-      default: return 'text-muted';
+      case 'EMI': return 'text-info';
+      case 'PRE_PAYMENT':
+      case 'PRE-PAYMENT':
+        return 'text-primary fw-black';
+      case 'PENDING_APPROVAL': return 'text-warning blink-slow';
+      default: 
+        if (s.startsWith('POST_PAYMENT')) return 'text-info fw-black';
+        return 'text-muted';
     }
   };
 
@@ -275,13 +289,15 @@ const LeadTable = ({
                       )}
                     </td>
                   )}
-                  <td onClick={(e) => e.stopPropagation()}>
+                  <td onClick={(e) => e.stopPropagation()} className="text-center">
                     {(lead.status === 'CONVERTED' || lead.paymentStatus) ? (
-                      <div 
-                        className={`bg-transparent py-1 px-0 fw-black text-uppercase text-center ${getStatusColorClass(lead.paymentStatus || lead.status)}`}
-                        style={{ width: '130px', fontSize: '10px' }}
-                      >
-                        {lead.paymentStatus?.replace('_', ' ') || lead.status?.toUpperCase()}
+                      <div className="d-flex justify-content-center">
+                        <div 
+                          className={`fw-black text-uppercase text-center d-inline-block ${getStatusColorClass(lead.paymentStatus || lead.status)}`}
+                          style={{ minWidth: '130px', fontSize: '10px' }}
+                        >
+                          {lead.paymentStatus?.replace('_', ' ') || lead.status?.toUpperCase()}
+                        </div>
                       </div>
                     ) : !lead.assignedToId ? (
                       <div className="d-flex flex-column align-items-center" style={{ width: '130px' }}>
@@ -308,7 +324,8 @@ const LeadTable = ({
                     <div className="d-flex align-items-center justify-content-end gap-1" onClick={(e) => e.stopPropagation()}>
                       {showActions && (
                         <>
-                          {['INTERESTED', 'FOLLOW_UP', 'WORKING', 'CALL_BACK'].includes(lead.status?.toUpperCase()) && (
+                          {(['INTERESTED', 'FOLLOW_UP', 'WORKING', 'CALL_BACK', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(lead.status?.toUpperCase()) || 
+                            lead.status?.toUpperCase().startsWith('POST_PAYMENT')) && (
                             <button 
                               className="p-2 border-0 bg-transparent text-primary hover-scale animate-pulse" 
                               onClick={() => {
@@ -317,6 +334,86 @@ const LeadTable = ({
                               title="Generate/Manage Payment Link"
                             >
                               <Zap size={16} fill="currentColor" />
+                            </button>
+                          )}
+
+                          {lead.paymentStatus === 'PENDING_APPROVAL' && (role === 'ADMIN' || role === 'MANAGER') && (
+                            <button 
+                              className="p-2 border-0 bg-transparent text-warning hover-scale" 
+                              onClick={async () => {
+                                if (window.confirm("Approve this manual payment?")) {
+                                  try {
+                                    // We need to fetch the payment ID from the lead or its history
+                                    // For simplicity, we'll use a direct API call if we have the payment ID
+                                    // But here we might need to find it first.
+                                    // Actually, we'll navigate to status update or handle it via a new API call
+                                    const payments = await leadsApi.getLeadPayments(lead.id);
+                                    const pending = payments.find(p => p.status === 'PENDING_APPROVAL');
+                                    if (pending) {
+                                      await leadsApi.approvePayment(pending.id);
+                                      toast.success("Payment Approved Protocol Engaged");
+                                      if (typeof loadLeads === 'function') loadLeads();
+                                      else window.location.reload();
+                                    }
+                                  } catch (err) {
+                                    toast.error("Approval failed: Registry sync error");
+                                  }
+                                }
+                              }} 
+                              title="Approve Manual Payment"
+                            >
+                              <ShieldCheck size={16} />
+                            </button>
+                          )}
+
+                          {lead.paymentStatus === 'PENDING_APPROVAL' && (role === 'ADMIN' || role === 'MANAGER') && (
+                            <button 
+                              className="p-2 border-0 bg-transparent text-info hover-scale" 
+                              onClick={async () => {
+                                try {
+                                  const payments = await leadsApi.getLeadPayments(lead.id);
+                                  const pending = payments.find(p => p.status === 'PENDING_APPROVAL');
+                                  if (pending && pending.receiptUrl) {
+                                    const baseUrl = import.meta.env.VITE_API_BASE_URL || (window.location.hostname === 'localhost' ? 'http://localhost:8080' : '');
+                                    const cleanBase = baseUrl.replace('/api', '');
+                                    const fullUrl = pending.receiptUrl.startsWith('http') ? pending.receiptUrl : `${cleanBase}${pending.receiptUrl}`;
+                                    window.open(fullUrl, '_blank');
+                                  } else {
+                                    toast.info("No receipt screenshot found for this payment.");
+                                  }
+                                } catch (err) {
+                                  toast.error("Failed to fetch receipt link");
+                                }
+                              }} 
+                              title="View Receipt Screenshot"
+                            >
+                              <Eye size={16} />
+                            </button>
+                          )}
+
+                          {lead.paymentStatus === 'PENDING_APPROVAL' && (role === 'ADMIN' || role === 'MANAGER') && (
+                            <button 
+                              className="p-2 border-0 bg-transparent text-danger hover-scale" 
+                              onClick={async () => {
+                                const reason = window.prompt("Reason for rejection:");
+                                if (reason !== null) {
+                                  try {
+                                    const payments = await leadsApi.getLeadPayments(lead.id);
+                                    const pending = payments.find(p => p.status === 'PENDING_APPROVAL');
+                                    if (pending) {
+                                      await leadsApi.rejectPayment(pending.id, reason);
+                                      toast.success("Payment Rejected Protocol Executed");
+                                      if (typeof loadLeads === 'function') loadLeads();
+                                      else window.location.reload();
+                                    }
+                                  } catch (err) {
+                                    toast.error("Rejection failed: Command error");
+                                  }
+                                }
+                              }} 
+                              title="Reject Manual Payment"
+                            >
+                              <XCircle size={16} />
                             </button>
                           )}
                           
@@ -464,6 +561,12 @@ const LeadTable = ({
         
         .table-hover tbody tr:hover { background: rgba(255,255,255,0.02) !important; }
         .hover-scale:hover { transform: scale(1.15); }
+        
+        @keyframes blink-slow {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+        .blink-slow { animation: blink-slow 2s infinite ease-in-out; }
         
         @media (max-width: 768px) {
           .lead-table-container { overflow-x: auto; }

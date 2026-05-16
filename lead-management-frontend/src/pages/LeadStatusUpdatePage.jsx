@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTheme } from '../context/ThemeContext';
 import {
   ShieldCheck, Calendar, MessageSquare, ArrowLeft, Activity,
@@ -10,6 +11,7 @@ import PortalSelect from '../components/PortalSelect';
 import { QRCodeCanvas } from 'qrcode.react';
 import { QrCode, Link as LinkIcon, Wallet, Search } from 'lucide-react';
 import PaymentOcrUpload from '../components/PaymentOcrUpload';
+import { useLookupData } from '../features/users/hooks/useLookupData';
 
 // Clean Architecture Services
 import adminService from '../services/adminService';
@@ -19,6 +21,7 @@ import { useLeadStatusLogic } from '../features/leads/hooks/useLeadStatusLogic';
 const LeadStatusUpdatePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const initialStatus = searchParams.get('newStatus');
 
@@ -29,19 +32,29 @@ const LeadStatusUpdatePage = () => {
   const [note, setNote] = useState('');
   const [paymentSkipped, setPaymentSkipped] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pipelineStages, setPipelineStages] = useState([]);
-  const [courses, setCourses] = useState([]);
+  const [isManualPayment, setIsManualPayment] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
+  
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [feeStructureExists, setFeeStructureExists] = useState(false);
   const [generatedLink, setGeneratedLink] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [receiptFile, setReceiptFile] = useState(null);
-  const [isManualPayment, setIsManualPayment] = useState(false);
-  const [showQRModal, setShowQRModal] = useState(false);
-  
+  const [utr, setUtr] = useState('');
+
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const canDoManual = ['ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER'].includes(user.role?.toUpperCase());
+  const userRole = user.role?.toUpperCase() || '';
+  const canDoManual = ['ADMIN', 'MANAGER', 'ROLE_ADMIN', 'ROLE_MANAGER', 'TEAM_LEADER', 'ROLE_TEAM_LEADER', 'ASSOCIATE', 'BDA'].some(r => userRole.includes(r));
+
+  // Auto-refreshing lookup data
+  const { 
+    pipelineStages: hookStages, 
+    courses: hookCourses 
+  } = useLookupData(userRole);
+
+  const pipelineStages = useMemo(() => hookStages || [], [hookStages]);
+  const courses = useMemo(() => hookCourses || [], [hookCourses]);
 
   const getDefaultFollowUp = useCallback(() => {
     const tomorrow = new Date();
@@ -73,29 +86,31 @@ const LeadStatusUpdatePage = () => {
     addInstallment,
     removeInstallment,
     handleInstallmentChange,
+    sumOfParts,
     balanceRemaining,
     isMatch
   } = useLeadStatusLogic();
+
+  useEffect(() => {
+    if (searchParams.get('manual') === 'true') {
+      setIsManualPayment(true);
+      const amt = searchParams.get('amount');
+      if (amt) setInitialAmount(amt);
+    }
+  }, [searchParams]);
 
   const init = useCallback(async () => {
     setLoading(true);
     setError(false);
     try {
-      // 1. Parallel loading of all required data
-      const [leadRes, stagesRes, feeRes, coursesRes] = await Promise.allSettled([
+      // 1. Parallel loading of lead-specific data
+      // courses and stages are now handled by useLookupData auto-polling
+      const [leadRes, feeRes] = await Promise.allSettled([
         leadsApi.fetchLeadById(id),
-        adminService.fetchPipelineStages(),
-        leadsApi.getFeeStructure(id),
-        adminService.fetchCourses()
+        leadsApi.getFeeStructure(id)
       ]);
 
-      let loadedCourses = [];
-      if (coursesRes.status === 'fulfilled') {
-        loadedCourses = coursesRes.value.data || coursesRes.value || [];
-        setCourses(loadedCourses);
-      } else {
-        toast.error("Security Override: Course Protocol Sync Blocked");
-      }
+      // courses and stages are now handled by hook auto-polling
 
       if (leadRes.status === 'fulfilled') {
         const leadData = leadRes.value.data || leadRes.value;
@@ -105,28 +120,29 @@ const LeadStatusUpdatePage = () => {
         throw new Error('Lead data fetch failed');
       }
 
-      if (stagesRes.status === 'fulfilled') {
-        const stages = stagesRes.value.data || stagesRes.value;
-        const processedStages = Array.isArray(stages) && stages.length > 0 ? stages : [
-          { label: 'New', statusValue: 'NEW', color: 'primary', isRoot: true },
-          { label: 'Contacted', statusValue: 'CONTACTED', color: 'info' },
-          { label: 'FollowUp', statusValue: 'FOLLOW_UP', color: 'warning' },
-          { label: 'Interested', statusValue: 'INTERESTED', color: 'primary' },
-          { label: 'Lost', statusValue: 'LOST', color: 'danger' },
-          { label: 'Prepayment', statusValue: 'CONVERTED', color: 'success' },
-        ];
-        setPipelineStages(processedStages);
-      }
-
       if (feeRes.status === 'fulfilled' && feeRes.value) {
         const feeData = feeRes.value.data || feeRes.value;
         if (feeData && feeData.totalAmount > 0) {
           setFeeStructureExists(true);
-          setTotalAmount(feeData.totalAmount);
-          setTotalPaidSoFar(feeData.paidAmount || 0);
-          if (feeData.courseId && loadedCourses.length > 0) {
-              setSelectedCourse(loadedCourses.find(c => c.id === feeData.courseId));
+          if (feeData.totalAmount > 0) {
+            setTotalAmount(feeData.totalAmount);
           }
+          setTotalPaidSoFar(feeData.paidAmount || 0);
+          setDiscount(feeData.discount || 0);
+
+          if (feeData.installments) {
+            const currentPayId = searchParams.get('installmentId');
+            const pending = feeData.installments
+              .filter(p => (p.status === 'PENDING' || p.status === 'REJECTED' || p.status === 'OVERDUE') && String(p.id) !== currentPayId)
+              .map(p => ({
+                amount: p.amount,
+                dueDate: p.dueDate ? p.dueDate.substring(0, 16) : ''
+              }));
+            
+            if (installments.length === 0) setInstallments(pending);
+          }
+
+          // Course sync is handled by the dedicated useEffect below
           if (feeData.nextDueDate) {
             setNextInstallmentDate(feeData.nextDueDate.split('T')[0]);
             setPaymentType('EMI');
@@ -139,7 +155,18 @@ const LeadStatusUpdatePage = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, initialStatus, setTotalAmount, setTotalPaidSoFar, setPaymentType]);
+  }, [id, initialStatus, searchParams, setTotalAmount, setTotalPaidSoFar, setPaymentType, setDiscount, setInstallments, installments.length]);
+
+  // Reactive Sync for Course and Fee Metadata
+  useEffect(() => {
+    if (lead && courses.length > 0 && !selectedCourse) {
+      const courseId = lead.courseId;
+      if (courseId) {
+        const course = courses.find(c => c.id === Number(courseId));
+        if (course) setSelectedCourse(course);
+      }
+    }
+  }, [lead, courses, selectedCourse]);
 
   useEffect(() => {
     init();
@@ -171,8 +198,18 @@ const LeadStatusUpdatePage = () => {
       const numericAmount = data.amount.replace(/[^\d.]/g, '');
       setInitialAmount(numericAmount);
     }
-    if (data.utrNumber) {
-      setNote(prev => `UTR: ${data.utrNumber}${prev ? ' | ' + prev : ''}`);
+    if (data.utrNumber || data.payerName) {
+      setUtr(data.utrNumber || '');
+      setNote(prev => {
+        const parts = prev.split('|').map(p => p.trim());
+        const otherParts = parts.filter(p => !p.toUpperCase().startsWith('UTR:') && !p.toUpperCase().startsWith('PAYER:'));
+        
+        const newParts = [];
+        if (data.utrNumber) newParts.push(`UTR: ${data.utrNumber}`);
+        if (data.payerName && data.payerName !== 'NOT FOUND') newParts.push(`PAYER: ${data.payerName}`);
+        
+        return [...newParts, ...otherParts].join(' | ');
+      });
     }
     if (data.paymentApp) {
       const app = data.paymentApp.toUpperCase();
@@ -249,33 +286,45 @@ const LeadStatusUpdatePage = () => {
 
     setIsSubmitting(true);
     try {
-      if (isManualPayment) {
-        await leadsApi.recordManualPayment({
-          leadId: id,
-          amount: paymentType === 'EMI' ? (initialAmount || "0") : (totalAmount || "0"),
-          totalAmount: totalAmount || "0",
-          paymentMethod,
-          note: note || "Manual Payment Recorded",
-          paymentType: paymentType === 'EMI' ? 'EMI_INSTALLMENT' : 'FULL',
-          nextDueDate: paymentType === 'EMI' ? followUpDate : null
-        }, receiptFile);
+      const response = isManualPayment 
+        ? await leadsApi.recordManualPayment({
+            leadId: id,
+            amount: paymentType === 'EMI' ? (initialAmount || "0") : (totalAmount || "0"),
+            totalAmount: totalAmount || "0",
+            discount: discount || 0,
+            paymentMethod,
+            note: note || "Manual Payment Recorded",
+            paymentType: paymentType === 'EMI' ? 'EMI_INSTALLMENT' : 'FULL',
+            utr: utr,
+            installments: paymentType === 'EMI' ? installments.map(i => ({ ...i, amount: i.amount || "0" })) : [],
+            nextDueDate: paymentType === 'EMI' ? followUpDate : null
+          }, receiptFile)
+        : await leadsApi.updateStatus(id, selectedStatus, note, {
+            paymentType,
+            totalAmount: totalAmount || "0",
+            paidAmount: paymentSkipped ? "0" : (paymentType === 'EMI' ? (initialAmount || "0") : (totalAmount || "0")),
+            paymentMethod,
+            discount: discount || 0,
+            installments: paymentType === 'EMI' ? installments.map(i => ({ ...i, amount: i.amount || "0" })) : [],
+            dueDate: (currentStatusConfig?.requireDate || ['EMI', 'EMI_FOLLOWUP'].includes(selectedStatus?.toUpperCase())) ? followUpDate : null,
+            courseId: selectedCourse?.id
+          });
+
+      if (response?.status === 'PENDING_APPROVAL') {
+        toast.info('Payment recorded and queued for Manager Verification');
       } else {
-        await leadsApi.updateStatus(id, selectedStatus, note, {
-          paymentType,
-          totalAmount: totalAmount || "0",
-          paidAmount: paymentSkipped ? "0" : (paymentType === 'EMI' ? (initialAmount || "0") : (totalAmount || "0")),
-          paymentMethod,
-          discount: discount || 0,
-          installments: paymentType === 'EMI' ? installments.map(i => ({ ...i, amount: i.amount || "0" })) : [],
-          dueDate: (currentStatusConfig?.requireDate || ['EMI', 'EMI_FOLLOWUP'].includes(selectedStatus?.toUpperCase())) ? followUpDate : null,
-          courseId: selectedCourse?.id
-        });
+        toast.success('System Status Propagated Successfully');
       }
 
-      toast.success('System Status Propagated Successfully');
+      // Invalidate queries to trigger hard refresh of dashboard data
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      
       navigate(-1);
     } catch (err) {
-      toast.error('Update failed: Terminal error');
+      const errorMsg = err.response?.data?.message || 'Update failed: Terminal error';
+      toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -477,7 +526,7 @@ const LeadStatusUpdatePage = () => {
                 )}
 
                 {/* Fee Structure Form - Now available for INTERESTED, PAID, and CONVERTED */}
-                {['INTERESTED', 'PAID', 'CONVERTED'].includes(selectedStatus?.toUpperCase()) && lead?.status?.toUpperCase() !== 'CONVERTED' && (
+                {['INTERESTED', 'PAID', 'CONVERTED'].includes(selectedStatus?.toUpperCase()) && (lead?.status?.toUpperCase() !== 'CONVERTED' || isManualPayment) && (
                   <div className={`p-3 rounded-4 border border-secondary border-opacity-10 animate-fade-in shadow-sm ${isDarkMode ? 'bg-surface bg-opacity-80' : 'bg-white'}`}>
                     <div className="d-flex align-items-center justify-content-between mb-3">
                       <div className="d-flex align-items-center gap-2">
@@ -513,11 +562,12 @@ const LeadStatusUpdatePage = () => {
                         <div className="d-flex align-items-center gap-2">
                           <input
                             type="number"
-                            className={`form-control border border-secondary border-opacity-10 rounded-3 fw-bold ${isDarkMode ? 'bg-surface text-white' : 'bg-light text-muted'}`}
+                            className={`form-control border border-secondary border-opacity-10 rounded-3 fw-bold ${isDarkMode ? 'bg-surface text-white' : 'bg-white text-dark'}`}
                             placeholder="e.g. 50000"
                             value={totalAmount}
-                            readOnly
-                            disabled
+                            onChange={(e) => setTotalAmount(e.target.value)}
+                            readOnly={!isManualPayment}
+                            disabled={!isManualPayment}
                           />
                         </div>
                       </div>
@@ -629,7 +679,7 @@ const LeadStatusUpdatePage = () => {
                       <div className={`mt-2 mb-3 p-3 rounded-4 text-center fw-bold text-uppercase border animate-fade-in ${isMatch ? 'text-success bg-success bg-opacity-10 border-success border-opacity-20' : 'text-danger bg-danger bg-opacity-10 border-danger border-opacity-20'}`} style={{ fontSize: '10px' }}>
                         {isMatch ? (
                           <div className="d-flex align-items-center justify-content-center gap-2">
-                            <ShieldCheck size={14} /> ACCOUNTING VERIFIED: ₹{discountedTotal}
+                            <ShieldCheck size={14} /> ACCOUNTING VERIFIED: ₹{sumOfParts.toLocaleString()}
                           </div>
                         ) : (
                           <div className="d-flex align-items-center justify-content-center gap-2">
@@ -698,8 +748,8 @@ const LeadStatusUpdatePage = () => {
                   </div>
                 )}
 
-                {/* Manual Payment Section for Admin/Manager */}
-                {canDoManual && (['PAID', 'CONVERTED', 'INTERESTED'].includes(selectedStatus?.toUpperCase())) && (
+                {/* Manual Payment Section for Initiation/Verification */}
+                {(isManualPayment || (canDoManual && ['PAID', 'CONVERTED', 'INTERESTED'].includes(selectedStatus?.toUpperCase()))) && (
                   <div className={`p-3 rounded-4 border border-warning border-opacity-20 animate-fade-in ${isDarkMode ? 'bg-warning bg-opacity-5' : 'bg-warning bg-opacity-10'}`}>
                     <div className="d-flex align-items-center justify-content-between mb-3">
                       <div className="d-flex align-items-center gap-2">
@@ -752,6 +802,35 @@ const LeadStatusUpdatePage = () => {
                               onChange={(e) => setNote(e.target.value)}
                             />
                           </div>
+                          
+                          {/* Visible UTR Field for manual editing/confirmation */}
+                          {utr && (
+                            <div className="col-12 mt-2 animate-fade-in">
+                              <div className={`p-2 rounded-3 border border-dashed d-flex align-items-center justify-content-between ${isDarkMode ? 'bg-black bg-opacity-20 border-white border-opacity-10' : 'bg-light border-secondary border-opacity-20'}`}>
+                                <div className="d-flex align-items-center gap-2 flex-grow-1">
+                                  <Shield size={12} className="text-primary" />
+                                  <div className="flex-grow-1">
+                                    <label className="text-muted fw-bold text-uppercase d-block" style={{ fontSize: '7px' }}>Verified UTR/TXN ID</label>
+                                    <input 
+                                      type="text"
+                                      className="bg-transparent border-0 p-0 text-primary fw-black font-monospace w-100"
+                                      style={{ fontSize: '10px', outline: 'none' }}
+                                      value={utr}
+                                      onChange={(e) => setUtr(e.target.value.toUpperCase())}
+                                    />
+                                  </div>
+                                </div>
+                                <button 
+                                  type="button"
+                                  onClick={() => setUtr('')}
+                                  className="btn btn-link p-0 text-danger text-decoration-none fw-bold ms-2"
+                                  style={{ fontSize: '9px' }}
+                                >
+                                  REMOVE
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -777,7 +856,7 @@ const LeadStatusUpdatePage = () => {
                   <div className="pt-2 text-center">
                     <button
                       type="submit"
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || (isManualPayment && !isMatch)}
                       className="w-100 py-3 ui-btn ui-btn-primary rounded-pill fw-black text-uppercase tracking-widest shadow-glow mb-3 transition-all hover-scale"
                     >
                       {isSubmitting ? (

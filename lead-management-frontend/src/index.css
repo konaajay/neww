@@ -581,13 +581,23 @@ select option {
 [data-bs-theme="dark"] input,
 [data-bs-theme="dark"] select,
 [data-bs-theme="dark"] textarea {
-  background-color: #111827 !important;
+  background-color: #0f172a !important; /* Deep Navy/Black */
   color: #ffffff !important;
+}
+
+/* Browser Autofill Fix for Dark Mode */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #0f172a inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 [data-bs-theme="dark"] input::placeholder,
 [data-bs-theme="dark"] textarea::placeholder {
-  color: rgba(255, 255, 255, 0.4) !important;
+  color: rgba(255, 255, 255, 0.3) !important;
 }
 
 /* Status Badges (Vibrant like Old UI) */

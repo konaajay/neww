@@ -73,7 +73,17 @@ export const useLookupData = (role) => {
         return true;
       });
     },
-    staleTime: 60 * 60 * 1000 // Config rarely changes
+    staleTime: 30 * 1000,
+    refetchInterval: 30000 // Poll every 30 seconds for global config changes
+  });
+
+  // 7a. Program/Course Protocols (Global Config)
+  const { data: courses, isLoading: loadingCourses } = useQuery({
+    queryKey: ['courses'],
+    queryFn: () => adminService.fetchCourses(),
+    select: (res) => res.data || res || [],
+    staleTime: 30 * 1000,
+    refetchInterval: 30000
   });
   
   // 8. Office Registry
@@ -106,8 +116,9 @@ export const useLookupData = (role) => {
     subordinates: subordinates || [],
     roles: Array.isArray(roles) ? roles : (roles?.data || []),
     pipelineStages: pipelineStages || [],
+    courses: courses || [],
     offices: offices || [],
     shifts: shifts || [],
-    loading: loadingUsers || loadingPermissions || loadingTeamTree || loadingTLs || loadingSubordinates || loadingRoles || loadingStages || loadingOffices || loadingShifts
+    loading: loadingUsers || loadingPermissions || loadingTeamTree || loadingTLs || loadingSubordinates || loadingRoles || loadingStages || loadingOffices || loadingShifts || loadingCourses
   };
 };

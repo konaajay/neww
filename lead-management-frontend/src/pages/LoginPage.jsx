@@ -101,11 +101,11 @@ const LoginPage = () => {
                 <User size={18} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-primary opacity-50 transition-smooth" />
                 <input
                   type="email"
-                  className="form-control ps-5 py-3 border-0 bg-white bg-opacity-5 text-white"
+                  className="form-control ps-5 py-3 border-0 bg-transparent text-white"
                   placeholder="Enter your credentials..."
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  style={{ fontSize: '14px', borderRadius: '16px', transition: 'all 0.3s ease' }}
+                  style={{ fontSize: '14px', borderRadius: '16px', transition: 'all 0.3s ease', background: 'rgba(0,0,0,0.2)' }}
                   required
                 />
               </div>
@@ -127,11 +127,11 @@ const LoginPage = () => {
                 <Lock size={18} className="position-absolute top-50 start-0 translate-middle-y ms-3 text-primary opacity-50 transition-smooth" />
                 <input
                   type={show ? 'text' : 'password'}
-                  className="form-control ps-5 py-3 border-0 bg-white bg-opacity-5 text-white"
+                  className="form-control ps-5 py-3 border-0 bg-transparent text-white"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  style={{ fontSize: '14px', borderRadius: '16px', transition: 'all 0.3s ease' }}
+                  style={{ fontSize: '14px', borderRadius: '16px', transition: 'all 0.3s ease', background: 'rgba(0,0,0,0.2)' }}
                   required
                 />
                 <button

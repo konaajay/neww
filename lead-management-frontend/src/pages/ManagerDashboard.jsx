@@ -159,7 +159,7 @@ const ManagerDashboard = () => {
       // Status filtering logic
       if (statusFilter) {
         if (statusFilter === 'Converted') {
-          return ['CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(status);
+          return ['CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(status) || (status && status.startsWith('POST_PAYMENT'));
         } else if (statusFilter === 'Follow Up') {
           return !['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(status);
         } else if (statusFilter === 'New') {
@@ -375,7 +375,7 @@ const ManagerDashboard = () => {
                     onViewInvoice={handleViewInvoice}
                     teamLeaders={subordinates}
                     role="MANAGER"
-                    loadLeads={refreshLeads}
+                    loadLeads={handleSync}
                     loading={leadsLoading}
                     pipelineStages={pipelineStages}
                   />
@@ -468,7 +468,11 @@ const ManagerDashboard = () => {
                     if (!['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(k.toUpperCase())) return acc + v;
                     return acc;
                   }, 0)), color: 'info', icon: '⏳' },
-                  { label: 'Converted', value: ((statusDistribution?.CONVERTED || 0) + (statusDistribution?.PAID || 0) + (statusDistribution?.SUCCESS || 0) + (statusDistribution?.EMI || 0) + (statusDistribution?.PRE_PAYMENT || 0) + (statusDistribution?.['PRE-PAYMENT'] || 0)), color: 'success', icon: '✅' },
+                  { label: 'Converted', value: Object.entries(statusDistribution || {}).reduce((acc, [k, v]) => {
+                    const ks = k.toUpperCase();
+                    if (['CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(ks) || ks.startsWith('POST_PAYMENT')) return acc + v;
+                    return acc;
+                  }, 0), color: 'success', icon: '✅' },
                   { label: 'Lost', value: ((statusDistribution?.LOST || 0) + (statusDistribution?.REJECTED || 0) + (statusDistribution?.DEAD || 0) + (statusDistribution?.NOT_INTERESTED || 0)), color: 'danger', icon: '❌' }
                 ].map((card, i) => (
                   <div key={i} className="col-6 col-md-3">
@@ -519,6 +523,7 @@ const ManagerDashboard = () => {
                   loading={leadsLoading}
                   teamLeaders={subordinates}
                   role="MANAGER"
+                  loadLeads={handleSync}
                   pipelineStages={pipelineStages}
                 />
               </div>

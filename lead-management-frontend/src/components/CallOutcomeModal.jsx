@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import ReactDOM from 'react-dom';
 import {
   ArrowLeft, Mail, Phone, BookOpen, MessageSquare,
   CheckCircle, Plus, Calendar, AlertCircle, ShieldCheck, User, Zap, IndianRupee, Copy, MessageCircle,
-  Clock, X, Activity, FileText, CreditCard
+  Clock, X, Activity, FileText, CreditCard, XCircle, Eye
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import associateService from '../services/associateService';
@@ -11,10 +13,21 @@ import adminService from '../services/adminService';
 import api from '../api/api';
 import leadsApi from '../features/leads/api/leadsApi';
 import { useAuth } from '../context/AuthContext';
+import { useLookupData } from '../features/users/hooks/useLookupData';
 import PortalSelect from './PortalSelect';
 
 const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistory }) => {
-  const { clearCall } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const userRole = user?.role?.toUpperCase() || '';
+  
+  // Use Lookup Data hook for auto-refreshing global config
+  const { 
+    pipelineStages: hookStages, 
+    courses: hookCourses 
+  } = useLookupData(userRole);
+
   const [outcome, setOutcome] = useState('CONTACTED');
   const [note, setNote] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
@@ -28,14 +41,11 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
   const [isUploading, setIsUploading] = useState(false);
   const [audioDuration, setAudioDuration] = useState(0);
   const [isDurationLoading, setIsDurationLoading] = useState(false);
-  const [pipelineStages, setPipelineStages] = useState([]);
-  const [allStatuses, setAllStatuses] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [activeTab, setActiveTab] = useState('TIMELINE'); // TIMELINE, FEE, INVOICE
   const [feeStructure, setFeeStructure] = useState(null);
   const [isLoadingFee, setIsLoadingFee] = useState(false);
-  const [courses, setCourses] = useState([]);
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [generatingLinkIds, setGeneratingLinkIds] = useState([]);
 
@@ -68,8 +78,23 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
   const isMatch = paymentType === 'FULL' ? true : Math.abs(sumOfParts - targetTotal) < 1;
   const balanceRemaining = targetTotal - sumOfParts;
 
-  const userRole = localStorage.getItem('role');
-  const isAdminOrManager = ['ADMIN', 'MANAGER'].includes(userRole);
+  const { clearCall } = useAuth();
+  
+  const pipelineStages = hookStages || [];
+  const courses = hookCourses || [];
+  
+  const allStatuses = React.useMemo(() => {
+    return pipelineStages.map(s => ({
+      id: s.statusValue,
+      label: s.label.toLowerCase()
+    }));
+  }, [pipelineStages]);
+
+  const isAdminOrManager = React.useMemo(() => {
+    if (!user) return false;
+    const role = (user.role || '').toUpperCase().replace('ROLE_', '');
+    return ['ADMIN', 'MANAGER', 'MGR', 'MANAGEMENT'].includes(role);
+  }, [user]);
 
   useEffect(() => {
     if (lead) {
@@ -93,23 +118,11 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
     }
   }, [lead, pipelineStages]);
 
-  useEffect(() => {
-    const fetchStages = async () => {
-      try {
-        const res = await adminService.fetchPipelineStages();
-        if (res.data) {
-          const active = res.data.filter(s => s.active);
-          setPipelineStages(active.slice(0, 6)); // First 6 for the stepper
-          setAllStatuses(active.map(s => ({
-            id: s.statusValue,
-            label: s.label.toLowerCase()
-          })));
-        }
-      } catch (err) {
-        console.error("Failed to load stages", err);
-      }
-    };
+  const getStageIndex = (status) => {
+    return pipelineStages.findIndex(s => s.statusValue === status);
+  };
 
+  useEffect(() => {
     const fetchAuditLogs = async () => {
       if (!lead?.id) return;
       setIsLoadingLogs(true);
@@ -124,19 +137,16 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
     };
 
     if (isOpen) {
-      fetchStages();
       fetchAuditLogs();
       fetchFeeStructure();
-      fetchCourses();
+      fetchGlobalCourses();
     }
   }, [isOpen, lead?.id]);
 
-  const fetchCourses = async () => {
+  const fetchGlobalCourses = async () => {
     try {
-      const res = await api.get('/admin/attendance/courses');
-      if (res.data?.data) {
-        setCourses(res.data.data);
-      }
+      // The courses are now handled by useLookupData polling, 
+      // but we can still manually trigger a refetch here if needed on open
     } catch (err) {
       console.error("Failed to fetch courses", err);
     }
@@ -344,37 +354,6 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
   };
 
   const isDarkMode = theme === 'dark';
-
-  // Map backend status to stepper index
-  const getStageIndex = (status) => {
-    switch (status) {
-      case 'NEW': return 0;
-      case 'CONTACTED':
-      case 'NOT_ANSWERED':
-      case 'SWITCHED_OFF':
-        return 1;
-      case 'FOLLOW_UP':
-      case 'CALL_BACK':
-      case 'FOLLOWUP_1':
-      case 'FOLLOWUP_2':
-      case 'FOLLOWUP_3':
-        return 2;
-      case 'INTERESTED':
-      case 'DEMO':
-      case 'PAYMENT_LINK_SENT':
-        return 3;
-      case 'PAID':
-      case 'CONVERTED':
-      case 'EMI':
-      case 'SUCCESS':
-        return 4;
-      case 'LOST':
-      case 'NOT_INTERESTED':
-        return 5;
-      default: return 0;
-    }
-  };
-
 
   const currentStageIndex = getStageIndex(lead.status);
   const selectedStageIndex = getStageIndex(outcome);
@@ -1033,9 +1012,68 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                                           <span className={`badge rounded-pill ${p.status === 'PAID' || p.status === 'SUCCESS' ? 'bg-success bg-opacity-10 text-success' : 'bg-warning bg-opacity-10 text-warning'}`} style={{ fontSize: '9px' }}>
                                             {p.status}
                                           </span>
-                                          {(p.status === 'PENDING' || p.status === 'OVERDUE') && (
+                                          {p.receiptUrl && (
+                                            <a 
+                                              href={p.receiptUrl.startsWith('http') ? p.receiptUrl : `${(import.meta.env.VITE_API_BASE_URL || (window.location.hostname === 'localhost' ? 'http://localhost:8080' : '')).replace('/api', '')}${p.receiptUrl}`} 
+                                              target="_blank" 
+                                              rel="noopener noreferrer"
+                                              className="btn btn-link p-0 border-0 ms-1"
+                                              title="View Receipt Screenshot"
+                                              onClick={(e) => e.stopPropagation()}
+                                            >
+                                              <Eye size={14} className="text-info hover-scale" />
+                                            </a>
+                                          )}
+                                          {p.status === 'PENDING_APPROVAL' && (isAdminOrManager) && (
+                                            <button
+                                              className="btn btn-link p-0 border-0 ms-1"
+                                              title="Approve Manual Payment"
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                if (!window.confirm("Approve this manual payment?")) return;
+                                                try {
+                                                  await leadsApi.approvePayment(p.id);
+                                                  toast.success("Payment Approved!");
+                                                  fetchFeeStructure();
+                                                  queryClient.invalidateQueries({ queryKey: ['leads'] });
+                                                  queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+                                                  queryClient.invalidateQueries({ queryKey: ['tasks'] });
+                                                } catch (err) {
+                                                  toast.error("Approval failed");
+                                                }
+                                              }}
+                                            >
+                                              <ShieldCheck size={14} className="text-success hover-scale" />
+                                            </button>
+                                          )}
+                                          {p.status === 'PENDING_APPROVAL' && (isAdminOrManager) && (
+                                            <button
+                                              className="btn btn-link p-0 border-0 ms-1"
+                                              title="Reject Manual Payment"
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                const reason = window.prompt("Reason for rejection:");
+                                                if (reason !== null) {
+                                                  try {
+                                                    await leadsApi.rejectPayment(p.id, reason);
+                                                    toast.success("Payment Rejected");
+                                                    fetchFeeStructure();
+                                                    queryClient.invalidateQueries({ queryKey: ['leads'] });
+                                                    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+                                                    queryClient.invalidateQueries({ queryKey: ['tasks'] });
+                                                  } catch (err) {
+                                                    toast.error("Rejection failed");
+                                                  }
+                                                }
+                                              }}
+                                            >
+                                              <XCircle size={14} className="text-danger hover-scale" />
+                                            </button>
+                                          )}
+                                          {(p.status === 'PENDING' || p.status === 'OVERDUE' || p.status === 'REJECTED') && (
                                             <>
                                               {!p.paymentGatewayId ? (
+                                                 <>
                                                 <button
                                                   className="btn btn-xs btn-outline-primary px-2 py-0 rounded-pill d-flex align-items-center gap-1"
                                                   style={{ fontSize: '8px' }}
@@ -1049,7 +1087,29 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                                                     </>
                                                   ) : 'Generate Link'}
                                                 </button>
-                                              ) : (
+                                                <button
+                                                  className="btn btn-xs btn-outline-success px-2 py-0 rounded-pill d-flex align-items-center gap-1 ms-1 shadow-glow-sm"
+                                                  style={{ fontSize: '8px' }}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    navigate(`/leads/${lead.id}/status-update?newStatus=${lead.status || 'EMI'}&manual=true&amount=${p.amount}&installmentId=${p.id}`);
+                                                  }}
+                                                >
+                                                  <IndianRupee size={8} /> MANUAL PAY
+                                                </button>
+                                              </>
+                                            ) : (
+                                              <div className="d-flex align-items-center gap-2">
+                                                <button
+                                                  className="btn btn-xs btn-outline-success px-2 py-0 rounded-pill d-flex align-items-center gap-1 shadow-glow-sm me-1"
+                                                  style={{ fontSize: '8px' }}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    navigate(`/leads/${lead.id}/status-update?newStatus=${lead.status || 'EMI'}&manual=true&amount=${p.amount}&installmentId=${p.id}`);
+                                                  }}
+                                                >
+                                                  <IndianRupee size={8} /> MANUAL PAY
+                                                </button>
                                                 <>
                                                   <button
                                                     className="btn btn-xs btn-primary p-1 rounded-circle"
@@ -1113,8 +1173,9 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                                                     <Mail size={10} className="text-white" />
                                                   </button>
                                                 </>
-                                              )}
-                                            </>
+                                              </div>
+                                            )}
+                                          </>
                                           )}
                                         </div>
                                       </td>

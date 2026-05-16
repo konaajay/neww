@@ -32,10 +32,20 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     caches.match(event.request).then((response) => {
-      return response || fetch(event.request).catch((err) => {
+      if (response) return response;
+
+      return fetch(event.request).catch((err) => {
+        // For navigation requests, fall back to index.html (SPA support)
+        if (event.request.mode === 'navigate') {
+          return caches.match('/index.html');
+        }
+        
         console.warn('[SW] Fetch failed for:', event.request.url, err);
-        // You could return a custom offline page here if desired
-        return null; 
+        // Return a basic error response instead of null
+        return new Response('Network error occurred', {
+          status: 408,
+          headers: { 'Content-Type': 'text/plain' }
+        });
       });
     })
   );

@@ -45,11 +45,12 @@ export const useLeadStatusLogic = (initialTotal = '', initialPaid = 0) => {
   }, [initialAmount, installments]);
 
   const balanceRemaining = useMemo(() => {
+    const target = Number(discountedTotal || 0) - Number(totalPaidSoFar || 0);
     if (paymentType === 'FULL') {
-      return Number(discountedTotal) - Number(initialAmount || 0);
+      return target - Number(initialAmount || 0);
     }
-    return Number(discountedTotal || 0) - sumOfParts;
-  }, [paymentType, discountedTotal, initialAmount, sumOfParts]);
+    return target - sumOfParts;
+  }, [paymentType, discountedTotal, totalPaidSoFar, initialAmount, sumOfParts]);
 
   const isMatch = useMemo(() => {
     if (paymentType === 'FULL') {
