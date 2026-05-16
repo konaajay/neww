@@ -281,7 +281,7 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
       return;
     }
 
-    const productionUrl = "http://54.84.148.176:8080";
+    const productionUrl = "http://3.84.147.168:8080";
     const paymentLink = `${productionUrl}/payment-instruction/${inst.paymentGatewayId}`;
     const message = `Hello ${lead.name}, your payment of ₹${inst.amount} for ${lead.courseName || 'the course'} is pending. Please complete the payment using this secure link: ${paymentLink}`;
 

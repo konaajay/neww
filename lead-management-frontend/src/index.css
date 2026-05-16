@@ -184,11 +184,8 @@ select option {
 html,
 body,
 #root {
-  height: 100% !important;
   min-height: 100% !important;
-  max-height: 100% !important;
   overflow-x: hidden !important; /* Block horizontal jitter */
-  overflow-y: hidden !important; /* Locked viewport */
   margin: 0;
   padding: 0;
   width: 100% !important;

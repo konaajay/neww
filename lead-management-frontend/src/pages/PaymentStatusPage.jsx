@@ -16,7 +16,7 @@ const PaymentStatusPage = () => {
             try {
                 const baseURL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
                     ? 'http://localhost:8080'
-                    : (import.meta.env.VITE_API_BASE_URL || 'http://54.84.148.176:8080');
+                    : (import.meta.env.VITE_API_BASE_URL || 'http://3.84.147.168:8080');
                     
                 const url = `${baseURL}/api/public/payments/order/${orderId}`;
                 const res = await axios.get(url);
