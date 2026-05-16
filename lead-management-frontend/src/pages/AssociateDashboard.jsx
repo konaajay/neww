@@ -33,7 +33,7 @@ import TodayTaskList from './dashboard/components/TodayTaskList';
 import FiltersBar from './dashboard/components/FiltersBar';
 import ManagerProfile from './dashboard/components/ManagerProfile';
 import AttendanceDashboard from './dashboard/components/AttendanceDashboard';
-import { StatSkeleton, ChartSkeleton } from './dashboard/components/DashboardSkeletons';
+import { StatSkeleton, ChartSkeleton, MetricSkeletonRow } from './dashboard/components/DashboardSkeletons';
 
 const RevenueTrendChart = React.lazy(() => import('./dashboard/components/RevenueTrendChart'));
 const LeadStatusPieChart = React.lazy(() => import('./dashboard/components/LeadStatusPieChart'));
