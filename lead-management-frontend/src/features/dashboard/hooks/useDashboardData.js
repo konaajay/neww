@@ -12,9 +12,10 @@ export const useDashboardData = (filters) => {
 
         // Single API source
         queryFn: ({ signal }) => dashboardService.fetchDashboard(filters, signal),
-        staleTime: 5 * 60 * 1000, // 5 minutes cache
+        staleTime: 0, // Instant stale to support real-time updates
         gcTime: 10 * 60 * 1000,   // 10 minutes garbage collection
-        refetchOnWindowFocus: false,
+        refetchOnWindowFocus: true,
+        refetchInterval: 4000,   // Poll every 4 seconds for real-time dashboards
         retry: 1,
 
         // Smooth transitions

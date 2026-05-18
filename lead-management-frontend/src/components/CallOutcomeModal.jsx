@@ -28,7 +28,7 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
     courses: hookCourses 
   } = useLookupData(userRole);
 
-  const [outcome, setOutcome] = useState('CONTACTED');
+  const [outcome, setOutcome] = useState('OPEN');
   const [note, setNote] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,6 +57,13 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
   const [scheduleNote, setScheduleNote] = useState('');
 
   const addInstallment = () => {
+    const courseForValidation = courses.find(c => String(c.id) === String(selectedCourseId || lead?.courseId));
+    const maxInst = courseForValidation?.maxInstallments;
+    
+    if (maxInst !== undefined && installments.length >= maxInst) {
+      toast.warning(`Maximum of ${maxInst} future installments allowed for this course.`);
+      return;
+    }
     setInstallments([...installments, { amount: '', dueDate: '' }]);
     setPaymentType('PART');
   };
@@ -169,9 +176,17 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
     return feeStructure?.installments?.find(i => i.status === 'PENDING' && i.paymentGatewayId);
   }, [feeStructure]);
 
+  const courseForValidation = courses.find(c => String(c.id) === String(selectedCourseId || lead?.courseId));
+  const minTokenRequired = courseForValidation ? parseFloat(courseForValidation.minTokenAmount || 500) : 500;
+  const isCommitmentTooLow = outcome === 'EMI' && parseFloat(initialAmount || 0) < minTokenRequired;
+
   if (!isOpen || !lead) return null;
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (isCommitmentTooLow) {
+      return toast.error(`Commitment cannot be less than the minimum token amount (₹${minTokenRequired.toLocaleString()}) configured for this course.`);
+    }
 
     // Normalization helper to match status variants (e.g., FOLLOW_UP vs FOLLOW-UP)
     const normalize = (s) => s?.toUpperCase().replace(/[-_ ]/g, '') || '';
@@ -694,6 +709,11 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                                         onChange={(e) => outcome === 'EMI' ? setInitialAmount(e.target.value) : setTotalAmount(e.target.value)}
                                       />
                                     </div>
+                                    {isCommitmentTooLow && (
+                                      <small className="text-danger fw-bold mt-2 d-block">
+                                        Commitment cannot be less than the minimum token amount (₹{minTokenRequired.toLocaleString()}) configured for this course.
+                                      </small>
+                                    )}
                                   </div>
 
                                   <div className="col-12">
@@ -823,7 +843,7 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                           <button
                             type="submit"
                             className="btn btn-primary rounded-pill fw-bold text-uppercase px-4 py-2 shadow-sm d-flex align-items-center gap-2"
-                            disabled={isSubmitting || !lead.assignedToId}
+                            disabled={isSubmitting || !lead.assignedToId || isCommitmentTooLow}
                           >
                             {isSubmitting ? (
                               <span className="spinner-border spinner-border-sm"></span>

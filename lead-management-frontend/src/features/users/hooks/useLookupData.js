@@ -10,9 +10,10 @@ export const useLookupData = (role) => {
     select: (data) => {
       return data?.content || data || [];
     },
-    staleTime: 30 * 60 * 1000,
+    staleTime: 0,
     enabled: role === 'ADMIN',
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: true,
+    refetchInterval: 10000
   });
 
   // 2. Permissions Registry
@@ -27,8 +28,9 @@ export const useLookupData = (role) => {
   const { data: teamTree, isLoading: loadingTeamTree } = useQuery({
     queryKey: ['teamTree'],
     queryFn: () => userApi.fetchTeamTree(),
-    staleTime: 5 * 60 * 1000,
-    enabled: role === 'ADMIN' || role === 'MANAGER'
+    staleTime: 0,
+    enabled: role === 'ADMIN' || role === 'MANAGER',
+    refetchInterval: 10000
   });
 
   // 4. Team Leaders (for assignment)
@@ -38,8 +40,9 @@ export const useLookupData = (role) => {
     select: (data) => {
       return Array.isArray(data) ? data : (data?.data || []);
     },
-    staleTime: 10 * 60 * 1000,
-    enabled: role === 'ADMIN' || role === 'MANAGER'
+    staleTime: 0,
+    enabled: role === 'ADMIN' || role === 'MANAGER',
+    refetchInterval: 10000
   });
 
   // 5. Subordinates (for TLs)
@@ -47,8 +50,9 @@ export const useLookupData = (role) => {
     queryKey: ['subordinates', role],
     queryFn: () => userApi.fetchSubordinates(role),
     select: (data) => Array.isArray(data) ? data : (data?.data || []),
-    staleTime: 5 * 60 * 1000,
-    enabled: role === 'TEAM_LEADER' || role === 'MANAGER'
+    staleTime: 0,
+    enabled: role === 'TEAM_LEADER' || role === 'MANAGER',
+    refetchInterval: 10000
   });
 
   // 6. Role Registry
@@ -73,18 +77,22 @@ export const useLookupData = (role) => {
       
       // Standard Hardcoded Stages (Strict Order and Config from Pipeline Architecture screenshot)
       const standardStages = [
-        { label: 'New', statusValue: 'NEW', requireNote: false, requireDate: false, createTask: false, orderIndex: 1, color: 'primary' },
-        { label: 'Contacted', statusValue: 'CONTACTED', requireNote: false, requireDate: true, createTask: true, orderIndex: 2, color: 'info' },
-        { label: 'Interested', statusValue: 'INTERESTED', requireNote: false, requireDate: true, createTask: true, orderIndex: 3, color: 'primary' },
-        { label: 'Follow-up', statusValue: 'FOLLOW_UP', requireNote: true, requireDate: true, createTask: true, orderIndex: 4, color: 'warning' },
-        { label: 'Lost', statusValue: 'LOST', requireNote: false, requireDate: false, createTask: false, orderIndex: 5, color: 'danger' },
-        { label: 'Converted', statusValue: 'CONVERTED', requireNote: false, requireDate: true, createTask: true, orderIndex: 6, color: 'success' },
+        { label: 'Open', statusValue: 'OPEN', requireNote: false, requireDate: false, createTask: false, orderIndex: 1, color: 'primary' },
+        { label: 'Switch Off', statusValue: 'SWITCH_OFF', requireNote: false, requireDate: false, createTask: false, orderIndex: 2, color: 'warning' },
+        { label: 'Out of Coverage', statusValue: 'OUT_OF_COVERAGE', requireNote: false, requireDate: false, createTask: false, orderIndex: 3, color: 'warning' },
+        { label: 'Wrong Number', statusValue: 'WRONG_NUMBER', requireNote: false, requireDate: false, createTask: false, orderIndex: 4, color: 'warning' },
+        { label: 'Not Responding', statusValue: 'NOT_RESPONDING', requireNote: false, requireDate: false, createTask: false, orderIndex: 5, color: 'warning' },
+        { label: 'Follow-up', statusValue: 'FOLLOW_UP', requireNote: true, requireDate: true, createTask: true, orderIndex: 6, color: 'warning' },
+        { label: 'Follow-up 1', statusValue: 'FOLLOW_UP_1', requireNote: true, requireDate: true, createTask: true, orderIndex: 7, color: 'warning' },
+        { label: 'Interested', statusValue: 'INTERESTED', requireNote: false, requireDate: true, createTask: true, orderIndex: 8, color: 'primary' },
+        { label: 'Converted', statusValue: 'CONVERTED', requireNote: false, requireDate: true, createTask: true, orderIndex: 9, color: 'success' },
+        { label: 'Lost', statusValue: 'LOST', requireNote: false, requireDate: false, createTask: false, orderIndex: 10, color: 'danger' },
         
         // Mandatory Operational Stages (Already Hard Logic - Hidden from main dropdown)
-        { label: 'EMI', statusValue: 'EMI', requireNote: true, requireDate: true, createTask: true, orderIndex: 7, color: 'info', hideInDropdown: true },
-        { label: 'Paid', statusValue: 'PAID', requireNote: true, requireDate: false, createTask: false, orderIndex: 8, color: 'success', hideInDropdown: true },
-        { label: 'Pre-Payment', statusValue: 'PRE_PAYMENT', requireNote: false, requireDate: true, createTask: true, orderIndex: 9, color: 'primary', hideInDropdown: true },
-        { label: 'EMI Follow-up', statusValue: 'EMI_FOLLOWUP', requireNote: true, requireDate: true, createTask: true, orderIndex: 10, color: 'danger', hideInDropdown: true }
+        { label: 'EMI', statusValue: 'EMI', requireNote: true, requireDate: true, createTask: true, orderIndex: 11, color: 'info', hideInDropdown: true },
+        { label: 'Paid', statusValue: 'PAID', requireNote: true, requireDate: false, createTask: false, orderIndex: 12, color: 'success', hideInDropdown: true },
+        { label: 'Pre-Payment', statusValue: 'PRE_PAYMENT', requireNote: false, requireDate: true, createTask: true, orderIndex: 13, color: 'primary', hideInDropdown: true },
+        { label: 'EMI Follow-up', statusValue: 'EMI_FOLLOWUP', requireNote: true, requireDate: true, createTask: true, orderIndex: 14, color: 'danger', hideInDropdown: true }
       ];
 
       // Normalize comparison to prevent duplicates (e.g., "FOLLOW_UP" vs "FOLLOW-UP")
@@ -120,8 +128,8 @@ export const useLookupData = (role) => {
 
       return merged.sort((a, b) => (a.orderIndex || 99) - (b.orderIndex || 99));
     },
-    staleTime: 30 * 1000,
-    refetchInterval: 30000 // Poll every 30 seconds for global config changes
+    staleTime: 0, // Real-time immediate stale
+    refetchInterval: 5000 // Poll every 5 seconds for global config changes
   });
 
   // 7a. Program/Course Protocols (Global Config)
@@ -129,8 +137,8 @@ export const useLookupData = (role) => {
     queryKey: ['courses'],
     queryFn: () => adminService.fetchCourses(),
     select: (res) => res.data || res || [],
-    staleTime: 30 * 1000,
-    refetchInterval: 30000
+    staleTime: 0, // Real-time immediate stale
+    refetchInterval: 5000 // Poll every 5 seconds for courses
   });
   
   // 8. Office Registry

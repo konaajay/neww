@@ -168,11 +168,13 @@ const TeamLeaderDashboard = () => {
         if (statusFilter === 'Converted') {
           return ['CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(status);
         } else if (statusFilter === 'Follow Up') {
-          return !['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(status);
-        } else if (statusFilter === 'New') {
-          return ['NEW', 'WORKING'].includes(status);
+          return !['OPEN', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED', 'DNP', 'SWITCH_OFF', 'SWITCHED_OFF', 'OUT_OF_COVERAGE', 'OUT_OF_COVERAGE_AREA', 'WRONG_NUMBER', 'NOT_RESPONDING'].includes(status);
+        } else if (statusFilter === 'Open') {
+          return ['OPEN', 'WORKING'].includes(status);
         } else if (statusFilter === 'Lost') {
           return ['LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(status);
+        } else if (statusFilter === 'DNP') {
+          return ['DNP', 'SWITCH_OFF', 'SWITCHED_OFF', 'OUT_OF_COVERAGE', 'OUT_OF_COVERAGE_AREA', 'WRONG_NUMBER', 'NOT_RESPONDING'].includes(status);
         }
       }
 
@@ -328,15 +330,16 @@ const TeamLeaderDashboard = () => {
           <div className="d-flex flex-column gap-3">
             <div className="row g-3 mb-2 animate-fade-in">
                {[
-                { label: 'New', value: ((statusDistribution.NEW || 0) + (statusDistribution.WORKING || 0)), color: 'primary', icon: '✨' },
+                { label: 'Open', value: ((statusDistribution.OPEN || 0) + (statusDistribution.WORKING || 0)), color: 'primary', icon: '✨' },
                 { label: 'Follow Up', value: (Object.entries(statusDistribution || {}).reduce((acc, [k, v]) => {
-                  if (!['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(k.toUpperCase())) return acc + v;
+                  if (!['OPEN', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED', 'DNP', 'SWITCH_OFF', 'SWITCHED_OFF', 'OUT_OF_COVERAGE', 'OUT_OF_COVERAGE_AREA', 'WRONG_NUMBER', 'NOT_RESPONDING'].includes(k.toUpperCase())) return acc + v;
                   return acc;
                 }, 0)), color: 'info', icon: '⏳' },
-                { label: 'Converted', value: ((statusDistribution.CONVERTED || 0) + (statusDistribution.PAID || 0) + (statusDistribution.SUCCESS || 0) + (statusDistribution.EMI || 0) + (statusDistribution.PRE_PAYMENT || 0) + (statusDistribution['PRE-PAYMENT'] || 0)), color: 'success', icon: '✅' },
+                { label: 'DNP', value: (statusDistribution.DNP || 0), color: 'warning', icon: '📞' },
+                { label: 'Converted', value: ((statusDistribution.CONVERTED || 0) + (statusDistribution.EMI || 0) + (statusDistribution.PRE_PAYMENT || 0) + (statusDistribution['PRE-PAYMENT'] || 0)), color: 'success', icon: '✅' },
                 { label: 'Lost', value: ((statusDistribution.LOST || 0) + (statusDistribution.REJECTED || 0) + (statusDistribution.DEAD || 0) + (statusDistribution.NOT_INTERESTED || 0)), color: 'danger', icon: '❌' }
               ].map((card, i) => (
-                <div key={i} className="col-6 col-md-3">
+                <div key={i} className="col-6 col-md">
                   <div 
                     className={`p-3 d-flex flex-column gap-1 transition-smooth cursor-pointer ${statusFilter === card.label ? 'shadow-glow' : 'shadow-sm'}`} 
                     style={{ 

@@ -9,7 +9,7 @@ export const useLeadStatusLogic = (externalState = {}) => {
   const [internalTotal, setInternalTotal] = useState('');
   const [internalPaid, setInternalPaid] = useState(0);
   const [internalInitial, setInternalInitial] = useState('');
-  const [internalDiscount, setInternalDiscount] = useState(0);
+  const [internalDiscount, setInternalDiscount] = useState('');
   const [internalInstallments, setInternalInstallments] = useState([]);
   const [internalPaymentType, setInternalPaymentType] = useState('FULL');
 
@@ -24,21 +24,29 @@ export const useLeadStatusLogic = (externalState = {}) => {
     return Number(totalAmount || 0) - Number(discount || 0);
   }, [totalAmount, discount]);
 
+  const maxInstallments = externalState.maxInstallments || 4;
+
   const addInstallment = useCallback(() => {
     if (externalState.setInstallments) {
         externalState.setInstallments(prev => {
-            if (prev.length >= 4) return prev;
+            if (prev.length >= maxInstallments) {
+                if (externalState.onMaxReached) externalState.onMaxReached(maxInstallments);
+                return prev;
+            }
             return [...prev, { amount: '', dueDate: '', invoicerKey: 'gyantrix' }];
         });
         if (externalState.setPaymentType) externalState.setPaymentType('EMI');
     } else {
         setInternalInstallments(prev => {
-            if (prev.length >= 4) return prev;
+            if (prev.length >= maxInstallments) {
+                if (externalState.onMaxReached) externalState.onMaxReached(maxInstallments);
+                return prev;
+            }
             return [...prev, { amount: '', dueDate: '', invoicerKey: 'gyantrix' }];
         });
         setInternalPaymentType('EMI');
     }
-  }, [externalState]);
+  }, [externalState, maxInstallments]);
 
   const removeInstallment = useCallback((index) => {
     if (externalState.setInstallments) {

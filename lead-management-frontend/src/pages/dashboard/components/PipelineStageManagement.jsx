@@ -17,9 +17,11 @@ import {
 import { toast } from 'react-toastify';
 import adminService from '../../../services/adminService';
 import { useTheme } from '../../../context/ThemeContext';
+import { useQueryClient } from '@tanstack/react-query';
 
 const PipelineStageManagement = () => {
     const { isDarkMode } = useTheme();
+    const queryClient = useQueryClient();
     const [stages, setStages] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
@@ -73,7 +75,7 @@ const PipelineStageManagement = () => {
                 require_date: formData.requireDate,
                 create_task: formData.createTask,
                 statusValue: formData.label.trim().toUpperCase().replace(/\s+/g, '_'),
-                analyticBucket: 'CONTACTED', 
+                analyticBucket: 'FOLLOW_UP', 
                 color: 'primary',           
                 orderIndex: formData.orderIndex || (editingStage ? editingStage.orderIndex : stages.length + 1),
                 active: true
@@ -88,6 +90,7 @@ const PipelineStageManagement = () => {
             }
             
             resetForm();
+            queryClient.invalidateQueries({ queryKey: ['pipelineStages'] });
             fetchStages();
         } catch (err) {
             const errorMessage = err.response?.data?.message || "Process failed - system sync error";
@@ -114,31 +117,37 @@ const PipelineStageManagement = () => {
     };
 
     const handleAutoSetup = async () => {
-        if (!window.confirm("Initialize strategic sales funnel? This will add standard stages (New, Contacted, Interested, Follow-up, Lost, Converted).")) return;
+        if (!window.confirm("Initialize strategic sales funnel? This will add standard stages (Open, Switch Off, Out of Coverage, Wrong Number, Not Responding, Follow-up, Follow-up 1, Interested, Converted, Lost).")) return;
         
         const standardStages = [
-            { label: 'New', requireNote: false, requireDate: false, createTask: false, analyticBucket: 'NEW', color: 'primary' },
-            { label: 'Contacted', requireNote: false, requireDate: true, createTask: true, analyticBucket: 'CONTACTED', color: 'info' },
-            { label: 'Interested', requireNote: false, requireDate: true, createTask: true, analyticBucket: 'CONTACTED', color: 'primary' },
-            { label: 'Follow-up', requireNote: true, requireDate: true, createTask: true, analyticBucket: 'CONTACTED', color: 'warning' },
-            { label: 'Lost', requireNote: false, requireDate: false, createTask: false, analyticBucket: 'LOST', color: 'danger' },
+            { label: 'Open', requireNote: false, requireDate: false, createTask: false, analyticBucket: 'OPEN', color: 'primary' },
+            { label: 'Switch Off', requireNote: false, requireDate: false, createTask: false, analyticBucket: 'DNP', color: 'warning' },
+            { label: 'Out of Coverage', requireNote: false, requireDate: false, createTask: false, analyticBucket: 'DNP', color: 'warning' },
+            { label: 'Wrong Number', requireNote: false, requireDate: false, createTask: false, analyticBucket: 'DNP', color: 'warning' },
+            { label: 'Not Responding', requireNote: false, requireDate: false, createTask: false, analyticBucket: 'DNP', color: 'warning' },
+            { label: 'Follow-up', requireNote: true, requireDate: true, createTask: true, analyticBucket: 'FOLLOW_UP', color: 'warning' },
+            { label: 'Follow-up 1', requireNote: true, requireDate: true, createTask: true, analyticBucket: 'FOLLOW_UP', color: 'warning' },
+            { label: 'Interested', requireNote: false, requireDate: true, createTask: true, analyticBucket: 'FOLLOW_UP', color: 'primary' },
             { label: 'Converted', requireNote: false, requireDate: true, createTask: true, analyticBucket: 'CONVERTED', color: 'success' },
+            { label: 'Lost', requireNote: false, requireDate: false, createTask: false, analyticBucket: 'LOST', color: 'danger' },
         ];
 
         setLoading(true);
         try {
-            for (const stage of standardStages) {
+            for (let i = 0; i < standardStages.length; i++) {
+                const stage = standardStages[i];
                 // Check if already exists to avoid duplicates
                 if (stages.some(s => s.label?.toUpperCase() === stage.label.toUpperCase())) continue;
                 
                 await adminService.createPipelineStage({
                     ...stage,
                     statusValue: stage.label.toUpperCase().replace(/\s+/g, '_'),
-                    orderIndex: stages.length + 1,
+                    orderIndex: stages.length + i + 1,
                     active: true
                 });
             }
             toast.success("Strategic funnel initialized");
+            queryClient.invalidateQueries({ queryKey: ['pipelineStages'] });
             fetchStages();
         } catch (err) {
             toast.error("Partial failure during initialization");
@@ -150,6 +159,7 @@ const PipelineStageManagement = () => {
     const handleReorder = async (id, direction) => {
         try {
             await adminService.reorderPipelineStage(id, direction);
+            queryClient.invalidateQueries({ queryKey: ['pipelineStages'] });
             fetchStages();
         } catch (err) {
             toast.error("Reorder synchronization failed");
@@ -161,6 +171,7 @@ const PipelineStageManagement = () => {
         try {
             await adminService.deletePipelineStage(id);
             toast.success("Status lead purged successfully");
+            queryClient.invalidateQueries({ queryKey: ['pipelineStages'] });
             fetchStages();
         } catch (err) {
             toast.error("Failed to purge lead");
@@ -317,7 +328,7 @@ const PipelineStageManagement = () => {
                                             <span className="fw-black text-main text-uppercase tracking-tighter" style={{ fontSize: '13px' }}>
                                                 {stage.label}
                                             </span>
-                                            {stage.statusValue === 'NEW' && (
+                                            {stage.statusValue === 'OPEN' && (
                                                 <span className="px-2 py-0.5 rounded-pill bg-success bg-opacity-10 text-success fw-black" style={{ fontSize: '7px', letterSpacing: '0.5px' }}>ROOT PROTOCOL</span>
                                             )}
                                         </div>
@@ -347,7 +358,7 @@ const PipelineStageManagement = () => {
                                             >
                                                 <Settings size={14} />
                                             </button>
-                                            {stage.statusValue !== 'NEW' && (
+                                            {stage.statusValue !== 'OPEN' && (
                                                 <button 
                                                     onClick={() => handleDelete(stage.id)}
                                                     className="ui-btn-icon bg-danger bg-opacity-10 text-danger border-0 p-2 rounded-circle hover-scale shadow-sm"

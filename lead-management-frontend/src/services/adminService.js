@@ -75,7 +75,16 @@ const adminService = {
   verifyResetOtp: (userId, otp, newPassword) => safeRequest(api.post(`/admin/users/${userId}/verify-reset-otp`, { otp, newPassword })),
   
   // Course Management
-  fetchCourses: () => safeRequest(api.get('/leads/program-protocols'))
+  fetchCourses: () => safeRequest(api.get('/leads/program-protocols')),
+
+  // Old Leads Ingestion (Admin)
+  uploadOldLeads: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return safeRequest(api.post('/admin/upload-old-leads', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }));
+  }
 };
 
 export default adminService;

@@ -3,9 +3,11 @@ import { BookOpen, Plus, Trash2, Edit3, Save, X, DollarSign, ShieldCheck } from 
 import { useTheme } from '../context/ThemeContext';
 import { toast } from 'react-toastify';
 import api from '../api/api';
+import { useQueryClient } from '@tanstack/react-query';
 
 const CourseManagementPage = () => {
     const { isDarkMode } = useTheme();
+    const queryClient = useQueryClient();
     const [courses, setCourses] = useState([]);
     const [isAdding, setIsAdding] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -15,6 +17,7 @@ const CourseManagementPage = () => {
         name: '',
         baseFee: '',
         minTokenAmount: '500',
+        maxInstallments: '',
         description: '',
         active: true
     });
@@ -46,7 +49,8 @@ const CourseManagementPage = () => {
                 toast.success(editingId ? "Course Protocol Updated" : "New Course Deployed");
                 setEditingId(null);
                 setIsAdding(false);
-                setFormData({ name: '', baseFee: '', minTokenAmount: '500', description: '', active: true });
+                setFormData({ name: '', baseFee: '', minTokenAmount: '500', maxInstallments: '', description: '', active: true });
+                queryClient.invalidateQueries({ queryKey: ['courses'] });
                 fetchCourses();
             }
         } catch (err) {
@@ -60,6 +64,7 @@ const CourseManagementPage = () => {
             name: course.name,
             baseFee: course.baseFee,
             minTokenAmount: course.minTokenAmount,
+            maxInstallments: course.maxInstallments || '',
             description: course.description || '',
             active: course.active
         });
@@ -71,6 +76,7 @@ const CourseManagementPage = () => {
         try {
             await api.delete(`/admin/attendance/courses/${id}`);
             toast.warning("Protocol Terminated");
+            queryClient.invalidateQueries({ queryKey: ['courses'] });
             fetchCourses();
         } catch (err) {
             toast.error("Termination failed.");
@@ -113,7 +119,7 @@ const CourseManagementPage = () => {
                             <button onClick={() => { setIsAdding(false); setEditingId(null); }} className="btn btn-link text-muted p-0 border-0"><X size={20} /></button>
                         </div>
                         <form onSubmit={handleSave} className="row g-4">
-                            <div className="col-md-6">
+                            <div className="col-md-4">
                                 <label className="form-label text-muted small fw-bold text-uppercase tracking-widest opacity-50 ps-2" style={{ fontSize: '9px' }}>Course Designation</label>
                                 <input
                                     className="form-control bg-surface border-main border-opacity-10 text-main py-3 px-3 rounded-4 shadow-none"
@@ -143,6 +149,18 @@ const CourseManagementPage = () => {
                                     min="500"
                                     value={formData.minTokenAmount}
                                     onChange={e => setFormData({ ...formData, minTokenAmount: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div className="col-md-2">
+                                <label className="form-label text-muted small fw-bold text-uppercase tracking-widest opacity-50 ps-2" style={{ fontSize: '9px' }}>Max EMIs</label>
+                                <input
+                                    type="number"
+                                    className="form-control bg-surface border-main border-opacity-10 text-main py-3 px-3 rounded-4 shadow-none"
+                                    placeholder="4"
+                                    min="1"
+                                    value={formData.maxInstallments}
+                                    onChange={e => setFormData({ ...formData, maxInstallments: e.target.value })}
                                     required
                                 />
                             </div>
@@ -190,6 +208,10 @@ const CourseManagementPage = () => {
                                     <div>
                                         <p className="text-muted small fw-bold text-uppercase mb-0 opacity-50" style={{ fontSize: '8px' }}>Program Fee</p>
                                         <p className="fw-black text-primary mb-0" style={{ fontSize: '20px' }}>₹{course.baseFee.toLocaleString()}</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-muted small fw-bold text-uppercase mb-0 opacity-50" style={{ fontSize: '8px' }}>Max EMIs</p>
+                                        <p className="fw-black mb-0 text-main" style={{ fontSize: '14px' }}>{course.maxInstallments || '∞'}</p>
                                     </div>
                                     <div className="text-end">
                                         <p className="text-muted small fw-bold text-uppercase mb-0 opacity-50" style={{ fontSize: '8px' }}>Min Token</p>

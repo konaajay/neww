@@ -855,3 +855,146 @@ select.ui-input option {
 .animate-zoom-in {
   animation: zoomIn 0.3s ease-out forwards;
 }
+
+/* ==========================================================================
+   HIGH-CONTRAST & PREMIUM DATE/TIME INPUT FIELDS (WCAG COMPLIANT)
+   ========================================================================== */
+
+/* Set correct color scheme for browser native popup pickers */
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"] {
+  position: relative !important;
+  color-scheme: dark !important;
+}
+
+[data-bs-theme="light"] input[type="date"],
+[data-bs-theme="light"] input[type="datetime-local"],
+[data-bs-theme="light"] input[type="time"] {
+  color-scheme: light !important;
+}
+
+/* 
+  Custom Calendar & Clock Icon System:
+  - Dark Mode: Vibrant sky blue icon (%2338bdf8), robust dark background, pure white text
+  - Light Mode: Deep indigo icon (%234f46e5), crisp white background, deep slate text
+*/
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"],
+input[type="date"].form-control,
+input[type="datetime-local"].form-control,
+input[type="time"].form-control,
+input[type="date"].ui-input,
+input[type="datetime-local"].ui-input,
+input[type="time"].ui-input {
+  background: rgba(15, 23, 42, 0.7) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='16' y1='2' x2='16' y2='6'%3E%3C/line%3E%3Cline x1='8' y1='2' x2='8' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='10' x2='21' y2='10'%3E%3C/line%3E%3C/svg%3E") no-repeat right 12px center / 18px !important;
+  color: #ffffff !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
+  padding-right: 42px !important;
+  font-weight: 700 !important;
+  border-radius: var(--radius-md) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+[data-bs-theme="light"] input[type="date"],
+[data-bs-theme="light"] input[type="datetime-local"],
+[data-bs-theme="light"] input[type="time"],
+[data-bs-theme="light"] input[type="date"].form-control,
+[data-bs-theme="light"] input[type="datetime-local"].form-control,
+[data-bs-theme="light"] input[type="time"].form-control,
+[data-bs-theme="light"] input[type="date"].ui-input,
+[data-bs-theme="light"] input[type="datetime-local"].ui-input,
+[data-bs-theme="light"] input[type="time"].ui-input {
+  background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='16' y1='2' x2='16' y2='6'%3E%3C/line%3E%3Cline x1='8' y1='2' x2='8' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='10' x2='21' y2='10'%3E%3C/line%3E%3C/svg%3E") no-repeat right 12px center / 18px !important;
+  color: #0f172a !important;
+  border: 1.5px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Premium Focus States */
+input[type="date"]:focus,
+input[type="datetime-local"]:focus,
+input[type="time"]:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 4px var(--primary-glow) !important;
+  background-color: rgba(15, 23, 42, 0.8) !important;
+  outline: none !important;
+}
+
+[data-bs-theme="light"] input[type="date"]:focus,
+[data-bs-theme="light"] input[type="datetime-local"]:focus,
+[data-bs-theme="light"] input[type="time"]:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 4px var(--primary-glow) !important;
+  background-color: #ffffff !important;
+}
+
+/* Hide native webkit calendar picker icon indicator but keep click area intact */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  position: absolute !important;
+  right: 0 !important;
+  top: 0 !important;
+  width: 40px !important;
+  height: 100% !important;
+  opacity: 0 !important;
+  cursor: pointer !important;
+  z-index: 5 !important;
+}
+
+/* Style Webkit Date Edit Sub-Fields for Superb Legibility */
+input[type="date"]::-webkit-datetime-edit,
+input[type="datetime-local"]::-webkit-datetime-edit,
+input[type="time"]::-webkit-datetime-edit {
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+/* Force fields to inherit color from input to enable clean state transitions */
+input[type="date"]::-webkit-datetime-edit-text,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field,
+input[type="datetime-local"]::-webkit-datetime-edit-text,
+input[type="datetime-local"]::-webkit-datetime-edit-month-field,
+input[type="datetime-local"]::-webkit-datetime-edit-day-field,
+input[type="datetime-local"]::-webkit-datetime-edit-year-field,
+input[type="datetime-local"]::-webkit-datetime-edit-hour-field,
+input[type="datetime-local"]::-webkit-datetime-edit-minute-field,
+input[type="datetime-local"]::-webkit-datetime-edit-ampm-field {
+  font-weight: 700 !important;
+  color: inherit !important;
+}
+
+/* Default Placeholder State styling: readable gray in dark and slate in light */
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"] {
+  color: rgba(255, 255, 255, 0.7) !important; /* Extremely high contrast placeholder for dark mode */
+}
+
+[data-bs-theme="light"] input[type="date"],
+[data-bs-theme="light"] input[type="datetime-local"],
+[data-bs-theme="light"] input[type="time"] {
+  color: rgba(15, 23, 42, 0.7) !important; /* Premium high contrast slate placeholder for light mode */
+}
+
+/* Active/Focused state makes it fully solid */
+input[type="date"]:focus,
+input[type="datetime-local"]:focus,
+input[type="time"]:focus,
+input[type="date"]:valid,
+input[type="datetime-local"]:valid,
+input[type="time"]:valid {
+  color: #ffffff !important;
+}
+
+[data-bs-theme="light"] input[type="date"]:focus,
+[data-bs-theme="light"] input[type="datetime-local"]:focus,
+[data-bs-theme="light"] input[type="time"]:focus,
+[data-bs-theme="light"] input[type="date"]:valid,
+[data-bs-theme="light"] input[type="datetime-local"]:valid,
+[data-bs-theme="light"] input[type="time"]:valid {
+  color: #0f172a !important;
+}

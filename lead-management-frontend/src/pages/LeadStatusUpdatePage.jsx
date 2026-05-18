@@ -14,12 +14,13 @@ import { useLookupData } from '../features/users/hooks/useLookupData';
 import PortalSelect from '../components/PortalSelect';
 import PaymentOcrUpload from '../components/PaymentOcrUpload';
 import { QRCodeCanvas } from 'qrcode.react';
+import { useTheme } from '../context/ThemeContext';
 
 const LeadStatusUpdatePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+  const { isDarkMode } = useTheme();
 
   const initialStatus = searchParams.get('newStatus');
   const isManualPaymentFromUrl = searchParams.get('manual') === 'true';
@@ -41,7 +42,7 @@ const LeadStatusUpdatePage = () => {
   // Fee Structure State
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [totalAmount, setTotalAmount] = useState('');
-  const [discount, setDiscount] = useState(0);
+  const [discount, setDiscount] = useState('');
   const [initialAmount, setInitialAmount] = useState(initialAmountFromUrl || '');
   const [paymentType, setPaymentType] = useState('FULL');
   const [installments, setInstallments] = useState([]);
@@ -92,8 +93,15 @@ const LeadStatusUpdatePage = () => {
     setInstallments,
     paymentType,
     setPaymentType,
-    totalPaidSoFar
+    totalPaidSoFar,
+    maxInstallments: selectedCourse?.maxInstallments,
+    onMaxReached: (max) => toast.warning(`Maximum of ${max} future installments allowed for this course.`)
   });
+
+  const minTokenRequired = selectedCourse ? parseFloat(selectedCourse.minTokenAmount || 500) : 500;
+  const isCommitmentTooLow = ['CONVERTED', 'PAID', 'EMI'].includes(selectedStatus?.toUpperCase()) && 
+                             selectedCourse && 
+                             parseFloat(initialAmount || 0) < minTokenRequired;
 
   const init = useCallback(async () => {
     try {
@@ -165,7 +173,7 @@ const LeadStatusUpdatePage = () => {
   // Sync course when fee data loads
   useEffect(() => {
     if (lead?.courseId && courses.length > 0 && !selectedCourse) {
-      const course = courses.find(c => c.id === lead.courseId);
+      const course = courses.find(c => String(c.id) === String(lead.courseId));
       if (course) setSelectedCourse(course);
     }
   }, [lead, courses, selectedCourse]);
@@ -175,12 +183,37 @@ const LeadStatusUpdatePage = () => {
     setSelectedCourse(course);
     if (course) {
       setTotalAmount(course.baseFee);
-      setDiscount(0);
+      setDiscount('');
       setInitialAmount(course.minTokenAmount || 500);
     }
   };
 
 
+
+  const copyToClipboard = (text) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text);
+      toast.success('Payment Link Copied!');
+    } else {
+      // Fallback for non-HTTPS environments
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      textArea.style.top = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        toast.success('Payment Link Copied! (Fallback)');
+      } catch (err) {
+        console.error('Fallback copy failed', err);
+        toast.error('Failed to copy. Please copy manually.');
+      }
+      document.body.removeChild(textArea);
+    }
+  };
 
   const handleOcrData = (data) => {
     if (data.success) {
@@ -191,6 +224,10 @@ const LeadStatusUpdatePage = () => {
   };
 
   const handleGeneratePaymentLink = async () => {
+    if (isCommitmentTooLow) {
+      return toast.error(`Commitment cannot be less than the minimum token amount (₹${minTokenRequired.toLocaleString()}) configured for this course.`);
+    }
+
     // 1. Accounting Validation Check
     if (!isMatch && !(feeStructureExists && sumOfParts <= (Number(discountedTotal) - Number(totalPaidSoFar)) + 1)) {
       return toast.error("Accounting Mismatch: Resolve settlement balance before generating link.");
@@ -198,53 +235,30 @@ const LeadStatusUpdatePage = () => {
 
     setIsSubmitting(true);
     try {
-      const payload = {
-        leadId: id,
-        amount: parseFloat(initialAmount),
-        businessName: INVOICERS[invoicerKey].businessName,
-        businessAddress: INVOICERS[invoicerKey].businessAddress,
-        businessContact: INVOICERS[invoicerKey].businessContact,
-        businessEmail: INVOICERS[invoicerKey].businessEmail,
-        taxId: INVOICERS[invoicerKey].taxId,
-        feeStructure: {
-          totalAmount: parseFloat(totalAmount),
-          discount: parseFloat(discount),
-          paymentType,
-          installments: installments.map(inst => {
-            const custom = INVOICERS[inst.invoicerKey || 'nexus'];
-            return {
-              amount: parseFloat(inst.amount),
-              dueDate: inst.dueDate,
-              businessName: custom.businessName,
-              businessAddress: custom.businessAddress,
-              businessContact: custom.businessContact,
-              businessEmail: custom.businessEmail,
-              taxId: custom.taxId
-            };
-          })
-        }
-      };
-
-      const res = await associateService.generatePaymentLink(payload);
+      const res = await leadsApi.createCashfreeOrder(
+        id,
+        parseFloat(initialAmount),
+        paymentType,
+        installments.map(inst => ({
+          amount: parseFloat(inst.amount),
+          dueDate: inst.dueDate
+        })),
+        parseFloat(totalAmount),
+        discount ? parseFloat(discount) : 0
+      );
       
       // Success check - handle various backend response formats
-      const link = res.data?.paymentUrl || res.data?.link || res.value?.paymentUrl;
+      const link = res?.payment_url || res?.paymentUrl || res?.link;
       
       if (link) {
         setGeneratedLink(link);
-        toast.success("Payment Link Generated & Propagated");
-        
-        // 2. AUTOMATIC STATUS TRANSITION
-        // After generating link, we automatically commit the status update to the pipeline
-        // Use a synthetic event to trigger the existing submission logic
-        const syntheticEvent = { preventDefault: () => {} };
-        await handleSubmit(syntheticEvent);
+        toast.success("Payment Link Generated successfully!");
       } else {
         throw new Error("No link returned from gateway");
       }
     } catch (err) {
       console.error("Link Generation Error:", err);
-      toast.error(err.response?.data?.message || "Gateway Initiation Failed");
+      toast.error(err.response?.data?.message || err.message || "Gateway Initiation Failed");
     } finally {
       setIsSubmitting(false);
     }
@@ -253,6 +267,10 @@ const LeadStatusUpdatePage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedStatus) return toast.error("Select Status Protocol");
+
+    if (['CONVERTED', 'PAID', 'EMI'].includes(selectedStatus?.toUpperCase()) && isCommitmentTooLow) {
+      return toast.error(`Commitment cannot be less than the minimum token amount (₹${minTokenRequired.toLocaleString()}) configured for this course.`);
+    }
 
     // Normalization helper to match status variants (e.g., FOLLOW_UP vs FOLLOW-UP)
     const normalize = (s) => s?.toUpperCase().replace(/[-_ ]/g, '') || '';
@@ -401,6 +419,7 @@ const LeadStatusUpdatePage = () => {
         }
       }
 
+      sessionStorage.setItem('pendingHardRefresh', 'true');
       toast.success("Protocol Updated & Tasks Scheduled");
       navigate(-1);
     } catch (err) {
@@ -491,7 +510,7 @@ const LeadStatusUpdatePage = () => {
                         </label>
                         <input 
                           type="datetime-local" 
-                          className="form-control form-control-sm rounded-3 fw-bold border-0 bg-transparent p-0" 
+                          className="form-control form-control-sm rounded-3 fw-bold mt-1" 
                           value={followUpDate} 
                           onChange={e => setFollowUpDate(e.target.value)} 
                           style={{ fontSize: '13px', minWidth: '150px' }}
@@ -573,6 +592,11 @@ const LeadStatusUpdatePage = () => {
                       {Number(initialAmount) > Number(discountedTotal) && (
                         <small className="text-danger fw-bold mt-2 d-block">Commitment cannot exceed total settlement amount.</small>
                       )}
+                      {isCommitmentTooLow && (
+                        <small className="text-danger fw-bold mt-2 d-block">
+                          Commitment cannot be less than the minimum token amount (₹{minTokenRequired.toLocaleString()}) configured for this course.
+                        </small>
+                      )}
                     </div>
 
                     <div className="row g-2 mb-4">
@@ -585,9 +609,9 @@ const LeadStatusUpdatePage = () => {
                     </div>
 
                     {paymentType === 'EMI' && (
-                      <div className="p-3 rounded-4 bg-light bg-opacity-5 border border-primary border-opacity-10 mb-4">
+                      <div className={`p-3 rounded-4 border border-primary border-opacity-10 mb-4 ${isDarkMode ? 'bg-black bg-opacity-25' : 'bg-light bg-opacity-50'}`}>
                         <div className="d-flex justify-content-between align-items-center mb-3">
-                          <span className="small fw-bold text-muted">PLAN FUTURE DUES (MAX 4)</span>
+                          <span className="small fw-bold text-muted">PLAN FUTURE DUES (MAX {selectedCourse?.maxInstallments || 4})</span>
                           <button type="button" onClick={addInstallment} className="btn btn-link btn-sm text-decoration-none">+ ADD DUE DATE</button>
                         </div>
                         {installments.map((inst, idx) => (
@@ -611,7 +635,7 @@ const LeadStatusUpdatePage = () => {
                        ) : (
                          <div className="d-flex align-items-center justify-content-center gap-2">
                            <AlertCircle size={14} />
-                           <span>MISMATCH: Commitment must match Settlement (₹{Number(Number(discountedTotal) - Number(totalPaidSoFar)).toLocaleString()})</span>
+                           <span>MISMATCH: Commitment must match Settlement (₹{Number(Math.abs(balanceRemaining)).toLocaleString()} Mismatched)</span>
                          </div>
                        )}
                     </div>
@@ -663,23 +687,72 @@ const LeadStatusUpdatePage = () => {
                           </div>
                         </div>
 
+                        {/* Copyable Payment Link Card */}
+                        {generatedLink && (
+                          <div className="mt-4 p-4 rounded-4 border border-success border-opacity-20 bg-success bg-opacity-5 animate-scale-in text-center">
+                            <h6 className="fw-black text-success text-uppercase mb-2" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>SECURE GATEWAY PAYMENT LINK</h6>
+                            <div className="d-flex align-items-center justify-content-between mb-3 bg-black bg-opacity-20 p-3 rounded-3 border border-secondary border-opacity-10">
+                              <span className="text-truncate small text-muted text-start pe-2" style={{ maxWidth: '80%' }}>{generatedLink}</span>
+                              <button 
+                                type="button" 
+                                onClick={() => {
+                                  copyToClipboard(generatedLink);
+                                }}
+                                className="btn btn-sm btn-link p-0 text-success text-decoration-none d-flex align-items-center gap-1 fw-bold"
+                              >
+                                <Copy size={14} />
+                                <span>COPY</span>
+                              </button>
+                            </div>
+                            <div className="d-flex gap-2">
+                              <a 
+                                href={generatedLink} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="btn btn-success flex-fill py-2 rounded-3 fw-bold small d-flex align-items-center justify-content-center gap-2"
+                              >
+                                <ExternalLink size={14} />
+                                <span>OPEN SECURE LINK</span>
+                              </a>
+                              <a 
+                                href={`https://api.whatsapp.com/send?phone=${lead?.mobile ? lead.mobile.replace(/[^0-9]/g, '') : ''}&text=${encodeURIComponent(`Hello ${lead?.name || 'Student'},\n\nPlease complete your enrollment payment using this secure link: ${generatedLink}`)}`}
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="btn btn-outline-success flex-fill py-2 rounded-3 fw-bold small d-flex align-items-center justify-content-center gap-2"
+                              >
+                                <MessageSquare size={14} />
+                                <span>SHARE ON WHATSAPP</span>
+                              </a>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Dynamic QR Display */}
                         {showQr && (
-                          <div className="mt-4 p-4 rounded-4 bg-white border border-primary border-opacity-10 text-center animate-scale-in">
-                            <div className="d-flex justify-content-center mb-3">
-                              <QRCodeCanvas 
-                                value={`upi://pay?pa=gyantrix@upi&pn=Gyantrix&am=${initialAmount}&cu=INR`} 
-                                size={180}
-                                level="H"
-                                includeMargin={true}
-                              />
-                            </div>
-                            <h6 className="fw-black text-primary text-uppercase mb-1" style={{ fontSize: '12px' }}>Scan to Pay ₹{Number(initialAmount).toLocaleString()}</h6>
-                            <div className="d-flex align-items-center justify-content-center gap-1 text-muted extra-small mb-0 fw-bold">
-                              <span>UPI ID:</span>
-                              <span className="text-primary">gyantrix@upi</span>
-                            </div>
-                            <p className="text-muted small mb-0 mt-1 opacity-50" style={{ fontSize: '8px' }}>Commitment Protocol: {lead?.name}</p>
+                          <div className={`mt-4 p-4 rounded-4 border border-primary border-opacity-10 text-center animate-scale-in ${isDarkMode ? 'bg-black bg-opacity-25' : 'bg-white'}`}>
+                            {isCommitmentTooLow ? (
+                              <div className="text-danger fw-bold py-3">
+                                <AlertCircle size={32} className="mx-auto mb-2 d-block" />
+                                <span>Commitment too low. Enforce minimum token amount (₹{minTokenRequired.toLocaleString()}) to generate QR.</span>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="d-flex justify-content-center mb-3">
+                                  <QRCodeCanvas 
+                                    value={`upi://pay?pa=gyantrix@upi&pn=Gyantrix&am=${initialAmount}&cu=INR`} 
+                                    size={180}
+                                    level="H"
+                                    includeMargin={true}
+                                  />
+                                </div>
+                                <h6 className="fw-black text-primary text-uppercase mb-1" style={{ fontSize: '12px' }}>Scan to Pay ₹{Number(initialAmount).toLocaleString()}</h6>
+                                <div className="d-flex align-items-center justify-content-center gap-1 text-muted extra-small mb-0 fw-bold">
+                                  <span>UPI ID:</span>
+                                  <span className="text-primary">gyantrix@upi</span>
+                                </div>
+                                <p className="text-muted small mb-0 mt-1 opacity-50" style={{ fontSize: '8px' }}>Commitment Protocol: {lead?.name}</p>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
@@ -689,7 +762,7 @@ const LeadStatusUpdatePage = () => {
 
                 {/* Manual Payment Section */}
                 {isManualPayment && (
-                  <div className="p-4 rounded-4 border border-secondary border-opacity-10 bg-white shadow-sm">
+                  <div className={`p-4 rounded-4 border border-secondary border-opacity-10 shadow-sm ${isDarkMode ? 'bg-surface' : 'bg-white'}`}>
                     <h6 className="fw-black text-uppercase tracking-wider mb-4 d-flex align-items-center gap-2">
                       <Shield size={18} className="text-primary" /> MANUAL PAYMENT VERIFICATION
                     </h6>
@@ -731,8 +804,8 @@ const LeadStatusUpdatePage = () => {
 
                 <button 
                   type="submit" 
-                  disabled={isSubmitting || (['CONVERTED', 'PAID', 'EMI'].includes(selectedStatus?.toUpperCase()) && !isMatch)} 
-                  className={`w-100 py-3 rounded-pill fw-black text-uppercase tracking-widest shadow-glow border-0 transition-all ${isSubmitting ? 'bg-secondary opacity-50' : (selectedStatus === 'CONVERTED' && !isMatch ? 'bg-danger bg-opacity-25 text-muted' : 'ui-btn-primary')}`}
+                  disabled={isSubmitting || (['CONVERTED', 'PAID', 'EMI'].includes(selectedStatus?.toUpperCase()) && !isMatch) || isCommitmentTooLow} 
+                  className={`w-100 py-3 rounded-pill fw-black text-uppercase tracking-widest shadow-glow border-0 transition-all ${isSubmitting ? 'bg-secondary opacity-50' : ((['CONVERTED', 'PAID', 'EMI'].includes(selectedStatus?.toUpperCase()) && (!isMatch || isCommitmentTooLow)) ? 'bg-danger bg-opacity-25 text-muted' : 'ui-btn-primary')}`}
                   style={{ minHeight: '56px' }}
                 >
                   {isSubmitting ? (

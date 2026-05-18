@@ -20,8 +20,9 @@ export const useTasks = (filters = {}, options = {}) => {
     queryKey: ['tasks', memoizedFilters],
     queryFn: ({ signal }) => taskService.fetchTasks(memoizedFilters, signal),
     select: (res) => (res?.data || []),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0, // Real-time immediate stale
     refetchOnWindowFocus: true,
+    refetchInterval: 4000, // Poll every 4 seconds to sync tasks list
     enabled,
     placeholderData: (previousData) => previousData
   });

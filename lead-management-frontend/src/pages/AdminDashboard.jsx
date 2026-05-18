@@ -246,11 +246,13 @@ const AdminDashboard = () => {
         if (statusFilter === 'Converted') {
           return ['CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(status);
         } else if (statusFilter === 'Follow Up') {
-          return !['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(status);
-        } else if (statusFilter === 'New') {
-          return ['NEW', 'WORKING'].includes(status);
+          return !['OPEN', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED', 'DNP', 'SWITCH_OFF', 'SWITCHED_OFF', 'OUT_OF_COVERAGE', 'OUT_OF_COVERAGE_AREA', 'WRONG_NUMBER', 'NOT_RESPONDING'].includes(status);
+        } else if (statusFilter === 'Open') {
+          return ['OPEN', 'WORKING'].includes(status);
         } else if (statusFilter === 'Lost') {
           return ['LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(status);
+        } else if (statusFilter === 'DNP') {
+          return ['DNP', 'SWITCH_OFF', 'SWITCHED_OFF', 'OUT_OF_COVERAGE', 'OUT_OF_COVERAGE_AREA', 'WRONG_NUMBER', 'NOT_RESPONDING'].includes(status);
         }
         return true;
       });
@@ -313,12 +315,13 @@ const AdminDashboard = () => {
           <div className="d-flex flex-column gap-3">
             <SystemStatGrid>
               {[
-                { label: 'New', value: ((statusDistribution.NEW || 0) + (statusDistribution.WORKING || 0)), color: 'text-primary' },
+                { label: 'Open', value: ((statusDistribution.OPEN || 0) + (statusDistribution.WORKING || 0)), color: 'text-primary' },
                 { label: 'Follow Up', value: (Object.entries(statusDistribution || {}).reduce((acc, [k, v]) => {
-                  if (!['NEW', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED'].includes(k.toUpperCase())) return acc + v;
+                  if (!['OPEN', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED', 'DNP', 'SWITCH_OFF', 'SWITCHED_OFF', 'OUT_OF_COVERAGE', 'OUT_OF_COVERAGE_AREA', 'WRONG_NUMBER', 'NOT_RESPONDING'].includes(k.toUpperCase())) return acc + v;
                   return acc;
                 }, 0)), color: 'text-info' },
-                { label: 'Converted', value: ((statusDistribution.CONVERTED || 0) + (statusDistribution.PAID || 0) + (statusDistribution.SUCCESS || 0) + (statusDistribution.EMI || 0) + (statusDistribution.PRE_PAYMENT || 0) + (statusDistribution['PRE-PAYMENT'] || 0)), color: 'text-success' },
+                { label: 'DNP', value: (statusDistribution.DNP || 0), color: 'text-warning' },
+                { label: 'Converted', value: ((statusDistribution.CONVERTED || 0) + (statusDistribution.EMI || 0) + (statusDistribution.PRE_PAYMENT || 0) + (statusDistribution['PRE-PAYMENT'] || 0)), color: 'text-success' },
                 { label: 'Lost', value: ((statusDistribution.LOST || 0) + (statusDistribution.REJECTED || 0) + (statusDistribution.DEAD || 0) + (statusDistribution.NOT_INTERESTED || 0)), color: 'text-danger' }
               ].map((card, i) => (
                 <SystemStatCard

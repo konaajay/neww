@@ -424,7 +424,7 @@ const AttendanceGovernance = ({ offices = [] }) => {
                                     </td>
                                     <td>
                                         <div className="d-flex flex-column gap-1">
-                                            <span className="fw-bold small">{p.shiftStartTime} - {p.longBreakEndTime} (Logic Hub)</span>
+                                            <span className="fw-bold small">{p.shiftStartTime || '09:30'} - {p.shiftEndTime || '18:30'} (Logic Hub)</span>
                                             <div className="d-flex gap-2">
                                                 <span className="badge bg-surface border border-info border-opacity-25 text-info fw-black" style={{ fontSize: '8px' }}>Grace: {p.gracePeriodMinutes}m</span>
                                                 <span className="badge bg-surface border border-success border-opacity-25 text-success fw-black" style={{ fontSize: '8px' }}>Full: {p.minimumWorkMinutes}m</span>

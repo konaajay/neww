@@ -18,6 +18,7 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
   const itemsPerPage = 20;
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [reschedulingTask, setReschedulingTask] = useState(null);
+  const [emiPromptTask, setEmiPromptTask] = useState(null);
   const { activeCall, startCall: logActiveCall } = useAuth();
   const [isStartingCall, setIsStartingCall] = useState(false);
   const navigate = useNavigate();
@@ -301,7 +302,7 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
                         if (['CONVERTED', 'PAID', 'SUCCESS'].includes(s)) colorClass = 'success';
                         else if (['LOST', 'REJECTED', 'NOT_INTERESTED'].includes(s)) colorClass = 'danger';
                         else if (['FOLLOW_UP', 'EMI', 'BUSY'].includes(s)) colorClass = 'warning';
-                        else if (['NEW', 'CONTACTED'].includes(s)) colorClass = 'info';
+                        else if (['OPEN', 'CONTACTED'].includes(s)) colorClass = 'info';
                         
                         return (
                           <span className={`fw-black text-uppercase text-${colorClass}`} style={{ fontSize: '10px', letterSpacing: '0.5px' }}>
@@ -346,7 +347,18 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
                           style={{ fontSize: '10px' }} 
                           onClick={(e) => { 
                             e.stopPropagation(); 
-                            if (task.lead?.id) {
+                            const isEmiOrPayment = 
+                              task.taskType === 'EMI_COLLECTION' || 
+                              task.title?.toUpperCase().includes('EMI') || 
+                              task.title?.toUpperCase().includes('PAYMENT') || 
+                              task.title?.toUpperCase().includes('INSTALLMENT') || 
+                              task.description?.toUpperCase().includes('PAYMENT') || 
+                              task.description?.toUpperCase().includes('INSTALLMENT') ||
+                              task.lead?.status === 'PRE_PAYMENT' ||
+                              task.lead?.status?.startsWith('POST_PAYMENT');
+                            if (isEmiOrPayment && task.lead?.id) {
+                              setEmiPromptTask(task);
+                            } else if (task.lead?.id) {
                               navigate(`/leads/${task.lead.id}/status-update`);
                             } else {
                               handleUpdateTaskStatus(task.id, 'COMPLETED');
@@ -412,12 +424,181 @@ const TaskBoard = ({ leads = [], theme = 'light', onUpdateStatus, loadLeads, use
         onTaskCreated={() => { setShowTaskModal(false); loadTasks(); }}
         leads={leads}
       />
+      {emiPromptTask && (
+        <EmiTaskActionModal
+          task={emiPromptTask}
+          theme={theme}
+          onClose={() => setEmiPromptTask(null)}
+          onComplete={async (taskId) => {
+            await updateStatus({ taskId, status: 'COMPLETED' });
+            loadTasks();
+          }}
+          onReschedule={async (task, dueDate, note) => {
+            await updateStatus({ taskId: task.id, status: 'COMPLETED' });
+            const taskPayload = {
+              title: task.title,
+              description: note || (task.title?.toUpperCase().includes('EMI') ? `Rescheduled EMI collection: ${task.title}` : `Rescheduled follow-up: ${task.title}`),
+              taskType: task.taskType || 'EMI_COLLECTION',
+              dueDate: `${dueDate}T09:00:00`
+            };
+            await createTask({ leadId: task.lead.id, data: taskPayload });
+            loadTasks();
+          }}
+        />
+      )}
 
       <style>{`
         .extra-small { font-size: 8px; }
         .animate-spin { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
+    </div>
+  );
+};
+
+const EmiTaskActionModal = ({ task, onClose, onComplete, onReschedule, theme }) => {
+  const isDarkMode = theme === 'dark';
+  const [isRescheduling, setIsRescheduling] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleNote, setRescheduleNote] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  if (!task) return null;
+
+  const handleComplete = async () => {
+    setLoading(true);
+    try {
+      await onComplete(task.id);
+      toast.success("Payment registered. Task marked as completed.");
+      onClose();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to complete task");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReschedule = async (e) => {
+    e.preventDefault();
+    if (!rescheduleDate) {
+      toast.error("Please select a reschedule date");
+      return;
+    }
+    setLoading(true);
+    try {
+      await onReschedule(task, rescheduleDate, rescheduleNote);
+      toast.success("Payment follow-up rescheduled successfully.");
+      onClose();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to reschedule task");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 11000 }}>
+      <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: '500px' }}>
+         <div className={`modal-content border-0 shadow-2xl rounded-4 overflow-hidden ${isDarkMode ? 'bg-dark border-secondary border-opacity-10 text-white' : 'bg-white text-dark'}`}>
+          
+          {/* Header */}
+          <div className={`modal-header border-bottom p-4 d-flex align-items-center justify-content-between ${isDarkMode ? 'border-secondary border-opacity-10 bg-surface bg-opacity-30' : 'border-light bg-light'}`}>
+            <div className="d-flex align-items-center gap-2">
+              <Clock size={20} className="text-primary opacity-75" />
+              <div>
+                <h4 className={`fw-black mb-0 tracking-tight ${isDarkMode ? 'text-white' : 'text-dark'}`} style={{ fontSize: '1.25rem' }}>Payment Follow-up Action</h4>
+                <p className="text-muted small fw-bold mb-0 text-uppercase tracking-widest" style={{ fontSize: '8px' }}>Task ID: L-{task.id}</p>
+              </div>
+            </div>
+            <button 
+              type="button" 
+              className={`btn-close ${isDarkMode ? 'btn-close-white' : ''}`} 
+              onClick={onClose}
+              aria-label="Close"
+            ></button>
+          </div>
+
+          <div className="modal-body p-4">
+            <div className="mb-4">
+              <h6 className="text-muted text-uppercase tracking-widest small mb-1" style={{ fontSize: '10px' }}>Current Task</h6>
+              <div className={`fw-black fs-5 ${isDarkMode ? 'text-white' : 'text-dark'}`}>{task.title}</div>
+              <p className="text-muted small mt-1">{task.description || 'No description provided'}</p>
+            </div>
+
+            {!isRescheduling ? (
+              <div className="d-flex flex-column gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={handleComplete}
+                  disabled={loading}
+                  className="btn btn-success py-3 rounded-pill fw-black text-uppercase d-flex align-items-center justify-content-center gap-2 hover-scale transition-all border-0 shadow-sm"
+                  style={{ letterSpacing: '2px', fontSize: '12px' }}
+                >
+                  <CheckSquare size={16} />
+                  Payment Completed (Finish Task)
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => setIsRescheduling(true)}
+                  disabled={loading}
+                  className="btn btn-outline-info py-3 rounded-pill fw-black text-uppercase d-flex align-items-center justify-content-center gap-2 hover-scale transition-all shadow-sm"
+                  style={{ letterSpacing: '2px', fontSize: '12px' }}
+                >
+                  <Calendar size={16} />
+                  Reschedule Follow-up
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleReschedule} className="d-flex flex-column gap-3 mt-3">
+                <div>
+                  <label className="form-label small fw-bold text-uppercase text-muted tracking-widest" style={{ fontSize: '10px' }}>Reschedule Due Date</label>
+                  <input
+                    type="date"
+                    className={`form-control py-3 px-3 rounded-3 ${isDarkMode ? 'bg-dark text-white border-secondary border-opacity-50' : 'bg-light text-dark border-light'}`}
+                    value={rescheduleDate}
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => setRescheduleDate(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label small fw-bold text-uppercase text-muted tracking-widest" style={{ fontSize: '10px' }}>Reschedule Notes</label>
+                  <textarea
+                    className={`form-control py-3 px-3 rounded-3 ${isDarkMode ? 'bg-dark text-white border-secondary border-opacity-50' : 'bg-light text-dark'}`}
+                    rows="3"
+                    placeholder="Enter reason for reschedule..."
+                    value={rescheduleNote}
+                    onChange={(e) => setRescheduleNote(e.target.value)}
+                  ></textarea>
+                </div>
+
+                <div className="d-flex gap-2 mt-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsRescheduling(false)}
+                    className={`btn py-3 flex-fill rounded-pill fw-bold text-uppercase ${isDarkMode ? 'btn-outline-secondary text-white' : 'btn-outline-secondary'}`}
+                    style={{ fontSize: '11px' }}
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn btn-primary py-3 flex-fill rounded-pill fw-black text-uppercase text-white border-0"
+                    style={{ fontSize: '11px' }}
+                  >
+                    Confirm Reschedule
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

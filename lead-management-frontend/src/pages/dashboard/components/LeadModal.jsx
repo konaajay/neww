@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { X, UserPlus, Upload, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { X, UserPlus, Upload, ChevronLeft, ChevronRight, Loader2, Database } from 'lucide-react';
 import LeadForm from '../../../components/LeadForm';
 import BulkIngestion from '../../../components/BulkIngestion';
+import OldLeadsIngestion from '../../../components/OldLeadsIngestion';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 
 const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) => {
     const { user } = useAuth();
-    const [mode, setMode] = useState(null); // null = CHOICE, 'SINGLE', 'BULK'
+    const [mode, setMode] = useState(null); // null = CHOICE, 'SINGLE', 'BULK', 'OLD_LEADS'
     const [isTransitioning, setIsTransitioning] = useState(false);
     const getTerminalTitle = () => {
         return "Add New Leads";
@@ -59,6 +60,9 @@ const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) =
         } else if (mode === 'BULK') {
             title = "Bulk Add";
             sub = "Upload excel/csv file";
+        } else if (mode === 'OLD_LEADS') {
+            title = "Old Leads CSV";
+            sub = "Ingest legacy data with status mapping";
         }
 
         return (
@@ -140,10 +144,27 @@ const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) =
             );
         }
 
+        if (mode === 'OLD_LEADS') {
+            return (
+                <div className={`animate-fade-in ${isDarkMode ? 'bg-slate-900' : 'bg-white'}`}>
+                    <OldLeadsIngestion
+                        onSuccess={() => {
+                            if (typeof onSuccess === 'function') onSuccess();
+                            setTimeout(() => {
+                                handleClose();
+                            }, 1500);
+                        }}
+                    />
+                </div>
+            );
+        }
+
+        const isAdminOrManager = user?.role === 'ADMIN' || user?.role === 'ROLE_ADMIN' || user?.role === 'MANAGER';
+
         return (
             <div className={`p-5 animate-fade-in h-100 bg-card`}>
                 <div className="row g-4 justify-content-center pb-4">
-                    <div className="col-md-6">
+                    <div className={isAdminOrManager ? "col-md-4" : "col-md-6"}>
                         <div
                             onClick={() => handleModeChange('SINGLE')}
                             className="p-5 rounded-4 border h-100 d-flex flex-column hover-lift cursor-pointer transition-all"
@@ -164,7 +185,7 @@ const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) =
                             </div>
                         </div>
                     </div>
-                    <div className="col-md-6">
+                    <div className={isAdminOrManager ? "col-md-4" : "col-md-6"}>
                         <div
                             onClick={() => handleModeChange('BULK')}
                             className="p-5 rounded-4 border h-100 d-flex flex-column hover-lift cursor-pointer transition-all"
@@ -185,6 +206,29 @@ const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) =
                             </div>
                         </div>
                     </div>
+                    {isAdminOrManager && (
+                        <div className="col-md-4">
+                            <div
+                                onClick={() => handleModeChange('OLD_LEADS')}
+                                className="p-5 rounded-4 border h-100 d-flex flex-column hover-lift cursor-pointer transition-all"
+                                style={{ 
+                                    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : '#f8fafc',
+                                    borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                                    cursor: 'pointer',
+                                    minHeight: '320px'
+                                }}
+                            >
+                                <div className="p-4 bg-info bg-opacity-10 text-info rounded-4 d-inline-block mb-4 shadow-glow group-hover:scale-110 transition-all" style={{width: 'fit-content'}}>
+                                    <Database size={48} strokeWidth={1.5} />
+                                </div>
+                                <h3 className={`fw-black mb-3 text-uppercase tracking-wider text-main`}>Old Leads</h3>
+                                <p className="text-muted mb-4 opacity-75 fw-bold"> Import legacy CSV with full mappings </p>
+                                <div className="d-flex align-items-center text-info small tracking-widest gap-2 mt-auto fw-black">
+                                    OPEN INGEST <ChevronRight size={18} />
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         );
@@ -207,7 +251,7 @@ const LeadModal = ({ isOpen, onClose, onAddLead, onSuccess, associates = [] }) =
             <div
                 className={`modal-dialog modal-dialog-centered w-100 h-auto transition-all duration-500`}
                 style={{
-                    maxWidth: !mode ? '600px' : '650px',
+                    maxWidth: !mode ? (user?.role === 'ADMIN' || user?.role === 'ROLE_ADMIN' || user?.role === 'MANAGER' ? '900px' : '600px') : '650px',
                     pointerEvents: 'all',
                     zIndex: 1600
                 }}

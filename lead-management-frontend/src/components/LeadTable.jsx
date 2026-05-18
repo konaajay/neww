@@ -17,7 +17,7 @@ import { toast } from 'react-toastify';
 const StatusDropdown = ({ lead, pipelineStages, onChange, getStatusColorClass }) => {
   const { isDarkMode } = useTheme();
 
-  const currentStage = pipelineStages.find(s => s.statusValue === (lead.status || 'NEW')) || pipelineStages[0];
+  const currentStage = pipelineStages.find(s => s.statusValue === (lead.status || 'OPEN')) || pipelineStages[0];
   const label = (lead.status === 'CONVERTED' || lead.paymentStatus) 
     ? (lead.paymentStatus?.replace('_', ' ') || 'CONVERTED') 
     : currentStage.label;
@@ -85,12 +85,16 @@ const LeadTable = ({
   }, [leads.length, itemsPerPage]);
 
   const pipelineStages = (propsPipelineStages && propsPipelineStages.length > 0) ? propsPipelineStages : [
-    { label: 'New', statusValue: 'NEW', color: 'primary', isRoot: true },
-    { label: 'Contacted', statusValue: 'CONTACTED', color: 'info' },
-    { label: 'FollowUp', statusValue: 'FOLLOW_UP', color: 'warning' },
+    { label: 'Open', statusValue: 'OPEN', color: 'primary', isRoot: true },
+    { label: 'Switch Off', statusValue: 'SWITCH_OFF', color: 'warning' },
+    { label: 'Out of Coverage', statusValue: 'OUT_OF_COVERAGE', color: 'warning' },
+    { label: 'Wrong Number', statusValue: 'WRONG_NUMBER', color: 'warning' },
+    { label: 'Not Responding', statusValue: 'NOT_RESPONDING', color: 'warning' },
+    { label: 'Follow-up', statusValue: 'FOLLOW_UP', color: 'warning' },
+    { label: 'Follow-up 1', statusValue: 'FOLLOW_UP_1', color: 'warning' },
     { label: 'Interested', statusValue: 'INTERESTED', color: 'primary' },
+    { label: 'Converted', statusValue: 'CONVERTED', color: 'success' },
     { label: 'Lost', statusValue: 'LOST', color: 'danger' },
-    { label: 'Prepayment', statusValue: 'CONVERTED', color: 'success' },
   ];
 
   const getStatusColorClass = (status) => {
@@ -99,12 +103,20 @@ const LeadTable = ({
     if (s.includes('PAID_INSTALLMENT') || s === 'FULL_PAID' || s === 'CONVERTED' || s === 'PAID' || s === 'SUCCESS') return 'bg-success text-white px-3 py-1 rounded-pill shadow-success';
     
     switch(s) {
-      case 'NEW': return 'text-primary';
+      case 'OPEN': return 'text-primary';
       case 'CONTACTED': return 'text-info';
       case 'FOLLOW_UP': return 'text-warning';
       case 'INTERESTED': return 'text-primary';
       case 'LOST': return 'text-danger';
       case 'EMI': return 'text-info';
+      case 'DNP':
+      case 'SWITCH_OFF':
+      case 'SWITCHED_OFF':
+      case 'OUT_OF_COVERAGE':
+      case 'OUT_OF_COVERAGE_AREA':
+      case 'WRONG_NUMBER':
+      case 'NOT_RESPONDING':
+        return 'text-warning fw-bold';
       case 'PRE_PAYMENT':
       case 'PRE-PAYMENT':
         return 'text-primary fw-black';
@@ -307,7 +319,7 @@ const LeadTable = ({
                           className="w-100 bg-surface bg-opacity-10 py-1 px-2 fw-black text-uppercase text-center text-muted border border-white border-opacity-5"
                           style={{ fontSize: '10px', borderRadius: '8px', cursor: 'not-allowed', opacity: 0.6 }}
                         >
-                          {pipelineStages.find(s => s.statusValue === (lead.status || 'NEW'))?.label || lead.status}
+                          {pipelineStages.find(s => s.statusValue === (lead.status || 'OPEN'))?.label || lead.status}
                         </div>
                         <div className="text-muted fw-bold opacity-30 mt-1" style={{ fontSize: '7px' }}>ASSIGNMENT REQUIRED</div>
                       </div>

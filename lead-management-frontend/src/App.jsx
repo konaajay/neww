@@ -1,16 +1,17 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,
       retry: 1,
-      staleTime: 5 * 60 * 1000,
+      staleTime: 0, // Real-time immediate stale
     },
   },
 });
@@ -59,6 +60,20 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   return children;
 };
 
+const AutoHardRefresher = () => {
+  const location = useLocation();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (sessionStorage.getItem('pendingHardRefresh') === 'true') {
+      sessionStorage.removeItem('pendingHardRefresh');
+      queryClient.invalidateQueries();
+    }
+  }, [location, queryClient]);
+
+  return null;
+};
+
 function App() {
   const { user, loading } = useAuth();
 
@@ -78,6 +93,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <AutoHardRefresher />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
@@ -177,6 +193,7 @@ function App() {
           closeOnClick
           rtl={false}
           theme="dark"
+          style={{ zIndex: 99999 }}
         />
       </ThemeProvider>
     </QueryClientProvider>
