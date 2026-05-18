@@ -144,6 +144,14 @@ function App() {
                 </ProtectedRoute>
               } 
             />
+            <Route 
+              path="/invoice/:leadId/:paymentId" 
+              element={
+                <ProtectedRoute>
+                  <InvoicePage />
+                </ProtectedRoute>
+              } 
+            />
 
             <Route 
               path="/" 

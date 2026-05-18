@@ -1,11 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import paymentService from '../services/paymentService';
-import { Printer, Share2, ArrowLeft } from 'lucide-react';
+import { Printer, Share2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
+// Number to Words Converter for Receipt Authenticity
+const numberToWords = (num) => {
+    if (!num || isNaN(num)) return '*** ZERO RUPEES ONLY ***';
+    const a = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+    const b = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+    const g = ['', 'thousand', 'million', 'billion', 'trillion'];
+    
+    const helper = (n) => {
+        let str = '';
+        if (n >= 100) {
+            str += a[Math.floor(n / 100)] + ' hundred ';
+            n %= 100;
+        }
+        if (n >= 20) {
+            str += b[Math.floor(n / 10)] + ' ';
+            n %= 10;
+        }
+        if (n > 0) {
+            str += a[n] + ' ';
+        }
+        return str.trim();
+    };
+
+    let n = Math.floor(num);
+    if (n === 0) return '*** ZERO RUPEES ONLY ***';
+    
+    let parts = [];
+    let i = 0;
+    while (n > 0) {
+        let rem = n % 1000;
+        if (rem > 0) {
+            let s = helper(rem);
+            if (i > 0) s += ' ' + g[i];
+            parts.unshift(s);
+        }
+        n = Math.floor(n / 1000);
+        i++;
+    }
+    return '*** ' + parts.join(' ').toUpperCase() + ' RUPEES ONLY ***';
+};
+
 const InvoicePage = () => {
-    const { leadId } = useParams();
+    const { leadId, paymentId } = useParams();
     const [invoiceData, setInvoiceData] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -13,7 +54,12 @@ const InvoicePage = () => {
         const fetchInvoice = async () => {
             try {
                 setLoading(true);
-                const res = await paymentService.fetchInvoiceByLead(leadId);
+                let res;
+                if (paymentId) {
+                    res = await paymentService.fetchInvoiceByPaymentId(paymentId);
+                } else {
+                    res = await paymentService.fetchInvoiceByLead(leadId);
+                }
                 setInvoiceData(res);
             } catch (err) {
                 toast.error('Failed to retrieve invoice.');
@@ -22,7 +68,7 @@ const InvoicePage = () => {
             }
         };
         fetchInvoice();
-    }, [leadId]);
+    }, [leadId, paymentId]);
 
     const handlePrint = () => {
         window.print();
@@ -62,149 +108,184 @@ const InvoicePage = () => {
 
     return (
         <div className="min-vh-100 custom-scroll" style={{ background: '#020617', padding: 'min(5vh, 40px) 15px', height: '100vh', overflowY: 'auto' }}>
+            {/* Float Controls (Hidden in Print) */}
+            <div className="no-print floating-actions position-fixed bottom-0 start-50 translate-middle-x mb-4 d-flex gap-2 gap-sm-3 z-3">
+                <button onClick={handlePrint} className="btn btn-primary btn-lg px-4 rounded-pill shadow-lg fw-black text-uppercase tracking-widest" style={{ fontSize: '12px' }}>
+                    <Printer size={18} className="me-2" /> PRINT
+                </button>
+                <button onClick={handleShare} className="btn btn-dark btn-lg px-4 rounded-pill shadow-lg fw-black text-uppercase tracking-widest" style={{ fontSize: '12px' }}>
+                    <Share2 size={18} className="me-2" /> SHARE
+                </button>
+                <button onClick={() => window.close()} className="btn btn-secondary btn-lg px-4 rounded-pill shadow-lg fw-black text-uppercase tracking-widest" style={{ fontSize: '12px' }}>
+                    CLOSE
+                </button>
+            </div>
+
             <div
                 id="printable-invoice"
-                className="invoice-container shadow-2xl mx-auto"
+                className="invoice-container mx-auto shadow-lg"
                 style={{
                     width: '100%',
-                    maxWidth: '850px',
+                    maxWidth: '720px',
                     background: '#fff',
-                    borderRadius: '4px',
                     color: '#000',
                     position: 'relative',
+                    border: '2px solid #000',
+                    padding: '24px',
+                    fontFamily: '"Courier New", Courier, monospace',
                     marginBottom: '100px'
                 }}
             >
-                {/* Float Controls (Hidden in Print) */}
-                <div className="no-print floating-actions position-fixed bottom-0 start-50 translate-middle-x mb-4 d-flex gap-2 gap-sm-3 z-3">
-                    <button onClick={handlePrint} className="btn btn-primary btn-lg px-4 rounded-pill shadow-lg fw-black text-uppercase tracking-widest" style={{ fontSize: '12px' }}>
-                        <Printer size={18} className="me-2" /> PRINT
-                    </button>
-                    <button onClick={handleShare} className="btn btn-dark btn-lg px-4 rounded-pill shadow-lg fw-black text-uppercase tracking-widest" style={{ fontSize: '12px' }}>
-                        <Share2 size={18} className="me-2" /> SHARE
-                    </button>
-                    <button onClick={() => window.close()} className="btn btn-secondary btn-lg px-4 rounded-pill shadow-lg fw-black text-uppercase tracking-widest" style={{ fontSize: '12px' }}>
-                        CLOSE
-                    </button>
+                {/* Header / Brand Logo */}
+                <div className="text-center mb-4">
+                    <div className="fw-black fs-5 text-uppercase tracking-widest mb-2" style={{ letterSpacing: '2px', borderBottom: '2px solid #000', pb: '5px' }}>
+                        ONLINE PAYMENT RECEIPT
+                    </div>
+                    <div className="d-flex justify-content-center align-items-center gap-2 mb-2 mt-2">
+                        <img src="/logo.png" alt="Gyantrix Logo" style={{ height: '45px', width: 'auto', objectFit: 'contain' }} />
+                    </div>
+                    <div className="small fw-bold text-uppercase opacity-75">Gyantrix Academic Core Ecosystem</div>
                 </div>
 
-                {/* Title Section */}
-                <div className="invoice-header mb-4 mb-md-5 border-bottom border-secondary border-opacity-10 pb-4">
-                    <h1 className="brand-title fw-black mb-1 letter-spacing-tight">GYANTRIX</h1>
-                    <p className="text-muted text-uppercase tracking-widest small mb-0 fw-bold opacity-75">Official Core Ecosystem Receipt</p>
-                </div>
+                {/* Candidate & Program Grid Table */}
+                <table className="table table-bordered border-dark mb-0 text-start" style={{ tableLayout: 'fixed', width: '100%', fontSize: '12px' }}>
+                    <tbody>
+                        <tr>
+                            <td className="w-50 py-2 px-3 border-dark">
+                                <span className="text-muted fw-bold">Univ.Reg.Number :</span> <strong className="float-end">GY-{invoiceData.leadId || invoiceData.id}</strong>
+                            </td>
+                            <td className="w-50 py-2 px-3 border-dark">
+                                <span className="text-muted fw-bold">Program :</span> <strong className="float-end">{(invoiceData.courseName || 'Professional Program').toUpperCase()}</strong>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td className="py-2 px-3 border-dark">
+                                <span className="text-muted fw-bold">Name Of Candidate :</span> <strong>{(invoiceData.leadName || 'Unnamed Record').toUpperCase()}</strong>
+                            </td>
+                            <td className="py-2 px-3 border-dark">
+                                <span className="text-muted fw-bold">Mobile No :</span> <strong className="float-end">{invoiceData.mobile}</strong>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
 
-                {/* Meta Row */}
-                <div className="row g-4 mb-4 mb-md-5 pb-4 pb-md-5 border-bottom border-light">
-                    <div className="col-12 col-md-7">
-                        <div className="text-muted small text-uppercase fw-bold mb-2 opacity-50">Recipient Payload</div>
-                        <div className="fw-black h3 mb-1 text-break">{(invoiceData.leadName || 'Unnamed Record').toUpperCase()}</div>
-                        <div className="text-muted font-monospace small">{invoiceData.mobile}</div>
-                    </div>
+                {/* Receipt and Date Metadata */}
+                <table className="table table-bordered border-dark border-top-0 mb-0 text-start" style={{ tableLayout: 'fixed', width: '100%', fontSize: '12px' }}>
+                    <tbody>
+                        <tr className="bg-light">
+                            <td className="w-50 py-2 px-3 border-dark">
+                                <span className="fw-bold">Receipt No :</span> <strong>{invoiceData.paymentGatewayId || ('REC-' + invoiceData.id)}</strong>
+                            </td>
+                            <td className="w-50 py-2 px-3 border-dark text-end">
+                                <span className="fw-bold">Date :</span> <strong>{new Date(invoiceData.date || invoiceData.createdAt).toLocaleDateString()}</strong>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
 
-                    <div className="col-12 col-md-5 text-md-end border-md-start border-light ps-md-4">
-                        <div className="text-muted small text-uppercase fw-bold mb-2 opacity-50">Transmission Data</div>
-                        <div className="fw-bold mb-1">DATE: {new Date(invoiceData.date || invoiceData.createdAt).toLocaleDateString()}</div>
-                        <div className="text-muted small font-monospace">REF: #{invoiceData.paymentGatewayId || invoiceData.id}</div>
-                    </div>
-                </div>
-
-                {/* Table Breakdown */}
-                <div className="mb-4 mb-md-5">
-                    <div className="d-flex justify-content-between py-2 border-bottom text-muted small text-uppercase fw-black opacity-25">
-                        <span>Ledger Entry</span>
-                        <span className="d-none d-sm-inline">Credit Value</span>
-                    </div>
-
-                    <div className="d-flex flex-column flex-sm-row justify-content-between py-4 py-md-5 gap-3">
-                        <div className="d-flex flex-column">
-                            <span className="fw-bold h5 mb-1">{invoiceData.paymentType || 'OPERATIONAL SETTLEMENT'}</span>
-                            <span className="text-muted small fw-bold opacity-50">Authorized via Encryption Lead</span>
-                        </div>
-                        <strong className="h3 mb-0 fw-black text-nowrap">₹{invoiceData.amount}</strong>
-                    </div>
-
-                    <div className="d-flex justify-content-between align-items-center py-4 border-top border-dark border-3 mt-4">
-                        <span className="h5 h4-md fw-black mb-0 opacity-75">GROSS REVENUE TOTAL</span>
-                        <div className="text-end">
-                            <strong className="h2 mb-0 fw-black text-primary">₹{invoiceData.amount}</strong>
-                            <div className="text-muted small fw-bold opacity-25" style={{ fontSize: '9px' }}>* INCLUSIVE OF ALL SYSTEM CHARGES</div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Account Summary - Fee Structure */}
-                {invoiceData.totalPackageAmount && (
-                    <div className="account-summary mb-4 mb-md-5 p-4 rounded bg-light border">
-                        <h6 className="fw-black text-uppercase small tracking-widest mb-3 opacity-50">Account Summary (Fee Ledger)</h6>
-                        <div className="row g-3">
-                            <div className="col-6 col-md-3">
-                                <div className="text-muted x-small fw-bold text-uppercase mb-1" style={{ fontSize: '9px' }}>Total Package</div>
-                                <div className="fw-bold fs-5">₹{invoiceData.totalPackageAmount.toLocaleString()}</div>
-                            </div>
-                            <div className="col-6 col-md-3">
-                                <div className="text-muted x-small fw-bold text-uppercase mb-1" style={{ fontSize: '9px' }}>Paid Amount</div>
-                                <div className="fw-bold fs-5 text-success">₹{invoiceData.paidAmountSoFar.toLocaleString()}</div>
-                            </div>
-                            <div className="col-6 col-md-3">
-                                <div className="text-muted x-small fw-bold text-uppercase mb-1" style={{ fontSize: '9px' }}>Balance Due</div>
-                                <div className="fw-bold fs-5 text-danger">₹{invoiceData.balanceDue.toLocaleString()}</div>
-                            </div>
-                            {invoiceData.nextInstallmentDate && invoiceData.balanceDue > 0 && (
-                                <div className="col-6 col-md-3">
-                                    <div className="text-muted x-small fw-bold text-uppercase mb-1" style={{ fontSize: '9px' }}>Next Due</div>
-                                    <div className="fw-bold fs-6 text-primary">{new Date(invoiceData.nextInstallmentDate).toLocaleDateString()}</div>
+                {/* Account Head Breakdown */}
+                <table className="table table-bordered border-dark border-top-0 mb-0 text-center" style={{ width: '100%', fontSize: '12px' }}>
+                    <thead>
+                        <tr className="bg-light">
+                            <th className="border-dark py-2" style={{ width: '10%' }}>S.NO</th>
+                            <th className="border-dark py-2 text-start px-3" style={{ width: '60%' }}>Account Head</th>
+                            <th className="border-dark py-2 text-end px-3" style={{ width: '30%' }}>Amount (INR)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td className="border-dark py-3">1</td>
+                            <td className="border-dark py-3 text-start px-3">
+                                <span className="fw-bold">{(invoiceData.paymentType || 'TUITION FEE SETTLEMENT').toUpperCase()}</span>
+                                <div className="text-muted small mt-2" style={{ fontSize: '10px', lineHeight: '1.4' }}>
+                                    <strong>Billing Invoicer:</strong> {invoiceData.businessName || 'Gyantrix'}<br />
+                                    {invoiceData.businessAddress && <><strong>Address:</strong> {invoiceData.businessAddress}<br /></>}
+                                    {invoiceData.taxId && <span className="text-primary fw-bold">{invoiceData.taxId}</span>}
                                 </div>
+                            </td>
+                            <td className="border-dark py-3 text-end px-3 fw-bold">₹{invoiceData.amount.toLocaleString()}</td>
+                        </tr>
+                        <tr className="fw-bold bg-light">
+                            <td colSpan="2" className="border-dark py-2 text-end px-3">Total :</td>
+                            <td className="border-dark py-2 text-end px-3">₹{invoiceData.amount.toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                            <td colSpan="3" className="border-dark py-3 text-start px-3 font-monospace" style={{ fontSize: '11px', lineHeight: '1.4' }}>
+                                <span className="text-muted">In Words :</span> <strong>{numberToWords(invoiceData.amount)}</strong>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                {/* Terms and COMPUTER GENERATION Box */}
+                <table className="table table-bordered border-dark border-top-0 mb-0 text-start" style={{ tableLayout: 'fixed', width: '100%', fontSize: '10px' }}>
+                    <tbody>
+                        <tr>
+                            <td className="w-50 py-2 px-3 border-dark text-muted italic">*Terms & Conditions Apply</td>
+                            <td className="w-50 py-2 px-3 border-dark text-end text-muted italic">*Payment subject to realization</td>
+                        </tr>
+                        <tr>
+                            <td colSpan="2" className="py-2 px-3 border-dark text-center fw-bold bg-light" style={{ fontSize: '10px' }}>
+                                This is a Computer Generated Receipt. No signature is Required . Generated On . {new Date().toLocaleString()}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                {/* Account Summary (Fee Ledger) */}
+                {invoiceData.totalPackageAmount && (
+                    <table className="table table-bordered border-dark border-top-0 mb-0 text-start mt-3" style={{ tableLayout: 'fixed', width: '100%', fontSize: '11px' }}>
+                        <tbody>
+                            <tr className="bg-light">
+                                <td colSpan="3" className="py-2 px-3 border-dark text-center fw-bold text-uppercase tracking-wider" style={{ fontSize: '10px' }}>
+                                    Account Summary (Fee Ledger)
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className="py-2 px-3 border-dark">
+                                    <span className="text-muted">Total Package:</span> <strong className="float-end">₹{invoiceData.totalPackageAmount.toLocaleString()}</strong>
+                                </td>
+                                <td className="py-2 px-3 border-dark">
+                                    <span className="text-muted">Paid So Far:</span> <strong className="float-end text-success">₹{invoiceData.paidAmountSoFar.toLocaleString()}</strong>
+                                </td>
+                                <td className="py-2 px-3 border-dark">
+                                    <span className="text-muted">Balance Due:</span> <strong className="float-end text-danger">₹{invoiceData.balanceDue.toLocaleString()}</strong>
+                                </td>
+                            </tr>
+                            {invoiceData.nextInstallmentDate && invoiceData.balanceDue > 0 && (
+                                <tr className="bg-light bg-opacity-50">
+                                    <td colSpan="3" className="py-2 px-3 border-dark text-center font-monospace">
+                                        NEXT PLANNED INSTALLMENT DUE DATE: <strong className="text-primary">{new Date(invoiceData.nextInstallmentDate).toLocaleDateString()}</strong>
+                                    </td>
+                                </tr>
                             )}
-                        </div>
-                    </div>
+                        </tbody>
+                    </table>
                 )}
-
-                {/* Verification Checkseal */}
-                <div className="d-flex align-items-center gap-3 text-success fw-black mb-5 mt-4 mt-md-5">
-                    <div className="bg-success rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 24, height: 24 }}>
-                        <ArrowLeft size={14} className="text-white" style={{ transform: 'rotate(135deg)' }} />
-                    </div>
-                    <span className="small-mobile">IDENTITY VERIFIED & BLOCKCHAIN ANCHORED</span>
-                </div>
-
-                {/* Legal Footer */}
-                <div className="mt-5 pt-4 pt-md-5 border-top border-light opacity-50">
-                    <div className="row g-3">
-                        <div className="col-12 col-sm-8 text-break">
-                            <p className="text-muted small mb-1">Electronic Authentication Hash:</p>
-                            <code className="text-dark font-monospace" style={{ fontSize: '8px', wordBreak: 'break-all' }}>
-                                {btoa(invoiceData.id + invoiceData.leadName).substring(0, 32)}
-                            </code>
-                        </div>
-                        <div className="col-12 col-sm-4 text-sm-end">
-                            <p className="text-muted small mb-0 font-monospace" style={{ fontSize: '9px' }}>GEN-ID: {new Date(invoiceData.date || invoiceData.createdAt).getTime()}</p>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <style>{`
-                .invoice-container {
-                    padding: clamp(20px, 8vw, 80px);
-                }
-                .brand-title {
-                    font-size: clamp(2rem, 10vw, 3.5rem);
-                }
-                @media (max-width: 576px) {
-                    .small-mobile { font-size: 11px; }
-                    .h3 { font-size: 1.5rem; }
-                    .h2 { font-size: 1.75rem; }
-                }
                 @media print {
-                    body > * { display: none !important; }
-                    #printable-invoice { display: block !important; box-shadow: none !important; padding: 10mm !important; width: 100% !important; max-width: 100% !important; border: none !important; }
-                    .no-print { display: none !important; }
-                    body { background: #fff !important; margin: 0; }
-                    .min-vh-100 { background: #fff !important; padding: 0 !important; min-height: auto !important; }
+                    .no-print, .no-print * { display: none !important; }
+                    body { background: #fff !important; margin: 0; padding: 0; }
+                    #printable-invoice { 
+                        display: block !important; 
+                        box-shadow: none !important; 
+                        border: 2px solid #000 !important; 
+                        padding: 10mm !important; 
+                        width: 100% !important; 
+                        max-width: 100% !important; 
+                        margin: 0 auto !important; 
+                    }
+                    .min-vh-100 { 
+                        background: #fff !important; 
+                        padding: 0 !important; 
+                        min-height: auto !important; 
+                        height: auto !important; 
+                        overflow: visible !important; 
+                    }
                 }
                 .fw-black { font-weight: 900 !important; }
-                .letter-spacing-tight { letter-spacing: -0.05em; }
             `}</style>
         </div>
     );

@@ -56,6 +56,18 @@ const LeadStatusUpdatePage = () => {
   const [showQr, setShowQr] = useState(false);
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 16));
 
+  const INVOICERS = {
+    gyantrix: {
+      businessName: "Gyantrix",
+      businessAddress: "Pathrika Nagar, Street No:1, HITEC City, Hyderabad - 500081",
+      businessContact: "+91 9247551330",
+      businessEmail: "support@gyantrixacademy.com",
+      taxId: "GSTIN: 36AAACG1234F1Z5"
+    }
+  };
+
+  const [invoicerKey, setInvoicerKey] = useState('gyantrix');
+
   // Success States
   const [showQRModal, setShowQRModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -179,13 +191,62 @@ const LeadStatusUpdatePage = () => {
   };
 
   const handleGeneratePaymentLink = async () => {
+    // 1. Accounting Validation Check
+    if (!isMatch && !(feeStructureExists && sumOfParts <= (Number(discountedTotal) - Number(totalPaidSoFar)) + 1)) {
+      return toast.error("Accounting Mismatch: Resolve settlement balance before generating link.");
+    }
+
+    setIsSubmitting(true);
     try {
-      // Implementation for generating link...
-      toast.success("Payment Link Generated");
-      return "https://pay.konas.ai/mock-link-123";
+      const payload = {
+        leadId: id,
+        amount: parseFloat(initialAmount),
+        businessName: INVOICERS[invoicerKey].businessName,
+        businessAddress: INVOICERS[invoicerKey].businessAddress,
+        businessContact: INVOICERS[invoicerKey].businessContact,
+        businessEmail: INVOICERS[invoicerKey].businessEmail,
+        taxId: INVOICERS[invoicerKey].taxId,
+        feeStructure: {
+          totalAmount: parseFloat(totalAmount),
+          discount: parseFloat(discount),
+          paymentType,
+          installments: installments.map(inst => {
+            const custom = INVOICERS[inst.invoicerKey || 'nexus'];
+            return {
+              amount: parseFloat(inst.amount),
+              dueDate: inst.dueDate,
+              businessName: custom.businessName,
+              businessAddress: custom.businessAddress,
+              businessContact: custom.businessContact,
+              businessEmail: custom.businessEmail,
+              taxId: custom.taxId
+            };
+          })
+        }
+      };
+
+      const res = await associateService.generatePaymentLink(payload);
+      
+      // Success check - handle various backend response formats
+      const link = res.data?.paymentUrl || res.data?.link || res.value?.paymentUrl;
+      
+      if (link) {
+        setGeneratedLink(link);
+        toast.success("Payment Link Generated & Propagated");
+        
+        // 2. AUTOMATIC STATUS TRANSITION
+        // After generating link, we automatically commit the status update to the pipeline
+        // Use a synthetic event to trigger the existing submission logic
+        const syntheticEvent = { preventDefault: () => {} };
+        await handleSubmit(syntheticEvent);
+      } else {
+        throw new Error("No link returned from gateway");
+      }
     } catch (err) {
-      toast.error("Gateway Initiation Failed");
-      return null;
+      console.error("Link Generation Error:", err);
+      toast.error(err.response?.data?.message || "Gateway Initiation Failed");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -217,16 +278,29 @@ const LeadStatusUpdatePage = () => {
         note,
         followUpDate: followUpDate || null,
         isManual: isManualPayment,
+        businessName: INVOICERS[invoicerKey].businessName,
+        businessAddress: INVOICERS[invoicerKey].businessAddress,
+        businessContact: INVOICERS[invoicerKey].businessContact,
+        businessEmail: INVOICERS[invoicerKey].businessEmail,
+        taxId: INVOICERS[invoicerKey].taxId,
         feeStructure: {
           courseId: selectedCourse?.id,
           totalAmount: parseFloat(totalAmount),
           discount: parseFloat(discount),
           initialAmount: parseFloat(initialAmount),
           paymentType,
-          installments: installments.map(inst => ({
-            amount: parseFloat(inst.amount),
-            dueDate: inst.dueDate
-          }))
+          installments: installments.map(inst => {
+            const custom = INVOICERS[inst.invoicerKey || 'nexus'];
+            return {
+              amount: parseFloat(inst.amount),
+              dueDate: inst.dueDate,
+              businessName: custom.businessName,
+              businessAddress: custom.businessAddress,
+              businessContact: custom.businessContact,
+              businessEmail: custom.businessEmail,
+              taxId: custom.taxId
+            };
+          })
         },
         manualPayment: isManualPayment ? {
           leadId: id,
@@ -235,7 +309,12 @@ const LeadStatusUpdatePage = () => {
           method: paymentMethod,
           paymentDate: paymentDate,
           note: `UTR: ${utr} | ${note}`,
-          installmentId: searchParams.get('installmentId')
+          installmentId: searchParams.get('installmentId'),
+          businessName: INVOICERS[invoicerKey].businessName,
+          businessAddress: INVOICERS[invoicerKey].businessAddress,
+          businessContact: INVOICERS[invoicerKey].businessContact,
+          businessEmail: INVOICERS[invoicerKey].businessEmail,
+          taxId: INVOICERS[invoicerKey].taxId
         } : null
       };
 
@@ -259,10 +338,23 @@ const LeadStatusUpdatePage = () => {
           totalAmount: parseFloat(totalAmount),
           discount: parseFloat(discount),
           paymentType,
-          installments: installments.map(inst => ({
-            amount: parseFloat(inst.amount),
-            dueDate: inst.dueDate
-          }))
+          businessName: INVOICERS[invoicerKey].businessName,
+          businessAddress: INVOICERS[invoicerKey].businessAddress,
+          businessContact: INVOICERS[invoicerKey].businessContact,
+          businessEmail: INVOICERS[invoicerKey].businessEmail,
+          taxId: INVOICERS[invoicerKey].taxId,
+          installments: installments.map(inst => {
+            const custom = INVOICERS[inst.invoicerKey || 'nexus'];
+            return {
+              amount: parseFloat(inst.amount),
+              dueDate: inst.dueDate,
+              businessName: custom.businessName,
+              businessAddress: custom.businessAddress,
+              businessContact: custom.businessContact,
+              businessEmail: custom.businessEmail,
+              taxId: custom.taxId
+            };
+          })
         };
 
         formData.append('data', JSON.stringify(metadata));
@@ -499,10 +591,12 @@ const LeadStatusUpdatePage = () => {
                           <button type="button" onClick={addInstallment} className="btn btn-link btn-sm text-decoration-none">+ ADD DUE DATE</button>
                         </div>
                         {installments.map((inst, idx) => (
-                          <div key={idx} className="d-flex gap-2 mb-2">
-                             <input type="number" className="form-control form-control-sm rounded-3" placeholder="Amount" value={inst.amount} onChange={e => handleInstallmentChange(idx, 'amount', e.target.value)} />
-                             <input type="datetime-local" className="form-control form-control-sm rounded-3" value={inst.dueDate} onChange={e => handleInstallmentChange(idx, 'dueDate', e.target.value)} style={{ minWidth: '160px' }} />
-                             <button type="button" onClick={() => removeInstallment(idx)} className="btn btn-sm text-danger"><X size={14} /></button>
+                          <div key={idx} className="p-3 rounded-3 mb-3 border border-secondary border-opacity-15 bg-black bg-opacity-10">
+                            <div className="d-flex gap-2 align-items-center mb-0">
+                               <input type="number" className="form-control form-control-sm rounded-3" placeholder="Amount" value={inst.amount} onChange={e => handleInstallmentChange(idx, 'amount', e.target.value)} />
+                               <input type="datetime-local" className="form-control form-control-sm rounded-3" value={inst.dueDate} onChange={e => handleInstallmentChange(idx, 'dueDate', e.target.value)} style={{ minWidth: '160px' }} />
+                               <button type="button" onClick={() => removeInstallment(idx)} className="btn btn-sm text-danger"><X size={14} /></button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -602,11 +696,7 @@ const LeadStatusUpdatePage = () => {
                     <PaymentOcrUpload 
                       onDataExtracted={handleOcrData} 
                       currentFile={receiptFile}
-                      setCurrentFile={(file) => {
-                        if (typeof setCurrentFile === 'function') {
-                          setCurrentFile(file);
-                        }
-                      }}
+                      setCurrentFile={setReceiptFile}
                     />
                     <div className="row g-3 mt-3">
                       <div className="col-md-4">

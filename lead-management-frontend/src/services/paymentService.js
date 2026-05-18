@@ -39,6 +39,9 @@ const paymentService = {
   fetchInvoiceByLead: (leadId) => {
     return safeRequest(api.get(`/payments/lead/${leadId}/invoice`));
   },
+  fetchInvoiceByPaymentId: (paymentId) => {
+    return safeRequest(api.get(`/payments/${paymentId}/invoice`));
+  },
   fetchStudentFee: (leadId) => {
     return safeRequest(api.get(`/payments/lead/${leadId}/fee-structure`));
   }

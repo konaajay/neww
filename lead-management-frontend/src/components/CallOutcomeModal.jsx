@@ -1024,7 +1024,18 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                                           <span className={`badge rounded-pill ${p.status === 'PAID' || p.status === 'SUCCESS' ? 'bg-success bg-opacity-10 text-success' : 'bg-warning bg-opacity-10 text-warning'}`} style={{ fontSize: '9px' }}>
                                             {p.status}
                                           </span>
-                                          {/* Receipt Visibility Logic - Check both camelCase and snake_case + fallbacks */}
+                                          {(p.status === 'PAID' || p.status === 'SUCCESS') && (
+                                            <button
+                                              className="btn btn-link p-0 border-0 ms-1 d-flex align-items-center"
+                                              title="View Invoice"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                window.open(`/invoice/${lead.id}/${p.id}`, '_blank');
+                                              }}
+                                            >
+                                              <FileText size={14} className="text-primary hover-scale" />
+                                            </button>
+                                          )}
                                           {(p.receiptUrl || p.receipt_url || p.screenshotUrl || p.proofUrl) && (
                                             <a 
                                               href={(p.receiptUrl || p.receipt_url || p.screenshotUrl || p.proofUrl).startsWith('http') 
@@ -1209,7 +1220,7 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                     <div className={`card shadow-sm border-0 rounded-4 p-4 animate-fade-in ${isDarkMode ? 'bg-secondary bg-opacity-10' : 'bg-white'}`}>
                       <div className="d-flex justify-content-between align-items-center mb-4">
                         <h6 className="fw-bold mb-0 text-dark">Official Receipt Details</h6>
-                        <button className="btn btn-sm btn-primary rounded-pill px-3 fw-bold" style={{ fontSize: '10px' }} onClick={() => window.open(`/api/payments/lead/${lead.id}/invoice`, '_blank')}>
+                        <button className="btn btn-sm btn-primary rounded-pill px-3 fw-bold" style={{ fontSize: '10px' }} onClick={() => window.open(`/invoice/${lead.id}`, '_blank')}>
                           <Zap size={12} className="me-1" /> GENERATE PDF
                         </button>
                       </div>

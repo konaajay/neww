@@ -28,13 +28,13 @@ export const useLeadStatusLogic = (externalState = {}) => {
     if (externalState.setInstallments) {
         externalState.setInstallments(prev => {
             if (prev.length >= 4) return prev;
-            return [...prev, { amount: '', dueDate: '' }];
+            return [...prev, { amount: '', dueDate: '', invoicerKey: 'gyantrix' }];
         });
         if (externalState.setPaymentType) externalState.setPaymentType('EMI');
     } else {
         setInternalInstallments(prev => {
             if (prev.length >= 4) return prev;
-            return [...prev, { amount: '', dueDate: '' }];
+            return [...prev, { amount: '', dueDate: '', invoicerKey: 'gyantrix' }];
         });
         setInternalPaymentType('EMI');
     }
