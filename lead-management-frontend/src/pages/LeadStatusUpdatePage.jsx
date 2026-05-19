@@ -132,7 +132,6 @@ const LeadStatusUpdatePage = () => {
 
       if (feeRes.status === 'fulfilled' && feeRes.value) {
         const feeData = feeRes.value.data || feeRes.value;
-        logger.log("[PROTOCOL-SYNC] Raw Fee Data:", feeData);
 
         // Correctly handle the nested structure from LeadPaymentService.getStudentFeeStructure
         const feeObj = feeData.fee || feeData;
@@ -142,7 +141,6 @@ const LeadStatusUpdatePage = () => {
         const discountAmt = feeObj.discount || feeObj.discountAmount || 0;
 
         if (packageAmt && packageAmt > 0) {
-          logger.log("[PROTOCOL-SYNC] Plan Detected in 'fee' object. Activating Summary.");
           setFeeStructureExists(true);
           // Ensure we store pure numbers for calculations
           setTotalAmount(parseFloat(packageAmt) || 0);
@@ -162,7 +160,6 @@ const LeadStatusUpdatePage = () => {
             setPaymentType('EMI');
           }
         } else {
-          logger.log("[PROTOCOL-SYNC] No active plan found. Initializing setup form.");
           setFeeStructureExists(false);
         }
       }
@@ -346,7 +343,6 @@ const LeadStatusUpdatePage = () => {
 
       // STRATEGIC ROUTING: If manual conversion or installment payment verification, use the specialized payment endpoint
       if (isManualPayment && (normSelected === 'CONVERTED' || searchParams.get('installmentId'))) {
-        logger.log("Routing via Specialized Manual Conversion/Installment Endpoint (Full Protocol Sync)...");
         
         const formData = new FormData();
         
@@ -399,7 +395,6 @@ const LeadStatusUpdatePage = () => {
       // LOGIC FIX: Only automate tasks if we are creating a NEW fee structure. 
       // If it exists, tasks are already managed by the backend or previous sessions.
       if (!feeStructureExists && paymentType === 'EMI' && installments.length > 0) {
-        logger.log("Initializing Automated EMI Collection Tasks...");
         for (const inst of installments) {
           if (inst.dueDate && inst.amount) {
             try {
