@@ -9,6 +9,11 @@ import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
 // Theme is managed by ThemeProvider in App.jsx
+if (import.meta.env.PROD) {
+  console.log = () => {};
+  console.debug = () => {};
+  console.info = () => {};
+}
 
 
 ReactDOM.createRoot(document.getElementById('root')).render(

@@ -1,6 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { X, Printer, Share2 } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
     if (!isOpen || !invoiceData) return null;
@@ -10,14 +11,69 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
     };
 
     const handleShare = async () => {
-        const text = `Receipt for ${invoiceData.leadName}\nAmount: ₹${invoiceData.amount}\nRef: ${invoiceData.paymentGatewayId || invoiceData.id}`;
+        const element = document.getElementById('printable-invoice');
+        if (!element) {
+            toast.error("Invoice element not found.");
+            return;
+        }
+
+        toast.info("Generating PDF receipt...", { autoClose: 2000 });
+
         try {
-            if (navigator.share) {
-                await navigator.share({ title: 'GYANTRIX RECEIPT', text });
-            } else {
-                window.open(`https://web.whatsapp.com/send?text=${encodeURIComponent(text)}`);
+            // Dynamically load html2pdf from CDN if not already loaded
+            if (!window.html2pdf) {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+                document.body.appendChild(script);
+                await new Promise((resolve) => {
+                    script.onload = resolve;
+                });
             }
-        } catch (err) { }
+
+            const cleanFileName = `Receipt_${(invoiceData.leadName || 'Record').replace(/\s+/g, '_')}.pdf`;
+            const opt = {
+                margin:       10,
+                filename:     cleanFileName,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            const pdfBlob = await window.html2pdf().from(element).set(opt).outputPdf('blob');
+            const pdfFile = new File([pdfBlob], cleanFileName, { type: 'application/pdf' });
+            const shareText = `Receipt for ${invoiceData.leadName}\nAmount: ₹${invoiceData.amount.toLocaleString()}\nRef: ${invoiceData.paymentGatewayId || invoiceData.id}`;
+
+            if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+                await navigator.share({
+                    files: [pdfFile],
+                    title: 'GYANTRIX RECEIPT',
+                    text: shareText
+                });
+                toast.success("Receipt shared successfully!");
+            } else {
+                // Desktop fallback: Download locally and open WhatsApp Web instructions
+                const downloadUrl = URL.createObjectURL(pdfBlob);
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = cleanFileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                toast.success("Receipt PDF downloaded! Opening WhatsApp to share...");
+                
+                const formattedMobile = invoiceData.mobile ? invoiceData.mobile.replace(/[^0-9]/g, '') : '';
+                const whatsappBase = formattedMobile.length >= 10 
+                    ? `https://web.whatsapp.com/send?phone=${formattedMobile.length === 10 ? '91' + formattedMobile : formattedMobile}&text=`
+                    : 'https://web.whatsapp.com/send?text=';
+
+                const fullUrl = `${whatsappBase}${encodeURIComponent(shareText + "\n\n📄 (Please drag and drop the downloaded receipt PDF here to share it)")}`;
+                window.open(fullUrl, '_blank');
+            }
+        } catch (err) {
+            console.error("PDF generation or sharing failed:", err);
+            toast.error("Failed to generate PDF receipt. Please use the Print option instead.");
+        }
     };
 
     return createPortal(

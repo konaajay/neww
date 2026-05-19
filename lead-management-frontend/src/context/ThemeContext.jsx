@@ -21,8 +21,14 @@ export const ThemeProvider = ({ children }) => {
 
   const toggleTheme = () => setIsDarkMode(prev => !prev);
 
+  const value = React.useMemo(() => ({
+    isDarkMode,
+    toggleTheme,
+    theme: isDarkMode ? 'dark' : 'light'
+  }), [isDarkMode]);
+
   return (
-    <ThemeContext.Provider value={{ isDarkMode, toggleTheme, theme: isDarkMode ? 'dark' : 'light' }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );

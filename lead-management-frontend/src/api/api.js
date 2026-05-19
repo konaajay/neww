@@ -26,10 +26,7 @@ export const safeRequest = async (req) => {
     const res = await req;
     return res.data;
   } catch (err) {
-    if (axios.isCancel(err)) {
-      // Suppress noise for canceled requests (likely React Query refetches)
-      if (import.meta.env.DEV) console.debug('Request canceled:', err.message);
-    } else {
+    if (!axios.isCancel(err)) {
       console.error('API Error:', err.response?.data?.message || err.message);
     }
     throw err;
@@ -41,9 +38,6 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-
-  // TRAFFIC MONITOR: Log every request
-  console.log(`%c[API-REQUEST] ${config.method.toUpperCase()} ${config.url}`, 'color: #3b82f6; font-weight: bold;');
 
   // Support for AbortSignal -> Axios CancelToken bridge
   if (config.signal) {
@@ -59,11 +53,13 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => {
-    console.log(`%c[API-SUCCESS] ${response.config.method.toUpperCase()} ${response.config.url}`, 'color: #10b981; font-weight: bold;');
     return response;
   },
   (error) => {
-    console.error(`%c[API-FAILURE] ${error.config?.method?.toUpperCase()} ${error.config?.url}`, 'color: #ef4444; font-weight: bold;', error.message);
+    if (!axios.isCancel(error)) {
+      console.error(`%c[API-FAILURE] ${error.config?.method?.toUpperCase()} ${error.config?.url}`, 'color: #ef4444; font-weight: bold;', error.message);
+    }
+    
     if (error.response?.status === 401 && !window.location.pathname.includes('/login')) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');

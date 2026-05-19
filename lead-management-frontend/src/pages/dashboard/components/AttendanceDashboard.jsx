@@ -38,12 +38,14 @@ const AttendanceDashboard = ({ filters, role }) => {
     const [activeSubTab, setActiveSubTab] = useState('logs');
     const [attendanceStatusFilter, setAttendanceStatusFilter] = useState('ALL');
 
-    const fetchStatus = useCallback(async () => {
+    const fetchStatus = useCallback(async (signal) => {
         try {
-            const res = await attendanceService.getStatus();
+            const res = await attendanceService.getStatus({ signal });
             setStatus(res.data || res);
         } catch (err) {
-            console.error("Failed to fetch attendance status", err);
+            if (err.name !== 'CanceledError' && err.message !== 'Operation canceled by the user.') {
+                console.error("Failed to fetch attendance status", err);
+            }
         } finally {
             setLoading(false);
         }
@@ -59,9 +61,8 @@ const AttendanceDashboard = ({ filters, role }) => {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     };
 
-    const fetchLogs = useCallback(async () => {
+    const fetchLogs = useCallback(async (signal) => {
         try {
-            console.log(">>> [ATTENDANCE DASHBOARD] Fetching logs for filters:", filters);
             const isAdminOrManagerOrTL = role === 'ADMIN' || role === 'MANAGER' || role === 'TEAM_LEADER';
 
             if (isAdminOrManagerOrTL) {
@@ -72,32 +73,34 @@ const AttendanceDashboard = ({ filters, role }) => {
                     teamId: filters.teamId,
                     managerId: filters.managerId
                 });
-                console.log(">>> [ATTENDANCE FETCH] ADMIN/MGR/TL PARAMS:", params);
-                const res = await attendanceService.getDailySummaries(params);
+                const res = await attendanceService.getDailySummaries(params, { signal });
                 const data = res.data || res || [];
-                console.log(">>> [ATTENDANCE FETCH] RECEIVED DATA SIZE:", data.length);
                 setLogs(data);
             } else {
                 const params = {
                     from: formatDate(filters.from),
                     to: formatDate(filters.to)
                 };
-                console.log(">>> [ATTENDANCE FETCH] MY LOGS PARAMS:", params);
-                const res = await attendanceService.getMyLogs(params);
+                const res = await attendanceService.getMyLogs(params, { signal });
                 const data = res.data || res || [];
-                console.log(">>> [ATTENDANCE FETCH] RECEIVED MY LOGS SIZE:", data.length);
                 setLogs(data);
             }
         } catch (err) {
-            console.error(">>> [ATTENDANCE FETCH] ERROR:", err);
+            if (err.name !== 'CanceledError' && err.message !== 'Operation canceled by the user.') {
+                console.error("Attendance fetch failed:", err);
+            }
         }
     }, [filters, role]);
 
     useEffect(() => {
-        fetchStatus();
-        fetchLogs();
+        const controller = new AbortController();
+        fetchStatus(controller.signal);
+        fetchLogs(controller.signal);
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
+        return () => {
+            controller.abort();
+            clearInterval(timer);
+        };
     }, [fetchStatus, fetchLogs]);
 
     const handleUpdateNote = async () => {
@@ -122,8 +125,6 @@ const AttendanceDashboard = ({ filters, role }) => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 async (position) => {
-                    console.log("Latitude:", position.coords.latitude);
-                    console.log("Longitude:", position.coords.longitude);
                     try {
                         const data = {
                             lat: position.coords.latitude,
@@ -198,11 +199,6 @@ const AttendanceDashboard = ({ filters, role }) => {
         const a = logs.filter(l => l.status && l.status.toUpperCase().includes('ABSENT')).length;
         const l = logs.filter(l => l.lateMinutes > 0 || l.isLate).length;
         
-        console.log(`>>> [SUMMARY STATS] Total: ${logs.length}, Present: ${p}, Absent: ${a}, Late: ${l}`);
-        if (logs.length > (p + a)) {
-            console.log(">>> [STATUSES]", logs.map(log => log.status));
-        }
-
         return { present: p, absent: a, late: l };
     }, [logs]);
 

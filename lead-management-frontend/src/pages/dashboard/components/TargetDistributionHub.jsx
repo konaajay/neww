@@ -131,13 +131,10 @@ const TargetDistributionHub = ({ filters }) => {
 
             // If empty for TL, try a direct fetch as fallback
             if (!isManager && filteredData.length === 0) {
-                console.log("[TEAM-DEBUG] TL tree empty, attempting direct associate fallback");
                 const dirRes = await api.get('/manager/direct-associates');
                 const dirData = Array.isArray(dirRes.data) ? dirRes.data : (dirRes.data?.data || []);
                 filteredData.push(...dirData.filter(u => u.id !== user.id));
             }
-
-            console.log(`[TEAM-DEBUG] Found ${filteredData.length} associates/TLs:`, filteredData.map(u => u.name));
 
             const fullList = isAdmin ? filteredData : [{ 
                 id: (isManager && filters?.userId) ? filters.userId : user.id, 

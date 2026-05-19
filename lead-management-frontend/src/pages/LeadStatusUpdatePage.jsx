@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { logger } from '../utils/logger';
 import { 
   ArrowLeft, ShieldCheck, Calendar, Activity, 
   MessageSquare, IndianRupee, AlertCircle, Shield,
@@ -59,6 +60,13 @@ const LeadStatusUpdatePage = () => {
 
   const INVOICERS = {
     gyantrix: {
+      businessName: "Gyantrix",
+      businessAddress: "Pathrika Nagar, Street No:1, HITEC City, Hyderabad - 500081",
+      businessContact: "+91 9247551330",
+      businessEmail: "support@gyantrixacademy.com",
+      taxId: "GSTIN: 36AAACG1234F1Z5"
+    },
+    nexus: {
       businessName: "Gyantrix",
       businessAddress: "Pathrika Nagar, Street No:1, HITEC City, Hyderabad - 500081",
       businessContact: "+91 9247551330",
@@ -124,7 +132,7 @@ const LeadStatusUpdatePage = () => {
 
       if (feeRes.status === 'fulfilled' && feeRes.value) {
         const feeData = feeRes.value.data || feeRes.value;
-        console.log("[PROTOCOL-SYNC] Raw Fee Data:", feeData);
+        logger.log("[PROTOCOL-SYNC] Raw Fee Data:", feeData);
 
         // Correctly handle the nested structure from LeadPaymentService.getStudentFeeStructure
         const feeObj = feeData.fee || feeData;
@@ -134,7 +142,7 @@ const LeadStatusUpdatePage = () => {
         const discountAmt = feeObj.discount || feeObj.discountAmount || 0;
 
         if (packageAmt && packageAmt > 0) {
-          console.log("[PROTOCOL-SYNC] Plan Detected in 'fee' object. Activating Summary.");
+          logger.log("[PROTOCOL-SYNC] Plan Detected in 'fee' object. Activating Summary.");
           setFeeStructureExists(true);
           // Ensure we store pure numbers for calculations
           setTotalAmount(parseFloat(packageAmt) || 0);
@@ -154,7 +162,7 @@ const LeadStatusUpdatePage = () => {
             setPaymentType('EMI');
           }
         } else {
-          console.log("[PROTOCOL-SYNC] No active plan found. Initializing setup form.");
+          logger.log("[PROTOCOL-SYNC] No active plan found. Initializing setup form.");
           setFeeStructureExists(false);
         }
       }
@@ -308,7 +316,7 @@ const LeadStatusUpdatePage = () => {
           initialAmount: parseFloat(initialAmount),
           paymentType,
           installments: installments.map(inst => {
-            const custom = INVOICERS[inst.invoicerKey || 'nexus'];
+            const custom = INVOICERS[inst.invoicerKey] || INVOICERS[invoicerKey] || INVOICERS.gyantrix;
             return {
               amount: parseFloat(inst.amount),
               dueDate: inst.dueDate,
@@ -336,9 +344,9 @@ const LeadStatusUpdatePage = () => {
         } : null
       };
 
-      // STRATEGIC ROUTING: If manual conversion, use the specialized payment endpoint
-      if (isManualPayment && normSelected === 'CONVERTED') {
-        console.log("Routing via Specialized Manual Conversion Endpoint (Full Protocol Sync)...");
+      // STRATEGIC ROUTING: If manual conversion or installment payment verification, use the specialized payment endpoint
+      if (isManualPayment && (normSelected === 'CONVERTED' || searchParams.get('installmentId'))) {
+        logger.log("Routing via Specialized Manual Conversion/Installment Endpoint (Full Protocol Sync)...");
         
         const formData = new FormData();
         
@@ -351,6 +359,7 @@ const LeadStatusUpdatePage = () => {
           paymentDate,
           note: `UTR: ${utr} | ${note}`,
           installmentId: searchParams.get('installmentId'),
+          nextDueDate: nextInstallmentDate || null,
           // Fee Structure Fields (Flattened)
           courseId: selectedCourse?.id,
           totalAmount: parseFloat(totalAmount),
@@ -361,8 +370,8 @@ const LeadStatusUpdatePage = () => {
           businessContact: INVOICERS[invoicerKey].businessContact,
           businessEmail: INVOICERS[invoicerKey].businessEmail,
           taxId: INVOICERS[invoicerKey].taxId,
-          installments: installments.map(inst => {
-            const custom = INVOICERS[inst.invoicerKey || 'nexus'];
+          installments: searchParams.get('installmentId') ? null : installments.map(inst => {
+            const custom = INVOICERS[inst.invoicerKey] || INVOICERS[invoicerKey] || INVOICERS.gyantrix;
             return {
               amount: parseFloat(inst.amount),
               dueDate: inst.dueDate,
@@ -390,7 +399,7 @@ const LeadStatusUpdatePage = () => {
       // LOGIC FIX: Only automate tasks if we are creating a NEW fee structure. 
       // If it exists, tasks are already managed by the backend or previous sessions.
       if (!feeStructureExists && paymentType === 'EMI' && installments.length > 0) {
-        console.log("Initializing Automated EMI Collection Tasks...");
+        logger.log("Initializing Automated EMI Collection Tasks...");
         for (const inst of installments) {
           if (inst.dueDate && inst.amount) {
             try {
@@ -483,340 +492,463 @@ const LeadStatusUpdatePage = () => {
           <div className="p-3">
             <form onSubmit={handleSubmit}>
               <div className="d-flex flex-column gap-3">
-                {/* Header Row: Protocol & Strategic Scheduling */}
-                <div className="row g-3">
-                  <div className={(() => {
-                    const normalize = (s) => s?.toUpperCase().replace(/[-_ ]/g, '') || '';
-                    const stage = pipelineStages.find(s => normalize(s.statusValue) === normalize(selectedStatus));
-                    const isConverted = normalize(selectedStatus) === 'CONVERTED';
-                    return (stage?.requireDate && !isConverted) ? "col-md-6" : "col-12";
-                  })()}>
-                    <div className={`h-100 p-3 rounded-4 border ${isDarkMode ? 'bg-surface bg-opacity-40 border-white border-opacity-5' : 'bg-light border-secondary border-opacity-10'}`}>
-                       <label className="text-muted small fw-black text-uppercase tracking-widest mb-1 d-block" style={{ fontSize: '9px' }}>Protocol Status</label>
-                       <h3 className="fw-black text-main text-uppercase mb-0 tracking-tight">{selectedStatus || 'Select Protocol'}</h3>
-                    </div>
-                  </div>
-
-                  {(() => {
-                    const normalize = (s) => s?.toUpperCase().replace(/[-_ ]/g, '') || '';
-                    const stage = pipelineStages.find(s => normalize(s.statusValue) === normalize(selectedStatus));
-                    const isConverted = normalize(selectedStatus) === 'CONVERTED';
-                    return stage?.requireDate && !isConverted;
-                  })() && (
-                    <div className="col-md-6 animate-fade-in">
-                      <div className={`h-100 p-3 rounded-4 border ${isDarkMode ? 'bg-surface bg-opacity-40 border-white border-opacity-5' : 'bg-light border-primary border-opacity-10 shadow-sm'}`}>
-                        <label className="form-label small fw-bold text-muted text-uppercase d-flex align-items-center gap-2 mb-1" style={{ fontSize: '10px' }}>
-                          <Calendar size={14} className="text-primary" /> Action Schedule
-                        </label>
-                        <input 
-                          type="datetime-local" 
-                          className="form-control form-control-sm rounded-3 fw-bold mt-1" 
-                          value={followUpDate} 
-                          onChange={e => setFollowUpDate(e.target.value)} 
-                          style={{ fontSize: '13px', minWidth: '150px' }}
-                        />
+                {searchParams.get('installmentId') ? (
+                  <>
+                    <div className={`p-4 rounded-4 border border-primary border-opacity-20 shadow-sm ${isDarkMode ? 'bg-surface' : 'bg-white'}`}>
+                      <div className="d-flex align-items-center gap-2 mb-3">
+                        <IndianRupee size={20} className="text-primary" />
+                        <h5 className="mb-0 fw-black text-uppercase tracking-tight text-main">Installment Payment Verification</h5>
                       </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Fee Structure / Summary */}
-                {['CONVERTED', 'PAID', 'EMI'].includes(selectedStatus?.toUpperCase()) && (
-                  <div className={`p-3 rounded-4 border border-secondary border-opacity-10 shadow-sm ${isDarkMode ? 'bg-surface' : 'bg-white'}`}>
-                    <div className="d-flex align-items-center justify-content-between mb-3">
-                      <div className="d-flex align-items-center gap-2">
-                        <IndianRupee size={16} className="text-primary" />
-                        <h6 className="mb-0 fw-bold text-uppercase tracking-wider" style={{ fontSize: '12px' }}>
-                          {feeStructureExists ? 'Financial Protocol Summary' : 'Student Fee Structure Form'}
-                        </h6>
+                      <div className="p-3 rounded-3 bg-primary bg-opacity-10 border border-primary border-opacity-20 mb-3 d-flex justify-content-between align-items-center">
+                        <span className="small fw-bold text-primary text-uppercase tracking-wider">Installment Commitment Amount</span>
+                        <h3 className="mb-0 fw-black text-primary">₹{Number(searchParams.get('amount') || 0).toLocaleString()}</h3>
                       </div>
-                    </div>
 
-                    {feeStructureExists ? (
-                      <div className="row g-2 mb-3">
-                        <div className="col-4 text-center">
-                          <div className={`p-2 rounded-3 border ${isDarkMode ? 'bg-black bg-opacity-20 border-white border-opacity-5' : 'bg-light border-secondary border-opacity-10'}`}>
-                            <div className="text-muted mb-1" style={{ fontSize: '8px' }}>PACKAGE</div>
-                            <div className="fw-black text-primary" style={{ fontSize: '11px' }}>₹{Number(totalAmount || 0).toLocaleString()}</div>
-                          </div>
-                        </div>
-                        <div className="col-4 text-center">
-                          <div className={`p-2 rounded-3 border ${isDarkMode ? 'bg-black bg-opacity-20 border-white border-opacity-5' : 'bg-light border-secondary border-opacity-10'}`}>
-                            <div className="text-muted mb-1" style={{ fontSize: '8px' }}>DISCOUNT</div>
-                            <div className="fw-black text-success" style={{ fontSize: '11px' }}>₹{Number(discount || 0).toLocaleString()}</div>
-                          </div>
-                        </div>
-                        <div className="col-4 text-center">
-                          <div className={`p-2 rounded-3 border ${isDarkMode ? 'bg-black bg-opacity-20 border-white border-opacity-5' : 'bg-light border-secondary border-opacity-10'}`}>
-                            <div className="text-muted mb-1" style={{ fontSize: '8px' }}>PAID</div>
-                            <div className="fw-black text-main" style={{ fontSize: '11px' }}>₹{Number(totalPaidSoFar || 0).toLocaleString()}</div>
-                          </div>
-                        </div>
-                        <div className="col-12">
-                          <div className={`p-2 rounded-3 text-center fw-black text-uppercase border ${isDarkMode ? 'bg-black bg-opacity-30 border-white border-opacity-10' : 'bg-white border-secondary border-opacity-20'}`} style={{ fontSize: '10px' }}>
-                             Net Settlement: <span className="text-primary">₹{(parseFloat(discountedTotal) || 0).toLocaleString()}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="row g-3 mb-4">
-                        <div className="col-12">
-                          <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '10px' }}>1. Select Program Protocol</label>
-                          <PortalSelect 
-                            options={[{ value: "", label: "-- SELECT COURSE --" }, ...courses.map(c => ({ value: c.id.toString(), label: `${c.name.toUpperCase()} (₹${c.baseFee})` }))]}
-                            value={selectedCourse?.id?.toString() || ''}
-                            onChange={(e) => handleCourseChange(e.target.value)}
+                      <div className="p-3 rounded-3 bg-success bg-opacity-10 border border-success border-opacity-20 mb-4 d-flex justify-content-between align-items-center">
+                        <span className="small fw-bold text-success text-uppercase tracking-wider">Actual Paid Amount (Deciphered / Entered)</span>
+                        <div className="input-group" style={{ width: '220px' }}>
+                          <span className="input-group-text bg-white border-success border-opacity-50 text-success fw-bold">₹</span>
+                          <input 
+                            type="number" 
+                            className="form-control fw-black text-success border-success border-opacity-50 text-end fs-5" 
+                            value={initialAmount} 
+                            onChange={e => setInitialAmount(e.target.value)} 
+                            placeholder="0.00"
                           />
                         </div>
-                        <div className="col-md-6">
-                          <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '10px' }}>2. Base Package</label>
-                          <input type="number" className="form-control rounded-3" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} />
-                        </div>
-                        <div className="col-md-6">
-                          <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '10px' }}>3. Discount</label>
-                          <input type="number" className="form-control rounded-3" value={discount} onChange={e => setDiscount(e.target.value)} />
-                        </div>
                       </div>
-                    )}
 
-                    <div className="mb-4">
-                      <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '10px' }}>
-                        {feeStructureExists ? 'Current Installment Commitment' : '4. Commitment'}
-                      </label>
-                      <input 
-                        type="number" 
-                        className="form-control rounded-3 fw-black text-primary border-primary border-opacity-25" 
-                        value={initialAmount} 
-                        onChange={e => setInitialAmount(e.target.value)} 
+                      {parseFloat(initialAmount || 0) < parseFloat(searchParams.get('amount') || 0) && (
+                        <div className="p-3 rounded-3 bg-warning bg-opacity-10 border border-warning border-opacity-20 mb-4 animate-fade-in">
+                          <div className="d-flex justify-content-between align-items-center mb-2">
+                            <span className="small fw-bold text-warning text-uppercase tracking-wider d-flex align-items-center gap-1" style={{ color: '#d97706' }}>
+                              <AlertCircle size={16} /> Partial Payment Detected: Remainder Installment Schedule
+                            </span>
+                            <span className="badge bg-warning text-dark fw-bold">
+                              Remainder: ₹{(parseFloat(searchParams.get('amount') || 0) - parseFloat(initialAmount || 0)).toLocaleString()}
+                            </span>
+                          </div>
+                          <p className="small text-muted mb-2">Please select the due date for the remaining balance. A new installment and automated collection task will be generated for this date.</p>
+                          <div className="row g-2 align-items-center">
+                            <div className="col-md-6">
+                              <label className="form-label small fw-bold text-muted text-uppercase mb-1" style={{ fontSize: '10px' }}>Next Installment Due Date</label>
+                              <input 
+                                type="datetime-local" 
+                                className="form-control rounded-3 fw-bold border-warning border-opacity-50" 
+                                value={nextInstallmentDate} 
+                                onChange={e => setNextInstallmentDate(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <h6 className="fw-black text-uppercase tracking-wider mb-4 d-flex align-items-center gap-2">
+                        <Shield size={18} className="text-primary" /> MANUAL PAYMENT UPLOAD & DETAILS
+                      </h6>
+                      <PaymentOcrUpload 
+                        onDataExtracted={handleOcrData} 
+                        currentFile={receiptFile}
+                        setCurrentFile={setReceiptFile}
                       />
-                      {Number(initialAmount) > Number(discountedTotal) && (
-                        <small className="text-danger fw-bold mt-2 d-block">Commitment cannot exceed total settlement amount.</small>
-                      )}
-                      {isCommitmentTooLow && (
-                        <small className="text-danger fw-bold mt-2 d-block">
-                          Commitment cannot be less than the minimum token amount (₹{minTokenRequired.toLocaleString()}) configured for this course.
-                        </small>
-                      )}
-                    </div>
-
-                    <div className="row g-2 mb-4">
-                      <div className="col-6">
-                        <button type="button" onClick={() => { setPaymentType('FULL'); setInstallments([]); }} className={`btn w-100 py-3 fw-bold rounded-3 ${paymentType === 'FULL' ? 'btn-primary' : 'btn-outline-secondary opacity-50'}`}>FULL SETTLEMENT</button>
-                      </div>
-                      <div className="col-6">
-                        <button type="button" onClick={() => setPaymentType('EMI')} className={`btn w-100 py-3 fw-bold rounded-3 ${paymentType === 'EMI' ? 'btn-primary' : 'btn-outline-secondary opacity-50'}`}>EMI INSTALLMENTS</button>
-                      </div>
-                    </div>
-
-                    {paymentType === 'EMI' && (
-                      <div className={`p-3 rounded-4 border border-primary border-opacity-10 mb-4 ${isDarkMode ? 'bg-black bg-opacity-25' : 'bg-light bg-opacity-50'}`}>
-                        <div className="d-flex justify-content-between align-items-center mb-3">
-                          <span className="small fw-bold text-muted">PLAN FUTURE DUES (MAX {selectedCourse?.maxInstallments || 4})</span>
-                          <button type="button" onClick={addInstallment} className="btn btn-link btn-sm text-decoration-none">+ ADD DUE DATE</button>
+                      <div className="row g-3 mt-3">
+                        <div className="col-md-4">
+                           <label className="form-label small fw-bold text-muted text-uppercase" style={{ fontSize: '10px' }}>Payment Date</label>
+                           <input 
+                             type="datetime-local" 
+                             className="form-control rounded-3 fw-bold" 
+                             value={paymentDate} 
+                             onChange={e => setPaymentDate(e.target.value)} 
+                             style={{ minWidth: '160px' }}
+                           />
                         </div>
-                        {installments.map((inst, idx) => (
-                          <div key={idx} className="p-3 rounded-3 mb-3 border border-secondary border-opacity-15 bg-black bg-opacity-10">
-                            <div className="d-flex gap-2 align-items-center mb-0">
-                               <input type="number" className="form-control form-control-sm rounded-3" placeholder="Amount" value={inst.amount} onChange={e => handleInstallmentChange(idx, 'amount', e.target.value)} />
-                               <input type="datetime-local" className="form-control form-control-sm rounded-3" value={inst.dueDate} onChange={e => handleInstallmentChange(idx, 'dueDate', e.target.value)} style={{ minWidth: '160px' }} />
-                               <button type="button" onClick={() => removeInstallment(idx)} className="btn btn-sm text-danger"><X size={14} /></button>
-                            </div>
-                          </div>
-                        ))}
+                        <div className="col-md-4">
+                           <label className="form-label small fw-bold text-muted text-uppercase" style={{ fontSize: '10px' }}>Verified UTR/TXN ID</label>
+                           <input type="text" className="form-control rounded-3 fw-bold" value={utr} onChange={e => setUtr(e.target.value.toUpperCase())} />
+                        </div>
+                        <div className="col-md-4">
+                           <label className="form-label small fw-bold text-muted text-uppercase" style={{ fontSize: '10px' }}>Payment Method</label>
+                           <PortalSelect options={[{value: 'UPI', label: 'UPI'}, {value: 'BANK', label: 'Bank Transfer'}, {value: 'CASH', label: 'Cash'}]} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} />
+                        </div>
                       </div>
-                    )}
-
-                    <div className={`p-3 rounded-4 text-center fw-black text-uppercase border mb-3 shadow-sm transition-all ${(isMatch || (feeStructureExists && sumOfParts <= (Number(discountedTotal) - Number(totalPaidSoFar)) + 1)) ? 'text-success border-success bg-success bg-opacity-10' : 'text-danger border-danger bg-danger bg-opacity-10'}`} style={{ fontSize: '11px', letterSpacing: '1px' }}>
-                       {(isMatch || (feeStructureExists && sumOfParts <= (Number(discountedTotal) - Number(totalPaidSoFar)) + 1)) ? (
-                         <div className="d-flex align-items-center justify-content-center gap-2">
-                           <CheckCircle2 size={14} />
-                           <span>ACCOUNTING VERIFIED: ₹{Number(sumOfParts).toLocaleString()}</span>
-                         </div>
-                       ) : (
-                         <div className="d-flex align-items-center justify-content-center gap-2">
-                           <AlertCircle size={14} />
-                           <span>MISMATCH: Commitment must match Settlement (₹{Number(Math.abs(balanceRemaining)).toLocaleString()} Mismatched)</span>
-                         </div>
-                       )}
                     </div>
 
-                    {/* Payment Orchestration - 3 Buttons */}
+                    <div>
+                       <label className="form-label small fw-bold text-muted text-uppercase" style={{ fontSize: '10px' }}>Interaction Notes</label>
+                       <textarea className="form-control rounded-4 p-3" rows="3" value={note} onChange={e => setNote(e.target.value)} placeholder="Recording context..."></textarea>
+                    </div>
+
+                    <button 
+                      type="submit" 
+                      disabled={isSubmitting || !utr || utr.trim().length < 4} 
+                      className={`w-100 py-3 rounded-pill fw-black text-uppercase tracking-widest shadow-glow border-0 transition-all ${isSubmitting || !utr || utr.trim().length < 4 ? 'bg-secondary opacity-50' : 'ui-btn-primary'}`}
+                      style={{ minHeight: '56px' }}
+                    >
+                      {isSubmitting ? (
+                        <div className="d-flex align-items-center justify-content-center gap-2">
+                          <RefreshCw size={18} className="animate-spin" />
+                          <span>SYNCHRONIZING PAYMENT...</span>
+                        </div>
+                      ) : (
+                        `Commit Installment Payment`
+                      )}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* Header Row: Protocol & Strategic Scheduling */}
+                    <div className="row g-3">
+                      <div className={(() => {
+                        const normalize = (s) => s?.toUpperCase().replace(/[-_ ]/g, '') || '';
+                        const stage = pipelineStages.find(s => normalize(s.statusValue) === normalize(selectedStatus));
+                        const isConverted = normalize(selectedStatus) === 'CONVERTED';
+                        return (stage?.requireDate && !isConverted) ? "col-md-6" : "col-12";
+                      })()}>
+                        <div className={`h-100 p-3 rounded-4 border ${isDarkMode ? 'bg-surface bg-opacity-40 border-white border-opacity-5' : 'bg-light border-secondary border-opacity-10'}`}>
+                           <label className="text-muted small fw-black text-uppercase tracking-widest mb-1 d-block" style={{ fontSize: '9px' }}>Protocol Status</label>
+                           <h3 className="fw-black text-main text-uppercase mb-0 tracking-tight">{selectedStatus || 'Select Protocol'}</h3>
+                        </div>
+                      </div>
+
+                      {(() => {
+                        const normalize = (s) => s?.toUpperCase().replace(/[-_ ]/g, '') || '';
+                        const stage = pipelineStages.find(s => normalize(s.statusValue) === normalize(selectedStatus));
+                        const isConverted = normalize(selectedStatus) === 'CONVERTED';
+                        return stage?.requireDate && !isConverted;
+                      })() && (
+                        <div className="col-md-6 animate-fade-in">
+                          <div className={`h-100 p-3 rounded-4 border ${isDarkMode ? 'bg-surface bg-opacity-40 border-white border-opacity-5' : 'bg-light border-primary border-opacity-10 shadow-sm'}`}>
+                            <label className="form-label small fw-bold text-muted text-uppercase d-flex align-items-center gap-2 mb-1" style={{ fontSize: '10px' }}>
+                              <Calendar size={14} className="text-primary" /> Action Schedule
+                            </label>
+                            <input 
+                              type="datetime-local" 
+                              className="form-control form-control-sm rounded-3 fw-bold mt-1" 
+                              value={followUpDate} 
+                              onChange={e => setFollowUpDate(e.target.value)} 
+                              style={{ fontSize: '13px', minWidth: '150px' }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Fee Structure / Summary */}
                     {['CONVERTED', 'PAID', 'EMI'].includes(selectedStatus?.toUpperCase()) && (
-                      <div className="animate-fade-in mb-4">
-                        <label className="text-muted small fw-black text-uppercase tracking-widest mb-3 d-block text-center" style={{ fontSize: '10px' }}>Finalize Payment Commitment</label>
-                        <div className="row g-2">
-                          <div className="col-4">
-                            <button 
-                              type="button" 
-                              onClick={() => {
-                                setIsManualPayment(false);
-                                setShowQr(false);
-                                handleGeneratePaymentLink();
-                              }}
-                              className="btn btn-outline-primary w-100 py-3 rounded-4 d-flex flex-column align-items-center gap-2 transition-all hover-scale"
-                            >
-                              <LinkIcon size={18} />
-                              <span className="fw-black" style={{ fontSize: '9px' }}>GENERATE LINK</span>
-                            </button>
-                          </div>
-                          <div className="col-4">
-                            <button 
-                              type="button" 
-                              onClick={() => {
-                                setIsManualPayment(false);
-                                setShowQr(!showQr);
-                              }}
-                              className={`btn ${showQr ? 'btn-primary' : 'btn-outline-primary'} w-100 py-3 rounded-4 d-flex flex-column align-items-center gap-2 transition-all hover-scale`}
-                            >
-                              <QrCode size={18} />
-                              <span className="fw-black" style={{ fontSize: '9px' }}>GENERATE QR</span>
-                            </button>
-                          </div>
-                          <div className="col-4">
-                            <button 
-                              type="button" 
-                              onClick={() => {
-                                setIsManualPayment(!isManualPayment);
-                                setShowQr(false);
-                              }}
-                              className={`btn ${isManualPayment ? 'btn-primary' : 'btn-outline-primary'} w-100 py-3 rounded-4 d-flex flex-column align-items-center gap-2 transition-all hover-scale`}
-                            >
-                              <ShieldCheck size={18} />
-                              <span className="fw-black" style={{ fontSize: '9px' }}>MANUAL / UTR</span>
-                            </button>
+                      <div className={`p-3 rounded-4 border border-secondary border-opacity-10 shadow-sm ${isDarkMode ? 'bg-surface' : 'bg-white'}`}>
+                        <div className="d-flex align-items-center justify-content-between mb-3">
+                          <div className="d-flex align-items-center gap-2">
+                            <IndianRupee size={16} className="text-primary" />
+                            <h6 className="mb-0 fw-bold text-uppercase tracking-wider" style={{ fontSize: '12px' }}>
+                              {feeStructureExists ? 'Financial Protocol Summary' : 'Student Fee Structure Form'}
+                            </h6>
                           </div>
                         </div>
 
-                        {/* Copyable Payment Link Card */}
-                        {generatedLink && (
-                          <div className="mt-4 p-4 rounded-4 border border-success border-opacity-20 bg-success bg-opacity-5 animate-scale-in text-center">
-                            <h6 className="fw-black text-success text-uppercase mb-2" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>SECURE GATEWAY PAYMENT LINK</h6>
-                            <div className="d-flex align-items-center justify-content-between mb-3 bg-black bg-opacity-20 p-3 rounded-3 border border-secondary border-opacity-10">
-                              <span className="text-truncate small text-muted text-start pe-2" style={{ maxWidth: '80%' }}>{generatedLink}</span>
-                              <button 
-                                type="button" 
-                                onClick={() => {
-                                  copyToClipboard(generatedLink);
-                                }}
-                                className="btn btn-sm btn-link p-0 text-success text-decoration-none d-flex align-items-center gap-1 fw-bold"
-                              >
-                                <Copy size={14} />
-                                <span>COPY</span>
-                              </button>
+                        {feeStructureExists ? (
+                          <div className="row g-2 mb-3">
+                            <div className="col-4 text-center">
+                              <div className={`p-2 rounded-3 border ${isDarkMode ? 'bg-black bg-opacity-20 border-white border-opacity-5' : 'bg-light border-secondary border-opacity-10'}`}>
+                                <div className="text-muted mb-1" style={{ fontSize: '8px' }}>PACKAGE</div>
+                                <div className="fw-black text-primary" style={{ fontSize: '11px' }}>₹{Number(totalAmount || 0).toLocaleString()}</div>
+                              </div>
                             </div>
-                            <div className="d-flex gap-2">
-                              <a 
-                                href={generatedLink} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="btn btn-success flex-fill py-2 rounded-3 fw-bold small d-flex align-items-center justify-content-center gap-2"
-                              >
-                                <ExternalLink size={14} />
-                                <span>OPEN SECURE LINK</span>
-                              </a>
-                              <a 
-                                href={`https://api.whatsapp.com/send?phone=${lead?.mobile ? lead.mobile.replace(/[^0-9]/g, '') : ''}&text=${encodeURIComponent(`Hello ${lead?.name || 'Student'},\n\nPlease complete your enrollment payment using this secure link: ${generatedLink}`)}`}
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="btn btn-outline-success flex-fill py-2 rounded-3 fw-bold small d-flex align-items-center justify-content-center gap-2"
-                              >
-                                <MessageSquare size={14} />
-                                <span>SHARE ON WHATSAPP</span>
-                              </a>
+                            <div className="col-4 text-center">
+                              <div className={`p-2 rounded-3 border ${isDarkMode ? 'bg-black bg-opacity-20 border-white border-opacity-5' : 'bg-light border-secondary border-opacity-10'}`}>
+                                <div className="text-muted mb-1" style={{ fontSize: '8px' }}>DISCOUNT</div>
+                                <div className="fw-black text-success" style={{ fontSize: '11px' }}>₹{Number(discount || 0).toLocaleString()}</div>
+                              </div>
+                            </div>
+                            <div className="col-4 text-center">
+                              <div className={`p-2 rounded-3 border ${isDarkMode ? 'bg-black bg-opacity-20 border-white border-opacity-5' : 'bg-light border-secondary border-opacity-10'}`}>
+                                <div className="text-muted mb-1" style={{ fontSize: '8px' }}>PAID</div>
+                                <div className="fw-black text-main" style={{ fontSize: '11px' }}>₹{Number(totalPaidSoFar || 0).toLocaleString()}</div>
+                              </div>
+                            </div>
+                            <div className="col-12">
+                              <div className={`p-2 rounded-3 text-center fw-black text-uppercase border ${isDarkMode ? 'bg-black bg-opacity-30 border-white border-opacity-10' : 'bg-white border-secondary border-opacity-20'}`} style={{ fontSize: '10px' }}>
+                                 Net Settlement: <span className="text-primary">₹{(parseFloat(discountedTotal) || 0).toLocaleString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="row g-3 mb-4">
+                            <div className="col-12">
+                              <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '10px' }}>1. Select Program Protocol</label>
+                              <PortalSelect 
+                                options={[{ value: "", label: "-- SELECT COURSE --" }, ...courses.map(c => ({ value: c.id.toString(), label: `${c.name.toUpperCase()} (₹${c.baseFee})` }))]}
+                                value={selectedCourse?.id?.toString() || ''}
+                                onChange={(e) => handleCourseChange(e.target.value)}
+                              />
+                            </div>
+                            <div className="col-md-6">
+                              <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '10px' }}>2. Base Package</label>
+                              <input type="number" className="form-control rounded-3" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} />
+                            </div>
+                            <div className="col-md-6">
+                              <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '10px' }}>3. Discount</label>
+                              <input type="number" className="form-control rounded-3" value={discount} onChange={e => setDiscount(e.target.value)} />
                             </div>
                           </div>
                         )}
 
-                        {/* Dynamic QR Display */}
-                        {showQr && (
-                          <div className={`mt-4 p-4 rounded-4 border border-primary border-opacity-10 text-center animate-scale-in ${isDarkMode ? 'bg-black bg-opacity-25' : 'bg-white'}`}>
-                            {isCommitmentTooLow ? (
-                              <div className="text-danger fw-bold py-3">
-                                <AlertCircle size={32} className="mx-auto mb-2 d-block" />
-                                <span>Commitment too low. Enforce minimum token amount (₹{minTokenRequired.toLocaleString()}) to generate QR.</span>
+                        <div className="mb-4">
+                          <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '10px' }}>
+                            {feeStructureExists ? 'Current Installment Commitment' : '4. Commitment'}
+                          </label>
+                          <input 
+                            type="number" 
+                            className="form-control rounded-3 fw-black text-primary border-primary border-opacity-25" 
+                            value={initialAmount} 
+                            onChange={e => setInitialAmount(e.target.value)} 
+                          />
+                          {Number(initialAmount) > Number(discountedTotal) && (
+                            <small className="text-danger fw-bold mt-2 d-block">Commitment cannot exceed total settlement amount.</small>
+                          )}
+                          {isCommitmentTooLow && (
+                            <small className="text-danger fw-bold mt-2 d-block">
+                              Commitment cannot be less than the minimum token amount (₹{minTokenRequired.toLocaleString()}) configured for this course.
+                            </small>
+                          )}
+                        </div>
+
+                        {!searchParams.get('installmentId') && (
+                          <div className="row g-2 mb-4">
+                            <div className="col-6">
+                              <button type="button" onClick={() => { setPaymentType('FULL'); setInstallments([]); }} className={`btn w-100 py-3 fw-bold rounded-3 ${paymentType === 'FULL' ? 'btn-primary' : 'btn-outline-secondary opacity-50'}`}>FULL SETTLEMENT</button>
+                            </div>
+                            <div className="col-6">
+                              <button type="button" onClick={() => setPaymentType('EMI')} className={`btn w-100 py-3 fw-bold rounded-3 ${paymentType === 'EMI' ? 'btn-primary' : 'btn-outline-secondary opacity-50'}`}>EMI INSTALLMENTS</button>
+                            </div>
+                          </div>
+                        )}
+
+                        {paymentType === 'EMI' && !searchParams.get('installmentId') && (
+                          <div className={`p-3 rounded-4 border border-primary border-opacity-10 mb-4 ${isDarkMode ? 'bg-black bg-opacity-25' : 'bg-light bg-opacity-50'}`}>
+                            <div className="d-flex justify-content-between align-items-center mb-3">
+                              <span className="small fw-bold text-muted">PLAN FUTURE DUES (MAX {selectedCourse?.maxInstallments || 4})</span>
+                              <button type="button" onClick={addInstallment} className="btn btn-link btn-sm text-decoration-none">+ ADD DUE DATE</button>
+                            </div>
+                            {installments.map((inst, idx) => (
+                              <div key={idx} className="p-3 rounded-3 mb-3 border border-secondary border-opacity-15 bg-black bg-opacity-10">
+                                <div className="d-flex gap-2 align-items-center mb-0">
+                                   <input type="number" className="form-control form-control-sm rounded-3" placeholder="Amount" value={inst.amount} onChange={e => handleInstallmentChange(idx, 'amount', e.target.value)} />
+                                   <input type="datetime-local" className="form-control form-control-sm rounded-3" value={inst.dueDate} onChange={e => handleInstallmentChange(idx, 'dueDate', e.target.value)} style={{ minWidth: '160px' }} />
+                                   <button type="button" onClick={() => removeInstallment(idx)} className="btn btn-sm text-danger"><X size={14} /></button>
+                                </div>
                               </div>
-                            ) : (
-                              <>
-                                <div className="d-flex justify-content-center mb-3">
-                                  <QRCodeCanvas 
-                                    value={`upi://pay?pa=gyantrix@upi&pn=Gyantrix&am=${initialAmount}&cu=INR`} 
-                                    size={180}
-                                    level="H"
-                                    includeMargin={true}
-                                  />
+                            ))}
+                          </div>
+                        )}
+
+                        <div className={`p-3 rounded-4 text-center fw-black text-uppercase border mb-3 shadow-sm transition-all ${(isMatch || (feeStructureExists && sumOfParts <= (Number(discountedTotal) - Number(totalPaidSoFar)) + 1)) ? 'text-success border-success bg-success bg-opacity-10' : 'text-danger border-danger bg-danger bg-opacity-10'}`} style={{ fontSize: '11px', letterSpacing: '1px' }}>
+                           {(isMatch || (feeStructureExists && sumOfParts <= (Number(discountedTotal) - Number(totalPaidSoFar)) + 1)) ? (
+                             <div className="d-flex align-items-center justify-content-center gap-2">
+                               <CheckCircle2 size={14} />
+                               <span>ACCOUNTING VERIFIED: ₹{Number(sumOfParts).toLocaleString()}</span>
+                             </div>
+                           ) : (
+                             <div className="d-flex align-items-center justify-content-center gap-2">
+                               <AlertCircle size={14} />
+                               <span>MISMATCH: Commitment must match Settlement (₹{Number(Math.abs(balanceRemaining)).toLocaleString()} Mismatched)</span>
+                             </div>
+                           )}
+                        </div>
+
+                        {/* Payment Orchestration - 3 Buttons */}
+                        {['CONVERTED', 'PAID', 'EMI'].includes(selectedStatus?.toUpperCase()) && (
+                          <div className="animate-fade-in mb-4">
+                            <label className="text-muted small fw-black text-uppercase tracking-widest mb-3 d-block text-center" style={{ fontSize: '10px' }}>Finalize Payment Commitment</label>
+                            <div className="row g-2">
+                              <div className="col-4">
+                                <button 
+                                  type="button" 
+                                  onClick={() => {
+                                    setIsManualPayment(false);
+                                    setShowQr(false);
+                                    handleGeneratePaymentLink();
+                                  }}
+                                  className="btn btn-outline-primary w-100 py-3 rounded-4 d-flex flex-column align-items-center gap-2 transition-all hover-scale"
+                                >
+                                  <LinkIcon size={18} />
+                                  <span className="fw-black" style={{ fontSize: '9px' }}>GENERATE LINK</span>
+                                </button>
+                              </div>
+                              <div className="col-4">
+                                <button 
+                                  type="button" 
+                                  onClick={() => {
+                                    setIsManualPayment(false);
+                                    setShowQr(!showQr);
+                                  }}
+                                  className={`btn ${showQr ? 'btn-primary' : 'btn-outline-primary'} w-100 py-3 rounded-4 d-flex flex-column align-items-center gap-2 transition-all hover-scale`}
+                                >
+                                  <QrCode size={18} />
+                                  <span className="fw-black" style={{ fontSize: '9px' }}>GENERATE QR</span>
+                                </button>
+                              </div>
+                              <div className="col-4">
+                                <button 
+                                  type="button" 
+                                  onClick={() => {
+                                    setIsManualPayment(!isManualPayment);
+                                    setShowQr(false);
+                                  }}
+                                  className={`btn ${isManualPayment ? 'btn-primary' : 'btn-outline-primary'} w-100 py-3 rounded-4 d-flex flex-column align-items-center gap-2 transition-all hover-scale`}
+                                >
+                                  <ShieldCheck size={18} />
+                                  <span className="fw-black" style={{ fontSize: '9px' }}>MANUAL / UTR</span>
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Copyable Payment Link Card */}
+                            {generatedLink && (
+                              <div className="mt-4 p-4 rounded-4 border border-success border-opacity-20 bg-success bg-opacity-5 animate-scale-in text-center">
+                                <h6 className="fw-black text-success text-uppercase mb-2" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>SECURE GATEWAY PAYMENT LINK</h6>
+                                <div className="d-flex align-items-center justify-content-between mb-3 bg-black bg-opacity-20 p-3 rounded-3 border border-secondary border-opacity-10">
+                                  <span className="text-truncate small text-muted text-start pe-2" style={{ maxWidth: '80%' }}>{generatedLink}</span>
+                                  <button 
+                                    type="button" 
+                                    onClick={() => {
+                                      copyToClipboard(generatedLink);
+                                    }}
+                                    className="btn btn-sm btn-link p-0 text-success text-decoration-none d-flex align-items-center gap-1 fw-bold"
+                                  >
+                                    <Copy size={14} />
+                                    <span>COPY</span>
+                                  </button>
                                 </div>
-                                <h6 className="fw-black text-primary text-uppercase mb-1" style={{ fontSize: '12px' }}>Scan to Pay ₹{Number(initialAmount).toLocaleString()}</h6>
-                                <div className="d-flex align-items-center justify-content-center gap-1 text-muted extra-small mb-0 fw-bold">
-                                  <span>UPI ID:</span>
-                                  <span className="text-primary">gyantrix@upi</span>
+                                <div className="d-flex gap-2">
+                                  <a 
+                                    href={generatedLink} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="btn btn-success flex-fill py-2 rounded-3 fw-bold small d-flex align-items-center justify-content-center gap-2"
+                                  >
+                                    <ExternalLink size={14} />
+                                    <span>OPEN SECURE LINK</span>
+                                  </a>
+                                  <a 
+                                    href={`https://api.whatsapp.com/send?phone=${lead?.mobile ? lead.mobile.replace(/[^0-9]/g, '') : ''}&text=${encodeURIComponent(`Hello ${lead?.name || 'Student'},\n\nPlease complete your enrollment payment using this secure link: ${generatedLink}`)}`}
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="btn btn-outline-success flex-fill py-2 rounded-3 fw-bold small d-flex align-items-center justify-content-center gap-2"
+                                  >
+                                    <MessageSquare size={14} />
+                                    <span>SHARE ON WHATSAPP</span>
+                                  </a>
                                 </div>
-                                <p className="text-muted small mb-0 mt-1 opacity-50" style={{ fontSize: '8px' }}>Commitment Protocol: {lead?.name}</p>
-                              </>
+                              </div>
+                            )}
+
+                            {/* Dynamic QR Display */}
+                            {showQr && (
+                              <div className={`mt-4 p-4 rounded-4 border border-primary border-opacity-10 text-center animate-scale-in ${isDarkMode ? 'bg-black bg-opacity-25' : 'bg-white'}`}>
+                                {isCommitmentTooLow ? (
+                                  <div className="text-danger fw-bold py-3">
+                                    <AlertCircle size={32} className="mx-auto mb-2 d-block" />
+                                    <span>Commitment too low. Enforce minimum token amount (₹{minTokenRequired.toLocaleString()}) to generate QR.</span>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="d-flex justify-content-center mb-3">
+                                      <QRCodeCanvas 
+                                        value={`upi://pay?pa=gyantrix@upi&pn=Gyantrix&am=${initialAmount}&cu=INR`} 
+                                        size={180}
+                                        level="H"
+                                        includeMargin={true}
+                                      />
+                                    </div>
+                                    <h6 className="fw-black text-primary text-uppercase mb-1" style={{ fontSize: '12px' }}>Scan to Pay ₹{Number(initialAmount).toLocaleString()}</h6>
+                                    <div className="d-flex align-items-center justify-content-center gap-1 text-muted extra-small mb-0 fw-bold">
+                                      <span>UPI ID:</span>
+                                      <span className="text-primary">gyantrix@upi</span>
+                                    </div>
+                                    <p className="text-muted small mb-0 mt-1 opacity-50" style={{ fontSize: '8px' }}>Commitment Protocol: {lead?.name}</p>
+                                  </>
+                                )}
+                              </div>
                             )}
                           </div>
                         )}
                       </div>
                     )}
-                  </div>
-                )}
 
-                {/* Manual Payment Section */}
-                {isManualPayment && (
-                  <div className={`p-4 rounded-4 border border-secondary border-opacity-10 shadow-sm ${isDarkMode ? 'bg-surface' : 'bg-white'}`}>
-                    <h6 className="fw-black text-uppercase tracking-wider mb-4 d-flex align-items-center gap-2">
-                      <Shield size={18} className="text-primary" /> MANUAL PAYMENT VERIFICATION
-                    </h6>
-                    <PaymentOcrUpload 
-                      onDataExtracted={handleOcrData} 
-                      currentFile={receiptFile}
-                      setCurrentFile={setReceiptFile}
-                    />
-                    <div className="row g-3 mt-3">
-                      <div className="col-md-4">
-                         <label className="form-label small fw-bold text-muted text-uppercase" style={{ fontSize: '10px' }}>Payment Date</label>
-                         <input 
-                           type="datetime-local" 
-                           className="form-control rounded-3 fw-bold" 
-                           value={paymentDate} 
-                           onChange={e => setPaymentDate(e.target.value)} 
-                           style={{ minWidth: '160px' }}
-                         />
+                    {/* Manual Payment Section */}
+                    {isManualPayment && (
+                      <div className={`p-4 rounded-4 border border-secondary border-opacity-10 shadow-sm ${isDarkMode ? 'bg-surface' : 'bg-white'}`}>
+                        <h6 className="fw-black text-uppercase tracking-wider mb-4 d-flex align-items-center gap-2">
+                          <Shield size={18} className="text-primary" /> MANUAL PAYMENT VERIFICATION
+                        </h6>
+                        <PaymentOcrUpload 
+                          onDataExtracted={handleOcrData} 
+                          currentFile={receiptFile}
+                          setCurrentFile={setReceiptFile}
+                        />
+                        <div className="row g-3 mt-3">
+                          <div className="col-md-4">
+                             <label className="form-label small fw-bold text-muted text-uppercase" style={{ fontSize: '10px' }}>Payment Date</label>
+                             <input 
+                               type="datetime-local" 
+                               className="form-control rounded-3 fw-bold" 
+                               value={paymentDate} 
+                               onChange={e => setPaymentDate(e.target.value)} 
+                               style={{ minWidth: '160px' }}
+                             />
+                          </div>
+                          <div className="col-md-4">
+                             <label className="form-label small fw-bold text-muted text-uppercase" style={{ fontSize: '10px' }}>Verified UTR/TXN ID</label>
+                             <input type="text" className="form-control rounded-3 fw-bold" value={utr} onChange={e => setUtr(e.target.value.toUpperCase())} />
+                          </div>
+                          <div className="col-md-4">
+                             <label className="form-label small fw-bold text-muted text-uppercase" style={{ fontSize: '10px' }}>Payment Method</label>
+                             <PortalSelect options={[{value: 'UPI', label: 'UPI'}, {value: 'BANK', label: 'Bank Transfer'}, {value: 'CASH', label: 'Cash'}]} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} />
+                          </div>
+                        </div>
                       </div>
-                      <div className="col-md-4">
-                         <label className="form-label small fw-bold text-muted text-uppercase" style={{ fontSize: '10px' }}>Verified UTR/TXN ID</label>
-                         <input type="text" className="form-control rounded-3 fw-bold" value={utr} onChange={e => setUtr(e.target.value.toUpperCase())} />
-                      </div>
-                      <div className="col-md-4">
-                         <label className="form-label small fw-bold text-muted text-uppercase" style={{ fontSize: '10px' }}>Payment Method</label>
-                         <PortalSelect options={[{value: 'UPI', label: 'UPI'}, {value: 'BANK', label: 'Bank Transfer'}, {value: 'CASH', label: 'Cash'}]} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} />
-                      </div>
+                    )}
+
+
+
+                    {/* Action Notes */}
+                    <div>
+                       <label className="form-label small fw-bold text-muted text-uppercase" style={{ fontSize: '10px' }}>Interaction Notes</label>
+                       <textarea className="form-control rounded-4 p-3" rows="3" value={note} onChange={e => setNote(e.target.value)} placeholder="Recording context..."></textarea>
                     </div>
-                  </div>
+
+                    {generatedLink ? (
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          sessionStorage.setItem('openLeadHistoryId', lead?.id || id);
+                          navigate(-1);
+                        }}
+                        className="w-100 py-3 rounded-pill fw-black text-uppercase tracking-widest shadow-glow border-0 bg-success text-white transition-all d-flex align-items-center justify-content-center gap-2"
+                        style={{ minHeight: '56px' }}
+                      >
+                        <CheckCircle2 size={20} />
+                        <span>LINK SHARED - CLOSE & VIEW LEAD AUDIT HISTORY</span>
+                      </button>
+                    ) : (
+                      <button 
+                        type="submit" 
+                        disabled={isSubmitting || (['CONVERTED', 'PAID', 'EMI'].includes(selectedStatus?.toUpperCase()) && !isMatch) || isCommitmentTooLow} 
+                        className={`w-100 py-3 rounded-pill fw-black text-uppercase tracking-widest shadow-glow border-0 transition-all ${isSubmitting ? 'bg-secondary opacity-50' : ((['CONVERTED', 'PAID', 'EMI'].includes(selectedStatus?.toUpperCase()) && (!isMatch || isCommitmentTooLow)) ? 'bg-danger bg-opacity-25 text-muted' : 'ui-btn-primary')}`}
+                        style={{ minHeight: '56px' }}
+                      >
+                        {isSubmitting ? (
+                          <div className="d-flex align-items-center justify-content-center gap-2">
+                            <RefreshCw size={18} className="animate-spin" />
+                            <span>SYNCHRONIZING PROTOCOL...</span>
+                          </div>
+                        ) : (
+                          `Commit ${selectedStatus || 'Status'} Update`
+                        )}
+                      </button>
+                    )}
+                  </>
                 )}
-
-
-
-                {/* Action Notes */}
-                <div>
-                   <label className="form-label small fw-bold text-muted text-uppercase" style={{ fontSize: '10px' }}>Interaction Notes</label>
-                   <textarea className="form-control rounded-4 p-3" rows="3" value={note} onChange={e => setNote(e.target.value)} placeholder="Recording context..."></textarea>
-                </div>
-
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting || (['CONVERTED', 'PAID', 'EMI'].includes(selectedStatus?.toUpperCase()) && !isMatch) || isCommitmentTooLow} 
-                  className={`w-100 py-3 rounded-pill fw-black text-uppercase tracking-widest shadow-glow border-0 transition-all ${isSubmitting ? 'bg-secondary opacity-50' : ((['CONVERTED', 'PAID', 'EMI'].includes(selectedStatus?.toUpperCase()) && (!isMatch || isCommitmentTooLow)) ? 'bg-danger bg-opacity-25 text-muted' : 'ui-btn-primary')}`}
-                  style={{ minHeight: '56px' }}
-                >
-                  {isSubmitting ? (
-                    <div className="d-flex align-items-center justify-content-center gap-2">
-                      <RefreshCw size={18} className="animate-spin" />
-                      <span>SYNCHRONIZING PROTOCOL...</span>
-                    </div>
-                  ) : (
-                    `Commit ${selectedStatus || 'Status'} Update`
-                  )}
-                </button>
               </div>
             </form>
           </div>

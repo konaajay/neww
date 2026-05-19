@@ -30,6 +30,7 @@ import CourseManagementPage from './pages/CourseManagementPage';
 import PaymentInstructionPage from './pages/PaymentInstructionPage';
 import PaymentStatusPage from './pages/PaymentStatusPage';
 import NotificationManager from './components/NotificationManager';
+import LeadEditPage from './pages/dashboard/components/LeadEditPage';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -165,6 +166,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <InvoicePage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/leads/:id/edit" 
+              element={
+                <ProtectedRoute>
+                  <LeadEditPage />
                 </ProtectedRoute>
               } 
             />

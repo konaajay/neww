@@ -108,13 +108,17 @@ export const useLookupData = (role) => {
           // USER OVERRIDE: If user edited the stage in dashboard, use their flags
           return {
             ...ss,
+            id: backendMatch.id || ss.statusValue,
             requireNote: backendMatch.requireNote ?? ss.requireNote,
             requireDate: backendMatch.requireDate ?? ss.requireDate,
             createTask: backendMatch.createTask ?? ss.createTask,
             label: backendMatch.label || ss.label // Allow label polish but keep statusValue constant
           };
         }
-        return ss;
+        return {
+          ...ss,
+          id: ss.statusValue
+        };
       });
 
       // 2. Add any custom stages from backend that aren't in standard
@@ -122,7 +126,7 @@ export const useLookupData = (role) => {
       backendStages.forEach(bs => {
         const normBs = normalize(bs.statusValue);
         if (!standardNormalized.includes(normBs)) {
-          merged.push(bs);
+          merged.push({ ...bs, id: bs.id || bs.statusValue });
         }
       });
 

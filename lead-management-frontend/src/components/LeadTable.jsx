@@ -67,6 +67,9 @@ const LeadTable = ({
   const [selectedOutcomeLead, setSelectedOutcomeLead] = useState(null);
   const [selectedHistoryLead, setSelectedHistoryLead] = useState(null);
   const [errorPopup, setErrorPopup] = useState(null);
+  const [rejectModalData, setRejectModalData] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [isRejecting, setIsRejecting] = useState(false);
   const { isDarkMode } = useTheme();
   const navigate = useNavigate();
 
@@ -83,6 +86,17 @@ const LeadTable = ({
   useEffect(() => {
     setCurrentPage(1);
   }, [leads.length, itemsPerPage]);
+
+  useEffect(() => {
+    const openHistoryId = sessionStorage.getItem('openLeadHistoryId');
+    if (openHistoryId && leads.length > 0) {
+      const targetLead = leads.find(l => l.id.toString() === openHistoryId.toString());
+      if (targetLead) {
+        setSelectedHistoryLead(targetLead);
+        sessionStorage.removeItem('openLeadHistoryId');
+      }
+    }
+  }, [leads]);
 
   const pipelineStages = (propsPipelineStages && propsPipelineStages.length > 0) ? propsPipelineStages : [
     { label: 'Open', statusValue: 'OPEN', color: 'primary', isRoot: true },
@@ -122,6 +136,7 @@ const LeadTable = ({
         return 'text-primary fw-black';
       case 'PENDING_APPROVAL': return 'text-warning blink-slow';
       default: 
+        if (s.includes('PENDING')) return 'text-warning blink-slow fw-black';
         if (s.startsWith('POST_PAYMENT')) return 'text-info fw-black';
         return 'text-muted';
     }
@@ -408,22 +423,9 @@ const LeadTable = ({
                           {lead.paymentStatus === 'PENDING_APPROVAL' && (role === 'ADMIN' || role === 'MANAGER') && (
                             <button 
                               className="p-2 border-0 bg-transparent text-danger hover-scale" 
-                              onClick={async () => {
-                                const reason = window.prompt("Reason for rejection:");
-                                if (reason !== null) {
-                                  try {
-                                    const payments = await leadsApi.getLeadPayments(lead.id);
-                                    const pending = payments.find(p => p.status === 'PENDING_APPROVAL');
-                                    if (pending) {
-                                      await leadsApi.rejectPayment(pending.id, reason);
-                                      toast.success("Payment Rejected Protocol Executed");
-                                      if (typeof loadLeads === 'function') loadLeads();
-                                      else window.location.reload();
-                                    }
-                                  } catch (err) {
-                                    toast.error("Rejection failed: Command error");
-                                  }
-                                }
+                              onClick={() => {
+                                setRejectModalData(lead);
+                                setRejectReason('');
                               }} 
                               title="Reject Manual Payment"
                             >
@@ -566,6 +568,110 @@ const LeadTable = ({
             </div>
           </div>
         </div>
+      )}
+
+      {rejectModalData && ReactDOM.createPortal(
+        <>
+          <div 
+            className="modal-backdrop fade show" 
+            style={{ 
+              zIndex: 999998, 
+              backgroundColor: 'rgba(0,0,0,0.7)', 
+              backdropFilter: 'blur(5px)' 
+            }} 
+          />
+          <div 
+            className="modal fade show d-block" 
+            tabIndex="-1" 
+            style={{ zIndex: 999999 }}
+          >
+            <div className="modal-dialog modal-dialog-centered">
+              <div 
+                className="modal-content border-0 rounded-4 overflow-hidden"
+                style={{ 
+                  backgroundColor: isDarkMode ? '#1e1e2d' : '#ffffff',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                }}
+              >
+                <div className="modal-header border-0 px-4 pt-4 pb-0">
+                  <h5 className={`modal-title fw-black d-flex align-items-center gap-2 ${isDarkMode ? 'text-white' : 'text-dark'}`}>
+                    <XCircle size={22} className="text-danger" />
+                    Reject Payment
+                  </h5>
+                  <button 
+                    type="button" 
+                    className={`btn-close ${isDarkMode ? 'btn-close-white' : ''}`} 
+                    onClick={() => setRejectModalData(null)}
+                    style={{ opacity: 0.8 }}
+                  ></button>
+                </div>
+                <div className="modal-body px-4 py-3">
+                  <p className={`small mb-3 fw-bold ${isDarkMode ? 'text-secondary' : 'text-muted'}`}>
+                    Please provide a clear reason for rejecting the manual payment for <span className="text-primary fw-black">{rejectModalData.name}</span>.
+                  </p>
+                  <textarea
+                    className="form-control rounded-3"
+                    style={{
+                      backgroundColor: isDarkMode ? '#151521' : '#f8f9fa',
+                      color: isDarkMode ? '#ffffff' : '#212529',
+                      border: `1px solid ${isDarkMode ? '#323248' : '#dee2e6'}`,
+                      boxShadow: 'none',
+                      resize: 'none'
+                    }}
+                    rows="4"
+                    placeholder="Enter rejection reason here..."
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                <div className="modal-footer border-0 px-4 pb-4 pt-0 d-flex gap-2 justify-content-end">
+                  <button 
+                    type="button" 
+                    className={`btn rounded-pill px-4 fw-bold ${isDarkMode ? 'btn-dark border-secondary' : 'btn-light border'}`} 
+                    onClick={() => setRejectModalData(null)} 
+                    disabled={isRejecting}
+                    style={{ color: isDarkMode ? '#aaa' : '#555' }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-danger rounded-pill px-4 fw-bold d-flex align-items-center gap-2"
+                    disabled={isRejecting || !rejectReason.trim()}
+                    onClick={async () => {
+                      setIsRejecting(true);
+                      try {
+                        const payments = await leadsApi.getLeadPayments(rejectModalData.id);
+                        const pending = payments.find(p => p.status === 'PENDING_APPROVAL');
+                        if (pending) {
+                          await leadsApi.rejectPayment(pending.id, rejectReason);
+                          toast.success("Payment Rejected Protocol Executed");
+                          setRejectModalData(null);
+                          if (typeof loadLeads === 'function') loadLeads();
+                          else window.location.reload();
+                        } else {
+                           toast.error("No pending payment found to reject");
+                           setRejectModalData(null);
+                        }
+                      } catch (err) {
+                        toast.error("Rejection failed: Command error");
+                      } finally {
+                        setIsRejecting(false);
+                      }
+                    }}
+                  >
+                    {isRejecting ? (
+                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    ) : null}
+                    {isRejecting ? 'Rejecting...' : 'Confirm Rejection'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>,
+        document.body
       )}
 
       <style>{`

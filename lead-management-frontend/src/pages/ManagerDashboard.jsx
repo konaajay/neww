@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useDebounce from '../hooks/useDebounce';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -48,6 +49,7 @@ const ManagerDashboard = () => {
   const { user, logout } = useAuth();
   const { isDarkMode } = useTheme();
   const theme = isDarkMode ? 'dark' : 'light';
+  const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('manager_active_tab') || 'my-stats');
   const [myDashboardSubTab, setMyDashboardSubTab] = useState('dashboard');
@@ -522,7 +524,7 @@ const ManagerDashboard = () => {
                   handleAssignLead={(leadId, targetId) => assignLead({ leadId, targetId: targetId || 0 })}
                   onRecordCallOutcome={(leadId, data) => recordCallOutcome({ leadId, data })}
                   onViewInvoice={handleViewInvoice}
-                  onEdit={(lead) => navigate(`/leads/${lead.id}/edit`)}
+                  onEdit={(lead) => navigate(`/leads/${lead.id}/edit`, { state: { lead } })}
                   loading={leadsLoading}
                   teamLeaders={subordinates}
                   role="MANAGER"

@@ -36,12 +36,13 @@ const PortalSelect = ({
                         left = windowWidth - menuWidth - 20;
                     }
  
-                    // Force open downwards as per user request
-                    const overflowsBottom = false;
+                    const overflowsBottom = (rect.bottom + menuHeight > windowHeight - 20);
                     const top = rect.bottom;
+                    const bottom = windowHeight - rect.top;
  
                     setCoords({
                         top,
+                        bottom,
                         left: Math.max(20, left),
                         width: rect.width,
                         flipped: overflowsBottom
@@ -86,7 +87,8 @@ const PortalSelect = ({
             className={`custom-portal-dropdown shadow-2xl animate-zoom-in ${isDarkMode ? 'bg-surface border-white border-opacity-10 text-white' : 'bg-white border-dark border-opacity-10 text-dark'}`}
             style={{
                 position: 'fixed',
-                top: `${coords.top + (coords.flipped ? -5 : 5)}px`,
+                top: coords.flipped ? 'auto' : `${coords.top + 5}px`,
+                bottom: coords.flipped ? `${coords.bottom + 5}px` : 'auto',
                 left: `${coords.left}px`,
                 width: `${coords.width}px`,
                 zIndex: 9999999,

@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import attendanceService from '../../services/attendanceService';
 import wfhService from '../../services/wfhService';
 import { useTheme } from '../../context/ThemeContext';
+import { logger } from '../../utils/logger';
 
 const SidebarAttendance = ({ isCollapsed }) => {
     const { isDarkMode } = useTheme();
@@ -31,7 +32,7 @@ const SidebarAttendance = ({ isCollapsed }) => {
             setStatus(data);
             setLastSync(new Date());
         } catch (err) {
-            console.warn('Attendance status fetch failed', err?.response?.status);
+            logger.warn('Attendance status fetch failed', err?.response?.status);
         } finally {
             setLoading(false);
         }
@@ -118,10 +119,10 @@ const SidebarAttendance = ({ isCollapsed }) => {
                         });
                         fetchStatus();
                     } catch (err) {
-                        console.warn('Heartbeat ignored:', err?.response?.data?.message || err.message);
+                        logger.warn('Heartbeat ignored:', err?.response?.data?.message || err.message);
                     }
                 },
-                (geoErr) => console.warn('Geo unavailable for heartbeat:', geoErr.message),
+                (geoErr) => logger.warn('Geo unavailable for heartbeat:', geoErr.message),
                 { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
             );
         };
@@ -149,7 +150,7 @@ const SidebarAttendance = ({ isCollapsed }) => {
                 const res = await attendanceService.getAllOffices();
                 setOffices(res?.data || res || []);
             } catch (err) {
-                console.warn('Failed to fetch office locations');
+                logger.warn('Failed to fetch office locations');
             }
         };
         fetchOffices();
@@ -191,7 +192,7 @@ const SidebarAttendance = ({ isCollapsed }) => {
                     setDistanceToOffice(dist);
                 }
             }, (err) => {
-                console.warn("Distance check failed:", err.message);
+                logger.warn("Distance check failed:", err.message);
             }, { 
                 enableHighAccuracy: true, 
                 timeout: 10000, 

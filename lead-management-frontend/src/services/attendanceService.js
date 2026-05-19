@@ -6,15 +6,16 @@ const attendanceService = {
   trackLocation: (data) => safeRequest(api.post('/attendance/track', data)),
   startBreak: (type = 'SHORT') => safeRequest(api.post(`/attendance/break/start?type=${type}`)),
   endBreak: () => safeRequest(api.post('/attendance/break/end')),
-  getStatus: () => safeRequest(api.get('/attendance/status')),
-  getMyLogs: (params) => safeRequest(api.get('/attendance/my-logs', { params })),
+  getStatus: (config = {}) => safeRequest(api.get('/attendance/status', config)),
+  getMyLogs: (params, config = {}) => safeRequest(api.get('/attendance/my-logs', { params, ...config })),
+  getAllOffices: () => safeRequest(api.get('/attendance/offices')),
 
   
   // Admin/Manager operations
   getOffices: () => safeRequest(api.get('/admin/attendance/offices')),
   getShifts: () => safeRequest(api.get('/admin/attendance/shifts')),
   getPolicies: () => safeRequest(api.get('/admin/attendance/policies')),
-  getDailySummaries: (params) => safeRequest(api.get('/admin/attendance/summaries', { params })),
+  getDailySummaries: (params, config = {}) => safeRequest(api.get('/admin/attendance/summaries', { params, ...config })),
   saveManualEntry: (data) => safeRequest(api.post('/attendance/manual', data)),
   previewManualEntry: (data) => safeRequest(api.post('/attendance/preview', data))
 };

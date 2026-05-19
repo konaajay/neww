@@ -113,13 +113,7 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
       return statsToUse.userBreakdown?.[target] || statsToUse.userBreakdown?.[k.toUpperCase()] || 0;
     };
 
-    if (stats) {
-      console.log(">>> [METRIC COMMAND CENTER] Received Stats:", stats);
-      console.log(">>> [METRIC COMMAND CENTER] Performance List Length:", stats.performance?.length || 0);
-      if (stats.performance?.length > 0) {
-          console.log(">>> [METRIC COMMAND CENTER] First record:", stats.performance[0]);
-      }
-    }
+
 
     return {
       displayToday: (statsToUse.todayFollowups || 0) + (statsToUse.todayPaymentsCount || 0),

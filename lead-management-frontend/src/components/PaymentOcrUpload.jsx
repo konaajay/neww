@@ -43,7 +43,11 @@ const PaymentOcrUpload = ({ onDataExtracted, currentFile, setCurrentFile }) => {
             if (res.success) {
                 setExtractedData(res);
                 onDataExtracted(res);
-                toast.success("Extraction Complete!");
+                if (res.errorMessage) {
+                    toast.warning("Verification Needed: " + res.errorMessage);
+                } else {
+                    toast.success("Extraction Complete!");
+                }
             } else {
                 toast.warning("Extraction partial: " + (res.errorMessage || "Could not read all fields"));
             }
@@ -130,11 +134,14 @@ const PaymentOcrUpload = ({ onDataExtracted, currentFile, setCurrentFile }) => {
                     <div className="col-12 col-md-7">
                         {extractedData ? (
                             <div className="d-flex flex-column gap-2 animate-slide-up">
-                                <div className="p-3 rounded-4 bg-success bg-opacity-10 border border-success border-opacity-20 mb-2">
-                                    <div className="d-flex align-items-center gap-2 text-success fw-black text-uppercase small">
-                                        <CheckCircle size={14} /> Extraction Successful
+                                <div className={`p-3 rounded-4 mb-2 ${extractedData.errorMessage ? 'bg-warning bg-opacity-10 border-warning border-opacity-20 text-warning' : 'bg-success bg-opacity-10 border-success border-opacity-20 text-success'}`}>
+                                    <div className="d-flex align-items-center gap-2 fw-black text-uppercase small">
+                                        {extractedData.errorMessage ? <AlertCircle size={14} /> : <CheckCircle size={14} />}
+                                        {extractedData.errorMessage ? 'Verification Needed' : 'Extraction Successful'}
                                     </div>
-                                    <p className="small text-success opacity-75 mb-0 fw-bold mt-1">Please verify the fields below against the image.</p>
+                                    <p className="small mb-0 fw-bold mt-1 opacity-90">
+                                        {extractedData.errorMessage ? extractedData.errorMessage + " Please verify and correct fields below." : "Please verify the fields below against the image."}
+                                    </p>
                                 </div>
 
                                 <div className="row g-2">

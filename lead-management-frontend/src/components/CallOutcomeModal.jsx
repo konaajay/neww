@@ -48,6 +48,10 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
   const [isLoadingFee, setIsLoadingFee] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [generatingLinkIds, setGeneratingLinkIds] = useState([]);
+  
+  const [rejectModalData, setRejectModalData] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [isRejecting, setIsRejecting] = useState(false);
 
   // New Payment / Installment State integration
   const [totalAmount, setTotalAmount] = useState('499');
@@ -1098,19 +1102,8 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
                                               title="Reject Manual Payment"
                                               onClick={async (e) => {
                                                 e.stopPropagation();
-                                                const reason = window.prompt("Reason for rejection:");
-                                                if (reason !== null) {
-                                                  try {
-                                                    await leadsApi.rejectPayment(p.id, reason);
-                                                    toast.success("Payment Rejected");
-                                                    fetchFeeStructure();
-                                                    queryClient.invalidateQueries({ queryKey: ['leads'] });
-                                                    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-                                                    queryClient.invalidateQueries({ queryKey: ['tasks'] });
-                                                  } catch (err) {
-                                                    toast.error("Rejection failed");
-                                                  }
-                                                }
+                                                setRejectModalData(p);
+                                                setRejectReason('');
                                               }}
                                             >
                                               <XCircle size={14} className="text-danger hover-scale" />
@@ -1284,6 +1277,105 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
           </div>
         </div>
       </div>
+      
+      {rejectModalData && ReactDOM.createPortal(
+        <>
+          <div 
+            className="modal-backdrop fade show" 
+            style={{ 
+              zIndex: 999998, 
+              backgroundColor: 'rgba(0,0,0,0.7)', 
+              backdropFilter: 'blur(5px)' 
+            }} 
+          />
+          <div 
+            className="modal fade show d-block" 
+            tabIndex="-1" 
+            style={{ zIndex: 999999 }}
+          >
+            <div className="modal-dialog modal-dialog-centered">
+              <div 
+                className="modal-content border-0 rounded-4 overflow-hidden"
+                style={{ 
+                  backgroundColor: theme === 'dark' ? '#1e1e2d' : '#ffffff',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                }}
+              >
+                <div className="modal-header border-0 px-4 pt-4 pb-0">
+                  <h5 className={`modal-title fw-black d-flex align-items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-dark'}`}>
+                    <XCircle size={22} className="text-danger" />
+                    Reject Payment
+                  </h5>
+                  <button 
+                    type="button" 
+                    className={`btn-close ${theme === 'dark' ? 'btn-close-white' : ''}`} 
+                    onClick={() => setRejectModalData(null)}
+                    style={{ opacity: 0.8 }}
+                  ></button>
+                </div>
+                <div className="modal-body px-4 py-3">
+                  <p className={`small mb-3 fw-bold ${theme === 'dark' ? 'text-secondary' : 'text-muted'}`}>
+                    Please provide a clear reason for rejecting the manual payment for <span className="text-primary fw-black">{lead.name}</span>.
+                  </p>
+                  <textarea
+                    className="form-control rounded-3"
+                    style={{
+                      backgroundColor: theme === 'dark' ? '#151521' : '#f8f9fa',
+                      color: theme === 'dark' ? '#ffffff' : '#212529',
+                      border: `1px solid ${theme === 'dark' ? '#323248' : '#dee2e6'}`,
+                      boxShadow: 'none',
+                      resize: 'none'
+                    }}
+                    rows="4"
+                    placeholder="Enter rejection reason here..."
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                <div className="modal-footer border-0 px-4 pb-4 pt-0 d-flex gap-2 justify-content-end">
+                  <button 
+                    type="button" 
+                    className={`btn rounded-pill px-4 fw-bold ${theme === 'dark' ? 'btn-dark border-secondary' : 'btn-light border'}`} 
+                    onClick={() => setRejectModalData(null)} 
+                    disabled={isRejecting}
+                    style={{ color: theme === 'dark' ? '#aaa' : '#555' }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-danger rounded-pill px-4 fw-bold d-flex align-items-center gap-2"
+                    disabled={isRejecting || !rejectReason.trim()}
+                    onClick={async () => {
+                      setIsRejecting(true);
+                      try {
+                        await leadsApi.rejectPayment(rejectModalData.id, rejectReason);
+                        toast.success("Payment Rejected");
+                        setRejectModalData(null);
+                        fetchFeeStructure();
+                        queryClient.invalidateQueries({ queryKey: ['leads'] });
+                        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+                        queryClient.invalidateQueries({ queryKey: ['tasks'] });
+                      } catch (err) {
+                        toast.error("Rejection failed");
+                      } finally {
+                        setIsRejecting(false);
+                      }
+                    }}
+                  >
+                    {isRejecting ? (
+                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    ) : null}
+                    {isRejecting ? 'Rejecting...' : 'Confirm Rejection'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
     </div>
   );
 

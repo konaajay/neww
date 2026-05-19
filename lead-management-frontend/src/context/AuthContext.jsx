@@ -54,14 +54,11 @@ export const AuthProvider = ({ children }) => {
         const newUserStr = JSON.stringify(userData);
         
         if (currentUserStr !== newUserStr) {
-          console.log("[AuthContext] Profile data changed, updating session state.");
           localStorage.setItem('user', newUserStr);
           setUser(userData);
-        } else {
-          console.log("[AuthContext] Profile data stable.");
         }
       }).catch(err => {
-        console.warn("[AuthContext] Profile sync failed:", err);
+        // Ignored
       });
     }
 
@@ -75,7 +72,6 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
-    console.log("[AuthContext] Attempting login for:", email);
     try {
       const response = await authService.login(email, password);
       const { token, id, role, email: userEmail, name, shiftTime, officeName, latitude, longitude } = response.data;
@@ -89,8 +85,6 @@ export const AuthProvider = ({ children }) => {
         latitude,
         longitude
       };
-      
-      console.log("[AuthContext] Login success payload:", { id, role, userEmail });
       
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(userData));
@@ -121,7 +115,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await api.post('/auth/logout');
     } catch (e) {
-      console.warn("Logout ping failed");
+      // Ignored
     }
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -161,8 +155,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const value = React.useMemo(() => ({
+    user,
+    login,
+    loginDemo,
+    logout,
+    loading,
+    activeCall,
+    startCall,
+    clearCall,
+    updateProfile
+  }), [user, loading, activeCall]);
+
   return (
-    <AuthContext.Provider value={{ user, login, loginDemo, logout, loading, activeCall, startCall, clearCall, updateProfile }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, CheckCircle, XCircle, Clock, Search, Filter, ShieldCheck, User } from 'lucide-react';
+import { useTheme } from '../../../context/ThemeContext';
 import { toast } from 'react-toastify';
 import wfhService from '../../../services/wfhService';
 
 const WfhApprovalPanel = ({ role }) => {
+    const { isDarkMode } = useTheme();
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -58,42 +60,50 @@ const WfhApprovalPanel = ({ role }) => {
         <div className="animate-fade-in">
             {/* Action Confirmation Modal */}
             {actionModal && (
-                <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 10000, background: 'rgba(3, 7, 18, 0.9)', backdropFilter: 'blur(10px)' }}>
-                    <div className="premium-card p-4 border-0 shadow-2xl bg-surface" style={{ borderRadius: '28px', width: '400px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                        <div className="d-flex align-items-center gap-3 mb-4">
-                            <div className={`p-2 rounded-circle ${actionModal.action === 'APPROVED' ? 'bg-success bg-opacity-10 text-success' : 'bg-danger bg-opacity-10 text-danger'}`}>
-                                {actionModal.action === 'APPROVED' ? <CheckCircle size={24} /> : <XCircle size={24} />}
-                            </div>
-                            <div>
-                                <h6 className="fw-black text-main text-uppercase tracking-widest mb-0">{actionModal.action} WFH REQUEST</h6>
-                                <p className="text-muted small mb-0 fw-bold">Add optional administrative notes</p>
-                            </div>
+                <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 100000, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)' }}>
+                    <div className="modal-content border-0 rounded-4 overflow-hidden shadow-lg" style={{ width: '450px', backgroundColor: isDarkMode ? '#1e1e2d' : '#ffffff', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+                        <div className="modal-header border-0 px-4 pt-4 pb-0">
+                            <h5 className={`modal-title fw-black d-flex align-items-center gap-2 ${isDarkMode ? 'text-white' : 'text-dark'}`}>
+                                <div className={`p-1 rounded-circle d-flex align-items-center justify-content-center ${actionModal.action === 'APPROVED' ? 'bg-success bg-opacity-10 text-success' : 'bg-danger bg-opacity-10 text-danger'}`}>
+                                    {actionModal.action === 'APPROVED' ? <CheckCircle size={22} /> : <XCircle size={22} />}
+                                </div>
+                                {actionModal.action} WFH REQUEST
+                            </h5>
                         </div>
-
-                        <textarea 
-                            className="form-control bg-dark border-white border-opacity-10 rounded-4 p-3 text-main mb-4"
-                            rows="3"
-                            placeholder="Type administrative notes here (optional)..."
-                            value={actionModal.notes}
-                            onChange={(e) => setActionModal(prev => ({ ...prev, notes: e.target.value }))}
-                            style={{ resize: 'none', fontSize: '12px' }}
-                        ></textarea>
-
-                        <div className="d-flex gap-2">
+                        <div className="modal-body px-4 py-3">
+                            <p className={`small mb-3 fw-bold ${isDarkMode ? 'text-secondary' : 'text-muted'}`}>Add optional administrative notes below.</p>
+                            <textarea 
+                                className="form-control rounded-3"
+                                rows="4"
+                                placeholder="Type administrative notes here (optional)..."
+                                value={actionModal.notes}
+                                onChange={(e) => setActionModal(prev => ({ ...prev, notes: e.target.value }))}
+                                style={{ 
+                                    resize: 'none', 
+                                    backgroundColor: isDarkMode ? '#151521' : '#f8f9fa',
+                                    color: isDarkMode ? '#ffffff' : '#212529',
+                                    border: `1px solid ${isDarkMode ? '#323248' : '#dee2e6'}`,
+                                    boxShadow: 'none'
+                                }}
+                                autoFocus
+                            ></textarea>
+                        </div>
+                        <div className="modal-footer border-0 px-4 pb-4 pt-0 d-flex gap-2 justify-content-end">
                             <button 
-                                className="btn flex-grow-1 py-2.5 rounded-pill fw-black text-uppercase tracking-widest border-0 opacity-50 hover-opacity-100" 
-                                style={{ fontSize: '10px', background: 'rgba(255,255,255,0.05)', color: '#fff' }}
+                                className={`btn rounded-pill px-4 fw-bold ${isDarkMode ? 'btn-dark border-secondary' : 'btn-light border'}`} 
                                 onClick={() => setActionModal(null)}
+                                style={{ color: isDarkMode ? '#aaa' : '#555' }}
+                                disabled={actionLoading === actionModal.id}
                             >
                                 Cancel
                             </button>
                             <button 
-                                className={`btn flex-grow-1 py-2.5 rounded-pill fw-black text-uppercase tracking-widest border-0 shadow-glow ${actionModal.action === 'APPROVED' ? 'bg-success' : 'bg-danger'}`}
-                                style={{ fontSize: '10px', color: '#fff' }}
+                                className={`btn rounded-pill px-4 fw-bold d-flex align-items-center gap-2 ${actionModal.action === 'APPROVED' ? 'btn-success' : 'btn-danger'}`}
                                 onClick={handleConfirmAction}
                                 disabled={actionLoading === actionModal.id}
                             >
-                                {actionLoading === actionModal.id ? 'Processing...' : `Confirm ${actionModal.action.toLowerCase()}`}
+                                {actionLoading === actionModal.id ? <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> : null}
+                                {actionLoading === actionModal.id ? 'Processing...' : `Confirm ${actionModal.action}`}
                             </button>
                         </div>
                     </div>

@@ -1,39 +1,81 @@
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Save, X, ChevronDown, Shield, Users, Target, Info, CreditCard } from 'lucide-react';
 import { useTheme } from '../../../context/ThemeContext';
 import { toast } from 'react-toastify';
 import paymentService from '../../../services/paymentService';
+import leadsApi from '../../../features/leads/api/leadsApi';
+import { useLookupData } from '../../../features/users/hooks/useLookupData';
+import { useAuth } from '../../../context/AuthContext';
 import { IndianRupee, Wallet, Calendar, AlertCircle } from 'lucide-react';
 
-const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], role }) => {
+const LeadEditPage = () => {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const { user } = useAuth();
+    const role = user?.role ? user.role.replace('ROLE_', '') : 'MANAGER';
+    
+    const { teamLeaders = [], subordinates = [] } = useLookupData(role);
+    const allUsers = [...teamLeaders, ...subordinates];
+
     const { isDarkMode } = useTheme();
+    const [lead, setLead] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
     const [formData, setFormData] = useState({
-        name: lead?.name || '',
-        mobile: lead?.mobile || '',
-        email: lead?.email || '',
-        college: lead?.college || '',
-        status: lead?.status || 'Active',
-        managerId: lead?.managerId || '',
-        teamLeaderId: lead?.teamLeaderId || '',
-        associateId: lead?.assignedToId || '',
-        assignmentType: 'SPECIFIC', // 'ALL' or 'SPECIFIC'
-        selectedLeads: [lead?.id] || [],
-        notes: lead?.notes || ''
+        name: '',
+        mobile: '',
+        email: '',
+        college: '',
+        status: 'Active',
+        managerId: '',
+        teamLeaderId: '',
+        associateId: '',
+        assignmentType: 'SPECIFIC',
+        selectedLeads: [],
+        notes: ''
     });
 
     const [studentFee, setStudentFee] = useState(null);
     const [isFeeLoading, setIsFeeLoading] = useState(false);
 
     useEffect(() => {
-        if (lead?.id && (lead.status === 'PAID' || lead.status === 'EMI' || lead.status === 'CONVERTED')) {
-            fetchFeeStructure();
-        }
-    }, [lead]);
+        const loadLead = () => {
+            const fetchedLead = location.state?.lead;
+            if (!fetchedLead) {
+                toast.error("Lead data not found in session. Please return to dashboard and try again.");
+                setIsLoading(false);
+                return;
+            }
+            
+            setLead(fetchedLead);
+            setFormData({
+                name: fetchedLead?.name || '',
+                mobile: fetchedLead?.mobile || '',
+                email: fetchedLead?.email || '',
+                college: fetchedLead?.college || '',
+                status: fetchedLead?.status || 'Active',
+                managerId: fetchedLead?.managerId || '',
+                teamLeaderId: fetchedLead?.teamLeaderId || '',
+                associateId: fetchedLead?.assignedToId || '',
+                assignmentType: 'SPECIFIC',
+                selectedLeads: [fetchedLead?.id],
+                notes: fetchedLead?.notes || ''
+            });
+            
+            if (fetchedLead?.status === 'PAID' || fetchedLead?.status === 'EMI' || fetchedLead?.status === 'CONVERTED') {
+                fetchFeeStructure();
+            }
+            setIsLoading(false);
+        };
+        loadLead();
+    }, [id, location.state]);
 
     const fetchFeeStructure = async () => {
         setIsFeeLoading(true);
         try {
-            const res = await paymentService.fetchStudentFee(lead.id);
+            const res = await paymentService.fetchStudentFee(id);
             setStudentFee(res.data);
         } catch (err) {
             console.error('Failed to fetch fee structure');
@@ -45,9 +87,9 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
     const [errors, setErrors] = useState({});
 
     // Filtered users for hierarchy
-    const managers = users.filter(u => u.role === 'MANAGER');
-    const teams = users.filter(u => u.role === 'TEAM_LEADER' && (formData.managerId ? u.managerId?.toString() === formData.managerId?.toString() : true));
-    const associates = users.filter(u => u.role === 'ASSOCIATE' && (formData.teamLeaderId ? u.teamLeaderId?.toString() === formData.teamLeaderId?.toString() : true));
+    const managers = allUsers.filter(u => u.role === 'MANAGER');
+    const teams = allUsers.filter(u => u.role === 'TEAM_LEADER' && (formData.managerId ? u.managerId?.toString() === formData.managerId?.toString() : true));
+    const associates = allUsers.filter(u => u.role === 'ASSOCIATE' && (formData.teamLeaderId ? u.teamLeaderId?.toString() === formData.teamLeaderId?.toString() : true));
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -68,11 +110,39 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (validate()) {
-            onSave(formData);
+            setIsSaving(true);
+            try {
+                // Determine save endpoint/method
+                await leadsApi.updateLead(id, formData);
+                
+                if (formData.associateId) {
+                    await leadsApi.assignLead(role, id, formData.associateId);
+                }
+                
+                toast.success('Lead updated successfully');
+                
+                // Trigger a hard refresh on navigation
+                sessionStorage.setItem('pendingHardRefresh', 'true');
+                navigate(-1);
+            } catch (err) {
+                toast.error('Failed to update lead');
+            } finally {
+                setIsSaving(false);
+            }
         }
     };
+
+    if (isLoading) {
+        return (
+            <div className={`min-vh-100 d-flex justify-content-center align-items-center ${isDarkMode ? 'bg-dark text-white' : 'bg-light text-dark'}`}>
+                <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={`min-vh-100 py-5 px-3 px-md-5 animate-fade-in ${isDarkMode ? 'bg-dark bg-opacity-50' : 'bg-light'}`}>
@@ -87,7 +157,8 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
                         <button
                             className="btn btn-outline-secondary px-4 py-2 fw-bold text-uppercase tracking-wider rounded-pill"
                             style={{ fontSize: '11px' }}
-                            onClick={onCancel}
+                            onClick={() => navigate(-1)}
+                            disabled={isSaving}
                         >
                             Cancel
                         </button>
@@ -95,8 +166,9 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
                             className="btn btn-primary px-4 py-2 fw-bold text-uppercase tracking-wider rounded-pill shadow-sm"
                             style={{ fontSize: '11px', background: '#4f46e5' }}
                             onClick={handleSave}
+                            disabled={isSaving}
                         >
-                            Update
+                            {isSaving ? 'Updating...' : 'Update'}
                         </button>
                         {lead?.status === 'PAID' || lead?.status === 'EMI' ? (
                             <div className="d-flex align-items-center gap-2 px-4 py-2 bg-success bg-opacity-10 text-success rounded-pill fw-bold small border border-success border-opacity-20 ms-2">
@@ -124,6 +196,7 @@ const LeadEditPage = ({ lead, onSave, onCancel, onSendPaymentLink, users = [], r
                                     <label className="form-label text-secondary fw-semibold small text-uppercase mb-2">Name</label>
                                     <input
                                         type="text"
+                                        name="name"
                                         value={formData.name}
                                         onChange={handleChange}
                                         className={`form-control py-2 px-3 rounded-3 transition-all ${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-10 text-main' : 'bg-light border-light-subtle'}`}
