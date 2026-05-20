@@ -31,6 +31,7 @@ import PaymentInstructionPage from './pages/PaymentInstructionPage';
 import PaymentStatusPage from './pages/PaymentStatusPage';
 import NotificationManager from './components/NotificationManager';
 import LeadEditPage from './pages/dashboard/components/LeadEditPage';
+import CertificateDashboard from './modules/certificates/pages/CertificateDashboard';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -134,6 +135,15 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['ASSOCIATE', 'ASSOCIATE_TEAM_LEAD']}>
                   <AssociateDashboard />
+                </ProtectedRoute>
+              } 
+            />
+
+            <Route 
+              path="/certificates/*" 
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'TEAM_LEADER']}>
+                  <CertificateDashboard />
                 </ProtectedRoute>
               } 
             />

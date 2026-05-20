@@ -1,0 +1,134 @@
+.certificate-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #eee;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.certificate-border {
+  width: 1100px;
+  max-width: 100%;
+  background: #fff;
+  padding: 40px;
+  position: relative;
+  border: 8px solid transparent;
+  border-image: linear-gradient(45deg, gold, #c9a646, gold) 1;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.12);
+}
+
+.title {
+  text-align: center;
+  font-size: 60px;
+  letter-spacing: 8px;
+  color: #0f2c3f;
+  margin: 0;
+}
+
+.subtitle {
+  text-align: center;
+  font-size: 22px;
+  letter-spacing: 4px;
+  margin-bottom: 20px;
+}
+
+.decor-line {
+  width: 200px;
+  height: 2px;
+  background: #aaa;
+  margin: 20px auto;
+}
+
+.certify-text {
+  text-align: center;
+  font-size: 18px;
+  color: #5b6670;
+}
+
+.name {
+  text-align: center;
+  font-size: 50px;
+  margin: 10px 0;
+  font-family: "Georgia", serif;
+  color: #101828;
+}
+
+.divider {
+  width: 300px;
+  height: 2px;
+  background: #000;
+  margin: 20px auto;
+}
+
+.description {
+  text-align: center;
+  font-size: 16px;
+  max-width: 800px;
+  margin: 0 auto;
+  line-height: 1.75;
+  color: #475569;
+}
+
+.bottom-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 60px;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.signature {
+  text-align: center;
+  min-width: 220px;
+}
+
+.sign {
+  font-family: cursive;
+  font-size: 20px;
+  margin: 0;
+}
+
+.role {
+  font-size: 14px;
+  margin: 4px 0 0;
+  color: #475569;
+}
+
+.logo-section {
+  text-align: center;
+}
+
+.logo-section img {
+  width: 80px;
+  display: inline-block;
+}
+
+.brand {
+  font-weight: bold;
+  margin-top: 8px;
+  color: #0f172a;
+}
+
+.footer {
+  position: absolute;
+  bottom: 20px;
+  left: 40px;
+  right: 40px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: #475569;
+}
+
+.badge {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: gold;
+  padding: 12px;
+  border-radius: 50%;
+  font-weight: bold;
+  color: #0f172a;
+}

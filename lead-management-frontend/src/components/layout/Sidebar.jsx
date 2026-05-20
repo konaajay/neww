@@ -1,9 +1,10 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import wfhService from '../../services/wfhService';
 import {
   LayoutDashboard, Users, UserPlus, Layers, Target, TrendingUp, Settings,
-  LogOut, Phone as PhoneIcon, Upload, IndianRupee, FileText, Menu, X, ShieldHalf, LifeBuoy, BookOpen
+  LogOut, Phone as PhoneIcon, Upload, IndianRupee, FileText, Menu, X, ShieldHalf, LifeBuoy, BookOpen, Award
 } from 'lucide-react';
 import SidebarAttendance from './SidebarAttendance';
 
@@ -39,6 +40,7 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
         { id: 'tasks', label: 'Team Task ', icon: Layers },
         { id: 'payments', label: 'Revenue Stats', icon: IndianRupee },
         { id: 'calls', label: 'Team Calllogs', icon: PhoneIcon },
+        { id: 'certificate', label: 'Certificate', icon: Award, url: '/certificates' },
         // { id: 'courses', label: 'Courses', icon: BookOpen },
         { id: 'settings', label: 'Global Settings', icon: Settings },
       ];
@@ -55,6 +57,7 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
         { id: 'payments', label: 'Team Revenue', icon: IndianRupee },
         { id: 'calls', label: 'Team Calllogs', icon: PhoneIcon },
         { id: 'tasks', label: 'Team Task ', icon: Layers },
+        { id: 'certificate', label: 'Certificate', icon: Award, url: '/certificates' },
         // { id: 'courses', label: 'Courses', icon: BookOpen },
         { id: 'reports', label: 'Team Reports', icon: TrendingUp },
       ];
@@ -126,6 +129,36 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
               {navItems.map(item => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
+                
+                if (item.url) {
+                  const isExternal = item.url.startsWith('http');
+                  return isExternal ? (
+                    <a
+                      key={item.id}
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`nav-link-premium border-0 position-relative text-decoration-none`}
+                      title={isCollapsed ? item.label : ''}
+                      onClick={() => onClose()}
+                    >
+                      <Icon size={18} className="text-muted" />
+                      {(!isCollapsed || isOpen) && <span>{item.label}</span>}
+                    </a>
+                  ) : (
+                    <Link
+                      key={item.id}
+                      to={item.url}
+                      className={`nav-link-premium border-0 position-relative text-decoration-none`}
+                      title={isCollapsed ? item.label : ''}
+                      onClick={() => onClose()}
+                    >
+                      <Icon size={18} className="text-muted" />
+                      {(!isCollapsed || isOpen) && <span>{item.label}</span>}
+                    </Link>
+                  );
+                }
+
                 return (
                   <button
                     key={item.id}

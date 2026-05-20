@@ -387,6 +387,24 @@ const LeadStatusUpdatePage = () => {
         }
 
         await associateService.recordManualPayment(formData);
+
+        // AUTO-COMPLETE: Complete the oldest pending EMI_COLLECTION task for this lead
+        try {
+          const tasksRes = await associateService.fetchLeadTasks(id);
+          const allTasks = tasksRes?.data || tasksRes || [];
+
+          // Find all open EMI collection tasks, sort by due date (oldest first)
+          const pendingEmiTasks = allTasks
+            .filter(t => t.taskType === 'EMI_COLLECTION' && t.status !== 'COMPLETED')
+            .sort((a, b) => new Date(a.dueDate || 0) - new Date(b.dueDate || 0));
+
+          if (pendingEmiTasks.length > 0) {
+            await associateService.updateTaskStatus(pendingEmiTasks[0].id, 'COMPLETED');
+            toast.success(`✅ EMI Collection Task auto-completed!`);
+          }
+        } catch (taskErr) {
+          console.warn('Auto-complete task failed (non-critical):', taskErr);
+        }
       } else {
         await leadsApi.updateStatus(id, selectedStatus, note, payload);
       }
@@ -601,7 +619,11 @@ const LeadStatusUpdatePage = () => {
                       })()}>
                         <div className={`h-100 p-3 rounded-4 border ${isDarkMode ? 'bg-surface bg-opacity-40 border-white border-opacity-5' : 'bg-light border-secondary border-opacity-10'}`}>
                            <label className="text-muted small fw-black text-uppercase tracking-widest mb-1 d-block" style={{ fontSize: '9px' }}>Protocol Status</label>
-                           <h3 className="fw-black text-main text-uppercase mb-0 tracking-tight">{selectedStatus || 'Select Protocol'}</h3>
+                           <PortalSelect 
+                             options={[{value: '', label: '-- SELECT PROTOCOL --'}, ...(pipelineStages || []).map(s => ({ value: s.statusValue, label: s.label }))]}
+                             value={selectedStatus || ''}
+                             onChange={e => setSelectedStatus(e.target.value)}
+                           />
                         </div>
                       </div>
 
@@ -678,11 +700,27 @@ const LeadStatusUpdatePage = () => {
                             </div>
                             <div className="col-md-6">
                               <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '10px' }}>2. Base Package</label>
-                              <input type="number" className="form-control rounded-3" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} />
+                              <input 
+                                type="number" 
+                                min="0" 
+                                onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') e.preventDefault(); }}
+                                onInput={(e) => { if (parseFloat(e.target.value) < 0) e.target.value = 0; }}
+                                className="form-control rounded-3" 
+                                value={totalAmount} 
+                                onChange={e => setTotalAmount(Math.max(0, parseFloat(e.target.value) || 0))} 
+                              />
                             </div>
                             <div className="col-md-6">
                               <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '10px' }}>3. Discount</label>
-                              <input type="number" className="form-control rounded-3" value={discount} onChange={e => setDiscount(e.target.value)} />
+                              <input 
+                                type="number" 
+                                min="0" 
+                                onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') e.preventDefault(); }}
+                                onInput={(e) => { if (parseFloat(e.target.value) < 0) e.target.value = 0; }}
+                                className="form-control rounded-3" 
+                                value={discount} 
+                                onChange={e => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))} 
+                              />
                             </div>
                           </div>
                         )}
@@ -693,9 +731,12 @@ const LeadStatusUpdatePage = () => {
                           </label>
                           <input 
                             type="number" 
+                            min="0"
+                            onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') e.preventDefault(); }}
+                            onInput={(e) => { if (parseFloat(e.target.value) < 0) e.target.value = 0; }}
                             className="form-control rounded-3 fw-black text-primary border-primary border-opacity-25" 
                             value={initialAmount} 
-                            onChange={e => setInitialAmount(e.target.value)} 
+                            onChange={e => setInitialAmount(Math.max(0, parseFloat(e.target.value) || 0))} 
                           />
                           {Number(initialAmount) > Number(discountedTotal) && (
                             <small className="text-danger fw-bold mt-2 d-block">Commitment cannot exceed total settlement amount.</small>
