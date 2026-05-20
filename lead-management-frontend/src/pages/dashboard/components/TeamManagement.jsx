@@ -133,7 +133,9 @@ const TeamManagement = ({
               <a href={`https://wa.me/${user.mobile}`} target="_blank" rel="noreferrer" className="btn btn-sm btn-link p-0 text-success opacity-50 hover-opacity-100"><MessageCircle size={13} /></a>
             </div>
 
-            <button onClick={() => handleEditUser(user)} className="btn btn-sm btn-link p-0 text-primary opacity-50 hover-opacity-100 transition-all hover-scale"><Edit size={13} /></button>
+            {user.active && (
+              <button onClick={() => handleEditUser(user)} className="btn btn-sm btn-link p-0 text-primary opacity-50 hover-opacity-100 transition-all hover-scale"><Edit size={13} /></button>
+            )}
             {user.active ? (
               <button onClick={() => handleDeleteUser(user.id)} className="btn btn-sm btn-link p-0 text-danger opacity-50 hover-opacity-100 ms-1 transition-all hover-scale" title="Deactivate"><Power size={13} /></button>
             ) : (

@@ -263,6 +263,28 @@ const ManagerDashboard = () => {
     }
   };
 
+  const handleUpdateUser = async (id, formData) => {
+    try {
+      await userApi.updateUser('MANAGER', id, formData);
+      toast.success('User Updated Successfully');
+      handleSync();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not update user');
+    }
+  };
+
+  const handleEditUserSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await userApi.updateUser('MANAGER', editingUser.id, editingUser);
+      toast.success('User Updated Successfully');
+      setEditingUser(null);
+      handleSync();
+    } catch (err) {
+      toast.error('Could not update user');
+    }
+  };
+
   const handleAssignSupervisor = async (assocId, supId) => {
     try {
       await userApi.assignSupervisor('MANAGER', assocId, supId);
@@ -595,7 +617,7 @@ const ManagerDashboard = () => {
             shifts={shifts}
             handleCreateUser={handleCreateUser}
             handleDeleteUser={handleDeleteUser}
-            handleUpdateUser={handleDeleteUser}
+            handleUpdateUser={handleUpdateUser}
             handleEditUser={setEditingUser}
             handleAssignSupervisor={handleAssignSupervisor}
             setSelectedPerfUserId={(id) => setFilterState(p => ({ ...p, userId: id }))}
@@ -608,6 +630,15 @@ const ManagerDashboard = () => {
         {/* Modals moved inside the main wrapping div */}
         <LeadModal isOpen={isIngestionModalOpen} onClose={() => setIsIngestionModalOpen(false)} onAddLead={handleAddLead} onSuccess={handleSync} associates={subordinates} />
         <InvoiceModal isOpen={!!selectedInvoice} onClose={() => setSelectedInvoice(null)} invoiceData={selectedInvoice} />
+        <UserEditModal
+          user={editingUser}
+          setUser={setEditingUser}
+          isOpen={!!editingUser}
+          onClose={() => setEditingUser(null)}
+          onSubmit={handleEditUserSubmit}
+          roles={roles}
+          teamLeaders={teamLeaders}
+        />
       </div>
     </DashboardLayout>
   );
