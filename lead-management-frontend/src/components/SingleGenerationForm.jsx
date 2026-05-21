@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User, Mail, Award, Send, Zap, CheckCircle2, AlertCircle } from 'lucide-react';
 import { isRetryable } from '../utils/statusUtils';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://52.87.168.111:8080";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://3.84.147.168:8080";
 
 const SingleGenerationForm = ({ onComplete, onDataChange }) => {
   const [formData, setFormData] = useState({

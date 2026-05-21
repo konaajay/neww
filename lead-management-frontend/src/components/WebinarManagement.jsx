@@ -3,7 +3,7 @@ import { Calendar, Clock, Link as LinkIcon, Copy, Plus, Trash2, CheckCircle2, Ex
 
 import './WebinarManagement.css';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://52.87.168.111:8080";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://3.84.147.168:8080";
 
 const WebinarManagement = () => {
   const [webinars, setWebinars] = useState([]);
