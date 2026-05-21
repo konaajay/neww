@@ -463,13 +463,13 @@ const TrackingDashboard = ({ searchQuery = '', templateFile }) => {
                         <Loader2 size={12} className="spin-animation" /> Processing
                       </span>
                     ) : log.status === STATUS.SENT ? (
-                      <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <CheckCircle size={12} /> Sent
+                      <span className="badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#10b981', color: '#ffffff', fontWeight: '700', padding: '6px 12px', borderRadius: '8px', boxShadow: '0 2px 10px rgba(16, 185, 129, 0.2)' }}>
+                        <CheckCircle size={14} /> Sent
                       </span>
                     ) : log.status === STATUS.FAILED ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <span className="badge badge-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', width: 'fit-content' }}>
-                          <XCircle size={12} /> Failed
+                        <span className="badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#ef4444', color: '#ffffff', fontWeight: '700', padding: '6px 12px', borderRadius: '8px', boxShadow: '0 2px 10px rgba(239, 68, 68, 0.2)', width: 'fit-content' }}>
+                          <XCircle size={14} /> Failed
                         </span>
                         {log.errorMessage && (
                           <div style={{ fontSize: '0.7rem', color: 'var(--accent-danger)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.errorMessage}>

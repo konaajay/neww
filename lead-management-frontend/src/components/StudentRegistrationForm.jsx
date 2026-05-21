@@ -34,10 +34,12 @@ const StudentRegistrationForm = () => {
       fetch(`${API_BASE}/api/webinars/${webinarId}`)
         .then(res => {
           if (res.ok) return res.json();
-          throw new Error('Failed to fetch webinar details');
+          return null;
         })
-        .then(data => setWebinarDetails(data))
-        .catch(err => console.error('Error fetching webinar details:', err));
+        .then(data => {
+          if (data) setWebinarDetails(data);
+        })
+        .catch(() => {});
     }
   }, [webinarId]);
 
@@ -160,7 +162,7 @@ const StudentRegistrationForm = () => {
       default:
         icon = <XCircle size={64} />;
         title = "Oops!";
-        message = "Something went wrong. Please check your connection to the server at 100.31.140.101 and try again.";
+        message = "Something went wrong. Please check your connection to the server and try again.";
         typeClass = "error";
         break;
     }

@@ -25,27 +25,27 @@ const DashboardLayout = ({ children, activeTab, onTabChange, role, navbarExtras,
     <div className={`app-shell ${isCollapsed ? 'sidebar-closed' : ''}`}>
       {/* Unified SaaS Header */}
       <header className="unified-header">
-        <div 
-          className="brand-section cursor-pointer hover-opacity d-flex align-items-center justify-content-center" 
+        <div
+          className="brand-section cursor-pointer hover-opacity d-flex align-items-center justify-content-center"
           onClick={toggleSidebar}
           style={{ cursor: 'pointer', transition: 'all 0.3s ease' }}
         >
-            {/* Desktop Expanded Branding */}
-            {!isCollapsed && (
-              <div className="d-none d-lg-flex align-items-center gap-3 overflow-hidden px-3">
-                <div style={{ width: '42px', height: '42px' }}>
-                  <img src="/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                </div>
-                <span className="fw-black tracking-widest text-main text-truncate" style={{ fontSize: '20px', letterSpacing: '0.15em' }}>GYANTRIX</span>
+          {/* Desktop Expanded Branding */}
+          {!isCollapsed && (
+            <div className="d-none d-lg-flex align-items-center gap-3 overflow-hidden px-3">
+              <div style={{ width: '42px', height: '42px' }}>
+                <img src="/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               </div>
-            )}
-
-            {/* Mobile/Collapsed Symbolic Toggle */}
-            <div className={`d-flex align-items-center justify-content-center w-100 ${!isCollapsed ? 'd-lg-none' : ''}`}>
-               <div className="transition-all hover-scale" style={{ width: '46px', height: '46px' }}>
-                 <img src="/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-               </div>
+              <span className="fw-black tracking-widest text-main text-truncate" style={{ fontSize: '20px', letterSpacing: '0.15em' }}>GYANTRIX</span>
             </div>
+          )}
+
+          {/* Mobile/Collapsed Symbolic Toggle */}
+          <div className={`d-flex align-items-center justify-content-center w-100 ${!isCollapsed ? 'd-lg-none' : ''}`}>
+            <div className="transition-all hover-scale" style={{ width: '46px', height: '46px' }}>
+              <img src="/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            </div>
+          </div>
         </div>
 
         <div className="nav-section">

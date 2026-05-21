@@ -127,7 +127,7 @@ const OldLeadsIngestion = ({ onSuccess }) => {
 
                 <div className="text-center">
                     <button
-                        className={`ui-btn px-5 py-3 rounded-pill fw-black text-uppercase tracking-widest shadow-lg ${isDarkMode ? 'ui-btn-primary' : 'btn-dark'}`}
+                        className="ui-btn px-5 py-3 rounded-pill fw-black text-uppercase tracking-widest shadow-lg ui-btn-primary"
                         onClick={handleReset}
                     >
                         INGEST ANOTHER BATCH
@@ -218,7 +218,7 @@ const OldLeadsIngestion = ({ onSuccess }) => {
                 <button
                     type="submit"
                     className={`ui-btn px-5 rounded-pill fw-black text-uppercase tracking-widest shadow-glow py-3 border-0 transition-all hover:scale-105 active:scale-95 d-flex align-items-center justify-content-center gap-3 ${uploading || !file ? 'opacity-50 grayscale' : ''
-                        } ${isDarkMode ? 'ui-btn-primary' : 'btn-dark'}`}
+                        } ui-btn-primary`}
                     disabled={uploading || !file}
                     style={{ fontSize: '11px', minWidth: '280px' }}
                 >

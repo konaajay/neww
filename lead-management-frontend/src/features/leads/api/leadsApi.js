@@ -30,7 +30,7 @@ const leadsApi = {
   },
 
   rejectPayment: async (paymentId, reason) => {
-    return await safeRequest(api.post(`/payments/${paymentId}/reject`, null, { params: { reason } }));
+    return await safeRequest(api.post(`/payments/${paymentId}/reject`, { reason }, { params: { reason } }));
   },
 
   updateStatus: (id, status, note, extraData = {}) => 
@@ -73,8 +73,8 @@ const leadsApi = {
 
   sendPaymentLink: (leadId, data) => safeRequest(api.post(`/leads/${leadId}/send-payment-link`, data)),
   
-  createCashfreeOrder: (leadId, amount, type, installments = [], totalAmount, discount, installmentId) => 
-    safeRequest(api.post('/payments/cashfree/create-order', { leadId, amount, type: type || 'FULL', installments, totalAmount, discount, installmentId })),
+  createCashfreeOrder: (leadId, amount, type, installments = [], totalAmount, discount, installmentId, courseId) => 
+    safeRequest(api.post('/payments/cashfree/create-order', { leadId, amount, type: type || 'FULL', installments, totalAmount, discount, installmentId, courseId })),
 
   recordManualPayment: (data, receiptFile) => {
     const formData = new FormData();

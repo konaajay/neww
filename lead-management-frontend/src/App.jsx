@@ -25,6 +25,7 @@ import PaymentPortal from './pages/PaymentPortal';
 import AssociateDashboard from './pages/AssociateDashboard';
 import StudentFeePage from './pages/StudentFeePage';
 import LeadStatusUpdatePage from './pages/LeadStatusUpdatePage';
+import LeadDetailsPage from './pages/LeadDetailsPage';
 import InvoicePage from './pages/InvoicePage';
 import CourseManagementPage from './pages/CourseManagementPage';
 import PaymentInstructionPage from './pages/PaymentInstructionPage';
@@ -32,6 +33,7 @@ import PaymentStatusPage from './pages/PaymentStatusPage';
 import NotificationManager from './components/NotificationManager';
 import LeadEditPage from './pages/dashboard/components/LeadEditPage';
 import CertificateDashboard from './modules/certificates/pages/CertificateDashboard';
+import StudentRegistrationForm from './components/StudentRegistrationForm';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -73,6 +75,18 @@ const AutoHardRefresher = () => {
     }
   }, [location, queryClient]);
 
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'pendingHardRefresh') {
+        queryClient.invalidateQueries();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [queryClient]);
+
   return null;
 };
 
@@ -102,6 +116,7 @@ function App() {
             <Route path="/payment-instruction/:orderId" element={<PaymentInstructionPage />} />
             <Route path="/payment-status/:orderId" element={<PaymentStatusPage />} />
             <Route path="/pay/:sessionId" element={<PaymentPortal />} />
+            <Route path="/registration/form" element={<StudentRegistrationForm />} />
             
             <Route 
               path="/manager/*" 
@@ -160,6 +175,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <LeadStatusUpdatePage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/leads/:id/details" 
+              element={
+                <ProtectedRoute>
+                  <LeadDetailsPage />
                 </ProtectedRoute>
               } 
             />

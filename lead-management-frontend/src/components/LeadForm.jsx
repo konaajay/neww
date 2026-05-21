@@ -28,6 +28,19 @@ const LeadForm = ({ onSubmit, title = "Add New Lead", initialData = {} }) => {
   }, [initialData]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [courses, setCourses] = useState([]);
+
+  React.useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const res = await api.get('/admin/attendance/courses');
+        setCourses(res.data || []);
+      } catch (err) {
+        console.error("Failed to load course list", err);
+      }
+    };
+    fetchCourses();
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -136,6 +149,24 @@ const LeadForm = ({ onSubmit, title = "Add New Lead", initialData = {} }) => {
                 style={{ fontSize: '14px', height: '60px', fontWeight: '600' }}
               />
               <label className={`${isDarkMode ? 'text-muted' : 'text-slate-500'} fw-bold small text-uppercase tracking-widest opacity-50 ps-3`} style={{ fontSize: '10px', transform: 'scale(0.85) translateY(-0.5rem) translateX(0.15rem)' }}>Mail</label>
+            </div>
+          </div>
+          <div className="col-12 col-md-6">
+            <div className="form-floating group">
+              <select
+                name="courseId"
+                className={`form-select ${isDarkMode ? 'bg-card border-white border-opacity-10 text-main' : 'bg-white border-dark border-opacity-10 text-dark'} py-3 px-3 shadow-none rounded-4 focus:border-primary transition-all custom-input`}
+                value={formData.courseId || ''}
+                onChange={handleChange}
+                required
+                style={{ fontSize: '14px', height: '60px', fontWeight: '600' }}
+              >
+                <option value="">-- SELECT COURSE --</option>
+                {courses.map(c => (
+                  <option key={c.id} value={c.id}>{c.name.toUpperCase()} (₹{c.baseFee})</option>
+                ))}
+              </select>
+              <label className={`${isDarkMode ? 'text-muted' : 'text-slate-500'} fw-bold small text-uppercase tracking-widest opacity-50 ps-3`} style={{ fontSize: '10px', transform: 'scale(0.85) translateY(-0.5rem) translateX(0.15rem)' }}>Course Inquiry</label>
             </div>
           </div>
         </div>

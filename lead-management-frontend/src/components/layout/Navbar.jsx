@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Menu, User as UserIcon, LogOut, Sun, Moon, Building2, Clock, ChevronDown, Key, Phone, Check, Edit2, Bell, ShieldHalf } from 'lucide-react';
+import { Menu, User as UserIcon, LogOut, Sun, Moon, Building2, Clock, ChevronDown, Key, Phone, Check, Edit2, Bell, ShieldHalf, ShieldAlert, CheckCircle, XCircle, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import ChangePasswordModal from './ChangePasswordModal';
 import { useTasks } from '../../features/leads/hooks/useTasks';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import wfhService from '../../services/wfhService';
+import api from '../../api/api';
 
 const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChange, isCollapsed }) => {
   const { user, updateProfile } = useAuth();
@@ -17,14 +18,36 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
   const [isEditingMobile, setIsEditingMobile] = useState(false);
   const [notifiedTasks, setNotifiedTasks] = useState(new Set());
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [clearedNotifications, setClearedNotifications] = useState(new Set());
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null);
+  const queryClient = useQueryClient();
+
+  // Helper to check and mark as notified in sessionStorage
+  const checkAndMarkNotified = (key) => {
+    try {
+      const stored = sessionStorage.getItem('notified_approvals_cache');
+      const notifiedSet = stored ? new Set(JSON.parse(stored)) : new Set();
+      if (notifiedSet.has(key)) {
+        return true;
+      }
+      notifiedSet.add(key);
+      sessionStorage.setItem('notified_approvals_cache', JSON.stringify(Array.from(notifiedSet)));
+      return false;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  };
 
   // 1. Task Notification Logic
   const { tasks } = useTasks({ userId: user?.id });
   
-  const normalizedRole = (user?.role || '').toUpperCase();
-  const isSuperior = ['ADMIN', 'MANAGER', 'MGR', 'TEAM_LEADER', 'TL', 'TEAMLEAD'].some(r => normalizedRole.includes(r));
+  // Robust role normalization: strip ROLE_ prefix, underscores, spaces — mirrors backend SecurityService.getRole()
+  const cleanRole = (user?.role || '').toUpperCase().replace('ROLE_', '').replace(/_/g, '').replace(/ /g, '');
+  const isSuperior = ['ADMIN', 'MANAGER', 'MGR', 'TEAMLEADER', 'TL', 'TEAMLEAD'].some(r => cleanRole.includes(r));
+  const isAdminOrManager = ['ADMIN', 'MANAGER', 'MGR'].some(r => cleanRole.includes(r));
+  const isAssociateOrTL = !isAdminOrManager && !!user;
 
   const { data: wfhNotify } = useQuery({
     queryKey: ['wfh-pending-count'],
@@ -37,6 +60,42 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
   });
 
   const wfhPendingCount = wfhNotify?.count || 0;
+
+  // Manager/Admin: poll for manual payments needing approval
+  const { data: pendingApprovalsData } = useQuery({
+    queryKey: ['pending-payment-approvals'],
+    queryFn: async () => {
+      const res = await api.get('/payments/alerts/pending-approvals');
+      return res.data || [];
+    },
+    enabled: !!user && isAdminOrManager,
+    refetchInterval: 30000
+  });
+
+  const pendingApprovals = pendingApprovalsData || [];
+
+  // Associate/TL: poll for their own payment status changes (approved or rejected)
+  const { data: myPaymentStatusData } = useQuery({
+    queryKey: ['my-payment-status', user?.id],
+    queryFn: async () => {
+      const res = await api.get(`/payments/alerts/my-status`);
+      return res.data || [];
+    },
+    enabled: !!user && isAssociateOrTL,
+    refetchInterval: 30000
+  });
+
+  const myResolvedPayments = useMemo(() => {
+    return (myPaymentStatusData || []).filter(payment => {
+      if (clearedNotifications.has(payment.id)) return false;
+      if (!payment.updatedAt) return true; // Show if no date, to be safe
+      const today = new Date();
+      const updated = new Date(payment.updatedAt);
+      return updated.getDate() === today.getDate() &&
+             updated.getMonth() === today.getMonth() &&
+             updated.getFullYear() === today.getFullYear();
+    });
+  }, [myPaymentStatusData, clearedNotifications]);
 
   const upcomingTasks = useMemo(() => {
     if (!Array.isArray(tasks)) return [];
@@ -65,7 +124,60 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
         setNotifiedTasks(prev => new Set(prev).add(task.id));
       }
     });
-  }, [upcomingTasks, notifiedTasks]);
+  }, [upcomingTasks, notifiedTasks]);  useEffect(() => {
+    pendingApprovals.forEach(payment => {
+      const key = `pending-${payment.id}`;
+      const alreadyNotified = checkAndMarkNotified(key);
+      if (!alreadyNotified) {
+        toast.warn(`APPROVAL REQUIRED: Manual Payment of ₹${payment.amount} pending approval for ${payment.leadName || 'Lead'}`, {
+          position: "top-right",
+          autoClose: 10000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          onClick: () => {
+            sessionStorage.setItem('openLeadOutcomeId', payment.leadId);
+            window.dispatchEvent(new CustomEvent('openLeadOutcome', { detail: { leadId: payment.leadId } }));
+            onTabChange('leads');
+          }
+        });
+      }
+    });
+  }, [pendingApprovals, onTabChange]);
+
+  useEffect(() => {
+    let hasNewResolution = false;
+    myResolvedPayments.forEach(payment => {
+      const key = `resolved-${payment.id}-${payment.status}`;
+      const alreadyNotified = checkAndMarkNotified(key);
+      if (!alreadyNotified) {
+        hasNewResolution = true;
+        if (payment.status === 'PAID' || payment.status === 'APPROVED') {
+          toast.success(`✅ Your manual payment of ₹${payment.amount} for ${payment.leadName || 'Lead'} was APPROVED!`, {
+            position: "top-right",
+            autoClose: 12000,
+            hideProgressBar: false,
+          });
+        } else if (payment.status === 'REJECTED') {
+          toast.error(`❌ Your manual payment of ₹${payment.amount} for ${payment.leadName || 'Lead'} was REJECTED.`, {
+            position: "top-right",
+            autoClose: 12000,
+            hideProgressBar: false,
+          });
+        }
+      }
+    });
+
+    if (hasNewResolution) {
+      // Invalidate react-query cache and dispatch event for real-time automatic UI refresh
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['my-payment-status'] });
+      window.dispatchEvent(new CustomEvent('paymentStatusUpdated'));
+    }
+  }, [myResolvedPayments, queryClient]);
 
   useEffect(() => {
     if (user?.mobile) setTempMobile(user.mobile);
@@ -123,18 +235,17 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
                 <Moon size={12} />
              </button>
           </div>
-  
-          {/* Notifications */}
+           {/* Notifications */}
           <div className="position-relative" ref={notificationRef}>
             <button 
               className={`p-2 rounded-circle border-0 transition-all position-relative ${isDarkMode ? 'bg-surface bg-opacity-30 text-main' : 'bg-light text-dark'}`}
               onClick={() => setIsNotificationOpen(!isNotificationOpen)}
               style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
-              <Bell size={18} className={(upcomingTasks.length > 0 || wfhPendingCount > 0) ? 'text-primary' : 'opacity-50'} />
-              {(upcomingTasks.length > 0 || wfhPendingCount > 0) && (
+              <Bell size={18} className={(upcomingTasks.length > 0 || wfhPendingCount > 0 || pendingApprovals.length > 0 || myResolvedPayments.length > 0) ? 'text-primary' : 'opacity-50'} />
+              {(upcomingTasks.length > 0 || wfhPendingCount > 0 || pendingApprovals.length > 0 || myResolvedPayments.length > 0) && (
                 <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: '7px', marginTop: '5px', marginLeft: '-5px' }}>
-                  {upcomingTasks.length + wfhPendingCount}
+                  {upcomingTasks.length + wfhPendingCount + pendingApprovals.length + myResolvedPayments.length}
                 </span>
               )}
             </button>
@@ -149,15 +260,15 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
               }}>
                 <div className="p-4 border-bottom border-light d-flex align-items-center justify-content-between">
                   <h6 className="fw-black text-main mb-0 text-uppercase tracking-widest" style={{ fontSize: '11px' }}>Notifications</h6>
-                  {upcomingTasks.length + wfhPendingCount > 0 && (
+                  {(upcomingTasks.length + wfhPendingCount + pendingApprovals.length + myResolvedPayments.length) > 0 && (
                     <span className="badge rounded-pill bg-primary bg-opacity-10 text-primary fw-black" style={{ fontSize: '9px' }}>
-                      {upcomingTasks.length + wfhPendingCount} NEW
+                      {upcomingTasks.length + wfhPendingCount + pendingApprovals.length + myResolvedPayments.length} NEW
                     </span>
                   )}
                 </div>
   
                 <div className="p-2">
-                  {upcomingTasks.length === 0 && wfhPendingCount === 0 ? (
+                  {upcomingTasks.length === 0 && wfhPendingCount === 0 && pendingApprovals.length === 0 && myResolvedPayments.length === 0 ? (
                     <div className="p-5 text-center">
                       <div className="mb-3 opacity-20">
                         <Bell size={40} className="text-muted" />
@@ -184,32 +295,113 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
                         </div>
                       )}
   
-                      {/* Task Alerts */}
-                      {upcomingTasks.map(task => (
+                      {/* Manual Payment Approvals */}
+                      {pendingApprovals.map(payment => (
                         <div 
-                        key={task.id} 
-                        className={`p-3 mb-2 rounded-3 border transition-all cursor-pointer ${isDarkMode ? 'bg-surface bg-opacity-40 border-white border-opacity-5 hover-bg-opacity-60' : 'bg-white border-light hover-shadow-sm'}`}
-                        onClick={() => {
-                          onTabChange('tasks', { filter: 'UPCOMING' });
-                          setIsNotificationOpen(false);
-                        }}
-                      >
-                        <div className="d-flex align-items-center gap-3">
-                          <div className={`p-2 rounded-circle ${isDarkMode ? 'bg-surface' : 'bg-primary bg-opacity-10 text-primary'}`}>
-                            <Clock size={14} />
-                          </div>
-                          <div className="flex-grow-1 overflow-hidden">
-                            <p className="mb-0 fw-black text-main text-truncate" style={{ fontSize: '11px' }}>{task.taskType?.replace('_', ' ')}</p>
-                            <p className="mb-0 text-muted extra-small fw-bold text-truncate">{task.leadName}</p>
-                            <div className="d-flex align-items-center gap-2 mt-1">
-                              <span className="text-primary fw-black" style={{ fontSize: '8px' }}>
-                                {new Date(task.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                              <span className="text-muted extra-small fw-bold opacity-50">In {Math.round((new Date(task.dueDate) - new Date()) / 60000)}m</span>
+                          key={`payment-${payment.id}`}
+                          className="p-3 mb-2 rounded-3 bg-danger bg-opacity-10 border border-danger border-opacity-20 cursor-pointer hover-bg-opacity-20 transition-all"
+                          onClick={() => {
+                            sessionStorage.setItem('openLeadOutcomeId', payment.leadId);
+                            window.dispatchEvent(new CustomEvent('openLeadOutcome', { detail: { leadId: payment.leadId } }));
+                            onTabChange('leads');
+                            setIsNotificationOpen(false);
+                          }}
+                        >
+                          <div className="d-flex align-items-center gap-3">
+                            <div className="p-2 bg-danger bg-opacity-20 rounded-circle text-danger">
+                              <ShieldAlert size={14} />
+                            </div>
+                            <div className="flex-grow-1 overflow-hidden">
+                              <p className="mb-0 fw-black text-main text-truncate" style={{ fontSize: '11px' }}>Payment Approval Required</p>
+                              <p className="mb-0 text-muted extra-small fw-bold text-truncate">{payment.leadName || 'Unknown Lead'} - ₹{payment.amount}</p>
+                              <span className="text-danger fw-black" style={{ fontSize: '8px' }}>PENDING MANUAL APPROVAL</span>
                             </div>
                           </div>
                         </div>
-                      </div>
+                      ))}
+
+                      {/* Resolved Payments (Approved or Rejected) */}
+                      {myResolvedPayments.map(payment => {
+                        const isRejected = payment.status === 'REJECTED';
+                        const noteVal = payment.note || '';
+                        const reasonPart = noteVal.includes('REJECTED:') 
+                          ? noteVal.split('REJECTED:')[1].trim() 
+                          : noteVal;
+
+                        return (
+                          <div 
+                            key={`resolved-payment-${payment.id}`}
+                            className={`p-3 mb-2 rounded-3 border cursor-pointer hover-bg-opacity-20 transition-all ${isRejected ? 'bg-danger bg-opacity-10 border-danger border-opacity-20' : 'bg-success bg-opacity-10 border-success border-opacity-20'}`}
+                            onClick={() => {
+                              sessionStorage.setItem('openLeadOutcomeId', payment.leadId);
+                              window.dispatchEvent(new CustomEvent('openLeadOutcome', { detail: { leadId: payment.leadId } }));
+                              onTabChange('leads');
+                              setIsNotificationOpen(false);
+                            }}
+                          >
+                            <div className="d-flex align-items-center gap-3">
+                              <div className={`p-2 rounded-circle ${isRejected ? 'bg-danger bg-opacity-20 text-danger' : 'bg-success bg-opacity-20 text-success'}`}>
+                                {isRejected ? <XCircle size={14} /> : <CheckCircle size={14} />}
+                              </div>
+                              <div className="flex-grow-1 overflow-hidden">
+                                <p className="mb-0 fw-black text-main text-truncate" style={{ fontSize: '11px' }}>
+                                  {isRejected ? 'Payment Rejected' : 'Payment Approved'}
+                                </p>
+                                <p className="mb-0 text-muted extra-small fw-bold text-truncate">
+                                  {payment.leadName || 'Unknown Lead'} - ₹{payment.amount}
+                                </p>
+                                {payment.updatedAt && (
+                                  <p className="mb-0 text-muted extra-small fw-bold mt-1" style={{ fontSize: '8px' }}>
+                                    {new Date(payment.updatedAt).toLocaleString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' })}
+                                  </p>
+                                )}
+                                {isRejected && (
+                                  <p className="mb-0 text-danger extra-small fw-bold text-wrap mt-1" style={{ fontSize: '9px' }}>
+                                    Reason: {reasonPart || 'No reason specified'}
+                                  </p>
+                                )}
+                              </div>
+                              <button
+                                className="btn btn-link p-1 text-muted opacity-50 hover-opacity-100 hover-text-danger border-0 d-flex align-items-center"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setClearedNotifications(prev => new Set(prev).add(payment.id));
+                                }}
+                                title="Clear Notification"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+  
+                      {/* Task Alerts */}
+                      {upcomingTasks.map(task => (
+                        <div 
+                          key={task.id} 
+                          className={`p-3 mb-2 rounded-3 border transition-all cursor-pointer ${isDarkMode ? 'bg-surface bg-opacity-40 border-white border-opacity-5 hover-bg-opacity-60' : 'bg-white border-light hover-shadow-sm'}`}
+                          onClick={() => {
+                            onTabChange('tasks', { filter: 'UPCOMING' });
+                            setIsNotificationOpen(false);
+                          }}
+                        >
+                          <div className="d-flex align-items-center gap-3">
+                            <div className={`p-2 rounded-circle ${isDarkMode ? 'bg-surface' : 'bg-primary bg-opacity-10 text-primary'}`}>
+                              <Clock size={14} />
+                            </div>
+                            <div className="flex-grow-1 overflow-hidden">
+                              <p className="mb-0 fw-black text-main text-truncate" style={{ fontSize: '11px' }}>{task.taskType?.replace('_', ' ')}</p>
+                              <p className="mb-0 text-muted extra-small fw-bold text-truncate">{task.leadName}</p>
+                              <div className="d-flex align-items-center gap-2 mt-1">
+                                <span className="text-primary fw-black" style={{ fontSize: '8px' }}>
+                                  {new Date(task.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                                <span className="text-muted extra-small fw-bold opacity-50">In {Math.round((new Date(task.dueDate) - new Date()) / 60000)}m</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       ))}
                     </>
                   )}

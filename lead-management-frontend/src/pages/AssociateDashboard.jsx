@@ -183,9 +183,9 @@ const AssociateDashboard = () => {
         const s = l.status?.toUpperCase() || '';
         if (leadStatusFilter === 'OPEN') return s === 'OPEN' || s === 'WORKING';
         if (leadStatusFilter === 'FOLLOW_UP') {
-          return !['OPEN', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED', 'DNP', 'SWITCH_OFF', 'SWITCHED_OFF', 'OUT_OF_COVERAGE', 'OUT_OF_COVERAGE_AREA', 'WRONG_NUMBER', 'NOT_RESPONDING'].includes(s);
+          return !['OPEN', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED', 'DNP', 'SWITCH_OFF', 'SWITCHED_OFF', 'OUT_OF_COVERAGE', 'OUT_OF_COVERAGE_AREA', 'WRONG_NUMBER', 'NOT_RESPONDING'].includes(s) && !(s && (s.startsWith('PAID_INSTALLMENT_') || s.startsWith('POST_PAYMENT')));
         }
-        if (leadStatusFilter === 'CONVERTED') return ['CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(s);
+        if (leadStatusFilter === 'CONVERTED') return ['CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(s) || (s && (s.startsWith('PAID_INSTALLMENT_') || s.startsWith('POST_PAYMENT')));
         if (leadStatusFilter === 'LOST') return ['LOST', 'REJECTED', 'CLOSED', 'DEAD', 'NOT_INTERESTED'].includes(s);
         if (leadStatusFilter === 'DNP') {
           return ['DNP', 'SWITCH_OFF', 'SWITCHED_OFF', 'OUT_OF_COVERAGE', 'OUT_OF_COVERAGE_AREA', 'WRONG_NUMBER', 'NOT_RESPONDING'].includes(s);
@@ -251,11 +251,16 @@ const AssociateDashboard = () => {
               {[
                 { id: 'OPEN', label: 'Open', value: ((statusDistribution.OPEN || 0) + (statusDistribution.WORKING || 0)), color: 'primary', icon: '✨' },
                 { id: 'FOLLOW_UP', label: 'Follow Up', value: (Object.entries(statusDistribution || {}).reduce((acc, [k, v]) => {
-                  if (!['OPEN', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED', 'DNP', 'SWITCH_OFF', 'SWITCHED_OFF', 'OUT_OF_COVERAGE', 'OUT_OF_COVERAGE_AREA', 'WRONG_NUMBER', 'NOT_RESPONDING'].includes(k.toUpperCase())) return acc + v;
+                  const key = k.toUpperCase();
+                  if (!['OPEN', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED', 'DNP', 'SWITCH_OFF', 'SWITCHED_OFF', 'OUT_OF_COVERAGE', 'OUT_OF_COVERAGE_AREA', 'WRONG_NUMBER', 'NOT_RESPONDING'].includes(key) && !key.startsWith('PAID_INSTALLMENT_') && !key.startsWith('POST_PAYMENT')) return acc + v;
                   return acc;
                 }, 0)), color: 'info', icon: '⏳' },
                 { id: 'DNP', label: 'DNP', value: (statusDistribution.DNP || 0), color: 'warning', icon: '📞' },
-                { id: 'CONVERTED', label: 'Converted', value: ((statusDistribution.CONVERTED || 0) + (statusDistribution.EMI || 0) + (statusDistribution.PRE_PAYMENT || 0) + (statusDistribution['PRE-PAYMENT'] || 0)), color: 'success', icon: '✅' },
+                { id: 'CONVERTED', label: 'Converted', value: (Object.entries(statusDistribution || {}).reduce((acc, [k, v]) => {
+                  const key = k.toUpperCase();
+                  if (['CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(key) || key.startsWith('PAID_INSTALLMENT_') || key.startsWith('POST_PAYMENT')) return acc + v;
+                  return acc;
+                }, 0)), color: 'success', icon: '✅' },
                 { id: 'LOST', label: 'Lost', value: ((statusDistribution.LOST || 0) + (statusDistribution.REJECTED || 0) + (statusDistribution.DEAD || 0) + (statusDistribution.NOT_INTERESTED || 0)), color: 'danger', icon: '❌' }
               ].map((card, i) => (
                 <div key={i} className="col-6 col-md">

@@ -98,6 +98,47 @@ const LeadTable = ({
     }
   }, [leads]);
 
+  useEffect(() => {
+    const openOutcomeId = sessionStorage.getItem('openLeadOutcomeId');
+    if (openOutcomeId && leads.length > 0) {
+      const targetLead = leads.find(l => l.id.toString() === openOutcomeId.toString());
+      if (targetLead) {
+        setSelectedOutcomeLead(targetLead);
+        sessionStorage.removeItem('openLeadOutcomeId');
+      }
+    }
+  }, [leads]);
+
+  useEffect(() => {
+    const handleRefresh = () => {
+      if (typeof loadLeads === 'function') {
+        loadLeads();
+      }
+    };
+    window.addEventListener('paymentStatusUpdated', handleRefresh);
+    window.addEventListener('openLeadOutcome', handleRefresh);
+    return () => {
+      window.removeEventListener('paymentStatusUpdated', handleRefresh);
+      window.removeEventListener('openLeadOutcome', handleRefresh);
+    };
+  }, [loadLeads]);
+
+  useEffect(() => {
+    const handleOpenOutcome = (e) => {
+      const leadId = e.detail?.leadId;
+      if (leadId && leads.length > 0) {
+        const targetLead = leads.find(l => l.id.toString() === leadId.toString());
+        if (targetLead) {
+          setSelectedOutcomeLead(targetLead);
+          sessionStorage.removeItem('openLeadOutcomeId');
+        }
+      }
+    };
+
+    window.addEventListener('openLeadOutcome', handleOpenOutcome);
+    return () => window.removeEventListener('openLeadOutcome', handleOpenOutcome);
+  }, [leads]);
+
   const pipelineStages = (propsPipelineStages && propsPipelineStages.length > 0) ? propsPipelineStages : [
     { label: 'Open', statusValue: 'OPEN', color: 'primary', isRoot: true },
     { label: 'Switch Off', statusValue: 'SWITCH_OFF', color: 'warning' },
@@ -253,7 +294,7 @@ const LeadTable = ({
                 <tr 
                   key={lead.id} 
                   className="border-bottom border-main border-opacity-10 hover-bg-light cursor-pointer"
-                  onClick={() => setSelectedOutcomeLead(lead)}
+                  onClick={() => window.open(`/leads/${lead.id}/details`, '_blank')}
                 >
                   <td className="ps-4 py-4 text-muted fw-black small" style={{ fontSize: '10px' }}>
                     {(currentPage - 1) * itemsPerPage + idx + 1}

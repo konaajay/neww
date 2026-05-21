@@ -10,15 +10,24 @@ const PortalSelect = ({
     placeholder = "Select option...", 
     className = "",
     style = {},
-    disabled = false
+    disabled = false,
+    searchable = false
 }) => {
     const { isDarkMode } = useTheme();
     const [isOpen, setIsOpen] = useState(false);
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
+    const [searchQuery, setSearchQuery] = useState('');
     const containerRef = useRef(null);
     const menuRef = useRef(null);
 
     const selectedOption = options.find(opt => opt.value === value) || null;
+
+    const filteredOptions = React.useMemo(() => {
+        if (!searchable || !searchQuery) return options;
+        return options.filter(opt => 
+            opt.label?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [options, searchable, searchQuery]);
 
     useEffect(() => {
         if (isOpen) {
@@ -66,6 +75,7 @@ const PortalSelect = ({
             if (containerRef.current && !containerRef.current.contains(event.target) &&
                 menuRef.current && !menuRef.current.contains(event.target)) {
                 setIsOpen(false);
+                setSearchQuery('');
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -73,12 +83,16 @@ const PortalSelect = ({
     }, []);
 
     const handleToggle = () => {
-        if (!disabled) setIsOpen(!isOpen);
+        if (!disabled) {
+            setIsOpen(!isOpen);
+            setSearchQuery('');
+        }
     };
 
     const handleSelect = (option) => {
         onChange({ target: { value: option.value } });
         setIsOpen(false);
+        setSearchQuery('');
     };
 
     const dropdownMenu = isOpen && ReactDOM.createPortal(
@@ -94,7 +108,7 @@ const PortalSelect = ({
                 zIndex: 9999999,
                 borderRadius: '16px',
                 border: '1px solid',
-                maxHeight: '220px', 
+                maxHeight: '260px', 
                 overflowY: 'auto',
                 overflowX: 'hidden',
                 boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)'
@@ -115,7 +129,30 @@ const PortalSelect = ({
                     background: var(--primary);
                 }
             `}</style>
-            {options.map((opt, i) => (
+            {searchable && (
+                <div 
+                    className="p-2 border-bottom sticky-top"
+                    style={{ 
+                        position: 'sticky', 
+                        top: 0, 
+                        backgroundColor: isDarkMode ? '#1e1e2d' : '#ffffff', 
+                        zIndex: 10,
+                        borderBottom: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` 
+                    }}
+                >
+                    <input 
+                        type="text" 
+                        className={`form-control form-control-sm rounded-3 py-2 px-3 fw-semibold ${isDarkMode ? 'bg-black text-white border-white border-opacity-10' : 'bg-light text-dark border-dark border-opacity-10'}`}
+                        placeholder="Search..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ fontSize: '12px' }}
+                        autoFocus
+                    />
+                </div>
+            )}
+            {filteredOptions.map((opt, i) => (
                 <div 
                     key={i}
                     className={`px-4 py-3 cursor-pointer d-flex align-items-center justify-content-between transition-all ${value === opt.value ? 'bg-primary bg-opacity-10 text-primary fw-black' : 'hover-bg-opacity opacity-80 hover-opacity-100'}`}
@@ -126,7 +163,7 @@ const PortalSelect = ({
                     {value === opt.value && <Check size={14} />}
                 </div>
             ))}
-            {options.length === 0 && (
+            {filteredOptions.length === 0 && (
                 <div className="px-4 py-3 text-muted small text-center opacity-50">No options available</div>
             )}
         </div>,

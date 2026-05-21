@@ -166,9 +166,9 @@ const TeamLeaderDashboard = () => {
       // Status filtering logic
       if (statusFilter) {
         if (statusFilter === 'Converted') {
-          return ['CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(status);
+          return ['CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(status) || (status && (status.startsWith('PAID_INSTALLMENT_') || status.startsWith('POST_PAYMENT')));
         } else if (statusFilter === 'Follow Up') {
-          return !['OPEN', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED', 'DNP', 'SWITCH_OFF', 'SWITCHED_OFF', 'OUT_OF_COVERAGE', 'OUT_OF_COVERAGE_AREA', 'WRONG_NUMBER', 'NOT_RESPONDING'].includes(status);
+          return !['OPEN', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED', 'DNP', 'SWITCH_OFF', 'SWITCHED_OFF', 'OUT_OF_COVERAGE', 'OUT_OF_COVERAGE_AREA', 'WRONG_NUMBER', 'NOT_RESPONDING'].includes(status) && !(status && (status.startsWith('PAID_INSTALLMENT_') || status.startsWith('POST_PAYMENT')));
         } else if (statusFilter === 'Open') {
           return ['OPEN', 'WORKING'].includes(status);
         } else if (statusFilter === 'Lost') {
@@ -272,6 +272,11 @@ const TeamLeaderDashboard = () => {
                     role="TEAM_LEADER"
                     loading={leadsLoading}
                     teamLeaders={membersList}
+                    selectedLeadIds={selectedLeadIds}
+                    toggleSelection={toggleSelection}
+                    bulkAssignTlId={bulkAssignTlId}
+                    setBulkAssignTlId={setBulkAssignTlId}
+                    handleBulkAssign={(targetId) => bulkAssignLeads({ leadIds: selectedLeadIds, targetId })}
                   />
                 </div>
               </div>
@@ -332,11 +337,16 @@ const TeamLeaderDashboard = () => {
                {[
                 { label: 'Open', value: ((statusDistribution.OPEN || 0) + (statusDistribution.WORKING || 0)), color: 'primary', icon: '✨' },
                 { label: 'Follow Up', value: (Object.entries(statusDistribution || {}).reduce((acc, [k, v]) => {
-                  if (!['OPEN', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED', 'DNP', 'SWITCH_OFF', 'SWITCHED_OFF', 'OUT_OF_COVERAGE', 'OUT_OF_COVERAGE_AREA', 'WRONG_NUMBER', 'NOT_RESPONDING'].includes(k.toUpperCase())) return acc + v;
+                  const key = k.toUpperCase();
+                  if (!['OPEN', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED', 'DNP', 'SWITCH_OFF', 'SWITCHED_OFF', 'OUT_OF_COVERAGE', 'OUT_OF_COVERAGE_AREA', 'WRONG_NUMBER', 'NOT_RESPONDING'].includes(key) && !key.startsWith('PAID_INSTALLMENT_') && !key.startsWith('POST_PAYMENT')) return acc + v;
                   return acc;
                 }, 0)), color: 'info', icon: '⏳' },
                 { label: 'DNP', value: (statusDistribution.DNP || 0), color: 'warning', icon: '📞' },
-                { label: 'Converted', value: ((statusDistribution.CONVERTED || 0) + (statusDistribution.EMI || 0) + (statusDistribution.PRE_PAYMENT || 0) + (statusDistribution['PRE-PAYMENT'] || 0)), color: 'success', icon: '✅' },
+                { label: 'Converted', value: (Object.entries(statusDistribution || {}).reduce((acc, [k, v]) => {
+                  const key = k.toUpperCase();
+                  if (['CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(key) || key.startsWith('PAID_INSTALLMENT_') || key.startsWith('POST_PAYMENT')) return acc + v;
+                  return acc;
+                }, 0)), color: 'success', icon: '✅' },
                 { label: 'Lost', value: ((statusDistribution.LOST || 0) + (statusDistribution.REJECTED || 0) + (statusDistribution.DEAD || 0) + (statusDistribution.NOT_INTERESTED || 0)), color: 'danger', icon: '❌' }
               ].map((card, i) => (
                 <div key={i} className="col-6 col-md">

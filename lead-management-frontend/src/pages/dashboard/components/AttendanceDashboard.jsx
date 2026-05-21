@@ -183,7 +183,8 @@ const AttendanceDashboard = ({ filters, role }) => {
         switch (s) {
             case 'WORKING':
             case 'PRESENT': return 'success';
-            case 'ON_BREAK':
+            case 'ON_SHORT_BREAK':
+            case 'ON_LONG_BREAK':
             case 'AUTO_BREAK':
             case 'LATE': return 'warning';
             case 'PUNCHED_OUT':

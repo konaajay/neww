@@ -74,7 +74,7 @@ const UploadSection = ({ csvFile, setCsvFile, templateFile, setTemplateFile }) =
           <button 
             onClick={() => templateInputRef.current?.click()}
             className="btn-secondary"
-            style={{ padding: '10px 16px', fontSize: '0.9rem', background: '#ffffff', color: 'var(--text-primary)', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}
+            style={{ padding: '10px 16px', fontSize: '0.9rem', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}
           >
             <ImageIcon size={16} color="var(--accent-primary)" />
             Upload Template
@@ -84,7 +84,7 @@ const UploadSection = ({ csvFile, setCsvFile, templateFile, setTemplateFile }) =
             href="/sample.csv" 
             download="sample.csv"
             className="btn-secondary"
-            style={{ padding: '10px 16px', fontSize: '0.9rem', background: '#ffffff', color: 'var(--text-primary)', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}
+            style={{ padding: '10px 16px', fontSize: '0.9rem', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}
           >
             <Download size={16} color="var(--accent-primary)" />
             Sample CSV
@@ -93,7 +93,7 @@ const UploadSection = ({ csvFile, setCsvFile, templateFile, setTemplateFile }) =
           <button 
             onClick={() => csvInputRef.current?.click()}
             className="btn-secondary"
-            style={{ padding: '10px 16px', fontSize: '0.9rem', background: '#ffffff', color: 'var(--text-primary)', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}
+            style={{ padding: '10px 16px', fontSize: '0.9rem', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}
           >
             <FileText size={16} color="var(--accent-secondary)" />
             Upload CSV
@@ -119,7 +119,7 @@ const UploadSection = ({ csvFile, setCsvFile, templateFile, setTemplateFile }) =
 
       {/* CSV Data Preview Card */}
       {csvFile && csvData.length > 0 && (
-        <div className="glass-panel" style={{ padding: '20px', background: 'rgba(255,255,255,0.4)', borderRadius: '12px', border: '1px dotted var(--accent-primary)' }}>
+        <div className="glass-panel" style={{ padding: '20px', borderRadius: '12px', border: '1px dotted var(--accent-primary)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <FileText size={18} color="var(--accent-primary)" />

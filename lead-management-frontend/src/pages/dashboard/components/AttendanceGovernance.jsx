@@ -22,7 +22,7 @@ import PortalSelect from '../../../components/PortalSelect';
 const AttendanceGovernance = ({ offices = [] }) => {
     const { isDarkMode } = useTheme();
     const queryClient = useQueryClient();
-    const [policies, setPolicies] = useState([]);
+    const [shifts, setShifts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [editingShiftId, setEditingShiftId] = useState(null);
@@ -56,8 +56,8 @@ const AttendanceGovernance = ({ offices = [] }) => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const res = await adminService.fetchPolicies();
-            setPolicies(res.data || []);
+            const res = await adminService.fetchAttendanceShifts();
+            setShifts(res.data || []);
         } catch (err) {
             console.error("Failed to load governance data", err);
         } finally {
@@ -98,43 +98,28 @@ const AttendanceGovernance = ({ offices = [] }) => {
             return;
         }
         try {
+            const selectedOffice = offices.find(o => o.id === parseInt(govData.officeId));
+            const shiftPayload = {
+                name: govData.shiftName,
+                startTime: govData.shiftStartTime,
+                endTime: govData.shiftEndTime,
+                graceMinutes: govData.gracePeriodMinutes,
+                minFullDayMinutes: govData.minimumWorkMinutes,
+                minHalfDayMinutes: govData.halfDayMinutes,
+                shortBreakStartTime: govData.shortBreakStartTime,
+                shortBreakEndTime: govData.shortBreakEndTime,
+                longBreakStartTime: govData.longBreakStartTime,
+                longBreakEndTime: govData.longBreakEndTime,
+                office: selectedOffice
+            };
+
             if (editingId) {
                 // UPDATE Mode
-                await adminService.updatePolicy(editingId, {
-                    ...govData,
-                    shiftStartTime: govData.shiftStartTime
-                });
-
-                if (editingShiftId) {
-                    const selectedOffice = offices.find(o => o.id === parseInt(govData.officeId));
-                    await adminService.updateShift(editingShiftId, {
-                        name: govData.shiftName,
-                        startTime: govData.shiftStartTime,
-                        endTime: govData.shiftEndTime,
-                        graceMinutes: govData.gracePeriodMinutes,
-                        minFullDayMinutes: govData.minimumWorkMinutes,
-                        minHalfDayMinutes: govData.halfDayMinutes,
-                        office: selectedOffice
-                    });
-                }
+                await adminService.updateShift(editingId, shiftPayload);
                 toast.success("Governance protocol updated");
             } else {
                 // CREATE Mode
-                await adminService.createPolicy({
-                    ...govData,
-                    shiftStartTime: govData.shiftStartTime
-                });
-
-                const selectedOffice = offices.find(o => o.id === parseInt(govData.officeId));
-                await adminService.createShift({
-                    name: govData.shiftName,
-                    startTime: govData.shiftStartTime,
-                    endTime: govData.shiftEndTime,
-                    graceMinutes: govData.gracePeriodMinutes,
-                    minFullDayMinutes: govData.minimumWorkMinutes,
-                    minHalfDayMinutes: govData.halfDayMinutes,
-                    office: selectedOffice
-                });
+                await adminService.createShift(shiftPayload);
                 toast.success("Governance protocol synchronized");
             }
             
@@ -165,54 +150,33 @@ const AttendanceGovernance = ({ offices = [] }) => {
         }
     };
 
-    const handleEdit = async (policy) => {
-        setEditingId(policy.id);
+    const handleEdit = (shift) => {
+        setEditingId(shift.id);
         
-        // Find matching shift to get its ID and nomenclature
-        try {
-            const shiftsRes = await adminService.fetchAttendanceShifts();
-            const matchingShift = (shiftsRes.data || []).find(s => s.office?.id === policy.officeId);
-            
-            if (matchingShift) {
-                setEditingShiftId(matchingShift.id);
-                setGovData({
-                    officeId: policy.officeId.toString(),
-                    shiftName: matchingShift.name,
-                    shiftStartTime: policy.shiftStartTime || matchingShift.startTime || '11:00',
-                    shiftEndTime: matchingShift.endTime || '20:00',
-                    gracePeriodMinutes: policy.gracePeriodMinutes,
-                    minimumWorkMinutes: policy.minimumWorkMinutes,
-                    halfDayMinutes: policy.halfDayMinutes,
-                    shortBreakStartTime: policy.shortBreakStartTime,
-                    shortBreakEndTime: policy.shortBreakEndTime,
-                    longBreakStartTime: policy.longBreakStartTime,
-                    longBreakEndTime: policy.longBreakEndTime,
-                    trackingIntervalSec: policy.trackingIntervalSec,
-                    maxAccuracyMeters: policy.maxAccuracyMeters,
-                    maxIdleMinutes: policy.maxIdleMinutes
-                });
-            } else {
-                setGovData({
-                    ...govData,
-                    ...policy,
-                    officeId: policy.officeId.toString()
-                });
-            }
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        } catch (err) {
-            console.error("Failed to fetch shifts for edit", err);
-            setGovData({
-                ...govData,
-                ...policy,
-                officeId: policy.officeId.toString()
-            });
-        }
+        setGovData({
+            officeId: shift.office?.id?.toString() || '',
+            shiftName: shift.name || 'STANDARD SHIFT',
+            shiftStartTime: shift.startTime || '11:00',
+            shiftEndTime: shift.endTime || '20:00',
+            gracePeriodMinutes: shift.graceMinutes || 15,
+            minimumWorkMinutes: shift.minFullDayMinutes || 480,
+            halfDayMinutes: shift.minHalfDayMinutes || 240,
+            shortBreakStartTime: shift.shortBreakStartTime || '17:00',
+            shortBreakEndTime: shift.shortBreakEndTime || '17:10',
+            longBreakStartTime: shift.longBreakStartTime || '13:00',
+            longBreakEndTime: shift.longBreakEndTime || '14:00',
+            trackingIntervalSec: 300,
+            maxAccuracyMeters: 100,
+            maxIdleMinutes: 30
+        });
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleDelete = async (id) => {
         if (!window.confirm("Purge this governance protocol?")) return;
         try {
-            await adminService.deletePolicy(id);
+            await adminService.deleteShift(id);
             toast.success("Protocol purged");
             queryClient.invalidateQueries({ queryKey: ['shifts'] });
             fetchData();
@@ -414,27 +378,27 @@ const AttendanceGovernance = ({ offices = [] }) => {
                             </tr>
                         </thead>
                         <tbody>
-                            {policies.map(p => (
+                            {shifts.map(p => (
                                 <tr key={p.id} className="border-top border-white border-opacity-5">
                                     <td className="py-4">
                                         <div className="d-flex align-items-center gap-2">
                                             <MapPin size={14} className="text-primary" />
-                                            <span className="fw-black text-main small">{p.officeName?.toUpperCase()}</span>
+                                            <span className="fw-black text-main small">{p.office?.name?.toUpperCase()}</span>
                                         </div>
                                     </td>
                                     <td>
                                         <div className="d-flex flex-column gap-1">
-                                            <span className="fw-bold small">{p.shiftStartTime || '09:30'} - {p.shiftEndTime || '18:30'} (Logic Hub)</span>
+                                            <span className="fw-bold small">{p.startTime || '09:30'} - {p.endTime || '18:30'} ({p.name || 'Logic Hub'})</span>
                                             <div className="d-flex gap-2">
-                                                <span className="badge bg-surface border border-info border-opacity-25 text-info fw-black" style={{ fontSize: '8px' }}>Grace: {p.gracePeriodMinutes}m</span>
-                                                <span className="badge bg-surface border border-success border-opacity-25 text-success fw-black" style={{ fontSize: '8px' }}>Full: {p.minimumWorkMinutes}m</span>
+                                                <span className="badge bg-surface border border-info border-opacity-25 text-info fw-black" style={{ fontSize: '8px' }}>Grace: {p.graceMinutes}m</span>
+                                                <span className="badge bg-surface border border-success border-opacity-25 text-success fw-black" style={{ fontSize: '8px' }}>Full: {p.minFullDayMinutes}m</span>
                                             </div>
                                         </div>
                                     </td>
                                     <td className="text-center">
                                         <div className="d-flex flex-column align-items-center">
                                             <Activity size={14} className="text-success mb-1" />
-                                            <span className="fw-black text-success small">{p.minimumWorkMinutes} MIN</span>
+                                            <span className="fw-black text-success small">{p.minFullDayMinutes} MIN</span>
                                         </div>
                                     </td>
                                     <td className="text-end">

@@ -249,7 +249,9 @@ const LeadStatusUpdatePage = () => {
           dueDate: inst.dueDate
         })),
         parseFloat(totalAmount),
-        discount ? parseFloat(discount) : 0
+        discount ? parseFloat(discount) : 0,
+        searchParams.get('installmentId'),
+        selectedCourse?.id
       );
       
       // Success check - handle various backend response formats
@@ -693,6 +695,7 @@ const LeadStatusUpdatePage = () => {
                             <div className="col-12">
                               <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '10px' }}>1. Select Program Protocol</label>
                               <PortalSelect 
+                                searchable={true}
                                 options={[{ value: "", label: "-- SELECT COURSE --" }, ...courses.map(c => ({ value: c.id.toString(), label: `${c.name.toUpperCase()} (₹${c.baseFee})` }))]}
                                 value={selectedCourse?.id?.toString() || ''}
                                 onChange={(e) => handleCourseChange(e.target.value)}
@@ -702,12 +705,11 @@ const LeadStatusUpdatePage = () => {
                               <label className="form-label small fw-bold text-muted mb-2 text-uppercase" style={{ fontSize: '10px' }}>2. Base Package</label>
                               <input 
                                 type="number" 
-                                min="0" 
-                                onKeyDown={(e) => { if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') e.preventDefault(); }}
-                                onInput={(e) => { if (parseFloat(e.target.value) < 0) e.target.value = 0; }}
-                                className="form-control rounded-3" 
+                                className="form-control rounded-3 bg-light text-muted" 
                                 value={totalAmount} 
-                                onChange={e => setTotalAmount(Math.max(0, parseFloat(e.target.value) || 0))} 
+                                readOnly
+                                disabled
+                                style={{ cursor: 'not-allowed', fontWeight: 'bold' }}
                               />
                             </div>
                             <div className="col-md-6">

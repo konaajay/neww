@@ -18,7 +18,9 @@ const SidebarAttendance = ({ isCollapsed }) => {
     const [distanceToOffice, setDistanceToOffice] = useState(null);
 
     const isPunchedIn = !!(status?.checkInTime);
-    const isOnBreak = status?.status === 'ON_BREAK' || status?.status === 'AUTO_BREAK';
+    const isOnManualBreak = status?.status === 'ON_BREAK';
+    const isAutoBreak = status?.status === 'AUTO_BREAK';
+    const isOnBreak = isOnManualBreak || isAutoBreak;
 
     const parseStatus = (res) => {
         const payload = res?.data ?? res;
@@ -283,7 +285,8 @@ const SidebarAttendance = ({ isCollapsed }) => {
         const suffix = (status?.isWfhApproved || status?.wfhStatus === 'APPROVED') ? ' (WFH)' : '';
         switch (status?.status) {
             case 'WORKING': return 'WORKING' + suffix;
-            case 'ON_BREAK':
+            case 'ON_SHORT_BREAK':
+            case 'ON_LONG_BREAK':
             case 'AUTO_BREAK': return 'BREAK';
             case 'OUTSIDE': return 'OUTSIDE';
             default: return (status?.status || 'ACTIVE') + suffix;
@@ -294,7 +297,8 @@ const SidebarAttendance = ({ isCollapsed }) => {
         if (!isPunchedIn) return 'secondary';
         switch (status?.status) {
             case 'WORKING': return 'dark';
-            case 'ON_BREAK':
+            case 'ON_SHORT_BREAK':
+            case 'ON_LONG_BREAK':
             case 'AUTO_BREAK': return 'warning';
             case 'OUTSIDE': return 'danger';
             default: return 'secondary';
@@ -393,32 +397,18 @@ const SidebarAttendance = ({ isCollapsed }) => {
                             </div>
 
                             <div className="row g-2">
-                                <div className="col-6">
+                                <div className="col-12">
                                     <button
-                                        onClick={() => handleBreak('SHORT')}
-                                        disabled={status?.status === 'ON_LONG_BREAK'}
-                                        className={`w-100 py-2 rounded-3 fw-black d-flex align-items-center justify-content-center gap-1 transition-all border ${status?.status === 'ON_SHORT_BREAK'
+                                        onClick={() => handleBreak('MANUAL')}
+                                        disabled={isAutoBreak}
+                                        className={`w-100 py-2 rounded-3 fw-black d-flex align-items-center justify-content-center gap-1 transition-all border ${isOnBreak
                                                 ? 'bg-warning text-dark border-warning shadow-glow'
                                                 : 'bg-transparent text-warning border-warning border-opacity-50'
-                                            }`}
-                                        style={{ fontSize: '10px' }}
+                                            } ${isAutoBreak ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        style={{ fontSize: '11px' }}
                                     >
-                                        <Coffee size={11} />
-                                        {status?.status === 'ON_SHORT_BREAK' ? 'Resume' : '↺ Short'}
-                                    </button>
-                                </div>
-                                <div className="col-6">
-                                    <button
-                                        onClick={() => handleBreak('LONG')}
-                                        disabled={status?.status === 'ON_SHORT_BREAK'}
-                                        className={`w-100 py-2 rounded-3 fw-black d-flex align-items-center justify-content-center gap-1 transition-all border ${status?.status === 'ON_LONG_BREAK'
-                                                ? 'bg-warning text-dark border-warning shadow-glow'
-                                                : 'bg-transparent text-warning border-warning border-opacity-50'
-                                            }`}
-                                        style={{ fontSize: '10px' }}
-                                    >
-                                        <LogOut size={11} style={{ transform: 'rotate(90deg)' }} />
-                                        {status?.status === 'ON_LONG_BREAK' ? 'Resume' : '↺ Long'}
+                                        <Coffee size={13} />
+                                        {isAutoBreak ? 'Auto Break Active' : (isOnManualBreak ? 'Resume Work' : 'Manual Break')}
                                     </button>
                                 </div>
                                 <div className="col-12">

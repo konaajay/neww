@@ -8,6 +8,7 @@
 		}
 	],
 	"settings": {
-		"liveServer.settings.multiRootWorkspaceName": "neww-main"
+		"liveServer.settings.multiRootWorkspaceName": "neww-main",
+		"git.ignoreLimitWarning": true
 	}
 }

@@ -63,7 +63,7 @@ const SingleGenerationForm = ({ onComplete, onDataChange }) => {
   };
 
   return (
-    <div className="glass-panel" style={{ padding: '24px', background: 'rgba(255,255,255,0.4)' }}>
+    <div className="glass-panel" style={{ padding: '24px' }}>
       <div style={{ marginBottom: '20px' }}>
         <h3 style={{ fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <User size={20} color="var(--accent-primary)" />
