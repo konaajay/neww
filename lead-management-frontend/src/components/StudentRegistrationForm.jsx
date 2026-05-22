@@ -25,7 +25,7 @@ const StudentRegistrationForm = () => {
     webinarId: webinarId || ''
   });
 
-  const [status, setStatus] = useState(webinarId ? 'idle' : 'no-webinar'); // idle, loading, success, error, duplicate, expired, no-webinar
+  const [status, setStatus] = useState(webinarId ? 'idle' : 'no-webinar');
   const [errors, setErrors] = useState({});
   const [webinarDetails, setWebinarDetails] = useState(null);
 
@@ -39,7 +39,7 @@ const StudentRegistrationForm = () => {
         .then(data => {
           if (data) setWebinarDetails(data);
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [webinarId]);
 
@@ -96,7 +96,12 @@ const StudentRegistrationForm = () => {
           department: formData.department,
           yearOfStudy: formData.yearOfStudy,
           referralSource: formData.crName || formData.friendName || 'Direct',
-          confirmation: formData.confirmation // Added to match DTO
+          confirmation: formData.confirmation,
+          crName: formData.crName,
+          crPhone: formData.crPhone,
+          friendName: formData.friendName,
+          friendPhone: formData.friendPhone,
+          friendCollege: formData.friendCollege
         })
       });
 

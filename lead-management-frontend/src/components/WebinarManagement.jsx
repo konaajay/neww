@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Link as LinkIcon, Copy, Plus, Trash2, CheckCircle2, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, Link as LinkIcon, Copy, Plus, Trash2, CheckCircle2, ExternalLink, Eye, X, Download, Loader } from 'lucide-react';
+import Papa from 'papaparse';
 
 import './WebinarManagement.css';
 
@@ -16,6 +17,11 @@ const WebinarManagement = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [generatedLink, setGeneratedLink] = useState('');
+  
+  const [selectedWebinar, setSelectedWebinar] = useState(null);
+  const [registrations, setRegistrations] = useState([]);
+  const [loadingRegistrations, setLoadingRegistrations] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Fetch webinars on load
   useEffect(() => {
@@ -92,6 +98,58 @@ const WebinarManagement = () => {
     navigator.clipboard.writeText(text);
     // You could add a toast here
     alert('Link copied to clipboard!');
+  };
+
+  const handleViewRegistrations = async (webinar) => {
+    setSelectedWebinar(webinar);
+    setIsModalOpen(true);
+    setLoadingRegistrations(true);
+    setRegistrations([]);
+    try {
+      const response = await fetch(`${API_BASE}/api/webinars/${webinar.id}/registrations`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setRegistrations(data);
+      } else {
+        console.error('Failed to fetch registrations');
+      }
+    } catch (err) {
+      console.error('Error fetching registrations:', err);
+    } finally {
+      setLoadingRegistrations(false);
+    }
+  };
+
+  const downloadCSV = () => {
+    if (!registrations || registrations.length === 0) return;
+    const csvData = registrations.map((r, index) => ({
+      'S.No': index + 1,
+      'Full Name': r.fullName,
+      'Email': r.email,
+      'Phone': r.phone,
+      'College Name': r.collegeName,
+      'Department': r.department,
+      'Year of Study': r.yearOfStudy,
+      'Referral Source': r.referralSource || 'Direct',
+      'CR Name': r.crName || 'N/A',
+      'CR Phone': r.crPhone || 'N/A',
+      'Friend Name': r.friendName || 'N/A',
+      'Friend College': r.friendCollege || 'N/A',
+      'Friend Phone': r.friendPhone || 'N/A',
+      'Registration Date': r.registrationDate ? new Date(r.registrationDate).toLocaleString() : 'N/A'
+    }));
+    
+    const csv = Papa.unparse(csvData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${selectedWebinar?.webinarTitle || selectedWebinar?.title || 'webinar'}_registrations.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -263,6 +321,13 @@ const WebinarManagement = () => {
                           >
                             <Copy size={14} style={{ marginRight: '4px' }} /> Link
                           </button>
+                          <button
+                            className="btn-secondary"
+                            style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                            onClick={() => handleViewRegistrations(webinar)}
+                          >
+                            <Eye size={14} style={{ marginRight: '4px' }} /> View
+                          </button>
                           <a
                             href={`/registration/form?webinarId=${webinar.id}`}
                             target="_blank"
@@ -282,6 +347,253 @@ const WebinarManagement = () => {
         </div>
 
       </div>
+
+      {isModalOpen && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(15, 23, 42, 0.4)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div 
+            style={{
+              width: '100%',
+              maxWidth: '1200px',
+              maxHeight: '85vh',
+              background: '#0f172a',
+              borderRadius: '24px',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              position: 'relative',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#0f172a'
+            }}>
+              <div>
+                <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Webinar Registration Details
+                </span>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', margin: '4px 0 0 0', color: '#ffffff' }}>
+                  {selectedWebinar?.webinarTitle || selectedWebinar?.title}
+                </h3>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {registrations.length > 0 && (
+                  <button
+                    onClick={downloadCSV}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 16px',
+                      background: 'rgba(59, 130, 246, 0.2)',
+                      color: '#60a5fa',
+                      border: 'none',
+                      borderRadius: '10px',
+                      fontSize: '0.85rem',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    title="Download CSV"
+                  >
+                    <Download size={16} /> Export CSV
+                  </button>
+                )}
+                <button 
+                  onClick={() => setIsModalOpen(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '8px',
+                    borderRadius: '50%',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#94a3b8',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '24px', overflowY: 'auto', flex: 1, background: '#090d16' }}>
+              {loadingRegistrations ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyKey: 'center', padding: '60px 0', gap: '16px' }}>
+                  <Loader className="animate-spin text-primary" size={32} style={{ animation: 'spin 1s linear infinite' }} />
+                  <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: '500' }}>Fetching registrations...</span>
+                </div>
+              ) : registrations.length === 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 0', gap: '12px' }}>
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    padding: '16px',
+                    borderRadius: '50%',
+                    color: '#94a3b8'
+                  }}>
+                    <Eye size={32} />
+                  </div>
+                  <h4 style={{ fontSize: '1rem', fontWeight: '600', margin: '4px 0', color: '#ffffff' }}>No Registrations Yet</h4>
+                  <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: 0, textAlign: 'center', maxWidth: '300px' }}>
+                    Share the link to get students registered for this webinar.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {/* Summary Card */}
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    padding: '16px 20px',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase' }}>Total Registered Students</div>
+                      <div style={{ fontSize: '1.75rem', fontWeight: '800', color: '#ffffff', marginTop: '4px' }}>
+                        {registrations.length}
+                      </div>
+                    </div>
+                    <div style={{
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      color: '#34d399',
+                      padding: '8px 16px',
+                      borderRadius: '30px',
+                      fontSize: '0.85rem',
+                      fontWeight: '700'
+                    }}>
+                      Active Form
+                    </div>
+                  </div>
+
+                  {/* List / Table */}
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                        <thead>
+                          <tr style={{ background: 'rgba(255, 255, 255, 0.04)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                            <th style={{ padding: '12px 16px', color: '#94a3b8', fontWeight: '600', width: '50px' }}>#</th>
+                            <th style={{ padding: '12px 16px', color: '#94a3b8', fontWeight: '600' }}>STUDENT INFO</th>
+                            <th style={{ padding: '12px 16px', color: '#94a3b8', fontWeight: '600' }}>COLLEGE & ACADEMICS</th>
+                            <th style={{ padding: '12px 16px', color: '#94a3b8', fontWeight: '600' }}>CR REFERRAL</th>
+                            <th style={{ padding: '12px 16px', color: '#94a3b8', fontWeight: '600' }}>FRIEND REFERRAL</th>
+                            <th style={{ padding: '12px 16px', color: '#94a3b8', fontWeight: '600' }}>REG. DATE</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {registrations.map((reg, index) => (
+                            <tr key={reg.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)', transition: 'background 0.2s' }}>
+                              <td style={{ padding: '12px 16px', color: '#94a3b8', fontWeight: '500' }}>{index + 1}</td>
+                              <td style={{ padding: '12px 16px' }}>
+                                <div style={{ fontWeight: '600', color: '#ffffff' }}>{reg.fullName}</div>
+                                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{reg.email}</div>
+                                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{reg.phone}</div>
+                              </td>
+                              <td style={{ padding: '12px 16px' }}>
+                                <div style={{ fontWeight: '500', color: '#ffffff' }}>{reg.collegeName}</div>
+                                <div style={{ color: '#94a3b8', fontSize: '0.8rem' }}>
+                                  {reg.department} • {reg.yearOfStudy} Year
+                                </div>
+                              </td>
+                              <td style={{ padding: '12px 16px' }}>
+                                {reg.crName ? (
+                                  <>
+                                    <div style={{ fontWeight: '500', color: '#ffffff' }}>{reg.crName}</div>
+                                    <div style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{reg.crPhone || 'No Phone'}</div>
+                                  </>
+                                ) : (
+                                  <span style={{ color: '#64748b', fontStyle: 'italic' }}>None</span>
+                                )}
+                              </td>
+                              <td style={{ padding: '12px 16px' }}>
+                                {reg.friendName ? (
+                                  <>
+                                    <div style={{ fontWeight: '500', color: '#ffffff' }}>{reg.friendName}</div>
+                                    <div style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{reg.friendPhone || 'No Phone'}</div>
+                                    {reg.friendCollege && (
+                                      <div style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '2px' }}>{reg.friendCollege}</div>
+                                    )}
+                                  </>
+                                ) : (
+                                  <span style={{ color: '#64748b', fontStyle: 'italic' }}>None</span>
+                                )}
+                              </td>
+                              <td style={{ padding: '12px 16px', color: '#94a3b8' }}>
+                                {reg.registrationDate ? new Date(reg.registrationDate).toLocaleString() : 'N/A'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '16px 24px',
+              borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+              background: '#0f172a',
+              display: 'flex',
+              justifyContent: 'flex-end'
+            }}>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="btn-secondary"
+                style={{ padding: '8px 24px', background: 'rgba(255,255,255,0.05)', color: '#ffffff', border: '1px solid rgba(255,255,255,0.1)' }}
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
+      `}</style>
     </div>
   );
 };
