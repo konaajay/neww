@@ -37,7 +37,12 @@ const StudentRegistrationForm = () => {
           return null;
         })
         .then(data => {
-          if (data) setWebinarDetails(data);
+          if (data) {
+            setWebinarDetails(data);
+            if (data.expiryTime && new Date(data.expiryTime) < new Date()) {
+              setStatus('expired');
+            }
+          }
         })
         .catch(() => { });
     }

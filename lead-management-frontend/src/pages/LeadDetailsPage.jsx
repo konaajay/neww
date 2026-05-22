@@ -608,16 +608,20 @@ const LeadDetailsPage = () => {
                                 <td className="fw-black small text-main">₹{Number(p.amount || 0).toLocaleString()}</td>
                                 <td className="text-muted" style={{ fontSize: '11px' }}>
                                   {p.dueDate ? formatDate(p.dueDate).split(',')[0] : (
-                                    p.createdAt ? formatDate(p.createdAt).split(',')[0] : (
-                                      feeStructure?.fee?.createdAt ? formatDate(feeStructure.fee.createdAt).split(',')[0] : (
-                                        lead?.createdAt ? formatDate(lead.createdAt).split(',')[0] : 'System Time'
+                                    p.date ? formatDate(p.date).split(',')[0] : (
+                                      p.createdAt ? formatDate(p.createdAt).split(',')[0] : (
+                                        feeStructure?.fee?.createdAt ? formatDate(feeStructure.fee.createdAt).split(',')[0] : (
+                                          lead?.createdAt ? formatDate(lead.createdAt).split(',')[0] : 'System Time'
+                                        )
                                       )
                                     )
                                   )}
                                 </td>
                                 <td className="text-muted fw-bold" style={{ fontSize: '11px' }}>
-                                  {(p.status === 'PAID' || p.status === 'SUCCESS') && p.updatedAt ? (
-                                    <span className="text-success">{formatDate(p.updatedAt).split(',')[0]}</span>
+                                  {(p.status === 'PAID' || p.status === 'SUCCESS') ? (
+                                    <span className="text-success">
+                                      {formatDate(p.date || p.updatedAt || p.createdAt).split(',')[0]}
+                                    </span>
                                   ) : (
                                     <span className="text-muted opacity-50">--</span>
                                   )}

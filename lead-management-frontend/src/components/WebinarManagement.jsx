@@ -371,31 +371,32 @@ const WebinarManagement = () => {
               width: '100%',
               maxWidth: '1200px',
               maxHeight: '85vh',
-              background: '#0f172a',
+              background: 'var(--bg-card)',
+              backdropFilter: 'var(--glass-blur)',
               borderRadius: '24px',
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
               position: 'relative',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-              border: '1px solid rgba(255, 255, 255, 0.1)'
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid var(--border-color)'
             }}
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
             <div style={{
               padding: '20px 24px',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              borderBottom: '1px solid var(--border-color)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              background: '#0f172a'
+              background: 'transparent'
             }}>
               <div>
                 <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Webinar Registration Details
                 </span>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', margin: '4px 0 0 0', color: '#ffffff' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', margin: '4px 0 0 0', color: 'var(--text-main)' }}>
                   {selectedWebinar?.webinarTitle || selectedWebinar?.title}
                 </h3>
               </div>
@@ -408,8 +409,8 @@ const WebinarManagement = () => {
                       alignItems: 'center',
                       gap: '8px',
                       padding: '8px 16px',
-                      background: 'rgba(59, 130, 246, 0.2)',
-                      color: '#60a5fa',
+                      background: 'rgba(99, 102, 241, 0.15)',
+                      color: 'var(--primary)',
                       border: 'none',
                       borderRadius: '10px',
                       fontSize: '0.85rem',
@@ -433,8 +434,8 @@ const WebinarManagement = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#94a3b8',
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    color: 'var(--text-muted)',
+                    backgroundColor: 'var(--border-color)',
                     transition: 'all 0.2s'
                   }}
                 >
@@ -444,24 +445,24 @@ const WebinarManagement = () => {
             </div>
 
             {/* Body */}
-            <div style={{ padding: '24px', overflowY: 'auto', flex: 1, background: '#090d16' }}>
+            <div style={{ padding: '24px', overflowY: 'auto', flex: 1, background: 'var(--bg-body)' }}>
               {loadingRegistrations ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyKey: 'center', padding: '60px 0', gap: '16px' }}>
                   <Loader className="animate-spin text-primary" size={32} style={{ animation: 'spin 1s linear infinite' }} />
-                  <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: '500' }}>Fetching registrations...</span>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '500' }}>Fetching registrations...</span>
                 </div>
               ) : registrations.length === 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 0', gap: '12px' }}>
                   <div style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
+                    background: 'var(--border-color)',
                     padding: '16px',
                     borderRadius: '50%',
-                    color: '#94a3b8'
+                    color: 'var(--text-muted)'
                   }}>
                     <Eye size={32} />
                   </div>
-                  <h4 style={{ fontSize: '1rem', fontWeight: '600', margin: '4px 0', color: '#ffffff' }}>No Registrations Yet</h4>
-                  <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: 0, textAlign: 'center', maxWidth: '300px' }}>
+                  <h4 style={{ fontSize: '1rem', fontWeight: '600', margin: '4px 0', color: 'var(--text-main)' }}>No Registrations Yet</h4>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0, textAlign: 'center', maxWidth: '300px' }}>
                     Share the link to get students registered for this webinar.
                   </p>
                 </div>
@@ -469,23 +470,23 @@ const WebinarManagement = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   {/* Summary Card */}
                   <div style={{
-                    background: 'rgba(255, 255, 255, 0.03)',
+                    background: 'var(--bg-card)',
                     padding: '16px 20px',
                     borderRadius: '16px',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    border: '1px solid var(--border-color)',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center'
                   }}>
                     <div>
-                      <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase' }}>Total Registered Students</div>
-                      <div style={{ fontSize: '1.75rem', fontWeight: '800', color: '#ffffff', marginTop: '4px' }}>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>Total Registered Students</div>
+                      <div style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--text-main)', marginTop: '4px' }}>
                         {registrations.length}
                       </div>
                     </div>
                     <div style={{
                       background: 'rgba(16, 185, 129, 0.15)',
-                      color: '#34d399',
+                      color: 'var(--success)',
                       padding: '8px 16px',
                       borderRadius: '30px',
                       fontSize: '0.85rem',
@@ -497,62 +498,62 @@ const WebinarManagement = () => {
 
                   {/* List / Table */}
                   <div style={{
-                    background: 'rgba(255, 255, 255, 0.02)',
+                    background: 'var(--bg-card)',
                     borderRadius: '16px',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    border: '1px solid var(--border-color)',
                     overflow: 'hidden'
                   }}>
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
                         <thead>
-                          <tr style={{ background: 'rgba(255, 255, 255, 0.04)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                            <th style={{ padding: '12px 16px', color: '#94a3b8', fontWeight: '600', width: '50px' }}>#</th>
-                            <th style={{ padding: '12px 16px', color: '#94a3b8', fontWeight: '600' }}>STUDENT INFO</th>
-                            <th style={{ padding: '12px 16px', color: '#94a3b8', fontWeight: '600' }}>COLLEGE & ACADEMICS</th>
-                            <th style={{ padding: '12px 16px', color: '#94a3b8', fontWeight: '600' }}>CR REFERRAL</th>
-                            <th style={{ padding: '12px 16px', color: '#94a3b8', fontWeight: '600' }}>FRIEND REFERRAL</th>
-                            <th style={{ padding: '12px 16px', color: '#94a3b8', fontWeight: '600' }}>REG. DATE</th>
+                          <tr style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-color)' }}>
+                            <th style={{ padding: '12px 16px', color: 'var(--text-muted)', fontWeight: '600', width: '50px' }}>#</th>
+                            <th style={{ padding: '12px 16px', color: 'var(--text-muted)', fontWeight: '600' }}>STUDENT INFO</th>
+                            <th style={{ padding: '12px 16px', color: 'var(--text-muted)', fontWeight: '600' }}>COLLEGE & ACADEMICS</th>
+                            <th style={{ padding: '12px 16px', color: 'var(--text-muted)', fontWeight: '600' }}>CR REFERRAL</th>
+                            <th style={{ padding: '12px 16px', color: 'var(--text-muted)', fontWeight: '600' }}>FRIEND REFERRAL</th>
+                            <th style={{ padding: '12px 16px', color: 'var(--text-muted)', fontWeight: '600' }}>REG. DATE</th>
                           </tr>
                         </thead>
                         <tbody>
                           {registrations.map((reg, index) => (
-                            <tr key={reg.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)', transition: 'background 0.2s' }}>
-                              <td style={{ padding: '12px 16px', color: '#94a3b8', fontWeight: '500' }}>{index + 1}</td>
+                            <tr key={reg.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background 0.2s' }}>
+                              <td style={{ padding: '12px 16px', color: 'var(--text-muted)', fontWeight: '500' }}>{index + 1}</td>
                               <td style={{ padding: '12px 16px' }}>
-                                <div style={{ fontWeight: '600', color: '#ffffff' }}>{reg.fullName}</div>
-                                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{reg.email}</div>
-                                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{reg.phone}</div>
+                                <div style={{ fontWeight: '600', color: 'var(--text-main)' }}>{reg.fullName}</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{reg.email}</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{reg.phone}</div>
                               </td>
                               <td style={{ padding: '12px 16px' }}>
-                                <div style={{ fontWeight: '500', color: '#ffffff' }}>{reg.collegeName}</div>
-                                <div style={{ color: '#94a3b8', fontSize: '0.8rem' }}>
+                                <div style={{ fontWeight: '500', color: 'var(--text-main)' }}>{reg.collegeName}</div>
+                                <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                                   {reg.department} • {reg.yearOfStudy} Year
                                 </div>
                               </td>
                               <td style={{ padding: '12px 16px' }}>
                                 {reg.crName ? (
                                   <>
-                                    <div style={{ fontWeight: '500', color: '#ffffff' }}>{reg.crName}</div>
-                                    <div style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{reg.crPhone || 'No Phone'}</div>
+                                    <div style={{ fontWeight: '500', color: 'var(--text-main)' }}>{reg.crName}</div>
+                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{reg.crPhone || 'No Phone'}</div>
                                   </>
                                 ) : (
-                                  <span style={{ color: '#64748b', fontStyle: 'italic' }}>None</span>
+                                  <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None</span>
                                 )}
                               </td>
                               <td style={{ padding: '12px 16px' }}>
                                 {reg.friendName ? (
                                   <>
-                                    <div style={{ fontWeight: '500', color: '#ffffff' }}>{reg.friendName}</div>
-                                    <div style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{reg.friendPhone || 'No Phone'}</div>
+                                    <div style={{ fontWeight: '500', color: 'var(--text-main)' }}>{reg.friendName}</div>
+                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{reg.friendPhone || 'No Phone'}</div>
                                     {reg.friendCollege && (
-                                      <div style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '2px' }}>{reg.friendCollege}</div>
+                                      <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '2px' }}>{reg.friendCollege}</div>
                                     )}
                                   </>
                                 ) : (
-                                  <span style={{ color: '#64748b', fontStyle: 'italic' }}>None</span>
+                                  <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None</span>
                                 )}
                               </td>
-                              <td style={{ padding: '12px 16px', color: '#94a3b8' }}>
+                              <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>
                                 {reg.registrationDate ? new Date(reg.registrationDate).toLocaleString() : 'N/A'}
                               </td>
                             </tr>
@@ -568,15 +569,15 @@ const WebinarManagement = () => {
             {/* Footer */}
             <div style={{
               padding: '16px 24px',
-              borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-              background: '#0f172a',
+              borderTop: '1px solid var(--border-color)',
+              background: 'transparent',
               display: 'flex',
               justifyContent: 'flex-end'
             }}>
               <button 
                 onClick={() => setIsModalOpen(false)}
                 className="btn-secondary"
-                style={{ padding: '8px 24px', background: 'rgba(255,255,255,0.05)', color: '#ffffff', border: '1px solid rgba(255,255,255,0.1)' }}
+                style={{ padding: '8px 24px', background: 'var(--bg-surface)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
               >
                 Close Details
               </button>

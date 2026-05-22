@@ -57,7 +57,9 @@ const OldLeadsIngestion = ({ onSuccess }) => {
     };
 
     const downloadTemplate = () => {
-        const csvContent = "data:text/csv;charset=utf-8,name,email,mobile,course,assignedToEmail,teamLeaderEmail,status\nAjay,ajay@gmail.com,9876543210,1,4,3,CONVERTED\nPriya,priya@example.com,9123456789,1,4,3,WORKING";
+        const csvContent = "data:text/csv;charset=utf-8,Payment dat Date,Student Name,Course Name,MAIL-ID,assignedTo,Total Fee,Paid Amount,Pending Amount,Payment Mode,Payment type,Follow-up Date = emi due date,Status,Remarks\n" +
+            "3/5/2026,Kamadula sangeetha,HR,sangeethahosanna579@gmail.com,Arjun,3000,3000,0,Company Ink,Post payment,N/A,Paid,Completed\n" +
+            "7/5/2026,Manda Sai Deepthi,FINANCE,deepthishiva23@gmail.com,Sai vardhan,5000,500,4500,Company Ink,prepayment,17-05-2026,Pending,required";
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
