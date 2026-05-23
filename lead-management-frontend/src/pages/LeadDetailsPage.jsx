@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import ReactDOM from 'react-dom';
 import {
@@ -20,6 +20,7 @@ import PortalSelect from '../components/PortalSelect';
 const LeadDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { isDarkMode } = useTheme();
@@ -34,7 +35,7 @@ const LeadDetailsPage = () => {
   const [loadingLead, setLoadingLead] = useState(true);
   const [auditLogs, setAuditLogs] = useState([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
-  const [activeTab, setActiveTab] = useState('TIMELINE'); // TIMELINE, FEE, INVOICE
+  const [activeTab, setActiveTab] = useState(location.state?.activeTab || new URLSearchParams(location.search).get('tab')?.toUpperCase() || 'TIMELINE'); // TIMELINE, FEE_STRUCTURE, INVOICE
   const [feeStructure, setFeeStructure] = useState(null);
   const [isLoadingFee, setIsLoadingFee] = useState(false);
   const [generatingLinkIds, setGeneratingLinkIds] = useState([]);

@@ -40,6 +40,7 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
         { id: 'tasks', label: 'Team Task ', icon: Layers },
         { id: 'payments', label: 'Revenue Stats', icon: IndianRupee },
         { id: 'calls', label: 'Team Calllogs', icon: PhoneIcon },
+        { id: 'reports', label: 'Monthly Reports', icon: FileText },
         { id: 'certificate', label: 'Certificate', icon: Award, url: '/certificates' },
         // { id: 'courses', label: 'Courses', icon: BookOpen },
         { id: 'settings', label: 'Global Settings', icon: Settings },

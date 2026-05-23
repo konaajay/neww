@@ -135,6 +135,20 @@
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
 }
 
+[data-bs-theme="dark"] .registration-input {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-bs-theme="dark"] .registration-input:focus {
+  background: rgba(15, 23, 42, 0.85);
+}
+
+.registration-input option {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
 .registration-input::placeholder {
   color: var(--text-muted);
 }

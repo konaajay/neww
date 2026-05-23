@@ -93,7 +93,7 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
     const isAssociate = role === 'ASSOCIATE';
     const subjectId = filters?.userId || currentUser?.id;
     const personalRecord = stats?.performance?.find(p => p.userId == subjectId);
-    const statsToUse = (isAssociate || filters?.userId || filters?.teamId || filters?.managerId || ((role === 'ADMIN' || role === 'MANAGER' || role === 'TL') && !hideUsers)) ? stats : (personalRecord || (hideUsers ? {} : (stats?.performance?.[0] || stats)));
+    const statsToUse = (isAssociate || filters?.userId || filters?.teamId || filters?.managerId || ((role === 'ADMIN' || role === 'MANAGER' || role === 'TL' || role === 'TEAM_LEADER') && !hideUsers)) ? stats : (personalRecord || (hideUsers ? {} : (stats?.performance?.[0] || stats)));
     
     const getCount = (k) => {
       const target = k.toUpperCase().replace(/_/g, '').replace(/\s/g, '');
@@ -119,7 +119,9 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
       displayToday: (statsToUse.todayFollowups || 0) + (statsToUse.todayPaymentsCount || 0),
       displayOverdue: (statsToUse.pendingFollowups || 0) + (statsToUse.pendingPaymentsCount || 0),
       totalActiveTasks: (statsToUse.todayFollowups || 0) + (statsToUse.pendingFollowups || 0) + (statsToUse.todayPaymentsCount || 0) + (statsToUse.pendingPaymentsCount || 0),
-      totalUsers: statsToUse.totalUsers || (getCount('ADMIN') + getCount('MANAGER') + getCount('TEAM_LEADER') + getCount('ASSOCIATE')),
+      totalUsers: (role === 'TEAM_LEADER' || role === 'TL')
+        ? (getCount('TEAM_LEADER') + getCount('ASSOCIATE'))
+        : (statsToUse.totalUsers || (getCount('ADMIN') + getCount('MANAGER') + getCount('TEAM_LEADER') + getCount('ASSOCIATE'))),
       getCount
     };
   }, [stats, role, filters, currentUser]);
@@ -191,7 +193,7 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
       })()}
 
       {/* 2. USERS / STAFF */}
-      { (role === 'ADMIN' || role === 'MANAGER') && (
+      { (role === 'ADMIN' || role === 'MANAGER' || role === 'TEAM_LEADER' || role === 'TL') && (
         <MetricCard
           title="STAFF"
           icon={Users}
@@ -204,7 +206,7 @@ const MetricCommandCenter = memo(({ stats, role, filters, onNavigate, leads = []
             },
             secondary: [
               ...( (role === 'ADMIN' && !filters?.managerId && !filters?.teamId && !filters?.userId) ? [{ label: 'ADMIN', value: statsMemo.getCount('ADMIN'), color: 'success' }] : [] ),
-              { label: 'MGR', value: statsMemo.getCount('MANAGER'), color: 'primary' },
+              ...( (role !== 'TEAM_LEADER' && role !== 'TL') ? [{ label: 'MGR', value: statsMemo.getCount('MANAGER'), color: 'primary' }] : [] ),
               { label: 'TL', value: statsMemo.getCount('TEAM_LEADER'), color: 'info' },
               { label: 'BDA', value: statsMemo.getCount('ASSOCIATE'), color: 'warning' },
             ]

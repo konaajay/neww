@@ -445,7 +445,7 @@ const LeadStatusUpdatePage = () => {
 
       sessionStorage.setItem('pendingHardRefresh', 'true');
       toast.success("Protocol Updated & Tasks Scheduled");
-      navigate(-1);
+      navigate(`/leads/${id}/details`, { state: { activeTab: 'FEE_STRUCTURE' } });
     } catch (err) {
       toast.error(err.response?.data?.message || "System Update Failed");
     } finally {
@@ -960,7 +960,7 @@ const LeadStatusUpdatePage = () => {
                         type="button" 
                         onClick={() => {
                           sessionStorage.setItem('openLeadHistoryId', lead?.id || id);
-                          navigate(-1);
+                          navigate(`/leads/${id}/details`, { state: { activeTab: 'FEE_STRUCTURE' } });
                         }}
                         className="w-100 py-3 rounded-pill fw-black text-uppercase tracking-widest shadow-glow border-0 bg-success text-white transition-all d-flex align-items-center justify-content-center gap-2"
                         style={{ minHeight: '56px' }}

@@ -41,6 +41,7 @@ import UserEditModal from './dashboard/components/UserEditModal';
 import InvoiceModal from './dashboard/components/InvoiceModal';
 import CourseManagementPage from './CourseManagementPage';
 import paymentService from '../services/paymentService';
+import MonthlyReportDownload from './dashboard/components/MonthlyReportDownload';
 
 const RevenueTrendChart = React.lazy(() => import('./dashboard/components/RevenueTrendChart'));
 const LeadStatusPieChart = React.lazy(() => import('./dashboard/components/LeadStatusPieChart'));
@@ -454,6 +455,12 @@ const AdminDashboard = () => {
         )}
 
         {activeTab === 'attendance' && <AttendanceDashboard filters={debouncedFilters} role="ADMIN" />}
+
+        {activeTab === 'reports' && (
+          <div className="animate-fade-in">
+            <MonthlyReportDownload role="ADMIN" />
+          </div>
+        )}
 
         {activeTab === 'payments' && (
           <div className="animate-fade-in">

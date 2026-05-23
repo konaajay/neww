@@ -40,6 +40,7 @@ import TodayTaskList from './dashboard/components/TodayTaskList';
 import LeadEditPage from './dashboard/components/LeadEditPage';
 import AttendanceDashboard from './dashboard/components/AttendanceDashboard';
 import CourseManagementPage from './CourseManagementPage';
+import MonthlyReportDownload from './dashboard/components/MonthlyReportDownload';
 import { StatSkeleton, ChartSkeleton, MetricSkeletonRow, TableSkeleton } from './dashboard/components/DashboardSkeletons';
 
 const RevenueTrendChart = React.lazy(() => import('./dashboard/components/RevenueTrendChart'));
@@ -596,6 +597,7 @@ const ManagerDashboard = () => {
         {activeTab === 'courses' && <CourseManagementPage />}
         {activeTab === 'reports' && (
           <div className="d-flex flex-column gap-4 animate-fade-in">
+            <MonthlyReportDownload role="MANAGER" />
             <div className="row g-4">
               <div className="col-12 col-xl-8">
                 <Card title="Revenue & Pipeline Trend">

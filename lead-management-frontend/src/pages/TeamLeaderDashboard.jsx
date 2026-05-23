@@ -31,6 +31,7 @@ import MetricCommandCenter from './dashboard/components/MetricCommandCenter';
 import paymentService from '../services/paymentService';
 import FiltersBar from './dashboard/components/FiltersBar';
 import AttendanceDashboard from './dashboard/components/AttendanceDashboard';
+import MonthlyReportDownload from './dashboard/components/MonthlyReportDownload';
 import { StatSkeleton, ChartSkeleton, MetricSkeletonRow } from './dashboard/components/DashboardSkeletons';
 
 const RevenueTrendChart = React.lazy(() => import('./dashboard/components/RevenueTrendChart'));
@@ -426,6 +427,7 @@ const TeamLeaderDashboard = () => {
         {activeTab === 'calls' && <CallLogDashboard userId={user?.id} filters={debouncedFilters} hideHeader={true} />}
         {activeTab === 'reports' && (
           <div className="d-flex flex-column gap-4 animate-fade-in">
+            <MonthlyReportDownload role="TEAM_LEADER" />
             <div className="row g-4">
               <div className="col-12 col-xl-8">
                 <Card title="Team Performance Trend">

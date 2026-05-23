@@ -11,11 +11,14 @@ import {
     History,
     AlertCircle,
     CheckCircle2,
+    Check,
     Timer,
     Calendar,
     ChevronRight,
     ShieldCheck,
-    RefreshCcw
+    RefreshCcw,
+    Plus,
+    FileText
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import attendanceService from '../../../services/attendanceService';
@@ -27,6 +30,16 @@ import { MetricSkeletonRow, TableSkeleton } from './DashboardSkeletons';
 import { SystemStatGrid, SystemStatCard } from '../../../components/SystemStatCard';
 import { cleanParams } from '../../../api/api';
 
+const formatDate = (dateStr) => {
+    if (!dateStr) return null;
+    // If already in YYYY-MM-DD format, return as is to avoid timezone shifts
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 const AttendanceDashboard = ({ filters, role }) => {
     const { isDarkMode } = useTheme();
     const [status, setStatus] = useState(null);
@@ -37,6 +50,24 @@ const AttendanceDashboard = ({ filters, role }) => {
     const [noteValue, setNoteValue] = useState('');
     const [activeSubTab, setActiveSubTab] = useState('logs');
     const [attendanceStatusFilter, setAttendanceStatusFilter] = useState('ALL');
+    const [sheetDate, setSheetDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [sheetRemarks, setSheetRemarks] = useState({});
+    const [sheetPending, setSheetPending] = useState({});
+
+    // Manual Attendance Marking States
+    const [showManualModal, setShowManualModal] = useState(false);
+    const [manualUsers, setManualUsers] = useState([]);
+    const [manualForm, setManualForm] = useState({
+        userId: '',
+        date: new Date().toISOString().split('T')[0],
+        status: 'AUTO',
+        loginTime: '',
+        logoutTime: '',
+        workMinutes: '',
+        breakMinutes: ''
+    });
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [previewData, setPreviewData] = useState(null);
 
     const fetchStatus = useCallback(async (signal) => {
         try {
@@ -51,15 +82,7 @@ const AttendanceDashboard = ({ filters, role }) => {
         }
     }, []);
 
-    const formatDate = (dateStr) => {
-        if (!dateStr) return null;
-        // If already in YYYY-MM-DD format, return as is to avoid timezone shifts
-        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
 
-        const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return dateStr;
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    };
 
     const fetchLogs = useCallback(async (signal) => {
         try {
@@ -67,11 +90,11 @@ const AttendanceDashboard = ({ filters, role }) => {
 
             if (isAdminOrManagerOrTL) {
                 const params = cleanParams({
-                    from: filters.from,
-                    to: filters.to,
-                    userId: filters.userId,
-                    teamId: filters.teamId,
-                    managerId: filters.managerId
+                    from: activeSubTab === 'sheet' ? sheetDate : filters.from,
+                    to: activeSubTab === 'sheet' ? sheetDate : filters.to,
+                    userId: activeSubTab === 'sheet' ? null : filters.userId,
+                    teamId: activeSubTab === 'sheet' ? null : filters.teamId,
+                    managerId: activeSubTab === 'sheet' ? null : filters.managerId
                 });
                 const res = await attendanceService.getDailySummaries(params, { signal });
                 const data = res.data || res || [];
@@ -90,7 +113,54 @@ const AttendanceDashboard = ({ filters, role }) => {
                 console.error("Attendance fetch failed:", err);
             }
         }
-    }, [filters, role]);
+    }, [filters, role, activeSubTab, sheetDate]);
+
+    const handleQuickMark = async (userId, status, note) => {
+        setSheetPending(prev => ({ ...prev, [userId]: true }));
+        try {
+            const payload = {
+                userId,
+                date: sheetDate,
+                status,
+                note,
+                loginTime: null,
+                logoutTime: null,
+                workMinutes: null,
+                breakMinutes: null
+            };
+            await attendanceService.saveManualEntry(payload);
+            toast.success(`Marked ${status} successfully`);
+            
+            // Re-fetch logs for this sheet date to update UI state immediately
+            const params = cleanParams({
+                from: sheetDate,
+                to: sheetDate,
+                userId: null,
+                teamId: null,
+                managerId: null
+            });
+            const res = await attendanceService.getDailySummaries(params);
+            const data = res.data || res || [];
+            setLogs(data);
+        } catch (err) {
+            console.error("Quick mark failed:", err);
+            toast.error("Failed to update status");
+        } finally {
+            setSheetPending(prev => ({ ...prev, [userId]: false }));
+        }
+    };
+
+    useEffect(() => {
+        if (logs.length > 0) {
+            const remarksMap = {};
+            logs.forEach(log => {
+                if (log.user?.id && log.note) {
+                    remarksMap[log.user.id] = log.note;
+                }
+            });
+            setSheetRemarks(prev => ({ ...remarksMap, ...prev }));
+        }
+    }, [logs]);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -102,6 +172,118 @@ const AttendanceDashboard = ({ filters, role }) => {
             clearInterval(timer);
         };
     }, [fetchStatus, fetchLogs]);
+
+    useEffect(() => {
+        if ((showManualModal || activeSubTab === 'sheet') && (!Array.isArray(manualUsers) || manualUsers.length === 0)) {
+            adminService.fetchUsers()
+                .then(res => {
+                    console.log("fetchUsers response:", res);
+                    let data = [];
+                    if (res) {
+                        if (Array.isArray(res)) {
+                            data = res;
+                        } else if (Array.isArray(res.content)) {
+                            data = res.content;
+                        } else if (res.data && Array.isArray(res.data.content)) {
+                            data = res.data.content;
+                        } else if (res.data && Array.isArray(res.data)) {
+                            data = res.data;
+                        }
+                    }
+                    data.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                    setManualUsers(data);
+                })
+                .catch(err => {
+                    console.error("Failed to fetch users", err);
+                    toast.error("Failed to load user list");
+                });
+        }
+    }, [showManualModal, activeSubTab, manualUsers]);
+
+    useEffect(() => {
+        if (!showManualModal || !manualForm.userId || !manualForm.date) {
+            setPreviewData(null);
+            return;
+        }
+
+        const fetchPreview = async () => {
+            setPreviewLoading(true);
+            try {
+                let loginTime = null;
+                let logoutTime = null;
+                if (manualForm.status !== 'ABSENT' && manualForm.status !== 'HOLIDAY' && manualForm.status !== 'LEAVE') {
+                    if (manualForm.loginTime) {
+                        loginTime = `${manualForm.date}T${manualForm.loginTime}:00`;
+                    }
+                    if (manualForm.logoutTime) {
+                        logoutTime = `${manualForm.date}T${manualForm.logoutTime}:00`;
+                    }
+                }
+
+                const payload = {
+                    userId: parseInt(manualForm.userId),
+                    date: manualForm.date,
+                    loginTime,
+                    logoutTime,
+                    status: manualForm.status,
+                    workMinutes: manualForm.workMinutes ? parseInt(manualForm.workMinutes) : null,
+                    breakMinutes: manualForm.breakMinutes ? parseInt(manualForm.breakMinutes) : null
+                };
+
+                const res = await attendanceService.previewManualEntry(payload);
+                setPreviewData(res.data || res);
+            } catch (err) {
+                console.error("Preview failed:", err);
+            } finally {
+                setPreviewLoading(false);
+            }
+        };
+
+        const timer = setTimeout(fetchPreview, 400);
+        return () => clearTimeout(timer);
+    }, [manualForm, showManualModal]);
+
+    const handleSaveManualEntry = async (e) => {
+        e.preventDefault();
+        if (!manualForm.userId) {
+            toast.error("Please select an employee");
+            return;
+        }
+        if (!manualForm.date) {
+            toast.error("Please select a date");
+            return;
+        }
+
+        try {
+            let loginTime = null;
+            let logoutTime = null;
+            if (manualForm.status !== 'ABSENT' && manualForm.status !== 'HOLIDAY' && manualForm.status !== 'LEAVE') {
+                if (manualForm.loginTime) {
+                    loginTime = `${manualForm.date}T${manualForm.loginTime}:00`;
+                }
+                if (manualForm.logoutTime) {
+                    logoutTime = `${manualForm.date}T${manualForm.logoutTime}:00`;
+                }
+            }
+
+            const payload = {
+                userId: parseInt(manualForm.userId),
+                date: manualForm.date,
+                loginTime,
+                logoutTime,
+                status: manualForm.status,
+                workMinutes: manualForm.workMinutes ? parseInt(manualForm.workMinutes) : null,
+                breakMinutes: manualForm.breakMinutes ? parseInt(manualForm.breakMinutes) : null
+            };
+
+            await attendanceService.saveManualEntry(payload);
+            toast.success("Manual attendance logged successfully!");
+            setShowManualModal(false);
+            fetchLogs();
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Failed to save manual attendance");
+        }
+    };
 
     const handleUpdateNote = async () => {
         try {
@@ -191,6 +373,8 @@ const AttendanceDashboard = ({ filters, role }) => {
             case 'SECONDARY': return 'secondary';
             case 'OUTSIDE':
             case 'ABSENT': return 'danger';
+            case 'HOLIDAY':
+            case 'LEAVE': return 'info';
             default: return 'primary';
         }
     };
@@ -202,6 +386,73 @@ const AttendanceDashboard = ({ filters, role }) => {
         
         return { present: p, absent: a, late: l };
     }, [logs]);
+
+    const handleDownloadCSV = () => {
+        if (!filteredLogs || filteredLogs.length === 0) {
+            toast.info("No logs available to download");
+            return;
+        }
+
+        const headers = [
+            "Date",
+            "Employee",
+            "Status",
+            "Check-In Time",
+            "Check-Out Time",
+            "Work Time (min)",
+            "Total Break (min)",
+            "Short Break (min)",
+            "Long Break (min)",
+            "Idle Time (min)",
+            "Late Minutes",
+            "Note/Remarks"
+        ];
+
+        const rows = filteredLogs.map(log => {
+            const formatTime = (timeStr) => {
+                if (!timeStr) return '---';
+                let d;
+                if (Array.isArray(timeStr)) {
+                    d = new Date(timeStr[0], timeStr[1] - 1, timeStr[2], timeStr[3], timeStr[4], timeStr[5] || 0);
+                } else {
+                    d = new Date(typeof timeStr === 'string' ? timeStr.replace(' ', 'T') : timeStr);
+                }
+                return isNaN(d.getTime()) ? '---' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            };
+
+            const checkIn = formatTime(log.checkInTime || log.loginTime);
+            const checkOut = formatTime(log.checkOutTime || log.logoutTime);
+
+            return [
+                log.date,
+                log.userName || 'SYSTEM',
+                log.status || '',
+                checkIn,
+                checkOut,
+                log.totalWorkMinutes || 0,
+                log.totalBreakMinutes || 0,
+                log.shortBreakMinutes || 0,
+                log.longBreakMinutes || 0,
+                log.totalIdleMinutes || 0,
+                log.lateMinutes || 0,
+                log.note || ''
+            ];
+        });
+
+        const csvRows = [headers.join(",")];
+        rows.forEach(row => {
+            csvRows.push(row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","));
+        });
+        
+        const blob = new Blob([csvRows.join("\r\n")], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `Attendance_Report_${filters?.from || 'start'}_to_${filters?.to || 'end'}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     if (loading) {
         return (
@@ -246,16 +497,29 @@ const AttendanceDashboard = ({ filters, role }) => {
                 <div className="p-3 p-sm-5 border-bottom border-white border-opacity-5 d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3">
                     <div className="d-flex align-items-center gap-4">
                         <div
-                            className={`cursor-pointer transition-all ${activeSubTab === 'logs' ? 'opacity-100' : 'opacity-40'}`}
+                            className="cursor-pointer transition-all"
+                            style={{ opacity: activeSubTab === 'logs' ? 1 : 0.4 }}
                             onClick={() => setActiveSubTab('logs')}
                         >
                             <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest" style={{ fontSize: 'min(14px, 3.5vw)' }}>Attendance Logs</h5>
                             <p className="text-muted small mb-0 opacity-50 fw-bold" style={{ fontSize: '9px' }}>{filters?.from} TO {filters?.to}</p>
                         </div>
 
+                        {(role === 'ADMIN' || role === 'MANAGER') && (
+                            <div
+                                className="cursor-pointer transition-all"
+                                style={{ opacity: activeSubTab === 'sheet' ? 1 : 0.4 }}
+                                onClick={() => setActiveSubTab('sheet')}
+                            >
+                                <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest" style={{ fontSize: 'min(14px, 3.5vw)' }}>Daily Sheet</h5>
+                                <p className="text-muted small mb-0 opacity-50 fw-bold" style={{ fontSize: '9px' }}>Quick Bulk Mark</p>
+                            </div>
+                        )}
+
                         {(role === 'ADMIN' || role === 'MANAGER' || role === 'TEAM_LEADER') && (
                             <div
-                                className={`cursor-pointer transition-all ${activeSubTab === 'wfh' ? 'opacity-100' : 'opacity-40'}`}
+                                className="cursor-pointer transition-all"
+                                style={{ opacity: activeSubTab === 'wfh' ? 1 : 0.4 }}
                                 onClick={() => setActiveSubTab('wfh')}
                             >
                                 <h5 className="fw-black mb-0 text-main text-uppercase tracking-widest" style={{ fontSize: 'min(14px, 3.5vw)' }}>WFH Requests</h5>
@@ -265,24 +529,38 @@ const AttendanceDashboard = ({ filters, role }) => {
                     </div>
                     <div className="d-flex gap-2">
                         {activeSubTab === 'logs' && (
-                            <button 
-                                className="ui-btn ui-btn-primary rounded-pill px-4 btn-sm shadow-glow-sm" 
-                                style={{ 
-                                    background: 'linear-gradient(135deg, var(--primary) 0%, #4338ca 100%)',
-                                    fontSize: '10px',
-                                    height: '36px'
-                                }}
-                                onClick={fetchLogs}
-                            >
-                                <RefreshCcw size={12} className="me-2" />
-                                UPDATE
-                            </button>
+                            <>
+                                <button 
+                                    className="ui-btn ui-btn-primary rounded-pill px-4 btn-sm shadow-glow-sm" 
+                                    style={{ 
+                                        background: 'linear-gradient(135deg, var(--primary) 0%, #4338ca 100%)',
+                                        fontSize: '10px',
+                                        height: '36px'
+                                    }}
+                                    onClick={fetchLogs}
+                                >
+                                    <RefreshCcw size={12} className="me-2" />
+                                    UPDATE
+                                </button>
+                                <button 
+                                    className="ui-btn rounded-pill px-4 btn-sm shadow-glow-sm btn-success border-0 text-white" 
+                                    style={{ 
+                                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                        fontSize: '10px',
+                                        height: '36px'
+                                    }}
+                                    onClick={handleDownloadCSV}
+                                >
+                                    <FileText size={12} className="me-2" />
+                                    DOWNLOAD CSV
+                                </button>
+                            </>
                         )}
                     </div>
                 </div>
 
                 <div className="p-4">
-                    {activeSubTab === 'logs' ? (
+                    {activeSubTab === 'logs' && (
                         <div className="table-responsive p-0">
                             <table className="table table-hover align-middle mb-0 border-0 bg-transparent text-main">
                                 <thead>
@@ -413,8 +691,149 @@ const AttendanceDashboard = ({ filters, role }) => {
                                 </tbody>
                             </table>
                         </div>
-                    ) : (
+                    )}
+
+                    {activeSubTab === 'wfh' && (
                         <WfhApprovalPanel role={role} />
+                    )}
+
+                    {activeSubTab === 'sheet' && (role === 'ADMIN' || role === 'MANAGER') && (
+                        <div className="animate-fade-in">
+                            <div className="d-flex align-items-center gap-3 mb-4 flex-wrap">
+                                <label className="text-muted small fw-bold text-uppercase tracking-wider">Sheet Date:</label>
+                                <input 
+                                    type="date"
+                                    className={`form-control border-0 bg-opacity-10 rounded-3 px-3 py-2 text-main ${isDarkMode ? 'bg-dark' : 'bg-light'}`}
+                                    style={{ width: '200px' }}
+                                    value={sheetDate}
+                                    onChange={(e) => {
+                                        setSheetDate(e.target.value);
+                                    }}
+                                />
+                                <span className="text-muted small">Select a date to view and mark attendance for all employees.</span>
+                            </div>
+
+                            <div className="table-responsive p-0">
+                                <table className="table align-middle mb-0 border-0 bg-transparent text-main">
+                                    <thead>
+                                        <tr className="border-bottom border-white border-opacity-5">
+                                            <th className="ps-4 py-3 text-muted small fw-black text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Employee</th>
+                                            <th className="py-3 text-muted small fw-black text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Role</th>
+                                            <th className="py-3 text-muted small fw-black text-uppercase tracking-widest text-center" style={{ fontSize: '9px', width: '320px' }}>Mark Status</th>
+                                            <th className="py-3 text-muted small fw-black text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Remarks</th>
+                                            <th className="pe-4 py-3 text-end text-muted small fw-black text-uppercase tracking-widest" style={{ fontSize: '9px' }}>Last Logged Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {Array.isArray(manualUsers) && manualUsers.map(user => {
+                                            const userLog = logs.find(log => log.userId === user.id);
+                                            const currentStatus = userLog ? userLog.status : 'ABSENT';
+                                            const remarks = sheetRemarks[user.id] !== undefined ? sheetRemarks[user.id] : (userLog?.note || '');
+                                            const isPending = sheetPending[user.id];
+
+                                            return (
+                                                <tr key={user.id} className="border-bottom border-white border-opacity-5">
+                                                    <td className="ps-4 py-3">
+                                                        <span className="fw-black text-main">{user.name}</span>
+                                                    </td>
+                                                    <td className="py-3">
+                                                        <span className="badge bg-secondary bg-opacity-10 text-muted border-0 small">
+                                                            {user.role?.name?.replace('ROLE_', '') || 'STAFF'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 text-center">
+                                                        <div className="d-flex justify-content-center gap-2">
+                                                            <button 
+                                                                className={`btn btn-sm rounded-pill px-3 py-1 fw-bold transition-all border d-flex align-items-center gap-1 ${
+                                                                    currentStatus === 'PRESENT' 
+                                                                        ? 'btn-success text-white border-success' 
+                                                                        : 'btn-outline-success border-success border-opacity-25'
+                                                                }`}
+                                                                style={{ fontSize: '10px' }}
+                                                                onClick={() => handleQuickMark(user.id, 'PRESENT', remarks)}
+                                                                disabled={isPending}
+                                                            >
+                                                                {currentStatus === 'PRESENT' && <Check size={10} />}
+                                                                Present
+                                                            </button>
+                                                            <button 
+                                                                className={`btn btn-sm rounded-pill px-3 py-1 fw-bold transition-all border d-flex align-items-center gap-1 ${
+                                                                    currentStatus === 'ABSENT' 
+                                                                        ? 'btn-danger text-white border-danger' 
+                                                                        : 'btn-outline-danger border-danger border-opacity-25'
+                                                                }`}
+                                                                style={{ fontSize: '10px' }}
+                                                                onClick={() => handleQuickMark(user.id, 'ABSENT', remarks)}
+                                                                disabled={isPending}
+                                                            >
+                                                                {currentStatus === 'ABSENT' && <X size={10} />}
+                                                                Absent
+                                                            </button>
+                                                            <button 
+                                                                className={`btn btn-sm rounded-pill px-3 py-1 fw-bold transition-all border d-flex align-items-center gap-1 ${
+                                                                    currentStatus === 'LATE' 
+                                                                        ? 'btn-warning text-white border-warning' 
+                                                                        : 'btn-outline-warning border-warning border-opacity-25'
+                                                                }`}
+                                                                style={{ fontSize: '10px' }}
+                                                                onClick={() => handleQuickMark(user.id, 'LATE', remarks)}
+                                                                disabled={isPending}
+                                                            >
+                                                                <Clock size={10} />
+                                                                Late
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-3">
+                                                        <input 
+                                                            type="text"
+                                                            className={`form-control form-control-sm border-0 bg-opacity-10 rounded-3 px-3 py-1 text-main ${isDarkMode ? 'bg-dark' : 'bg-light'}`}
+                                                            style={{ maxWidth: '250px', fontSize: '11px' }}
+                                                            placeholder="Add remark (max 255)"
+                                                            value={remarks}
+                                                            onChange={(e) => setSheetRemarks(prev => ({ ...prev, [user.id]: e.target.value }))}
+                                                            onBlur={() => {
+                                                                if (remarks !== (userLog?.note || '')) {
+                                                                    handleQuickMark(user.id, currentStatus, remarks);
+                                                                }
+                                                            }}
+                                                        />
+                                                    </td>
+                                                    <td className="pe-4 py-3 text-end">
+                                                        {userLog?.loginTime ? (
+                                                            <span className="text-muted small">
+                                                                {(() => {
+                                                                    const timeStr = userLog.loginTime;
+                                                                    let d;
+                                                                    if (Array.isArray(timeStr)) {
+                                                                        d = new Date(timeStr[0], timeStr[1] - 1, timeStr[2], timeStr[3], timeStr[4], timeStr[5] || 0);
+                                                                    } else {
+                                                                        d = new Date(typeof timeStr === 'string' ? timeStr.replace(' ', 'T') : timeStr);
+                                                                    }
+                                                                    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                                                })()}
+                                                                {userLog.logoutTime && ` - ` + (() => {
+                                                                    const timeStr = userLog.logoutTime;
+                                                                    let d;
+                                                                    if (Array.isArray(timeStr)) {
+                                                                        d = new Date(timeStr[0], timeStr[1] - 1, timeStr[2], timeStr[3], timeStr[4], timeStr[5] || 0);
+                                                                    } else {
+                                                                        d = new Date(typeof timeStr === 'string' ? timeStr.replace(' ', 'T') : timeStr);
+                                                                    }
+                                                                    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                                                })()}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-muted small opacity-50">-</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>
@@ -451,6 +870,186 @@ const AttendanceDashboard = ({ filters, role }) => {
                         >
                             <Save size={18} /> SAVE
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Manual Attendance Modal */}
+            {showManualModal && (
+                <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 9999, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}>
+                    <div className={`premium-card p-4 border-0 shadow-lg ${isDarkMode ? 'bg-surface bg-opacity-95' : 'bg-card bg-opacity-95'}`} style={{ borderRadius: '32px', width: '500px', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div className="d-flex justify-content-between align-items-center mb-4">
+                            <h5 className="fw-black text-main text-uppercase mb-0 tracking-widest d-flex align-items-center gap-2" style={{ fontSize: '14px' }}>
+                                <Clock size={20} className="text-warning animate-spin" /> Log Manual Attendance
+                            </h5>
+                            <button className="btn btn-link text-muted p-0 border-0" onClick={() => setShowManualModal(false)}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        
+                        <form onSubmit={handleSaveManualEntry} className="d-flex flex-column gap-3">
+                            {/* Employee Selection */}
+                            <div>
+                                <label className="text-muted small fw-bold mb-2 text-uppercase tracking-wider" style={{ fontSize: '10px' }}>Employee</label>
+                                <select 
+                                    className={`form-select border-0 bg-opacity-10 rounded-3 p-3 text-main ${isDarkMode ? 'bg-dark' : 'bg-light'}`}
+                                    value={manualForm.userId}
+                                    onChange={(e) => setManualForm(prev => ({ ...prev, userId: e.target.value }))}
+                                    required
+                                >
+                                    <option value="" disabled className={isDarkMode ? 'bg-dark' : 'bg-light'}>Select employee...</option>
+                                    {Array.isArray(manualUsers) && manualUsers.map(u => (
+                                        <option key={u.id} value={u.id} className={isDarkMode ? 'bg-dark' : 'bg-light'}>
+                                            {u.name} ({u.role?.name?.replace('ROLE_', '') || 'STAFF'})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="row g-3">
+                                {/* Date Picker */}
+                                <div className="col-md-6">
+                                    <label className="text-muted small fw-bold mb-2 text-uppercase tracking-wider" style={{ fontSize: '10px' }}>Date</label>
+                                    <input 
+                                        type="date"
+                                        className={`form-control border-0 bg-opacity-10 rounded-3 p-3 text-main ${isDarkMode ? 'bg-dark' : 'bg-light'}`}
+                                        value={manualForm.date}
+                                        onChange={(e) => setManualForm(prev => ({ ...prev, date: e.target.value }))}
+                                        required
+                                    />
+                                </div>
+
+                                {/* Status Option */}
+                                <div className="col-md-6">
+                                    <label className="text-muted small fw-bold mb-2 text-uppercase tracking-wider" style={{ fontSize: '10px' }}>Status Option</label>
+                                    <select 
+                                        className={`form-select border-0 bg-opacity-10 rounded-3 p-3 text-main ${isDarkMode ? 'bg-dark' : 'bg-light'}`}
+                                        value={manualForm.status}
+                                        onChange={(e) => setManualForm(prev => ({ ...prev, status: e.target.value }))}
+                                        required
+                                    >
+                                        <option value="AUTO" className={isDarkMode ? 'bg-dark' : 'bg-light'}>Auto-calculate</option>
+                                        <option value="PRESENT" className={isDarkMode ? 'bg-dark' : 'bg-light'}>Present</option>
+                                        <option value="ABSENT" className={isDarkMode ? 'bg-dark' : 'bg-light'}>Absent</option>
+                                        <option value="LATE" className={isDarkMode ? 'bg-dark' : 'bg-light'}>Late</option>
+                                        <option value="HALF_DAY" className={isDarkMode ? 'bg-dark' : 'bg-light'}>Half Day</option>
+                                        <option value="SHORT_DAY" className={isDarkMode ? 'bg-dark' : 'bg-light'}>Short Day</option>
+                                        <option value="HOLIDAY" className={isDarkMode ? 'bg-dark' : 'bg-light'}>Holiday</option>
+                                        <option value="LEAVE" className={isDarkMode ? 'bg-dark' : 'bg-light'}>Leave</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Conditionally show times if not absent/holiday/leave */}
+                            {manualForm.status !== 'ABSENT' && manualForm.status !== 'HOLIDAY' && manualForm.status !== 'LEAVE' && (
+                                <div className="row g-3">
+                                    <div className="col-md-6">
+                                        <label className="text-muted small fw-bold mb-2 text-uppercase tracking-wider" style={{ fontSize: '10px' }}>Login Time</label>
+                                        <input 
+                                            type="time"
+                                            className={`form-control border-0 bg-opacity-10 rounded-3 p-3 text-main ${isDarkMode ? 'bg-dark' : 'bg-light'}`}
+                                            value={manualForm.loginTime}
+                                            onChange={(e) => setManualForm(prev => ({ ...prev, loginTime: e.target.value }))}
+                                            required={manualForm.status === 'AUTO'}
+                                        />
+                                    </div>
+                                    <div className="col-md-6">
+                                        <label className="text-muted small fw-bold mb-2 text-uppercase tracking-wider" style={{ fontSize: '10px' }}>Logout Time</label>
+                                        <input 
+                                            type="time"
+                                            className={`form-control border-0 bg-opacity-10 rounded-3 p-3 text-main ${isDarkMode ? 'bg-dark' : 'bg-light'}`}
+                                            value={manualForm.logoutTime}
+                                            onChange={(e) => setManualForm(prev => ({ ...prev, logoutTime: e.target.value }))}
+                                            required={manualForm.status === 'AUTO'}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Overrides section */}
+                            {manualForm.status !== 'ABSENT' && manualForm.status !== 'HOLIDAY' && manualForm.status !== 'LEAVE' && (
+                                <div className="row g-3">
+                                    <div className="col-md-6">
+                                        <label className="text-muted small fw-bold mb-2 text-uppercase tracking-wider" style={{ fontSize: '10px' }}>Work Minutes Override</label>
+                                        <input 
+                                            type="number"
+                                            className={`form-control border-0 bg-opacity-10 rounded-3 p-3 text-main ${isDarkMode ? 'bg-dark' : 'bg-light'}`}
+                                            placeholder="Auto"
+                                            value={manualForm.workMinutes}
+                                            onChange={(e) => setManualForm(prev => ({ ...prev, workMinutes: e.target.value }))}
+                                        />
+                                    </div>
+                                    <div className="col-md-6">
+                                        <label className="text-muted small fw-bold mb-2 text-uppercase tracking-wider" style={{ fontSize: '10px' }}>Break Minutes Override</label>
+                                        <input 
+                                            type="number"
+                                            className={`form-control border-0 bg-opacity-10 rounded-3 p-3 text-main ${isDarkMode ? 'bg-dark' : 'bg-light'}`}
+                                            placeholder="Auto"
+                                            value={manualForm.breakMinutes}
+                                            onChange={(e) => setManualForm(prev => ({ ...prev, breakMinutes: e.target.value }))}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Live Preview Panel */}
+                            {previewLoading && (
+                                <div className="p-3 rounded-4 bg-primary bg-opacity-10 border border-primary border-opacity-10 text-center">
+                                    <span className="small text-primary fw-bold">Calculating Live Preview...</span>
+                                </div>
+                            )}
+
+                            {!previewLoading && previewData && (
+                                <div className={`p-4 rounded-4 border ${isDarkMode ? 'bg-dark bg-opacity-50 border-white border-opacity-10' : 'bg-light border-black border-opacity-10'}`}>
+                                    <h6 className="fw-black text-uppercase tracking-wider text-muted mb-3" style={{ fontSize: '9px' }}>Calculated Preview Results</h6>
+                                    <div className="row g-2">
+                                        <div className="col-6">
+                                            <p className="text-muted small mb-1">Final Status</p>
+                                            <span className={`badge rounded-1 px-2 py-1 text-uppercase fw-black bg-${getStatusColor(previewData.status)} bg-opacity-10 text-${getStatusColor(previewData.status)}`} style={{ fontSize: '9px' }}>
+                                                {previewData.status}
+                                            </span>
+                                        </div>
+                                        <div className="col-6">
+                                            <p className="text-muted small mb-1">Lateness</p>
+                                            <span className={`fw-black small ${previewData.late ? 'text-danger' : 'text-success'}`}>
+                                                {previewData.late ? 'Late' : 'On Time'}
+                                            </span>
+                                        </div>
+                                        {previewData.status !== 'ABSENT' && previewData.status !== 'HOLIDAY' && previewData.status !== 'LEAVE' && (
+                                            <>
+                                                <div className="col-6 mt-2">
+                                                    <p className="text-muted small mb-1">Worked Time</p>
+                                                    <span className="fw-black small text-main">{previewData.workedMinutes} minutes</span>
+                                                </div>
+                                                <div className="col-6 mt-2">
+                                                    <p className="text-muted small mb-1">Break Time</p>
+                                                    <span className="fw-black small text-main">{previewData.breakMinutes} minutes</span>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Action Buttons */}
+                            <div className="d-flex gap-3 mt-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowManualModal(false)}
+                                    className={`w-50 py-3 rounded-pill border-0 fw-black text-uppercase tracking-wider transition-all hover-scale ${isDarkMode ? 'bg-dark text-muted' : 'bg-light text-muted'}`}
+                                    style={{ fontSize: '11px' }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="w-50 py-3 rounded-pill bg-primary text-white border-0 shadow-glow fw-black text-uppercase tracking-wider transition-all hover-scale"
+                                    style={{ fontSize: '11px' }}
+                                >
+                                    Save Entry
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
