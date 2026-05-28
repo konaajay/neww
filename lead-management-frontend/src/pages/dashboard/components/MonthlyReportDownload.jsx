@@ -66,9 +66,37 @@ const MonthlyReportDownload = ({ role }) => {
             const from = toISO(year, month, 1);
             const to   = toISO(year, month, daysInMonth(year, month));
 
-            // 1. all users
-            const usersRes = await adminService.fetchUsers();
-            const allUsers = (usersRes?.content ?? usersRes ?? [])
+            // 1. fetch users based on role
+            let allUsers = [];
+            if (role === 'admin' || role === 'SUPER_ADMIN') {
+                const usersRes = await adminService.fetchUsers();
+                allUsers = (usersRes?.content ?? usersRes ?? []);
+            } else {
+                // For Managers & TLs, use hierarchical endpoint
+                const treeRes = await safeRequest(api.get('/manager/team-tree'));
+                let rawTree = Array.isArray(treeRes) ? treeRes : (treeRes?.data || treeRes?.content || []);
+                
+                // Fallback for Manager: if team-tree is empty, try team-leaders
+                if (rawTree.length === 0) {
+                    const fbRes = await safeRequest(api.get('/manager/team-leaders'));
+                    rawTree = Array.isArray(fbRes) ? fbRes : (fbRes?.data || fbRes?.content || []);
+                }
+                
+                const flattenTree = (users) => {
+                    let flat = [];
+                    users.forEach(u => {
+                        flat.push(u);
+                        if (u.subordinates && u.subordinates.length > 0) {
+                            flat = [...flat, ...flattenTree(u.subordinates)];
+                        }
+                    });
+                    return flat;
+                };
+                allUsers = flattenTree(rawTree);
+            }
+
+            allUsers = allUsers
+                .filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i) // deduplicate
                 .filter(u => !String(u.role || '').toUpperCase().includes('ADMIN'))
                 .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
