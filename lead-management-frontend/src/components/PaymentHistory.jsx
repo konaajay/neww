@@ -149,7 +149,7 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
       } else {
         res = await managerService.fetchAssociatesByTl ? await managerService.fetchAssociatesByTl(tlId) : { data: [] };
       }
-      setAssociates(res.data);
+      setAssociates(Array.isArray(res) ? res : (res?.data || res?.content || []));
     } catch (err) {
       console.error('Failed to map associate leads');
     } finally {
@@ -211,7 +211,7 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
       const now = new Date();
       const targetDate = new Date(payment.dueDate || payment.createdAt);
       const isOverdueByDate = isPending && targetDate < now;
-      const isExplicitOverdue = s === 'FAILED' || s === 'OVERDUE';
+      const isExplicitOverdue = s === 'FAILED' || s === 'OVERDUE' || s === 'REJECTED';
       const isAnyOverdue = isExplicitOverdue || isOverdueByDate;
 
       if (paymentStatusFilter === 'PAID' && !isPaid) return false;
@@ -249,9 +249,9 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
       })
       .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0),
     totalInvoiced: (payments || []).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0),
-    overdueCount: externalStats ? (externalStats.overduePaymentsCount || externalStats.overdueCount || 0) : (payments || []).filter(p => {
+    overdueCount: (payments || []).filter(p => {
         const status = p.status?.toUpperCase();
-        const isOverdue = status === 'FAILED' || status === 'OVERDUE';
+        const isOverdue = status === 'FAILED' || status === 'OVERDUE' || status === 'REJECTED';
         const isPending = status === 'PENDING' || status === 'INITIATED' || status === 'PARTIAL' || status === 'PENDING_APPROVAL' || status === 'UNDER_REVIEW';
         const now = new Date();
         const targetDate = new Date(p.dueDate || p.createdAt);
@@ -365,7 +365,7 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
               {currentItems.map((payment, index) => {
                 const globalIndex = indexOfFirstItem + index;
                 const emiId = payment.paymentGatewayId || `E-${(globalIndex + 1).toString().padStart(2, '0')}`;
-                const isOverdue = payment.status === 'FAILED' || payment.status === 'OVERDUE';
+                const isOverdue = payment.status === 'FAILED' || payment.status === 'OVERDUE' || payment.status === 'REJECTED';
                 const isPendingApproval = payment.status === 'PENDING_APPROVAL' || payment.status === 'UNDER_REVIEW';
                 const isPending = payment.status === 'PENDING' || payment.status === 'INITIATED' || payment.status === 'PARTIAL' || isPendingApproval;
                 const isPaid = payment.status === 'PAID' || payment.status === 'SUCCESS' || payment.status === 'APPROVED';

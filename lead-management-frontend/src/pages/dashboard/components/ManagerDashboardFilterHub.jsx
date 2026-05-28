@@ -69,7 +69,7 @@ const ManagerDashboardFilterHub = ({
   // Fetch Managers on Load
   useEffect(() => {
     if (!isManager) {
-      adminService.fetchManagers().then(res => setManagers(res.data)).catch(() => { });
+      adminService.fetchManagers().then(res => setManagers(Array.isArray(res) ? res : (res?.data || res?.content || []))).catch(() => { setManagers([]); });
     }
   }, [isManager]);
 
@@ -77,7 +77,7 @@ const ManagerDashboardFilterHub = ({
   useEffect(() => {
     const targetMgrId = isManager ? user.id : selectedMgrId;
     if (targetMgrId) {
-      adminService.fetchTeamsByManager(targetMgrId).then(res => setTls(res.data)).catch(() => { });
+      adminService.fetchTeamsByManager(targetMgrId).then(res => setTls(Array.isArray(res) ? res : (res?.data || res?.content || []))).catch(() => { setTls([]); });
     } else {
       setTls([]);
     }
@@ -87,9 +87,9 @@ const ManagerDashboardFilterHub = ({
   useEffect(() => {
     const targetMgrId = isManager ? user.id : selectedMgrId;
     if (selectedTlId) {
-      adminService.fetchAssociates(selectedTlId, null).then(res => setAssociates(res.data)).catch(() => { });
+      adminService.fetchAssociates(selectedTlId, null).then(res => setAssociates(Array.isArray(res) ? res : (res?.data || res?.content || []))).catch(() => { setAssociates([]); });
     } else if (targetMgrId) {
-      adminService.fetchAssociates(null, targetMgrId).then(res => setAssociates(res.data)).catch(() => { });
+      adminService.fetchAssociates(null, targetMgrId).then(res => setAssociates(Array.isArray(res) ? res : (res?.data || res?.content || []))).catch(() => { setAssociates([]); });
     } else {
       setAssociates([]);
     }
@@ -248,98 +248,111 @@ const ManagerDashboardFilterHub = ({
   return (
     <div className="d-flex flex-column gap-3">
       {!hideFilters && (
-        <div className="premium-card p-1 border-0 shadow-lg bg-surface bg-opacity-10 backdrop-blur rounded-pill px-3" style={{ backdropFilter: 'blur(20px)' }}>
-          <div className="d-flex align-items-center justify-content-between gap-2 overflow-x-auto no-scrollbar py-1">
-            {/* Left: Title & Analysis Type */}
-            <div className="d-flex align-items-center gap-3">
-              <div className="d-flex align-items-center gap-2 pe-3 border-end border-white border-opacity-10 animate-fade-in">
-                <div className={`text-primary ${isDarkMode ? 'opacity-75' : ''}`}>
-                  <Command size={16} strokeWidth={2.5} />
-                </div>
-                <div className="d-none d-xl-block">
-                  <h6 className="fw-black mb-0 text-main tracking-widest text-uppercase" style={{ fontSize: '10px' }}>Command Center</h6>
-                  <small className="text-muted fw-bold opacity-50" style={{ fontSize: '7px' }}>HIERARCHICAL ANALYSIS</small>
-                </div>
+        <div className="premium-card p-3 border-0 shadow-lg bg-surface bg-opacity-10 backdrop-blur rounded-4" style={{ backdropFilter: 'blur(20px)' }}>
+          <div className="row g-3 align-items-center m-0">
+            {/* Title Section */}
+            <div className="col-12 col-xl-3 d-flex align-items-center gap-2 mb-2 mb-xl-0">
+              <div className={`text-primary ${isDarkMode ? 'opacity-75' : ''}`}>
+                <Command size={16} strokeWidth={2.5} />
               </div>
+              <div>
+                <h6 className="fw-black mb-0 text-main tracking-widest text-uppercase" style={{ fontSize: '10px' }}>Command Center</h6>
+                <small className="text-muted fw-bold opacity-50" style={{ fontSize: '7px' }}>HIERARCHICAL ANALYSIS</small>
+              </div>
+            </div>
 
-              <div className="d-flex align-items-center gap-2">
+            {/* Dropdowns Section */}
+            <div className="col-12 col-xl-7">
+              <div className="row g-2">
                 {!isManager && (
-                  <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-25 p-1 px-3 rounded-pill border border-white border-opacity-10 animate-fade-in">
-                    <Users size={12} className="text-primary opacity-50" />
-                    <PortalSelect 
-                      options={[
-                        { value: "", label: "CHOOSE MANAGER" },
-                        ...managers.map(m => ({ value: m.id.toString(), label: m.name.toUpperCase() }))
-                      ]}
-                      value={selectedMgrId}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setSelectedMgrId(val);
-                        setSelectedTlId('');
-                        setSelectedAssocId('');
-                        setFilters(prev => ({
-                          ...prev,
-                          userId: val || (isManager ? user.id : null)
-                        }));
-                      }}
-                      style={{ width: '150px' }}
-                    />
+                  <div className="col-12 col-md-4">
+                    <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-25 p-2 rounded-3 border border-white border-opacity-10 w-100">
+                      <Users size={12} className="text-primary opacity-50 flex-shrink-0" />
+                      <PortalSelect 
+                        options={[
+                          { value: "", label: "CHOOSE MANAGER" },
+                          ...managers.map(m => ({ value: m.id.toString(), label: m.name.toUpperCase() }))
+                        ]}
+                        value={selectedMgrId}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSelectedMgrId(val);
+                          setSelectedTlId('');
+                          setSelectedAssocId('');
+                          setFilters(prev => ({
+                            ...prev,
+                            userId: val || (isManager ? user.id : null)
+                          }));
+                        }}
+                        className="w-100 border-0 bg-transparent"
+                        style={{ width: '100%', outline: 'none' }}
+                      />
+                    </div>
                   </div>
                 )}
 
-                <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-25 p-1 px-3 rounded-pill border border-white border-opacity-10 animate-fade-in">
-                  <ShieldHalf size={12} className="text-warning opacity-50" />
-                  <PortalSelect 
-                    options={[
-                      { value: "", label: (isManager || selectedMgrId) ? 'ALL TEAMS' : '---' },
-                      ...tls.map(tl => ({ value: tl.id.toString(), label: tl.name.toUpperCase() }))
-                    ]}
-                    value={selectedTlId}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setSelectedTlId(val);
-                      setSelectedAssocId('');
-                      setFilters(prev => ({
-                        ...prev,
-                        userId: val || selectedMgrId || (isManager ? user.id : null)
-                      }));
-                    }}
-                    disabled={!isManager && !selectedMgrId}
-                    style={{ width: '150px' }}
-                  />
+                <div className={`col-12 ${!isManager ? 'col-md-4' : 'col-md-6'}`}>
+                  <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-25 p-2 rounded-3 border border-white border-opacity-10 w-100">
+                    <ShieldHalf size={12} className="text-warning opacity-50 flex-shrink-0" />
+                    <PortalSelect 
+                      options={[
+                        { value: "", label: (isManager || selectedMgrId) ? 'ALL TEAMS' : '---' },
+                        ...tls.map(tl => ({ value: tl.id.toString(), label: tl.name.toUpperCase() }))
+                      ]}
+                      value={selectedTlId}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSelectedTlId(val);
+                        setSelectedAssocId('');
+                        setFilters(prev => ({
+                          ...prev,
+                          userId: val || selectedMgrId || (isManager ? user.id : null)
+                        }));
+                      }}
+                      disabled={!isManager && !selectedMgrId}
+                      className="w-100 border-0 bg-transparent"
+                      style={{ width: '100%', outline: 'none' }}
+                    />
+                  </div>
                 </div>
 
-                <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-25 p-1 px-3 rounded-pill border border-white border-opacity-10 animate-fade-in">
-                  <User size={12} className="text-info opacity-50" />
-                  <PortalSelect 
-                    options={[
-                      { value: "", label: effectiveMgr ? 'ALL ASSOCIATES' : '---' },
-                      ...(effectiveMgr ? [{ value: "-1", label: "⚠️ UNASSIGNED LEADS" }] : []),
-                      ...associates.map(member => ({ value: member.id.toString(), label: member.name.toUpperCase() }))
-                    ]}
-                    value={selectedAssocId}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setSelectedAssocId(val);
-                      setFilters(prev => ({
-                        ...prev,
-                        userId: val || selectedTlId || selectedMgrId || (isManager ? user.id : null)
-                      }));
-                    }}
-                    disabled={!effectiveMgr}
-                    style={{ width: '150px' }}
-                  />
+                <div className={`col-12 ${!isManager ? 'col-md-4' : 'col-md-6'}`}>
+                  <div className="d-flex align-items-center gap-2 bg-surface bg-opacity-25 p-2 rounded-3 border border-white border-opacity-10 w-100">
+                    <User size={12} className="text-info opacity-50 flex-shrink-0" />
+                    <PortalSelect 
+                      options={[
+                        { value: "", label: effectiveMgr ? 'ALL ASSOCIATES' : '---' },
+                        ...(effectiveMgr ? [{ value: "-1", label: "⚠️ UNASSIGNED LEADS" }] : []),
+                        ...associates.map(member => ({ value: member.id.toString(), label: member.name.toUpperCase() }))
+                      ]}
+                      value={selectedAssocId}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSelectedAssocId(val);
+                        setFilters(prev => ({
+                          ...prev,
+                          userId: val || selectedTlId || selectedMgrId || (isManager ? user.id : null)
+                        }));
+                      }}
+                      disabled={!effectiveMgr}
+                      className="w-100 border-0 bg-transparent"
+                      style={{ width: '100%', outline: 'none' }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
-            <button
-              className="ui-btn ui-btn-outline btn-sm px-4 rounded-pill border-white border-opacity-10 fw-black transition-all hover-scale"
-              style={{ fontSize: '9px', whiteSpace: 'nowrap' }}
-              onClick={hubReset}
-            >
-              RESET ALL
-            </button>
+            {/* Reset Button Section */}
+            <div className="col-12 col-xl-2 ms-auto text-end mt-3 mt-xl-0">
+              <button
+                className="ui-btn ui-btn-outline w-100 w-xl-auto px-4 py-2 rounded-3 border-white border-opacity-10 fw-black transition-all hover-scale"
+                style={{ fontSize: '10px' }}
+                onClick={hubReset}
+              >
+                RESET ALL
+              </button>
+            </div>
           </div>
         </div>
       )}

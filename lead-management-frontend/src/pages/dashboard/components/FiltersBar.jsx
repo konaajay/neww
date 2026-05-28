@@ -160,148 +160,156 @@ const FiltersBar = ({
   };
 
   return (
-    <div className={`px-3 py-2 animate-fade-in ${isDarkMode ? 'bg-surface bg-opacity-30 border border-white border-opacity-5' : 'bg-white border border-dark border-opacity-5 shadow-sm'} rounded-4 mb-2 d-flex flex-wrap align-items-center gap-2 w-100`} style={{ position: 'relative', zIndex: 10, minHeight: '52px' }}>
-      <div className="d-flex flex-wrap align-items-center justify-content-between gap-1.5 gap-lg-2 w-100">
-        {/* Left Section: Title + Hierarchy Dropdowns */}
-        <div className="d-flex align-items-center gap-2">
-          <div className="d-flex align-items-center gap-2 pe-2 border-end border-white border-opacity-10">
-            <div className="p-1.5 bg-primary bg-opacity-10 rounded-2 text-primary">
-              <Command size={12} strokeWidth={2.5} />
-            </div>
-            <h5 className="fw-black mb-0 text-main tracking-widest text-uppercase d-none d-xl-block" style={{ fontSize: '8px', letterSpacing: '1px' }}>{title}</h5>
+    <div className={`px-4 py-3 animate-fade-in ${isDarkMode ? 'bg-surface bg-opacity-30 border border-white border-opacity-5' : 'bg-white border border-dark border-opacity-5 shadow-sm'} rounded-4 mb-3 w-100`} style={{ position: 'relative', zIndex: 10 }}>
+      <div className="row g-3 align-items-center w-100 m-0">
+        
+        {/* Title Header */}
+        <div className="col-12 col-xl-auto d-flex align-items-center gap-2">
+          <div className="p-2 bg-primary bg-opacity-10 rounded-3 text-primary">
+            <Command size={14} strokeWidth={2.5} />
           </div>
+          <h5 className="fw-black mb-0 text-main tracking-widest text-uppercase d-none d-xl-block" style={{ fontSize: '10px', letterSpacing: '1px' }}>{title}</h5>
+        </div>
 
-          {!hideUserFilter && role !== 'ASSOCIATE' && (
-            <div className="d-flex align-items-center gap-2 flex-wrap">
-              {role === 'ADMIN' ? (
-                <>
+        {/* User Dropdowns Grid */}
+        {!hideUserFilter && role !== 'ASSOCIATE' && (
+          <>
+            {role === 'ADMIN' ? (
+              <>
+                <div className="col-12 col-sm-6 col-xl">
                   <PortalSelect
-                    options={[{ value: "", label: "MANAGERS" }, ...managers.map(u => ({ value: u.id.toString(), label: u.name.toUpperCase() }))]}
+                    options={[{ value: "", label: "ALL MANAGERS" }, ...managers.map(u => ({ value: u.id.toString(), label: u.name.toUpperCase() }))]}
                     value={filters.managerId || ""}
                     onChange={(e) => handleFilterChange('managerId', e.target.value || null)}
-                    style={{ width: '125px' }}
+                    className="w-100" style={{ width: '100%' }}
                   />
+                </div>
+                <div className="col-12 col-sm-6 col-xl">
                   <PortalSelect
                     options={[{ value: "", label: "TEAM LEADERS" }, ...tls.map(u => ({ value: u.id.toString(), label: u.name.toUpperCase() }))]}
                     value={filters.teamId || ""}
                     onChange={(e) => handleTLChange(e.target.value || null)}
-                    style={{ width: '125px' }}
+                    className="w-100" style={{ width: '100%' }}
                   />
+                </div>
+                <div className="col-12 col-sm-6 col-xl">
                   <PortalSelect
                     options={[{ value: "", label: "ASSOCIATES" }, ...associates.map(u => ({ value: u.id.toString(), label: u.name.toUpperCase() }))]}
                     value={filters.userId || ""}
                     onChange={(e) => handleFilterChange('userId', e.target.value || null)}
-                    style={{ width: '125px' }}
+                    className="w-100" style={{ width: '100%' }}
                   />
-                </>
-              ) : role === 'MANAGER' ? (
-                <>
+                </div>
+              </>
+            ) : role === 'MANAGER' ? (
+              <>
+                <div className="col-12 col-sm-6 col-xl">
                   <PortalSelect
                     options={[{ value: "", label: "TEAM LEADERS" }, ...tls.map(u => ({ value: u.id.toString(), label: u.name.toUpperCase() }))]}
                     value={filters.teamId || ""}
                     onChange={(e) => handleTLChange(e.target.value || null)}
-                    style={{ width: '160px' }}
+                    className="w-100" style={{ width: '100%' }}
                   />
+                </div>
+                <div className="col-12 col-sm-6 col-xl">
                   <PortalSelect
                     options={[{ value: "", label: "ASSOCIATES" }, ...associates.map(u => ({ value: u.id.toString(), label: u.name.toUpperCase() }))]}
                     value={filters.userId || ""}
                     onChange={(e) => handleFilterChange('userId', e.target.value || null)}
-                    style={{ width: '160px' }}
+                    className="w-100" style={{ width: '100%' }}
                   />
-                </>
-              ) : role === 'TEAM_LEADER' || role === 'TL' ? (
-                <>
-                  <div className="opacity-75" style={{ width: '160px' }}>
-                    <PortalSelect
-                      options={[{ value: currentUserId, label: (findInTree(teamTree, currentUserId)?.name || "TEAM LEADER").toUpperCase() }]}
-                      value={currentUserId}
-                      disabled={true}
-                    />
-                  </div>
+                </div>
+              </>
+            ) : role === 'TEAM_LEADER' || role === 'TL' ? (
+              <>
+                <div className="col-12 col-sm-6 col-xl opacity-75">
+                  <PortalSelect
+                    options={[{ value: currentUserId, label: (findInTree(teamTree, currentUserId)?.name || "TEAM LEADER").toUpperCase() }]}
+                    value={currentUserId}
+                    disabled={true}
+                    className="w-100" style={{ width: '100%' }}
+                  />
+                </div>
+                <div className="col-12 col-sm-6 col-xl">
                   <PortalSelect
                     options={[{ value: "", label: "ALL ASSOCIATES" }, ...associates.map(u => ({ value: u.id.toString(), label: u.name.toUpperCase() }))]}
                     value={filters.userId || ""}
                     onChange={(e) => handleFilterChange('userId', e.target.value || null)}
-                    style={{ width: '160px' }}
+                    className="w-100" style={{ width: '100%' }}
                   />
-                </>
-              ) : (
+                </div>
+              </>
+            ) : (
+              <div className="col-12 col-xl">
                 <PortalSelect
                   options={[{ value: "", label: "TEAM ASSOCIATE" }, ...associates.map(u => ({ value: u.id.toString(), label: u.name.toUpperCase() }))]}
                   value={filters.userId || ""}
                   onChange={(e) => handleFilterChange('userId', e.target.value || null)}
-                  style={{ width: '160px' }}
-                />
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Right Section: Date Range + Controls */}
-        <div className="d-flex align-items-center gap-2 gap-lg-3 ms-lg-auto justify-content-end mt-1 mt-lg-0 flex-wrap">
-          <div className="d-flex align-items-center gap-1.5 flex-wrap">
-            <div
-              className={`d-flex align-items-center gap-2 px-3 rounded-4 border cursor-pointer hover-bg-opacity transition-all ${isDarkMode ? 'border-white border-opacity-10 bg-surface bg-opacity-40 shadow-inner' : 'border-dark border-opacity-5 bg-light shadow-sm'}`}
-              style={{ minHeight: '40px' }}
-            >
-              <CalendarDays size={13} className="text-primary" />
-              <div className="position-relative">
-                <input
-                  type="date"
-                  className="bg-transparent border-0 text-main fw-black cursor-pointer"
-                  style={{ fontSize: '12px', outline: 'none', width: '130px', background: 'transparent', color: 'inherit', colorScheme: 'dark', opacity: 0.9 }}
-
-                  value={filters.from || ""}
-                  onClick={(e) => { e.stopPropagation(); if (e.target.showPicker) e.target.showPicker(); }}
-                  onChange={(e) => handleFilterChange('from', e.target.value)}
+                  className="w-100" style={{ width: '100%' }}
                 />
               </div>
-            </div>
+            )}
+          </>
+        )}
 
-            <span className="text-muted fw-black opacity-30 d-none d-sm-block" style={{ fontSize: '9px' }}>TO</span>
-
-            <div
-              className={`d-flex align-items-center gap-2 px-4 rounded-4 border cursor-pointer hover-bg-opacity transition-all ${isDarkMode ? 'border-white border-opacity-10 bg-surface bg-opacity-40 shadow-inner' : 'border-dark border-opacity-5 bg-light shadow-sm'}`}
-              style={{ minHeight: '40px' }}
-            >
-              <CalendarDays size={13} className="text-primary" />
-              <div className="position-relative">
-                <input
-                  type="date"
-                  className="bg-transparent border-0 text-main fw-black cursor-pointer"
-                  style={{ fontSize: '12px', outline: 'none', width: '130px', background: 'transparent', color: 'inherit', colorScheme: 'dark', opacity: 0.9 }}
-                  value={filters.to || ""}
-                  onClick={(e) => { e.stopPropagation(); if (e.target.showPicker) e.target.showPicker(); }}
-                  onChange={(e) => handleFilterChange('to', e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="d-flex align-items-center gap-2">
-            <button
-              onClick={(e) => { e.stopPropagation(); handleReset(); }}
-              className="btn btn-link p-0 text-muted fw-black text-uppercase tracking-widest text-decoration-none transition-all hover-opacity"
-              style={{ fontSize: '9px', letterSpacing: '1px' }}
-            >
-              RESET
-            </button>
-
-            <button
-              onClick={(e) => { e.stopPropagation(); onSync(); }}
-              className="px-4 d-flex align-items-center justify-content-center gap-2 shadow-glow hover-scale-sm border-0 transition-all rounded-4 ui-btn-primary"
-              style={{
-                background: 'linear-gradient(135deg, var(--primary) 0%, #4338ca 100%)',
-                color: 'white',
-                minWidth: '110px',
-                minHeight: '40px'
-              }}
-            >
-              <RefreshCcw size={14} strokeWidth={2.5} className="animate-spin-slow" />
-              <span className="fw-black text-uppercase tracking-widest" style={{ fontSize: '11px' }}>UPDATE</span>
-            </button>
+        {/* Date From */}
+        <div className="col-12 col-sm-6 col-xl-auto">
+          <div
+            className={`d-flex align-items-center gap-2 px-3 py-2 rounded-3 border w-100 ${isDarkMode ? 'border-white border-opacity-10 bg-surface bg-opacity-40' : 'border-dark border-opacity-5 bg-light'}`}
+            style={{ height: '38px', cursor: 'pointer', minWidth: '150px' }}
+            onClick={(e) => { const el = e.currentTarget.querySelector('input'); if(el?.showPicker) el.showPicker(); }}
+          >
+            <CalendarDays size={14} className="text-primary flex-shrink-0" />
+            <input
+              type="date"
+              className="bg-transparent border-0 text-main fw-black w-100"
+              style={{ fontSize: '12px', outline: 'none', color: 'inherit', colorScheme: isDarkMode ? 'dark' : 'light' }}
+              value={filters.from || ""}
+              onChange={(e) => handleFilterChange('from', e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+            />
           </div>
         </div>
+
+        {/* Date To */}
+        <div className="col-12 col-sm-6 col-xl-auto">
+          <div
+            className={`d-flex align-items-center gap-2 px-3 py-2 rounded-3 border w-100 ${isDarkMode ? 'border-white border-opacity-10 bg-surface bg-opacity-40' : 'border-dark border-opacity-5 bg-light'}`}
+            style={{ height: '38px', cursor: 'pointer', minWidth: '150px' }}
+            onClick={(e) => { const el = e.currentTarget.querySelector('input'); if(el?.showPicker) el.showPicker(); }}
+          >
+            <CalendarDays size={14} className="text-primary flex-shrink-0" />
+            <input
+              type="date"
+              className="bg-transparent border-0 text-main fw-black w-100"
+              style={{ fontSize: '12px', outline: 'none', color: 'inherit', colorScheme: isDarkMode ? 'dark' : 'light' }}
+              value={filters.to || ""}
+              onChange={(e) => handleFilterChange('to', e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+
+        {/* Buttons */}
+        <div className="col-12 col-xl-auto ms-xl-auto d-flex align-items-center gap-3 mt-2 mt-xl-0 justify-content-end">
+          <button
+            onClick={(e) => { e.stopPropagation(); handleReset(); }}
+            className="btn btn-link p-0 text-muted fw-black text-uppercase tracking-widest text-decoration-none"
+            style={{ fontSize: '10px', letterSpacing: '1px' }}
+          >
+            RESET
+          </button>
+          
+          <button
+            onClick={(e) => { e.stopPropagation(); onSync(); }}
+            className="px-4 d-flex align-items-center justify-content-center gap-2 shadow-glow border-0 rounded-3 ui-btn-primary"
+            style={{ background: 'linear-gradient(135deg, var(--primary) 0%, #4338ca 100%)', color: 'white', height: '38px', minWidth: '120px' }}
+          >
+            <RefreshCcw size={14} strokeWidth={2.5} className="animate-spin-slow" />
+            <span className="fw-black text-uppercase tracking-widest" style={{ fontSize: '11px' }}>UPDATE</span>
+          </button>
+        </div>
+
       </div>
 
       <style>{`
