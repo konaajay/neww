@@ -47,10 +47,7 @@
   color-scheme: dark !important;
 }
 
-[data-bs-theme="dark"] select,
-[data-bs-theme="dark"] select option {
-  background-color: #111827 !important;
-  color: #ffffff !important;
+[data-bs-theme="dark"] select {
   color-scheme: dark !important;
 }
 
@@ -613,19 +610,24 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   z-index: 2 !important;
 }
 
-select option {
-  background-color: #111827;
-  color: #ffffff;
+/* Completely remove the native indicator for month picker since we handle it via showPicker() */
+input[type="month"]::-webkit-calendar-picker-indicator {
+  display: none !important;
+  -webkit-appearance: none !important;
+  background: transparent !important;
+  color: transparent !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
+}
+input[type="month"]::-webkit-inner-spin-button,
+input[type="month"]::-webkit-clear-button {
+  display: none !important;
 }
 
-[data-bs-theme="light"] select option {
-  background-color: #ffffff;
-  color: #000000;
-}
-
-/* Force dark mode consistency for inputs */
+/* Removed select from here to allow native Chrome dark mode dropdown */
 [data-bs-theme="dark"] input,
-[data-bs-theme="dark"] select,
 [data-bs-theme="dark"] textarea {
   background-color: #0f172a !important;
   /* Deep Navy/Black */

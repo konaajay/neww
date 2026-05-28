@@ -32,6 +32,7 @@ import UserEditModal from './dashboard/components/UserEditModal';
 import CallLogDashboard from './dashboard/components/CallLogDashboard';
 import CallAnalyticsGrid from './dashboard/components/CallAnalyticsGrid';
 import InvoiceModal from './dashboard/components/InvoiceModal';
+import { SystemStatGrid, SystemStatCard } from '../components/SystemStatCard';
 import LeadModal from './dashboard/components/LeadModal';
 import FiltersBar from './dashboard/components/FiltersBar';
 import MetricCommandCenter from './dashboard/components/MetricCommandCenter';
@@ -492,40 +493,32 @@ const ManagerDashboard = () => {
         )}
         {activeTab === 'leads' && (
           <div className="d-flex flex-column gap-3">
-            <div className="row g-3 mb-2 animate-fade-in">
+            <SystemStatGrid>
               {[
-                { label: 'Open', value: ((statusDistribution?.OPEN || 0) + (statusDistribution?.WORKING || 0)), color: 'primary', icon: '✨' },
-                { label: 'Follow Up', value: (Object.entries(statusDistribution || {}).reduce((acc, [k, v]) => {
+                { label: 'Open', value: ((statusDistribution?.OPEN || 0) + (statusDistribution?.WORKING || 0)), color: 'text-primary' },
+                { label: 'Follow Up', value: Object.entries(statusDistribution || {}).reduce((acc, [k, v]) => {
                   const key = k.toUpperCase();
                   if (!['OPEN', 'WORKING', 'CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT', 'LOST', 'REJECTED', 'DEAD', 'NOT_INTERESTED', 'DNP', 'SWITCH_OFF', 'SWITCHED_OFF', 'OUT_OF_COVERAGE', 'OUT_OF_COVERAGE_AREA', 'WRONG_NUMBER', 'NOT_RESPONDING'].includes(key) && !key.startsWith('PAID_INSTALLMENT_') && !key.startsWith('POST_PAYMENT')) return acc + v;
                   return acc;
-                }, 0)), color: 'info', icon: '⏳' },
-                { label: 'DNP', value: (statusDistribution?.DNP || 0), color: 'warning', icon: '📞' },
+                }, 0), color: 'text-info' },
+                { label: 'DNP', value: (statusDistribution?.DNP || 0), color: 'text-warning' },
                 { label: 'Converted', value: Object.entries(statusDistribution || {}).reduce((acc, [k, v]) => {
                   const ks = k.toUpperCase();
                   if (['CONVERTED', 'PAID', 'SUCCESS', 'EMI', 'PRE_PAYMENT', 'PRE-PAYMENT'].includes(ks) || ks.startsWith('PAID_INSTALLMENT_') || ks.startsWith('POST_PAYMENT')) return acc + v;
                   return acc;
-                }, 0), color: 'success', icon: '✅' },
-                { label: 'Lost', value: ((statusDistribution?.LOST || 0) + (statusDistribution?.REJECTED || 0) + (statusDistribution?.DEAD || 0) + (statusDistribution?.NOT_INTERESTED || 0)), color: 'danger', icon: '❌' }
+                }, 0), color: 'text-success' },
+                { label: 'Lost', value: ((statusDistribution?.LOST || 0) + (statusDistribution?.REJECTED || 0) + (statusDistribution?.DEAD || 0) + (statusDistribution?.NOT_INTERESTED || 0)), color: 'text-danger' }
               ].map((card, i) => (
-                <div key={i} className="col-6 col-md">
-                    <div 
-                      className={`p-3 d-flex flex-column gap-1 transition-smooth cursor-pointer ${statusFilter === card.label ? 'shadow-glow' : 'shadow-sm'}`} 
-                      style={{ 
-                        borderRadius: '20px', 
-                        background: statusFilter === card.label ? (isDarkMode ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.08)') : (isDarkMode ? 'rgba(255, 255, 255, 0.03)' : '#ffffff'),
-                        border: `1px solid ${statusFilter === card.label ? 'var(--primary)' : 'var(--border-color)'}`,
-                        backdropFilter: 'var(--glass-blur)',
-                        transform: statusFilter === card.label ? 'translateY(-2px)' : 'none'
-                      }}
-                      onClick={() => setStatusFilter(statusFilter === card.label ? null : card.label)}
-                    >
-                      <h4 className={`mb-0 fw-black ${statusFilter === card.label ? 'text-primary' : 'text-main'}`} style={{ fontSize: '24px', lineHeight: 1 }}>{card.value}</h4>
-                      <small className="text-muted fw-black text-uppercase tracking-widest opacity-60" style={{ fontSize: '8px' }}>{card.label}</small>
-                    </div>
-                  </div>
-                ))}
-            </div>
+                <SystemStatCard
+                  key={i}
+                  label={card.label}
+                  value={card.value}
+                  colorClass={card.color}
+                  isActive={statusFilter === card.label}
+                  onClick={() => setStatusFilter(statusFilter === card.label ? null : card.label)}
+                />
+              ))}
+            </SystemStatGrid>
 
             <div className="premium-card overflow-hidden shadow-lg border-0">
               <div className="card-header bg-transparent p-4 border-0 border-bottom border-white border-opacity-5 d-flex justify-content-between align-items-center">
@@ -638,6 +631,7 @@ const ManagerDashboard = () => {
             handleSync={handleSync}
           />
         )}
+        {activeTab === 'hierarchy' && <TeamTree data={teamTree} />}
 
         {/* Modals moved inside the main wrapping div */}
         <LeadModal isOpen={isIngestionModalOpen} onClose={() => setIsIngestionModalOpen(false)} onAddLead={handleAddLead} onSuccess={handleSync} associates={subordinates} />

@@ -12,9 +12,11 @@ export const ThemeProvider = ({ children }) => {
     const root = window.document.documentElement;
     if (isDarkMode) {
       root.setAttribute('data-bs-theme', 'dark');
+      root.style.colorScheme = 'dark';
       localStorage.setItem('theme', 'dark');
     } else {
       root.setAttribute('data-bs-theme', 'light');
+      root.style.colorScheme = 'light';
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkMode]);

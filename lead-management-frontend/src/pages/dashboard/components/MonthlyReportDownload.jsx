@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
     Download, FileSpreadsheet, Users, User,
     Calendar, RefreshCcw, TrendingUp, Target,
@@ -49,6 +49,7 @@ function fmtCurrency(n) {
 
 const MonthlyReportDownload = ({ role }) => {
     const { isDarkMode } = useTheme();
+    const monthInputRef = useRef(null);
     const now = new Date();
 
     const [year,    setYear]    = useState(now.getFullYear());
@@ -197,32 +198,36 @@ const MonthlyReportDownload = ({ role }) => {
                 </div>
 
                 <div className="d-flex align-items-center gap-2 flex-wrap">
-                    {/* Month selector */}
-                    <div className="position-relative">
-                        <select
-                            className={`form-select form-select-sm fw-bold border-0 rounded-pill ps-3 pe-4 ${isDarkMode ? 'bg-dark text-white' : 'bg-light text-dark'}`}
-                            style={{ fontSize: '11px', height: '36px', minWidth: '130px' }}
-                            value={month}
-                            onChange={e => setMonth(Number(e.target.value))}
-                        >
-                            {MONTHS.map((m, idx) => (
-                                <option key={idx} value={idx + 1}>{m}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Year selector */}
-                    <div className="position-relative">
-                        <select
-                            className={`form-select form-select-sm fw-bold border-0 rounded-pill ps-3 pe-4 ${isDarkMode ? 'bg-dark text-white' : 'bg-light text-dark'}`}
-                            style={{ fontSize: '11px', height: '36px', minWidth: '90px' }}
-                            value={year}
-                            onChange={e => setYear(Number(e.target.value))}
-                        >
-                            {[2024, 2025, 2026, 2027].map(y => (
-                                <option key={y} value={y}>{y}</option>
-                            ))}
-                        </select>
+                    {/* Unified Month/Year Native Picker with Bulletproof Icon */}
+                    <div 
+                        className={`position-relative rounded-pill shadow-sm d-flex align-items-center ${isDarkMode ? 'bg-dark text-white' : 'bg-light text-dark'}`} 
+                        style={{ minWidth: '160px', height: '36px', cursor: 'pointer' }}
+                        onClick={() => monthInputRef.current?.showPicker()}
+                    >
+                        <input 
+                            ref={monthInputRef}
+                            type="month"
+                            data-lpignore="true"
+                            data-1p-ignore="true"
+                            data-form-type="other"
+                            autoComplete="off"
+                            className="form-control form-control-sm fw-bold border-0 bg-transparent h-100 w-100"
+                            style={{ fontSize: '11px', paddingLeft: '15px', paddingRight: '40px', color: 'inherit', cursor: 'pointer' }}
+                            value={`${year}-${String(month).padStart(2, '0')}`}
+                            onChange={e => {
+                                if (e.target.value) {
+                                    const [y, m] = e.target.value.split('-');
+                                    setYear(Number(y));
+                                    setMonth(Number(m));
+                                }
+                            }}
+                        />
+                        <Calendar 
+                            size={16} 
+                            color="#00b4d8"
+                            className="position-absolute" 
+                            style={{ right: '15px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', zIndex: 1 }} 
+                        />
                     </div>
 
                     {/* Load report */}

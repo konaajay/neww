@@ -3,9 +3,16 @@ import { useTheme } from '../context/ThemeContext';
 
 export const SystemStatGrid = ({ children }) => {
   return (
-    <div className="d-flex flex-wrap mb-4 animate-fade-in" style={{ gap: '16px' }}>
+    <div 
+      className="mb-4 animate-fade-in"
+      style={{
+        display: 'grid',
+        gap: '1.5rem',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))'
+      }}
+    >
       {React.Children.map(children, child => (
-        <div style={{ flex: '1 1 200px', minWidth: '200px' }}>
+        <div>
           {child}
         </div>
       ))}

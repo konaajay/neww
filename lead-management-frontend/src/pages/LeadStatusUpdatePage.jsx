@@ -445,7 +445,7 @@ const LeadStatusUpdatePage = () => {
 
       sessionStorage.setItem('pendingHardRefresh', 'true');
       toast.success("Protocol Updated & Tasks Scheduled");
-      navigate(`/leads/${id}/details`, { state: { activeTab: 'FEE_STRUCTURE' } });
+      navigate(`/leads/${id}/details`, { state: { activeTab: 'FEE_STRUCTURE' }, replace: true });
     } catch (err) {
       toast.error(err.response?.data?.message || "System Update Failed");
     } finally {

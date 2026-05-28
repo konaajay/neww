@@ -194,7 +194,7 @@ const PipelineStageManagement = () => {
                     <div className="d-flex gap-2">
                         <button 
                             onClick={handleAutoSetup}
-                            className="ui-btn ui-btn-outline px-4 py-2 rounded-pill fw-black text-uppercase tracking-widest d-flex align-items-center gap-2"
+                            className="ui-btn ui-btn-outline text-primary px-4 py-2 rounded-pill fw-black text-uppercase tracking-widest d-flex align-items-center gap-2"
                             style={{ fontSize: '10px', borderColor: 'rgba(var(--primary-rgb), 0.2)' }}
                             disabled={loading}
                         >
@@ -296,12 +296,12 @@ const PipelineStageManagement = () => {
                     <table className="table table-hover align-middle mb-0 text-nowrap">
                         <thead>
                             <tr className={isDarkMode ? 'border-bottom border-white border-opacity-5' : 'border-bottom'}>
-                                <th className="ps-4 text-muted small fw-black text-uppercase tracking-widest py-3" style={{ fontSize: '9px', width: '60px' }}>#</th>
-                                <th className="text-muted small fw-black text-uppercase tracking-widest py-3" style={{ fontSize: '9px' }}>Status Lead</th>
-                                <th className="text-muted small fw-black text-uppercase tracking-widest py-3 text-center" style={{ fontSize: '9px' }}>Note Req.</th>
-                                <th className="text-muted small fw-black text-uppercase tracking-widest py-3 text-center" style={{ fontSize: '9px' }}>Date Req.</th>
-                                <th className="text-muted small fw-black text-uppercase tracking-widest py-3 text-center" style={{ fontSize: '9px' }}>Task</th>
-                                <th className="pe-4 text-end text-muted small fw-black text-uppercase tracking-widest py-3" style={{ fontSize: '9px', width: '120px' }}>Actions</th>
+                                <th className="ps-4 text-secondary small fw-black text-uppercase tracking-widest py-3" style={{ fontSize: '9px', width: '60px' }}>#</th>
+                                <th className="text-secondary small fw-black text-uppercase tracking-widest py-3" style={{ fontSize: '9px' }}>Status Lead</th>
+                                <th className="text-secondary small fw-black text-uppercase tracking-widest py-3 text-center" style={{ fontSize: '9px' }}>Note Req.</th>
+                                <th className="text-secondary small fw-black text-uppercase tracking-widest py-3 text-center" style={{ fontSize: '9px' }}>Date Req.</th>
+                                <th className="text-secondary small fw-black text-uppercase tracking-widest py-3 text-center" style={{ fontSize: '9px' }}>Task</th>
+                                <th className="pe-4 text-end text-secondary small fw-black text-uppercase tracking-widest py-3" style={{ fontSize: '9px', width: '120px' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -313,7 +313,7 @@ const PipelineStageManagement = () => {
                                 </tr>
                             ) : stages.length === 0 ? (
                                 <tr>
-                                  <td colSpan="6" className="text-center py-5 text-muted small fw-bold opacity-50">NO STATUS LEADS FOUND</td>
+                                  <td colSpan="6" className="text-center py-5 text-secondary small fw-bold">NO STATUS LEADS FOUND</td>
                                 </tr>
                             ) : stages.map((stage, idx) => (
                                 <tr key={stage.id} className="transition-all hover:bg-white hover:bg-opacity-5">

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import paymentService from '../services/paymentService';
 import adminService from '../services/adminService';
 import managerService from '../services/managerService';
@@ -14,6 +15,7 @@ import { TableSkeleton, MetricSkeletonRow } from '../pages/dashboard/components/
 import { SystemStatGrid, SystemStatCard } from './SystemStatCard';
 
 const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManagerId, teamId: externalTeamId, from: externalFrom, to: externalTo, hideHeader = false, hideFilters = false, refreshTrigger, externalStats }) => {
+  const navigate = useNavigate();
   const { isDarkMode } = useTheme();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -204,7 +206,7 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
     if (paymentStatusFilter !== 'ALL') {
       const s = payment.status?.toUpperCase();
       const isPaid = ['PAID', 'SUCCESS', 'APPROVED', 'COMPLETED'].includes(s);
-      const isPending = ['PENDING', 'INITIATED', 'PARTIAL', 'PARTIAL_PENDING'].includes(s);
+      const isPending = ['PENDING', 'INITIATED', 'PARTIAL', 'PARTIAL_PENDING', 'PENDING_APPROVAL', 'UNDER_REVIEW'].includes(s);
       
       const now = new Date();
       const targetDate = new Date(payment.dueDate || payment.createdAt);
@@ -243,14 +245,14 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
     pendingRevenue: externalStats ? (externalStats.pendingPaymentsAmount || externalStats.pendingRevenue || 0) : (payments || [])
       .filter(p => {
         const s = p.status?.toUpperCase();
-        return s === 'PENDING' || s === 'FAILED' || s === 'INITIATED' || s === 'PARTIAL_PENDING';
+        return s === 'PENDING' || s === 'FAILED' || s === 'INITIATED' || s === 'PARTIAL_PENDING' || s === 'PENDING_APPROVAL' || s === 'UNDER_REVIEW';
       })
       .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0),
     totalInvoiced: (payments || []).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0),
     overdueCount: externalStats ? (externalStats.overduePaymentsCount || externalStats.overdueCount || 0) : (payments || []).filter(p => {
         const status = p.status?.toUpperCase();
         const isOverdue = status === 'FAILED' || status === 'OVERDUE';
-        const isPending = status === 'PENDING' || status === 'INITIATED' || status === 'PARTIAL';
+        const isPending = status === 'PENDING' || status === 'INITIATED' || status === 'PARTIAL' || status === 'PENDING_APPROVAL' || status === 'UNDER_REVIEW';
         const now = new Date();
         const targetDate = new Date(p.dueDate || p.createdAt);
         return isOverdue || (isPending && targetDate < now);
@@ -364,12 +366,13 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
                 const globalIndex = indexOfFirstItem + index;
                 const emiId = payment.paymentGatewayId || `E-${(globalIndex + 1).toString().padStart(2, '0')}`;
                 const isOverdue = payment.status === 'FAILED' || payment.status === 'OVERDUE';
-                const isPending = payment.status === 'PENDING' || payment.status === 'INITIATED' || payment.status === 'PARTIAL';
+                const isPendingApproval = payment.status === 'PENDING_APPROVAL' || payment.status === 'UNDER_REVIEW';
+                const isPending = payment.status === 'PENDING' || payment.status === 'INITIATED' || payment.status === 'PARTIAL' || isPendingApproval;
                 const isPaid = payment.status === 'PAID' || payment.status === 'SUCCESS' || payment.status === 'APPROVED';
                 
                 const now = new Date();
                 const targetDate = new Date(payment.dueDate || payment.createdAt);
-                const isOverdueByDate = isPending && targetDate < now;
+                const isOverdueByDate = !isPaid && !isPendingApproval && targetDate < now;
                 
                 const dueDateObj = payment.dueDate ? new Date(payment.dueDate) : new Date(payment.createdAt);
                 const dueDate = dueDateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -400,10 +403,10 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
                          </div>
                        )}
                        {isPending && (
-                         <div className={`ui-badge bg-opacity-10 border border-opacity-20 ${isOverdueByDate ? 'bg-danger text-danger border-danger' : 'bg-warning text-warning border-warning'}`}>
-                           {isOverdueByDate ? <AlertCircle size={10} /> : <Clock size={10} />}
+                         <div className={`ui-badge bg-opacity-10 border border-opacity-20 ${isPendingApproval ? 'bg-info text-info border-info' : (isOverdueByDate ? 'bg-danger text-danger border-danger' : 'bg-warning text-warning border-warning')}`}>
+                           {isPendingApproval ? <FileText size={10} /> : (isOverdueByDate ? <AlertCircle size={10} /> : <Clock size={10} />)}
                            <span className="fw-black text-uppercase ms-1" style={{ fontSize: '9px' }}>
-                             {isOverdueByDate ? 'Overdue / Pending' : 'Live / Pending'}
+                             {isPendingApproval ? 'Pending Approval' : (isOverdueByDate ? 'Overdue / Pending' : 'Live / Pending')}
                            </span>
                          </div>
                        )}
@@ -418,11 +421,13 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
                              {(isPending || isOverdue) && (
                                <>
                                  <button 
-                                   onClick={() => setSelectedClearPayment(payment)}
-                               className="ui-btn ui-btn-primary btn-sm rounded-pill px-4 fw-black shadow-glow"
+                                   onClick={() => {
+                                     navigate(`/leads/${payment.leadId}/details`, { state: { activeTab: 'FEE_STRUCTURE' } });
+                                   }}
+                               className={`btn btn-sm rounded-pill px-4 fw-black ${isPendingApproval ? 'ui-btn ui-btn-primary shadow-glow text-white' : 'bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25'}`}
                                style={{ fontSize: '10px' }}
                              >
-                               APPROVE
+                               {isPendingApproval ? 'APPROVE' : 'RECORD'}
                              </button>
                            </>
                          )}

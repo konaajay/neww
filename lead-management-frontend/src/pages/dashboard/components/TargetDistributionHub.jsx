@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
     Target, 
     Calendar, 
@@ -25,6 +25,7 @@ import TargetHistoryModal from './TargetHistoryModal';
 const TargetDistributionHub = ({ filters }) => {
     const { user } = useAuth();
     const { isDarkMode } = useTheme();
+    const monthInputRef = useRef(null);
     const [subordinates, setSubordinates] = useState([]);
     const [selectedUserId, setSelectedUserId] = useState('');
     const [amount, setAmount] = useState('');
@@ -49,7 +50,7 @@ const TargetDistributionHub = ({ filters }) => {
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
     ];
-    const years = [2024, 2025, 2026, 2027];
+    const years = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030];
 
     const loadData = async () => {
         if (!user) return;
@@ -251,36 +252,38 @@ const TargetDistributionHub = ({ filters }) => {
                         </div>
                     </div>
                     
-                    <div className={`d-flex align-items-center gap-3 p-1 rounded-pill ${isDarkMode ? 'bg-surface' : 'bg-gray-50'}`}>
-                        <button 
-                            onClick={() => { 
-                                if (month === 1) {
-                                    setMonth(12);
-                                    setYear(prev => prev - 1);
-                                } else {
-                                    setMonth(prev => prev - 1);
-                                }
-                                setEditMode(false); 
-                            }} 
-                            className={`btn btn-sm rounded-circle border-0 shadow-sm ${isDarkMode ? 'bg-surface text-main' : 'bg-white'}`}
+                    <div className="d-flex align-items-center gap-2">
+                        <div 
+                            className={`position-relative rounded-pill shadow-sm d-flex align-items-center ${isDarkMode ? 'bg-surface text-main' : 'bg-gray-50 text-dark'}`} 
+                            style={{ minWidth: '150px', height: '32px', cursor: 'pointer' }}
+                            onClick={() => monthInputRef.current?.showPicker()}
                         >
-                            <ChevronLeft size={12}/>
-                        </button>
-                        <span className="small fw-black text-main px-2 uppercase tracking-tighter" style={{ minWidth: '100px', textAlign: 'center' }}>{months[month-1]} {year}</span>
-                        <button 
-                            onClick={() => { 
-                                if (month === 12) {
-                                    setMonth(1);
-                                    setYear(prev => prev + 1);
-                                } else {
-                                    setMonth(prev => prev + 1);
-                                }
-                                setEditMode(false); 
-                            }} 
-                            className={`btn btn-sm rounded-circle border-0 shadow-sm ${isDarkMode ? 'bg-surface text-main' : 'bg-white'}`}
-                        >
-                            <ChevronRight size={12}/>
-                        </button>
+                            <input 
+                                ref={monthInputRef}
+                                type="month"
+                                data-lpignore="true"
+                                data-1p-ignore="true"
+                                data-form-type="other"
+                                autoComplete="off"
+                                className="form-control form-control-sm fw-bold border-0 bg-transparent h-100 w-100"
+                                style={{ fontSize: '11px', paddingLeft: '15px', paddingRight: '40px', color: 'inherit', cursor: 'pointer' }}
+                                value={`${year}-${String(month).padStart(2, '0')}`}
+                                onChange={e => {
+                                    if (e.target.value) {
+                                        const [y, m] = e.target.value.split('-');
+                                        setYear(Number(y));
+                                        setMonth(Number(m));
+                                        setEditMode(false);
+                                    }
+                                }}
+                            />
+                            <Calendar 
+                                size={14} 
+                                color="#00b4d8"
+                                className="position-absolute" 
+                                style={{ right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', zIndex: 1 }} 
+                            />
+                        </div>
                     </div>
                 </div>
 

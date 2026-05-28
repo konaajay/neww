@@ -29,7 +29,7 @@ export const useLookupData = (role) => {
     queryKey: ['teamTree'],
     queryFn: () => userApi.fetchTeamTree(),
     staleTime: 0,
-    enabled: role === 'ADMIN' || role === 'MANAGER',
+    enabled: role === 'ADMIN' || role === 'MANAGER' || role === 'TEAM_LEADER',
     refetchInterval: 10000
   });
 

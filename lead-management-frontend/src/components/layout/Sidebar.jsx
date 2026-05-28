@@ -52,7 +52,8 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
         { id: 'my-stats', label: 'My HOME', icon: ShieldHalf },
         { id: 'overview', label: 'Team Dashboard', icon: LayoutDashboard },
         { id: 'strategy', label: 'Strategic Hub', icon: TrendingUp },
-        { id: 'users', label: 'Personnel', icon: Users },
+        // { id: 'users', label: 'Personnel', icon: Users },
+        { id: 'hierarchy', label: 'Hierarchy', icon: Layers },
         { id: 'attendance', label: 'Attendance', icon: FileText },
         { id: 'leads', label: 'Team Leads', icon: Target },
         { id: 'payments', label: 'Team Revenue', icon: IndianRupee },
@@ -69,7 +70,8 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
         { id: 'my-stats', label: 'My HOME', icon: ShieldHalf },
         { id: 'overview', label: 'Team Dashboard', icon: LayoutDashboard },
         { id: 'strategy', label: 'Strategic Hub', icon: TrendingUp },
-        { id: 'users', label: 'My Squad', icon: Users },
+        // { id: 'users', label: 'My Squad', icon: Users },
+        { id: 'hierarchy', label: 'Hierarchy', icon: Layers },
         { id: 'attendance', label: 'Attendance', icon: FileText },
         { id: 'leads', label: 'Team Leads', icon: Target },
         { id: 'tasks', label: 'Team Task ', icon: Layers },
@@ -130,7 +132,7 @@ const Sidebar = ({ isOpen, onClose, activeTab, onTabChange, role, isCollapsed, o
               {navItems.map(item => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
-                
+
                 if (item.url) {
                   const isExternal = item.url.startsWith('http');
                   return isExternal ? (

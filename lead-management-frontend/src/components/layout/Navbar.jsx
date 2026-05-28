@@ -251,12 +251,14 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
             </button>
   
             {isNotificationOpen && (
-              <div className={`position-absolute top-100 end-0 mt-3 p-0 rounded-4 shadow-2xl animate-zoom-in ${isDarkMode ? 'bg-surface' : 'bg-card'}`} style={{ 
+              <div className={`position-absolute top-100 end-0 mt-3 p-0 rounded-4 shadow-2xl animate-zoom-in bg-card`} style={{ 
                 width: '320px', 
                 maxHeight: 'calc(100vh - 100px)',
                 overflowY: 'auto',
                 border: '1px solid rgba(0,0,0,0.05)',
-                zIndex: 2010 
+                zIndex: 2010,
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)'
               }}>
                 <div className="p-4 border-bottom border-light d-flex align-items-center justify-content-between">
                   <h6 className="fw-black text-main mb-0 text-uppercase tracking-widest" style={{ fontSize: '11px' }}>Notifications</h6>
@@ -441,7 +443,9 @@ const Navbar = ({ onToggleSidebar, userEmail, onLogout, navbarExtras, onTabChang
                 border: '1px solid rgba(0,0,0,0.05)',
                 zIndex: 2010,
                 scrollbarWidth: 'none',
-                msOverflowStyle: 'none'
+                msOverflowStyle: 'none',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)'
               }}>
                 <div className="p-4 border-bottom border-light" style={{ background: 'linear-gradient(to bottom right, rgba(79, 70, 229, 0.05), rgba(59, 130, 246, 0.05))' }}>
                   <div className="d-flex align-items-center gap-3">
