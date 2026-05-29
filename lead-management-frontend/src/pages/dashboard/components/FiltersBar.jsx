@@ -61,11 +61,15 @@ const FiltersBar = ({
 
   const getAllByRole = useCallback((nodes, targetRole) => {
     const results = [];
+    const seenIds = new Set();
     const collect = (list) => {
       if (!list) return;
       const arr = Array.isArray(list) ? list : [list];
       arr.forEach(n => {
-        if (isRole(n.role, targetRole) && n.active !== false) results.push(n);
+        if (isRole(n.role, targetRole) && n.active !== false && !seenIds.has(n.id)) {
+          results.push(n);
+          seenIds.add(n.id);
+        }
         if (n.subordinates) collect(n.subordinates);
       });
     };
@@ -149,9 +153,9 @@ const FiltersBar = ({
     onChange({
       from: formatDate(firstDay),
       to: formatDate(lastDay),
-      userId: null,
-      managerId: null,
-      teamId: null
+      userId: hideUserFilter ? filters.userId : null,
+      managerId: hideUserFilter ? filters.managerId : null,
+      teamId: hideUserFilter ? filters.teamId : null
     });
   };
 

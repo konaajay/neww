@@ -70,21 +70,39 @@ const ManagerDashboard = () => {
   const [filterState, setFilterState] = useState(() => {
     const d = new Date();
     const f = new Date(d.getFullYear(), d.getMonth(), 1);
-    const l = d; // Today
+    const l = new Date(d.getFullYear(), d.getMonth() + 1, 0); // End of month
     const fmt = (date) => {
       const y = date.getFullYear();
       const m = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       return `${y}-${m}-${day}`;
     };
+    const initialTab = localStorage.getItem('manager_active_tab') || 'my-stats';
     return {
       from: fmt(f),
       to: fmt(l),
-      userId: null,
+      userId: initialTab === 'my-stats' ? user?.id : null,
       teamId: null,
       managerId: user?.id
     };
   });
+
+  // Ensure filters are populated if user loads asynchronously
+  useEffect(() => {
+    if (user?.id) {
+      setFilterState(prev => {
+        if (!prev.managerId) {
+          const initialTab = localStorage.getItem('manager_active_tab') || 'my-stats';
+          return {
+            ...prev,
+            managerId: user.id,
+            userId: initialTab === 'my-stats' ? user.id : prev.userId
+          };
+        }
+        return prev;
+      });
+    }
+  }, [user?.id]);
 
   const stableFilters = useMemo(() => ({
     from: filterState.from,
@@ -223,6 +241,13 @@ const ManagerDashboard = () => {
       setFilterState(prev => ({ ...prev, userId: user?.id, teamId: null, managerId: user?.id }));
     } else if (tab === 'overview') {
       setFilterState(prev => ({ ...prev, userId: null, teamId: null, managerId: user?.id }));
+    } else {
+      setFilterState(prev => {
+        if (String(prev.userId) === String(user?.id)) {
+          return { ...prev, userId: null, teamId: null, managerId: user?.id };
+        }
+        return prev;
+      });
     }
   };
 
@@ -561,7 +586,7 @@ const ManagerDashboard = () => {
             </div>
           </div>
         )}
-        {activeTab === 'payments' && <PaymentHistory role="MANAGER" managerId={filterState.userId ? null : user?.id} userId={filterState.userId || null} teamId={filterState.teamId || null} from={filterState.from} to={filterState.to} hideHeader={true} externalStats={statsWithPerf} />}
+        {activeTab === 'payments' && <PaymentHistory role="MANAGER" managerId={filterState.userId ? null : user?.id} userId={filterState.userId || null} teamId={filterState.teamId || null} from={filterState.from} to={filterState.to} hideHeader={true} />}
         {activeTab === 'calls' && <CallLogDashboard userId={filterState.userId} filters={debouncedFilters} hideHeader={true} />}
         {activeTab === 'attendance' && <AttendanceDashboard filters={debouncedFilters} role="MANAGER" />}
         {activeTab === 'strategy' && (
@@ -616,7 +641,7 @@ const ManagerDashboard = () => {
         )}
         {activeTab === 'users' && (
           <TeamManagement
-            teamLeaders={teamLeaders}
+            teamLeaders={subordinates}
             roles={roles}
             offices={offices}
             shifts={shifts}

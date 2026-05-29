@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import useDebounce from '../hooks/useDebounce';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -57,11 +57,28 @@ const TeamLeaderDashboard = () => {
 
   // 1. STABLE FILTERS (Core fix to prevent API spam)
   const [filters, setFilters] = useState({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
-    to: new Date().toISOString().split('T')[0],
-    userId: null,
+    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+    to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0],
+    userId: (localStorage.getItem('tl_active_tab') || 'my-stats') === 'my-stats' ? user?.id : null,
     teamId: user?.id
   });
+
+  // Ensure filters are populated if user loads asynchronously
+  useEffect(() => {
+    if (user?.id) {
+      setFilters(prev => {
+        if (!prev.teamId) {
+          const initialTab = localStorage.getItem('tl_active_tab') || 'my-stats';
+          return {
+            ...prev,
+            teamId: user.id,
+            userId: initialTab === 'my-stats' ? user.id : prev.userId
+          };
+        }
+        return prev;
+      });
+    }
+  }, [user?.id]);
 
   const stableFilters = useMemo(() => ({
     from: filters.from,
@@ -119,10 +136,13 @@ const TeamLeaderDashboard = () => {
 
     if (tab === 'my-stats') {
       setFilters(prev => ({ ...prev, userId: user?.id, teamId: null }));
-    } else if (tab === 'overview') {
-      setFilters(prev => ({ ...prev, userId: null, teamId: user?.id }));
-    } else if (tab === 'users') {
-      setFilters(prev => ({ ...prev, userId: null, teamId: user?.id }));
+    } else {
+      setFilters(prev => {
+        if (String(prev.userId) === String(user?.id)) {
+          return { ...prev, userId: null, teamId: user?.id };
+        }
+        return prev;
+      });
     }
   };
 

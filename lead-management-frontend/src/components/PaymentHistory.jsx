@@ -242,7 +242,7 @@ const PaymentHistory = ({ role, userId: externalUserId, managerId: externalManag
   const successfulPayments = (payments || []).filter(p => ['PAID', 'SUCCESS', 'APPROVED', 'PARTIAL', 'COMPLETED'].includes(p.status?.toUpperCase()));
   const paymentStats = {
     totalRevenue: externalStats ? (externalStats.monthlyRevenue || externalStats.totalRevenue || externalStats.revenue || 0) : successfulPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0),
-    pendingRevenue: externalStats ? (externalStats.pendingPaymentsAmount || externalStats.pendingRevenue || 0) : (payments || [])
+    pendingRevenue: externalStats ? (externalStats.pendingRevenueAmount || externalStats.pendingPaymentsAmount || externalStats.pendingRevenue || 0) : (payments || [])
       .filter(p => {
         const s = p.status?.toUpperCase();
         return s === 'PENDING' || s === 'FAILED' || s === 'INITIATED' || s === 'PARTIAL_PENDING' || s === 'PENDING_APPROVAL' || s === 'UNDER_REVIEW';

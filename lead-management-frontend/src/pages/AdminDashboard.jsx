@@ -64,7 +64,7 @@ const AdminDashboard = () => {
   const [filters, setFilters] = useState(() => {
     const d = new Date();
     const f = new Date(d.getFullYear(), d.getMonth(), 1);
-    const l = d; // Today
+    const l = new Date(d.getFullYear(), d.getMonth() + 1, 0); // End of month
     const fmt = (date) => {
       const y = date.getFullYear();
       const m = String(date.getMonth() + 1).padStart(2, '0');
