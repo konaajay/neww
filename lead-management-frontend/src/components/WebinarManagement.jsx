@@ -4,7 +4,7 @@ import Papa from 'papaparse';
 
 import './WebinarManagement.css';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://3.84.147.168:8080";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://3.84.147.168:8080";
 
 const WebinarManagement = () => {
   const [webinars, setWebinars] = useState([]);
