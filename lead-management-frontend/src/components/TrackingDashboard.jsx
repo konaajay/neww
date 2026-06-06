@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Clock, CheckCircle, XCircle, Eye, Edit2, X, Save, Award, Zap, AlertCircle, FileType, Download, RefreshCw, Loader2 } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Eye, Edit2, X, Save, Award, Zap, AlertCircle, FileType, Download, RefreshCw, Loader2, GraduationCap } from 'lucide-react';
 import gyLogo from '../assets/gy1-png.png';
 import isoNewBadge from '../assets/iso-new-badge.png';
 import { STATUS, normalizeBackendRecord } from '../utils/statusUtils';
@@ -8,7 +8,7 @@ import { startScheduler, stopScheduler } from '../services/schedulerService';
 
 import './TrackingDashboard.css';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://34.225.217.229:8080";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://34.225.217.229:8080";
 
 const TrackingDashboard = ({ searchQuery = '', templateFile }) => {
   // --- 1. STATE DEFINITIONS ---
@@ -448,6 +448,12 @@ const TrackingDashboard = ({ searchQuery = '', templateFile }) => {
                   <td data-label="Recipient" style={{ padding: '16px' }}>
                     <div style={{ fontSize: '0.9rem', fontWeight: '500' }}>{log.name}</div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{log.email}</div>
+                    {log.college && log.college !== '-' && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', marginTop: '2px', fontWeight: '500' }}>
+                        <GraduationCap size={10} style={{ marginRight: '4px', display: 'inline' }} />
+                        {log.college}
+                      </div>
+                    )}
                   </td>
                   <td data-label="Time & Date" style={{ padding: '16px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                     <div style={{ fontWeight: '500', color: 'var(--text-primary)' }}>{log.date}</div>
@@ -498,13 +504,24 @@ const TrackingDashboard = ({ searchQuery = '', templateFile }) => {
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                       <button
                         onClick={() => setPreviewRecord(log)}
-                        style={{ padding: '6px', background: 'rgba(0,0,0,0.05)', borderRadius: '6px', color: 'var(--text-primary)', transition: 'var(--transition-smooth)' }}
+                        style={{ padding: '6px', background: 'rgba(0,0,0,0.05)', borderRadius: '6px', color: 'var(--text-primary)', transition: 'var(--transition-smooth)', border: 'none', cursor: 'pointer' }}
                         title="Preview Certificate"
                         className="hover-opacity"
                       >
                         <Eye size={16} />
                       </button>
-
+                      
+                      {log.status === STATUS.FAILED && (
+                        <button
+                          onClick={() => handleRetrySingle(log.id)}
+                          disabled={isRetrying}
+                          style={{ padding: '6px 10px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '6px', color: 'var(--accent-primary)', transition: 'var(--transition-smooth)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: '700', border: 'none', cursor: isRetrying ? 'not-allowed' : 'pointer' }}
+                          title="Resend Certificate"
+                          className="hover-opacity"
+                        >
+                          <RefreshCw size={14} className={isRetrying ? "spin-animation" : ""} /> Resend
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

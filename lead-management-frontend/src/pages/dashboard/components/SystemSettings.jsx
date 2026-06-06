@@ -14,7 +14,8 @@ import {
   Timer,
   Layers,
   Edit2,
-  BookOpen
+  BookOpen,
+  GraduationCap
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import adminService from '../../../services/adminService';
@@ -22,6 +23,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import PipelineStageManagement from './PipelineStageManagement';
 import AttendanceGovernance from './AttendanceGovernance';
 import CourseManagementPage from '../../CourseManagementPage';
+import CollegeManagement from './CollegeManagement';
 
 const SystemSettings = () => {
     const { isDarkMode } = useTheme();
@@ -111,6 +113,7 @@ const SystemSettings = () => {
         { id: 'governance', label: 'GOVERNANCE', icon: ShieldCheck },
         { id: 'stages', label: 'STAGES', icon: Layers },
         { id: 'courses', label: 'COURSES', icon: BookOpen },
+        { id: 'colleges', label: 'COLLEGES', icon: GraduationCap },
     ];
 
     return (
@@ -241,6 +244,7 @@ const SystemSettings = () => {
             { activeTab === 'governance' && <AttendanceGovernance offices={offices} /> }
             { activeTab === 'stages' && <PipelineStageManagement /> }
             { activeTab === 'courses' && <CourseManagementPage /> }
+            { activeTab === 'colleges' && <CollegeManagement /> }
         </div>
     );
 };

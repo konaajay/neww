@@ -7,6 +7,7 @@ import TrackingDashboard from '../../../components/TrackingDashboard';
 import GLogoCertificateTemplate from '../../../components/GLogoCertificateTemplate';
 import SingleGenerationForm from '../../../components/SingleGenerationForm';
 import WebinarManagement from '../../../components/WebinarManagement';
+import CollegeManagement from '../../../pages/dashboard/components/CollegeManagement';
 
 const CertificateDashboard = () => {
   console.log("CertificateDashboard Loaded");
@@ -76,6 +77,10 @@ const CertificateDashboard = () => {
         ) : activeTab === 'webinars' ? (
           <div>
             <WebinarManagement />
+          </div>
+        ) : activeTab === 'colleges' ? (
+          <div style={{ paddingTop: '8px' }}>
+            <CollegeManagement />
           </div>
         ) : (
           <div>

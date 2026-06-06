@@ -75,6 +75,21 @@ const Header = ({ activeTab, setActiveTab, searchQuery, setSearchQuery }) => {
         >
           Tracking
         </button>
+        <button
+          onClick={() => setActiveTab('colleges')}
+          style={{
+            padding: '10px 24px',
+            borderRadius: '8px',
+            fontWeight: '600',
+            fontSize: '0.95rem',
+            background: activeTab === 'colleges' ? '#ffffff' : 'transparent',
+            color: activeTab === 'colleges' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+            boxShadow: activeTab === 'colleges' ? '0 2px 10px rgba(0,0,0,0.05)' : 'none',
+            transition: 'var(--transition-smooth)'
+          }}
+        >
+          Colleges
+        </button>
       </div>
 
       {/* Search Bar */}

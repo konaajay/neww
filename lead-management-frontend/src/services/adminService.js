@@ -77,6 +77,14 @@ const adminService = {
   // Course Management
   fetchCourses: () => safeRequest(api.get('/leads/program-protocols')),
 
+  // College Management
+  fetchColleges: (params) => safeRequest(api.get('/colleges', { params })),
+  fetchActiveColleges: () => safeRequest(api.get('/colleges/active')),
+  createCollege: (data) => safeRequest(api.post('/colleges', data)),
+  updateCollege: (id, data) => safeRequest(api.put(`/colleges/${id}`, data)),
+  deleteCollege: (id) => safeRequest(api.delete(`/colleges/${id}`)),
+  toggleCollegeStatus: (id) => safeRequest(api.patch(`/colleges/${id}/status`)),
+
   // Old Leads Ingestion (Admin)
   uploadOldLeads: (file) => {
     const formData = new FormData();

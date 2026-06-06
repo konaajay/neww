@@ -49,6 +49,7 @@ export const normalizeBackendRecord = (log) => {
   const email = getNorm(log, 'emailAddress', 'email', 'mail');
   const dateStr = log.timestamp || log.issueDate || log.date || '-';
   const webinarName = getNorm(log, 'webinarName', 'webinar', 'courseName', 'course');
+  const college = log.registration?.collegeName || getNorm(log, 'collegeName', 'college', 'university', 'institution');
   let retryCount = log.retryCount || 0;
   const errorMessage = log.errorMessage || null;
 
@@ -78,6 +79,7 @@ export const normalizeBackendRecord = (log) => {
     id,
     name,
     email,
+    college,
     date: dateStr,
     webinarName,
     status: uiStatus,

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CheckCircle2, AlertCircle, Loader2, Send, Calendar, XCircle } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, Send, Calendar, XCircle, GraduationCap } from 'lucide-react';
 import './StudentRegistrationForm.css';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://34.225.217.229:8080";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://34.225.217.229:8080";
 
 const StudentRegistrationForm = () => {
   const [searchParams] = useSearchParams();
@@ -28,6 +28,8 @@ const StudentRegistrationForm = () => {
   const [status, setStatus] = useState(webinarId ? 'idle' : 'no-webinar');
   const [errors, setErrors] = useState({});
   const [webinarDetails, setWebinarDetails] = useState(null);
+  const [activeColleges, setActiveColleges] = useState([]);
+  const [collegesLoading, setCollegesLoading] = useState(true);
 
   useEffect(() => {
     if (webinarId) {
@@ -47,6 +49,16 @@ const StudentRegistrationForm = () => {
         .catch(() => { });
     }
   }, [webinarId]);
+
+  // Fetch active colleges for dropdown
+  useEffect(() => {
+    setCollegesLoading(true);
+    fetch(`${API_BASE}/api/colleges/active`)
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setActiveColleges(Array.isArray(data) ? data : []))
+      .catch(() => setActiveColleges([]))
+      .finally(() => setCollegesLoading(false));
+  }, []);
 
   const validate = () => {
     const newErrors = {};
@@ -280,15 +292,25 @@ const StudentRegistrationForm = () => {
 
               <div className="form-group">
                 <label className="form-label">College Name *</label>
-                <input
-                  type="text"
-                  name="collegeName"
-                  className={`registration-input ${errors.collegeName ? 'error' : ''}`}
-                  placeholder="Your college name"
-                  value={formData.collegeName}
-                  onChange={handleChange}
-                  disabled={status === 'loading'}
-                />
+                {collegesLoading ? (
+                  <div className="registration-input d-flex align-items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+                    <Loader2 size={16} className="spin-loader" /> Loading colleges...
+                  </div>
+                ) : (
+                  <select
+                    name="collegeName"
+                    className={`registration-input ${errors.collegeName ? 'error' : ''}`}
+                    value={formData.collegeName}
+                    onChange={handleChange}
+                    disabled={status === 'loading'}
+                    style={{ maxWidth: '100%', textOverflow: 'ellipsis' }}
+                  >
+                    <option value="">Select College</option>
+                    {activeColleges.map(c => (
+                      <option key={c.id} value={c.collegeName?.trim()}>{c.collegeName?.trim()}</option>
+                    ))}
+                  </select>
+                )}
                 {errors.collegeName && <span className="error-text">{errors.collegeName}</span>}
               </div>
 

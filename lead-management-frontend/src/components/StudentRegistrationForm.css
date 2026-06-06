@@ -242,6 +242,11 @@
   }
 }
 
+.spin-loader {
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
 .feedback-overlay {
   width: 100%;
   display: flex;

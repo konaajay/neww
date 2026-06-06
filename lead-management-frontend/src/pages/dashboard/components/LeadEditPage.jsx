@@ -8,6 +8,7 @@ import leadsApi from '../../../features/leads/api/leadsApi';
 import { useLookupData } from '../../../features/users/hooks/useLookupData';
 import { useAuth } from '../../../context/AuthContext';
 import { IndianRupee, Wallet, Calendar, AlertCircle } from 'lucide-react';
+import adminService from '../../../services/adminService';
 
 const LeadEditPage = () => {
     const { id } = useParams();
@@ -39,6 +40,14 @@ const LeadEditPage = () => {
 
     const [studentFee, setStudentFee] = useState(null);
     const [isFeeLoading, setIsFeeLoading] = useState(false);
+    const [activeColleges, setActiveColleges] = useState([]);
+
+    // Fetch active colleges for dropdown
+    useEffect(() => {
+        adminService.fetchActiveColleges()
+            .then(data => setActiveColleges(Array.isArray(data) ? data : []))
+            .catch(() => setActiveColleges([]));
+    }, []);
 
     useEffect(() => {
         const loadLead = () => {
@@ -231,15 +240,22 @@ const LeadEditPage = () => {
                                 </div>
                                 <div className="col-12 col-md-6">
                                     <label className="form-label text-secondary fw-semibold small text-uppercase mb-2">College</label>
-                                    <input
-                                        type="text"
+                                    <select
                                         name="college"
-                                        className="form-control py-2 px-3 rounded-3 border-light-subtle"
-                                        placeholder="College/University"
+                                        className={`form-select py-2 px-3 rounded-3 ${isDarkMode ? 'bg-white bg-opacity-5 border-white border-opacity-10 text-main' : 'border-light-subtle'}`}
                                         value={formData.college}
                                         onChange={handleChange}
-                                        style={{ backgroundColor: '#fdfdfd', height: '48px' }}
-                                    />
+                                        style={{ height: '48px', maxWidth: '100%', textOverflow: 'ellipsis' }}
+                                    >
+                                        <option value="">Select College</option>
+                                        {/* Keep existing value selectable even if not in active list */}
+                                        {formData.college && !activeColleges.find(c => c.collegeName?.trim() === formData.college?.trim()) && (
+                                            <option value={formData.college}>{formData.college}</option>
+                                        )}
+                                        {activeColleges.map(c => (
+                                            <option key={c.id} value={c.collegeName?.trim()}>{c.collegeName?.trim()}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
                         </div>
