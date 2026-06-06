@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const getBaseURL = () => {
   const url = import.meta.env.VITE_API_BASE_URL || 
-    (window.location.hostname === 'localhost' ? 'http://localhost:8080' : 'https://3.84.147.168:8080');
+    (window.location.hostname === 'localhost' ? 'http://localhost:8080' : 'https://34.225.217.229:8080');
   return url.endsWith('/api') ? url : `${url}/api`;
 };
 

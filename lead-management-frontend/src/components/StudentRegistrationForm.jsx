@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { CheckCircle2, AlertCircle, Loader2, Send, Calendar, XCircle } from 'lucide-react';
 import './StudentRegistrationForm.css';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://3.84.147.168:8080";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://34.225.217.229:8080";
 
 const StudentRegistrationForm = () => {
   const [searchParams] = useSearchParams();
