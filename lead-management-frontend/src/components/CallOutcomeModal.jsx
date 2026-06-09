@@ -304,7 +304,7 @@ const CallOutcomeModal = ({ isOpen, onClose, lead, onSubmit, theme, onShowHistor
       return;
     }
 
-    const productionUrl = "https://52.87.168.111";
+    const productionUrl = window.location.origin;
     const paymentLink = `${productionUrl}/payment-instruction/${inst.paymentGatewayId}`;
     const message = `Hello ${lead.name}, your payment of ₹${inst.amount} for ${lead.courseName || 'the course'} is pending. Please complete the payment using this secure link: ${paymentLink}`;
 

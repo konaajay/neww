@@ -139,7 +139,7 @@ const LeadDetailsPage = () => {
       return;
     }
 
-    const productionUrl = "https://52.87.168.111";
+    const productionUrl = window.location.origin;
     const paymentLink = `${productionUrl}/payment-instruction/${inst.paymentGatewayId}`;
     const courseName = lead?.courseName || lead?.course?.name || courses?.find(c => c.id === lead?.courseId)?.name || courses?.find(c => c.id === lead?.course_id)?.name || 'the course';
     const message = `Hello ${lead?.name}, your payment of ₹${inst.amount} for ${courseName} is pending. Please complete the payment using this secure link: ${paymentLink}`;
