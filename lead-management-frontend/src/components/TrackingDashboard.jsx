@@ -8,7 +8,7 @@ import { startScheduler, stopScheduler } from '../services/schedulerService';
 
 import './TrackingDashboard.css';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://32.199.180.3:8080";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://34.225.217.229:8080";
 
 const TrackingDashboard = ({ searchQuery = '', templateFile }) => {
   // --- 1. STATE DEFINITIONS ---
