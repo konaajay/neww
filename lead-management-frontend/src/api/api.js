@@ -1,9 +1,8 @@
 import axios from 'axios';
 
 const getBaseURL = () => {
-  const url = import.meta.env.VITE_API_BASE_URL || 
-    (window.location.hostname === 'localhost' ? 'http://localhost:8080' : 'http://34.225.217.229:8080');
-  return url.endsWith('/api') ? url : `${url}/api`;
+  return import.meta.env.VITE_API_BASE_URL || 
+    (window.location.hostname === 'localhost' ? 'http://localhost:8080' : 'https://sales-backend.duckdns.org');
 };
 
 const api = axios.create({

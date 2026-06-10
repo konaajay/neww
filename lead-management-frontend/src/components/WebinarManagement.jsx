@@ -4,7 +4,7 @@ import Papa from 'papaparse';
 
 import './WebinarManagement.css';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://34.225.217.229:8080";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://sales-backend.duckdns.org";
 
 const WebinarManagement = () => {
   const [webinars, setWebinars] = useState([]);
